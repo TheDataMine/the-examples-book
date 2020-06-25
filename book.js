@@ -5,4 +5,10 @@ $(document).ready(function() {
     anchor = '#' + $(this).parent().attr('id');
     $(this).addClass("hasAnchor").prepend('<a href="' + anchor + '" class="anchor"></a>');
   });
+
+  // Section anchors
+  $('#search-box').each(function() {
+    anchor = '#' + $(this).parent().attr('id');
+    $(this).append('<button class="close-icon" type="reset"></button>');
+  });
 });
