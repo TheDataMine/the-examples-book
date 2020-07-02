@@ -1,15 +1,46 @@
 # SQL {#sql}
 
 ```{r setup, include=F}
+library(RMariaDB)
 library(RSQLite)
 library(DBI)
 
-db <- dbConnect(RSQLite::SQLite(), "chinook.db")
+# Establish a connection to sqlite databases
+chinook <- dbConnect(RSQLite::SQLite(), "chinook.db")
+lahman <- dbConnect(RSQLite::SQLite(), "lahman.db")
+
+# Establish a connection to mysql databases
+# connection <- dbConnect(RMariaDB::MariaDB(),
+#                       host="scholar-db.rcac.purdue.edu",
+#                       db="elections",
+#                       user="elections_user",
+#                       password="Dataelect!98")
+```
+
+```{r setup, eval=F}
+library(RMariaDB)
+library(RSQLite)
+library(DBI)
+
+# Establish a connection to sqlite databases
+chinook <- dbConnect(RSQLite::SQLite(), "chinook.db")
+lahman <- dbConnect(RSQLite::SQLite(), "lahman.db")
+
+# Establish a connection to mysql databases
+connection <- dbConnect(RMariaDB::MariaDB(),
+                      host="your-host.com",
+                      db="your-database-name",
+                      user="your-username",
+                      password="your-password")
 ```
 
 ### RDBMS {#sql-rdbms}
 
 ### SQL in R {#sql-in-r}
+
+#### Examples {#sql-in-r-examples}
+
+Please see [here](https://raw.githubusercontent.com/TheDataMine/the-examples-book/master/files/think-summer-examples-2020.pdf) for a variety of examples demonstrating using SQL within R.
 
 ### SQL in Python {#sql-in-python}
 
@@ -18,14 +49,14 @@ db <- dbConnect(RSQLite::SQLite(), "chinook.db")
 The following examples us the `chinook.db` sqlite database.
 
 ```{r}
-dbListTables(db)
+dbListTables(chinook)
 ```
 
 #### How do I select all of the rows of a table called employees?
 
 <details>
     <summary>Click here for solution</summary>
-```{sql, connection=db}
+```{sql, connection=chinook}
 SELECT * FROM employees;
 ```
 </details>
@@ -34,7 +65,7 @@ SELECT * FROM employees;
 
 <details>
     <summary>Click here for solution</summary>
-```{sql, connection=db}
+```{sql, connection=chinook}
 SELECT * FROM employees LIMIT 5;
 ```
 </details>
@@ -43,12 +74,12 @@ SELECT * FROM employees LIMIT 5;
 
 <details>
     <summary>Click here for solution</summary>
-```{sql, connection=db}
+```{sql, connection=chinook}
 SELECT LastName, FirstName FROM employees;
 ```
     
 You can switch the order in which the columns are displayed as well:
-```{sql, connection=db}
+```{sql, connection=chinook}
 SELECT FirstName, LastName FROM employees;
 ```
 </details>
@@ -57,7 +88,7 @@ SELECT FirstName, LastName FROM employees;
 
 <details>
     <summary>Click here for solution</summary>
-```{sql, connection=db}
+```{sql, connection=chinook}
 SELECT DISTINCT Title FROM employees;
 ```
 </details>
@@ -68,17 +99,17 @@ SELECT DISTINCT Title FROM employees;
     <summary>Click here for solution</summary>
     
 Select only employees with a FirstName "Steve":
-```{sql, connection=db}
+```{sql, connection=chinook}
 SELECT * FROM employees WHERE FirstName='Steve';
 ```
 
 Select only employees with FirstName "Steve" OR FirstName "Laura":
-```{sql, connection=db}
+```{sql, connection=chinook}
 SELECT * FROM employees WHERE FirstName='Steve' OR FirstName='Laura';
 ```
 
 Select only employees with FirstName "Steve" AND LastName "Laura":
-```{sql, connection=db}
+```{sql, connection=chinook}
 SELECT * FROM employees WHERE FirstName='Steve' AND LastName='Laura';
 ```
 As expected, there are no results! There is nobody with the full name "Steve Laura".
@@ -89,7 +120,7 @@ As expected, there are no results! There is nobody with the full name "Steve Lau
 
 <details>
     <summary>Click here for solution</summary>
-```{sql, connection=db}
+```{sql, connection=chinook}
 SELECT * FROM tracks LIMIT 10;
 ```
 </details>
@@ -98,7 +129,157 @@ SELECT * FROM tracks LIMIT 10;
 
 <details>
     <summary>Click here for solution</summary>
-```{sql, connection=db}
+```{sql, connection=chinook}
 SELECT COUNT(*) FROM tracks;
 ```
 </details>
+
+#### Are there any artists with the names: "Elis Regina", "Seu Jorge", or "The Beatles"?
+
+<details>
+    <summary>Click here for solution</summary>
+```{sql, connection=chinook}
+SELECT * FROM artists WHERE Name='Elis Regina' OR Name='Seu Jorge' OR Name='The Beatles';
+```
+</details>
+
+#### What albums did the artist with `ArtistId` of 41 make?
+
+<details>
+    <summary>Click here for solution</summary>
+```{sql, connection=chinook}
+SELECT * FROM albums WHERE ArtistId=41;
+```
+</details>
+
+#### What are the tracks of the album with `AlbumId` of 71? Order the results from most `Milliseconds` to least.
+
+<details>
+    <summary>Click here for solution</summary>
+```{sql, connection=chinook}
+SELECT * FROM tracks WHERE AlbumId=71 ORDER BY Milliseconds DESC;
+```
+</details>
+
+#### What are the tracks of the album with `AlbumId` of 71? Order the results from longest to shortest and convert `Milliseconds` to seconds. Use aliasing to name the calculated field `Seconds`.
+
+<details>
+    <summary>Click here for solution</summary>
+```{sql, connection=chinook}
+SELECT Milliseconds/1000.0 AS Seconds, * FROM tracks WHERE AlbumId=71 ORDER BY Seconds DESC;
+```
+</details>
+
+#### What are the tracks that are at least 250 seconds long?
+
+<details>
+    <summary>Click here for solution</summary>
+```{sql, connection=chinook}
+SELECT Milliseconds/1000.0 AS Seconds, * FROM tracks WHERE Seconds >= 250;
+```
+</details>
+
+#### What are the tracks that are between 250 and 300 seconds long?
+
+<details>
+    <summary>Click here for solution</summary>
+```{sql, connection=chinook}
+SELECT Milliseconds/1000.0 AS Seconds, * FROM tracks WHERE Seconds BETWEEN 250 AND 300 ORDER BY Seconds;
+```
+</details>
+
+#### What is the `GenreId` of the genre with name `Pop`?
+
+<details>
+    <summary>Click here for solution</summary>
+```{sql, connection=chinook}
+SELECT GenreId FROM genres WHERE Name='Pop';
+```
+</details>
+
+#### What is the average length (in seconds) of a track with genre "Pop"?
+
+<details>
+    <summary>Click here for solution</summary>
+```{sql, connection=chinook}
+SELECT AVG(Milliseconds/1000.0) AS avg FROM tracks WHERE genreId=9;
+```
+</details>
+
+#### What is the longest Bossa Nova track (in seconds)?
+
+<details>
+    <summary>Click here for solution</summary>
+    
+What is the `GenreId` of Bossa Nova?
+```{sql, connection=chinook}
+SELECT GenreId FROM genres WHERE Name='Bossa Nova';
+```
+```{sql, connection=chinook}
+SELECT *, MAX(Milliseconds/1000.0) AS Seconds FROM tracks WHERE genreId=11;
+```
+</details>
+
+#### Get the average price per hour for Bossa Nova music (`genreId` of 11).
+
+<details>
+    <summary>Click here for solution</summary>
+```{sql, connection=chinook}
+SELECT AVG(UnitPrice/Milliseconds/1000.0/3600) AS 'Price per Hour' FROM tracks WHERE genreId=11;
+```
+</details>
+
+#### Get the average time (in seconds) for tracks by genre.
+
+<details>
+    <summary>Click here for solution</summary>
+```{sql, connection=chinook}
+SELECT genreId, AVG(Milliseconds/1000.0) AS 'Average seconds per track' FROM tracks GROUP BY genreId;
+```
+
+We can use an INNER JOIN to get the name of each genre as well.
+```{sql, connection=chinook}
+SELECT g.Name, track_time.'Average seconds per track' FROM genres AS g INNER JOIN (SELECT genreId, AVG(Milliseconds/1000.0) AS 'Average seconds per track' FROM tracks GROUP BY genreId) AS track_time ON g.GenreId=track_time.GenreId ORDER BY track_time.'Average seconds per track' DESC;
+```
+
+</details>
+
+#### What is the average price per track for each genre?
+
+<details>
+    <summary>Click here for solution</summary>
+```{sql, connection=chinook}
+SELECT genreId, AVG(UnitPrice) AS 'Average seconds per track' FROM tracks GROUP BY genreId;
+```
+</details>
+
+#### What is the average number of tracks per album?
+
+<details>
+    <summary>Click here for solution</summary>
+```{sql, connection=chinook}
+SELECT AVG(trackCount) FROM (SELECT COUNT(*) AS trackCount FROM tracks GROUP BY albumId) AS track_count;
+```
+</details>
+
+#### What is the average number of tracks per album per genre?
+
+<details>
+    <summary>Click here for solution</summary>
+```{sql, connection=chinook}
+SELECT genreId, AVG(trackCount) FROM (SELECT genreId, COUNT(*) AS trackCount FROM tracks GROUP BY albumId) AS track_count GROUP BY genreId;
+```
+
+```{sql, connection=chinook}
+SELECT Name, avg_track_count.'Average Track Count' FROM genres AS g INNER JOIN (SELECT genreId, AVG(trackCount) AS 'Average Track Count' FROM (SELECT genreId, COUNT(*) AS trackCount FROM tracks GROUP BY albumId) AS track_count GROUP BY genreId) AS avg_track_count ON g.GenreId=avg_track_count.genreId;
+```
+</details>
+
+
+
+The following examples us the `lahman.db` sqlite database.
+
+```{r}
+dbListTables(lahman)
+```
+
