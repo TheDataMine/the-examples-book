@@ -14,6 +14,147 @@ Any format or template related questions should be asked in Piazza.
 
 ## STAT 29000
 
+### Project 1
+
+---
+
+**Motivation:** In this project we will jump right into an R review. In this project we are going to break one larger data-wrangling problem into discrete parts. There is a slight emphasis on writing functions and dealing with strings. At the end of this project we will have greatly simplified a dataset, making it easy to dig into.
+
+**Context:** We just started the semester and are digging into a large dataset, and in doing so, reviewing R concepts we've previously learned.
+
+**Scope:** data wrangling in R, functions
+
+**Learning objectives:**
+
+#### Dataset: 
+
+`/class/datamine/data/airbnb`
+
+Public: ???
+
+Often times (maybe even the majority of the time) data doesn’t come in one nice file or database. Explore the dataset in `/class/datamine/data/airbnb`.
+
+##### 1. You may have noted that, for each country, city, and date we can find 3 files: `calendar.csv.gz`, `listings.csv.gz`, and `reviews.csv.gz` (for now, we will ignore all files in the "visualisations" folders). Let's take a look at the data in each of the three types of files. Pick a country, city and date, and read the first 50 rows of each of the 3 datasets. Provide 1-2 sentences explaining the type of information found in each, and what variable(s) could be used to join them. 
+
+**Hint:** `read.csv` has an argument to select the number of rows we want to read.
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Chunk of code used to read the first 50 rows of each dataset.
+- 1-2 sentences briefly describing the information contained in each dataset.
+- Name(s) of variable(s) that could be used to join them.
+```
+
+To read a compressed csv, simply use the `read.csv` function:
+
+```{r, eval=F}
+dat <- read.csv("/class/datamine/data/airbnb/brazil/rj/rio-de-janeiro/2019-06-19/data/calendar.csv.gz")
+head(dat)
+```
+
+Let's work towards getting this data into an easier format to analyze. From now on, we will focus on the `listings.csv.gz` datasets.
+
+##### 2. Write a function called `get_paths_for_country`, that, given a string with the country name, returns a vector with the full paths for all `listings.csv.gz` files, starting with `/class/datamine/data/airbnb/...`.
+
+Some example output from `get_paths_for_country("united-states")`:
+
+```{txt}
+ [1] "/class/datamine/data/airbnb/united-states/ca/los-angeles/2019-07-08/data/listings.csv.gz"       
+ [2] "/class/datamine/data/airbnb/united-states/ca/oakland/2019-07-13/data/listings.csv.gz"           
+ [3] "/class/datamine/data/airbnb/united-states/ca/pacific-grove/2019-07-01/data/listings.csv.gz"     
+ [4] "/class/datamine/data/airbnb/united-states/ca/san-diego/2019-07-14/data/listings.csv.gz"         
+ [5] "/class/datamine/data/airbnb/united-states/ca/san-francisco/2019-07-08/data/listings.csv.gz"     
+```
+
+**Hint:** `list.files` is useful with the `recursive=T` option.
+
+**Hint:** To exclude "visualisations" folders, try: `grep("visualisations", ..., invert=T)`.
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Chunk of code for your `get_paths_for_country` function.
+```
+
+##### 3. Write a function called `get_data_for_country` that, given a string with the country name, returns a data.frames containing the all listings data for that country. Use your previously written function to help you. 
+
+**Hint:** Use `stringAsFactors=F` in the `read.csv` function.
+
+**Hint:** Use `do.call(rbind, <listofdataframes>)` to combine a list of dataframes into a single dataframe.
+
+**Relevant topics:** rbind, [lapply](#r-lapply), [function](#r-basic-functions)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Chunk of code for your `get_data_for_country` function.
+```
+
+##### 4. Use your `get_data_for_country` to get the data for a country of your choice, and make sure to name the data.frame `listings`. Take a look at the following columns: `host_is_superhost`, `host_has_profile_pic`, `host_identity_verified`, and  `is_location_exact`. What is the data type for each column? Is there a more appropriate type for them? If so, which type would you recommend? 
+
+**Hint:** Remember, there are a six types of vectors: logical, integer, double, character, complex, and raw. To see the vector data types of you can use `typeof` or `str`. The function `typeof` will return the type, while `str` will return more information. See some examples below:
+
+```{r, eval=T}
+# Using typeof
+typeof(letters)
+typeof(1:10)
+```
+
+```{r, eval=T}
+# Using str
+str(letters)
+str(1:10)
+```
+
+##### 5. Write a function called `transform_column` that, given a column similar to the ones in (4) (more or less, lowercase "t"s and "f"s) transforms it to your suggested vector type in (4). Note that NA values for these columns appear as blank (`""`), and we need to be careful when transforming the data. Test your function on column `host_is_superhost`.
+
+**Relevant topics:** toupper, as.logical
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Chunk of code for your `transform_column` function.
+- Type of `transform_column(listings$host_is_superhost)`.
+```
+
+##### 6. Before we can use your function, we need to determine which columns are similar to `host_is_superhost` (i.e., lowercase "t"s and "f"s) and need transformation. Create a function named `should_be_transformed` that, given a column, determines (returns `TRUE` or `FALSE`) if it contains only "t", "f", and "" values. Use your newly created function to create a vector named `columns_to_transform` which contains all columns we want to transform using the function in (5). How many columns are in this format?
+
+**Relevant topics:** unique, %in%, any, [sapply](#r-sapply), which
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Chunk of code for your `should_be_transformed` function.
+- Chunk of code used to obtain `columns_to_transform`.
+```
+
+##### 7. Apply your function `transform_column` to all columns in `columns_to_transform` in your `listings` data. Make sure it worked by checking the type of columns `id` and `instant_bookable`. Note that the column `id` should have the same type as before.
+
+**Relevant topics:** [apply](#r-apply)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Chunk of code to get your new `listings` data.
+- Type of columns `id` and `instant_bookable`.
+```
+
+##### 8. Now that we have organized and cleaned our data, let's explore it! Based on your `listings` data, if you are looking at an instant bookable listing (where `instant_bookable` is `TRUE`), would you expect the location to be exact (where `is_exact_location` is `TRUE`)? Why or why not?
+
+**Hint:** Make a frequency table, and see how many instant bookable listings have exact location.
+
+**Relevant topics:** table
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Chunk of code to get a frequency table.
+- 1-2 sentences explaining whether or not we would expect the location to be exact if we were looking at a instant bookable listing.
+```
+
+---
+
 ### Project 2
 
 ---
@@ -1073,6 +1214,156 @@ Notice how all of the non-numeric text is surrounded by quotes. The surrounding 
 
 ---
 
+### Project 12
+
+--- 
+
+**Motivation:** Databases are comprised of many tables. It is imperative that we learn how to combine data from multiple tables using queries. To do so we perform joins! In this project we will explore learn about and practice using joins on a database containing bike trip information from the Bay Area Bike Share. 
+
+**Context:** We've introduced a variety of SQL commands that let you filter and extract information from a database in an systematic way. In this project we will introduce joins, a powerful method to combine data from different tables.
+
+**Scope:** SQL, sqlite, joins
+
+**Learning objectives:**
+
+```{block, type="bbox"}
+- Briefly explain the differences between left and inner join and demonstrate the ability to use the join statements to solve a data-driven problem.
+- Perform grouping and aggregate data using group by and the following functions: count, max, sum, avg, like, having. 
+- Showcase the ability to filter, alias, and write subqueries.
+```
+
+#### Dataset
+
+The following questions will use the dataset found in Scholar:
+
+`/class/datamine/data/bay_area_bike_share/bay_area_bike_share.db`
+
+A public sample of the data can be found [here](https://www.datadepot.rcac.purdue.edu/datamine/data/bay_area_bike_share/bay_area_bike_share.db).
+
+#### Questions 
+
+##### 1. There are a variety of ways to join data using SQL. With that being said, if you are able to understand and use a LEFT JOIN and INNER JOIN, you can perform *all* of the other types of joins (RIGHT JOIN, FULL OUTER JOIN). Given the following two tables, use [RMarkdown](#r-rmarkdown) to display the result of performing the following query as a table:
+
+```{sql, eval=F}
+SELECT * FROM users AS u INNER JOIN dorms AS d ON u.dorm=d.id;
+```
+
+**users:**
+
+id | first_name | last_name | dorm
+---|------------|-----------|-----
+1  | Alice      | Smith     | 1
+2  | Bob        | Johnson   | 2
+3  | Susan      | Marques   | 3
+4  | Amare      | Keita     | 3
+5  | Kristen    | Lakehold  | 4
+
+**dorms:**
+
+id | name | capacity | address
+---|------|----------|--------
+1  | Windsor Halls | NULL | Windsor Halls, West Lafayette, IN, 47906
+2  | Cary Quadrangle | 1200 | 1016 W Stadium Ave, West Lafayette, IN 47906
+3  | Hillenbrand Hall | NULL | 1301 3rd Street, West Lafayette, IN 47906
+
+**Relevant topics:** [sql](#sql), [inner join](#sql-examples)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- [RMarkdown](#r-rmarkdown) table displaying the result of performing the following query as a table.
+```
+
+##### 2. Using the same two tables from (1), use [RMarkdown](#r-rmarkdown) to display the result of performing the following query as a table. Explain the difference between an INNER JOIN and LEFT JOIN.
+
+```{sql, eval=F}
+SELECT * FROM users AS u LEFT JOIN dorms AS d ON u.dorm=d.id;
+```
+
+**Relevant topics:** [sql](#sql), [left join](#sql-examples)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- [RMarkdown](#r-rmarkdown) table displaying the result of performing the following query as a table.
+- 1-2 sentences explaining (in your own words) what the difference between and INNER and LEFT JOIN is.
+```
+
+##### 3. Aliases can be created for tables, fields, and even results of aggregate functions (like MIN, MAX, COUNT, AVG, etc.). In addition, you can combine fields using the `sqlite` concatenate operator `||` (see [here](https://www.sqlitetutorial.net/sqlite-string-functions/sqlite-concat/)). Write a query that returns the first 5 records of information from the `station` table formatted in the following way:
+
+`(id) name @ (lat, long)`
+
+For example:
+
+`(84) Ryland Park @ (37.342725,-121.895617)`
+
+**Relevant topics:** [aliasing](#sql-examples), concat
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- SQL query used to solve this problem. 
+- The first 5 records of information from the `station` table.
+```
+
+##### 4. There is a variety of interesting weather information in the `weather` table. Write a query that finds the average `mean_temperature_f` by `zip_code`. Which is on average the warmest `zip_code`?
+
+Use aliases to format the result in the following way:
+
+```{txt}
+Zip Code|Avg Temperature
+94041|61.3808219178082
+```
+
+**Relevant topics:** [aliasing](#sql-examples), [group by](#sql-examples), avg
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- SQL query used to solve this problem.
+- The results of the query copy and pasted.
+```
+
+##### 5. From (4) we can see that there are only 5 `zip_code`s with weather information. How many unique `zip_code`s do we have in the `trip` table? Write a query that finds the number of unique `zip_code`s in the `trip` table. Write another query that lists the `zip_code` and count of the number of times the `zip_code` appears. If we had originally assumed that the `zip_code` was related to the location of the trip itself, we were wrong. Can you think of a likely explanation?
+
+Relevant topics: [group by](#sql-examples), [count](#sql-examples)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- SQL queries used to solve this problem.
+- 1-2 sentences explainging what a possible explanation for the `zip_code`s could be.
+```
+
+##### 6. In (4) we wrote a query that finds the average `mean_temperature_f` by `zip_code`. What if we want to tack on to our results information from each row in the `station` table based on the `zip_code`s? To do, use an INNER JOIN. INNER JOIN combines tables based on specified fields, and returns only rows where there is a match in both the "left" and "right" tables.
+
+**Hint:** Use the query from (4) as a sub query within your solution.
+
+**Relevant topics:** [inner join](#sql-examples), subqueries, [aliasing](#sql-examples)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- SQL query used to solve this problem.
+```
+
+##### 7. In (5) we eluded that the `zip_code`s in the `trip` table aren't very consistent. Users can enter a zip code when using the app. This means that `zip_code` can be from anywhere in the world! With that being said, if the `zip_code` is one of the 5 `zip_code`s for which we have weather data (from question 4), we can add that weather information to matching rows of the `trip` table. In (6) we used an INNER JOIN to append some weather information to each row in the `station` table. For this question, write a query that performs an INNER JOIN and appends weather data from the `weather` table to the trip data from the `trip` table. Limit your solution to 5 lines. 
+
+**Hint:** You will want to wrap your dates and datetimes in [sqlite's `date` function](https://www.sqlitetutorial.net/sqlite-date-functions/sqlite-date-function/) prior to comparison.
+
+**Important note:** Notice that the weather data has about 1 row of weather information for each date and each zip code. This means you may have to join your data based on multiple constraints instead of just 1 like in (6).
+
+**Relevant topics:** [inner join](#sql-examples), [aliasing](#sql-examples)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- SQL query used to solve this problem.
+- First 5 lines of output.
+```
+
+--- 
+
 ## STAT 39000
 
 ### Project 2
@@ -2110,6 +2401,137 @@ Notice how all of the non-numeric text is surrounded by quotes. The surrounding 
 - Code used to create the visualization in a code chunk.
 - The generated plot as either a png or jpg/jpeg.
 - 1-2 sentences describing your plot and your conclusion.
+```
+
+---
+
+### Project 11
+
+--- 
+
+**Motivation:** Being able to use results of queries as tables in new queries (also known as writing sub-queries), and calculating values like MIN, MAX, and AVG in aggregate are key skills to have in order to write more complex queries. In this project we will learn about aliasing, writing sub-queries, and calculating aggregate values.
+
+**Context:** We are in the middle of a series of projects focused on working with databases and SQL. In this project we introduce aliasing, sub-queries, and calculating aggregate values using a much larger dataset!
+
+**Scope:** sql, sql in R
+
+**Learning objectives:**
+
+```{block, type="bbox"}
+- Demonstrate the ability to interact with popular database management systems within R.
+- Solve data-driven problems using a combination of SQL and R.
+- Basic clauses: select, order by, limit, desc, asc, count, where, from, etc.
+- Showcase the ability to filter, alias, and write subqueries.
+- Perform grouping and aggregate data using group by and the following functions: count, max, sum, avg, like, having. Explain when to use having, and when to use where.
+```
+
+#### Dataset
+
+`elections` database & `/class/datamine/data/election/itcontYYYY.txt` (for example, data for year 1980 would be `/class/datamine/data/electionitcont1980.txt`)
+
+A public sample of the data can be found here:
+
+https://www.datadepot.rcac.purdue.edu/datamine/data/election/itcontYYYY.txt (for example, data for year 1980 would be https://www.datadepot.rcac.purdue.edu/datamine/data/election/itcont1980.txt)
+
+Up until now, you've been working with a neatly organized database containing baseball data. As fantastic as this database is, it would be trivial to load up the entire database in R or Python and do your analysis using `merge`-like functions. Now, we are going to deal with a much larger set of data.
+
+##### 1. Approximately how large was the lahman database (use the sqlite database in Scholar: `/class/datamine/data/lahman/lahman.db`)? Use UNIX utilities you've learned about this semester to write a line of code to return the amount of data (in MB) in the elections folder `/class/datamine/data/election/`. How much data (in MB) is there? 
+
+The data in that folder has been added to the `elections` database in the `elections` table. Write a SQL query that returns how many rows of data are in the database. How many rows of data are in the database?
+
+**Hint:** This will take some time! Be patient.
+
+**Relevant topics:** [sql](#sql), [sql in R](#r-sql), [awk](#awk), [ls](#ls)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Approximate size of the lahman database in mb.
+- Line of code (bash/awk) to calculate the size (in mb) of the entire elections dataset in `/class/datamine/data/election`.
+- The size of the elections data in mb.
+- SQL query used to find the number of rows of data in the `elections` table in the `elections` database.
+- The number of rows in the `elections` table in the `elections` database.
+```
+
+##### 2. Write a SQL query using the `LIKE` command to find a unique list of `zip_code`s that start with "479". How many unique `zip_code`s are there that begin with "479"?
+
+**Hint:** Make sure you only select `zip_code`s.
+
+**Relevant topics:** [sql](#sql), like
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- SQL queries used to answer the question.
+- The first 5 results from running the query.
+```
+
+##### 3. Write a SQL query that counts the number of donations (rows) that are from Indiana. How many donations are from Indiana? Rewrite the query and create an _alias_ for our field so it doesn't read `COUNT(*)` but rather `Indiana Donations`. 
+
+**Relevant topics:** [sql](#sql), [where](#sql-examples), [aliasing](#sql-examples)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- SQL query used to answer the question.
+- The result of the SQL query.
+```
+
+##### 4. Rewrite the query in (3) so the result is displayed like the following:
+
+```{txt}
++-------------+
+| Donations   |
++-------------+
+| IN: 1111778 |
++-------------+
+```
+
+**Hint:** Use CONCAT and aliasing to accomplish this.
+
+**Relevant topics:** [sql](#sql), [aliasing](#sql-examples), concat
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- SQL query used to answer the question.
+```
+
+##### 5. In (2) we wrote a query that returns a unique list of `zip_code`s that start with "479". In (3) we wrote a query that counts the number of donations that are from Indiana. Use our query from (2) as a sub-query to find how many donations come from areas with `zip_code`s starting with "479". What percent of donations in Indiana come from said `zip_code`s?
+
+**Relevant topics:** [sql](#sql), [aliasing](#sql-examples), subqueries
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- SQL queries used to answer the question.
+- The percentage of donations from Indiana from `zip_code`s starting with "479".
+```
+
+##### 6. In (3) we wrote a query that counts the number of donations that are from Indiana. When running queries like this, a natural "next question" is to ask the same question about another state. SQL gives us the ability to calculate functions in aggregate when grouping by a certain column. Write a SQL query that returns the state, number of donations from each state, the sum of the donations (`transaction_amt`). Which 5 states gave the most donations (highest count)? Order you result from most to least.
+
+**Hint:** You may want to create an alias in order to sort.
+
+**Relevant topics:** [sql](#sql), group by
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- SQL query used to answer the question. 
+- Which 5 states gave the most donations?
+```
+
+##### 7. Write a query that gets the number of donations, and sum of donations, by year, for Indiana. Create one or more graphics that highlights the year-by-year changes. Write a short 1-2 sentences explaining your graphic(s).
+
+**Relevant topics:** [sql in R](#sql-in-R), group by
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- SQL query used to answer the question.
+- R code used to create your graphic(s).
+- 1 or more graphics in png/jpeg format.
+- 1-2 sentences summarizing your graphic(s).
 ```
 
 ---
