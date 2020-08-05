@@ -1603,6 +1603,89 @@ tapply(grades$grade, grades$year, mean, na.rm=T)
 
 ## Writing functions {#r-writing-functions}
 
+In a nutshell, a function is a set of instructions or actions packaged together in a single definition or unit. Typically, function accept 0 or more _arguments_ as input, and returns 0 or more results as output. The following is an example of a function in `R`:
+
+```{r}
+# word_count is a function that accepts a sentence as an argument,
+# strips punctuation and extra space, and returns the number of 
+# words in the sentence.
+word_count <- function(sentence) {
+  # strip punctuation and save into an auxiliary variable
+  aux <- gsub('[[:punct:]]+','', sentence)
+  
+  # split the sentence by space and remove extra spaces
+  result <- sum(unlist(strsplit(aux, " ")) != "")
+  return(result)
+}
+test_sentence <- "this is a  sentence, with 7 words."
+word_count(test_sentence)
+```
+
+The function is named `word_count`. The function has a single _parameter_ named `sentence`. The function returns a single value, `result`, which is the number of words in the provided sentence. `test_sentence` is the _argument_ to `word_count`. An _argument_ is the actual value passed to the function. We _pass_ values to functions -- this just means we use the values as _arguments_ to the function. The _parameter_, `sentence`, is the name shown in the function definition.
+
+Functions can have helper functions. A helper function is a function defined and used within another function in order to reduce complexity or make the task at hand more clear. For example, we could have written the previous function differently:
+
+```{r}
+# word_count is a function that accepts a sentence as an argument,
+# strips punctuation and extra space, and returns the number of 
+# words in the sentence.
+word_count <- function(sentence) {
+  
+  # a helper function that takes care of removing
+  # punctuation and extra spaces.
+  split_and_clean <- function(sentence) {
+    # strip punctuation and save into an auxiliary variable
+    aux <- gsub('[[:punct:]]+','', sentence)
+    
+    # remove extra spaces
+    aux <- unlist(strsplit(aux, " "))
+    
+    return(aux[aux!=""])
+  }
+  
+  # return the length of the sentence
+  result <- length(split_and_clean(sentence))
+  return(result)
+}
+test_sentence <- "this is a  sentence, with 7 words."
+word_count(test_sentence)
+```
+Here, our helper function is named `split_and_clean`. If you try to call `split_and_clean` outside of `word_count`, you will get an error. `split_and_clean` is defined within the scope of `word_count` and is not available outside that scope. In this example, `word_count` is the _caller_, the function that _calls_ the other function, `split_and_clean`. The other function, `split_and_clean`, can be referred to as the `callee`.
+
+In `R` functions can be passed to other functions as arguments. In general, functions that accept another function as an argument or return functions, are called higher order functions. Some examples of higher order functions in R are `sapply`, `lapply`, `tapply`, `Map`, and `Reduce`. The function passed as an argument, is often referred to as a _callback function_, as the _caller_ is expected to call back (execute) the argument at a later point in time.
+
+### `...` {#r-ellipsis}
+
+The ellipsis `...` in `R` can be used to pass an unknown number of arguments to a function. For example, if you look at the documentation for `sapply` (`?sapply`), you will see the following in the usage section:
+
+```{r, eval=F}
+sapply(X, FUN, ..., simplify = TRUE, USE.NAMES = TRUE)
+```
+
+In the arguments section, it says the ellipsis are "optional arguments to FUN". `sapply` uses the ellipsis as a vehicle to pass an unknown number of arguments to the callback function. In practice, this could look something like:
+
+```{r}
+dims <- function(..., sort=F) {
+  args <- list(...)
+  arg_names <- names(args)
+  results <- lapply(args, dim)
+  
+  if (is.null(arg_names) | sort==FALSE) {
+    # arguments not passed with a name
+    return(results)
+  }
+  
+  return(results[order(names(results))])
+}
+
+dims(grades)
+dims(grades, mat)
+dims(xyz=grades, abc=mat)
+dims(xyz=grades, abc=mat, sort=T)
+```
+
+Here, `dims` accepts any number of data.frame-like objects, `...`, and a logical value indicating whether or not to sort the list by names. As you can see, if arguments are passed to `dims` with names, those names can be accessed within `dims` via `names(list(...))`. 
+
 ## Plotting {#r-plotting}
 
 ### `barplot` {#r-barplot}
