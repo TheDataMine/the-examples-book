@@ -1,0 +1,126 @@
+---
+title: "easypackages Vignette"
+author: "Jake Sherman"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{easypackages-vignette}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# easypackages
+The `easypackages` package makes it easy to load or install multiple packages in R. Basically, it aims to solve two small day-to-day problems faced by R users:
+
+* Having to call `library` once for each additional package that you wish to use
+* Collaborators having to manually install packages that you've used that they don't have
+
+These problems are solved with the `libraries` and `packages` functions, respectively. Read on to learn more.
+
+### To install
+
+Development version:
+
+```r
+devtools::install_github("jakesherman/packages")
+```
+
+## Loading multiple packages
+
+At its most basic, the `libraries` function allows this:
+
+```r
+library(dplyr)
+library(ggplot2)
+library(RMySQL)
+library(data.table)
+```
+
+to become this:
+
+```r
+libraries("dplyr", "ggplot2", "RMySQL", "data.table")
+```
+
+The functions in this package purposefully *do not use non-standard evaluation*, this package names must either be strings or variables pointing to strings (or objects of class`package_obj`, see below for more). Not using non-standard evaluation allows us to do things like this:
+
+```r
+my_packages <- c("dplyr", "ggplot2", "RMySQL", "data.table")
+libraries(my_packages)
+```
+
+
+## Loading or installing multiple packages
+
+Similar to `libraries` is `packages`. The `packages` function looks for packages that are not currently installed and installs them after confirming that this is OK with the user (this behavior may be turned off, but is enabled by default).
+
+```r
+packages("dplyr", "ggplot2", "RMySQL", "data.table")
+```
+
+This makes sharing your scripts among collaborators and colleagues simpler, as you don't need to worry about whether or not a differnt user does or does not have the correct package or packages installed.
+
+## Installing packages from GitHub (or Bitbucket)
+
+Use a forward slash to separate a GitHub username and repo name to install an R package from a GitHub repo. For example, to install this package, do:
+
+```r
+packages("jakesherman/packages")
+```
+
+The same works with Bitbucket, but use a `$` to separate the username from the repo. You may mix and match between CRAN and GitHub packages, like so:
+
+```r
+packages("dplyr", "ggplot2", "jakesherman/packages", "Rdatatable/data.table")
+```
+
+## Loading vs. attaching packages
+
+Techincally, I've been using the word *load* incorrectly so far. In R, *loading* a package means having its contents available in memory, such that you can only access its functions via the `::` and `:::` operators. *Attaching* a package means loading it and *then* adding it to the search path so that you can access its functions directly. You can learn more about the distinctions between loading and attaching [here](http://r-pkgs.had.co.nz/namespace.html). 
+
+**By default, packages are attached**, just as if you used `base::library`. To change this behavior and load a package instead of attaching it, add `::` to the end of a package name in any of the functions, like so:
+
+```r
+packages("fastmatch::")
+```
+
+This becomes powerful as part of the `packages` function. A script you write may need one function from a package that you don't want to attach, but want to have installed so that the function can be loaded successfully. Adding `::` to the end of a package name in the `packages` function ensures that the package is installed on a different user's machine so that they can run your code.
+
+## Other installation types: `package_obj` objects
+
+CRAN, public GitHub and public Bitbucket repos cover many R packages, but not all. In the spirit of making this package flexible, an S3 class called `package_obj` has been introduced. You can create a `package_obj` by using the `package` constructor function. 
+
+```r
+my_package <- package("packages")
+```
+
+A `package_obj` needs at minimum a name, and by default that name will be installed from CRAN when the `install_package` method is called on the object. You may specify an **installation function** (as well as, optionally, arguments for that function) that will be used to install your function instead of the default. For example, if we want to install a package locally, we could do so like:
+
+```r
+local_package <- package("jake_great_package", 
+                         devtools::install_local, 
+                         path = "path/to/jake_great.tar.gz")
+```
+
+`package_obj` objects are accepted as inputs to any of the three major functions in this package: `libraries`, `packages`, and `install_packages` (actually, all non-`package_obj` objects are converted into `package_obj`s underneath the hood). For example, we could attach/install the above packages like so:
+
+```r
+packages(package("packages"), package("jake_great_package", 
+                                      devtools::install_local, 
+                                      path = "path/to/jake_great.tar.gz"))
+```
+
+You may specify whether `package_obj` objects are attached or loaded with the `load_type` argument in the constructor function. The default is *attach*.
+
+## Importing specific functions from package
+
+You may also choose to import specific functions from a package into the global environment with the `from_import` function (inspired by Python). The first argument is the package name, while the next is one or more function names from the package, or a list of function names from the package.
+
+```r
+from_import("dplyr", "select", "arrange", "mutate")
+from_import("dplyr", list("select", "arrange", "mutate")
+```
+
+## Thank you
+
+Thanks for your interest, I hope this package will save you a bit of time going forward. At the moment it is a work-in-progress, so comments and suggestions are appreciated! 
