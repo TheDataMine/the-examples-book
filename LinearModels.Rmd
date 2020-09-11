@@ -1,0 +1,258 @@
+---
+title: "LINEAR MODELS"
+# author: Fulya Gokalp Yavuz
+output: pdf_document
+
+# bibliography: Reference.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+```
+
+<!-- Before starting any modeling action, please remember reporting descriptive statistics such as mean, median, variance or standart deviation, min-max, etc. values for your data.  -->
+
+# Simple Linear Regression
+
+Simple linear regression models describe the effect that a particular variable (x, explanatory/independent variable), might have on the value of a continuous outcome variable (y, response/dependent variable). It is also known as a supervised machine learning method. 
+
+We will use the data from a retrospective cohort study with 79 laparoscopic myomectomy and 34 robotic myomectomy patients by courtesy of M.D. Faruk Abike collected between 2016 and 2020. We will call it *abike* data for the rest of the chapter. $\color{red}{\text{(ADD github link for the data set)}}$ Age, BMI, operation time and bleeding amount are numeric variables and surgery type is a factor in this data set. Here is how the data look like: 
+
+```{r}
+mydata <- read.csv("abike.csv")
+head(mydata)
+```
+
+For some numerical summaries, use `summary()` command for the univariate summary information. Actually, it is the easiest way to catch any unusual activity such as a data-typing error. 
+
+```{r}
+summary(mydata)
+```
+
+We may use a scatterplot to determine the strength of the relationship between two variables. Plot the age on the x-axis and BMI on the y-axis:
+
+```{r out.width = '70%'}
+plot(BMI ~ Age, data = mydata,
+     xlab = "Age", ylab = "BMI",
+     col = "purple")
+```
+
+We might expect a positive small association between a patient's age and BMI. That relationship appears to be somehow linear in nature. Please notice that the age of the youngest patient visited gynecology service is 24, and the smallest BMI is approximately 21. And so, we do not have any underweight or obese patients in this data set.
+
+Having a linear trend between these two variables does not (always) mean that "X causes Y", so please keep in mind that **correlation does not imply causation**. 
+
+After having some idea about the shape of the data, let's find the estimated correlation coefficient to see the linear correlation between these two variables:
+
+```{r}
+cor(mydata$Age, mydata$BMI)
+```
+
+
+### Model Definition
+
+After having some idea about our data set, let us try to answer the following research question: *"What’s the expected BMI of a patient if their age is 27?"*
+
+The simple linear regression might help us to answer this question. It states that the value of a response is expressed as the following equation:
+
+$Y | X = \beta_0 + \beta_1X + \epsilon$
+
+$Y | X$ : the value of Y (output) conditional upon the value of X (input).
+
+$\beta_0$ and $\beta_1$ are two fixed parameters in this model and they are called the intercept and the slope, respectively. The first regression coefficient $\beta_0$, is interpreted as the expected value of the response variable when the predictor is zero. And $\beta_1$ is interpreted as the change in the mean response for each one-unit increase in the predictor which is the main focus of the model. 
+
+$\epsilon$ represents the random error. Since we are not able to model the real life perfectly, we have this term. It is independent from the input ($X$) with a zero mean and constant variance ($\sigma^2$) normal distribution assumption such that $\epsilon \sim N(0, \sigma)$.
+
+## Fitting Linear Models with lm
+
+It is time to use your observed data to fit the linear model. The *fitted* model concerns the mean response value, denoted $\hat{y}$, for a given of the predictor, x, written as follows:
+
+$\hat{y} = \hat{\beta}_0 + \hat{\beta}_1x$.
+
+The following line creates a fitted linear model object of the mean BMI by age:
+
+```{r}
+model1 <- lm(BMI ~ Age, data=mydata)
+model1
+```
+
+Please refer that the left side of the formula is the output and the right side of it is the input separating by tilde (~). If you want to use more than one explanatory variables, you can easily add '+' next to `Age` such as `BMI ~ Age + Operation.Time`. You can use `help` page to see more details on `lm` function:
+
+```{r, eval=FALSE}
+?lm
+```
+
+The linear model is estimated as follows:
+
+$\hat{y} = `r round(model1$coefficients[1], 3)` + `r round(model1$coefficients[2], 3)`x$
+
+The mean BMI of a patient with an age of 0 is `r round(model1$coefficients[1], 3)`  (although a value of zero for the explanatory variable does not make sense in this context). On average, for every 1 year increase in age, a patient’s BMI is estimated to increase by `r round(model1$coefficients[2], 3)`.
+
+If we go back to the question we asked at the beginning, the expected BMI of a patient with an age of 27 is acquired by extracting the model coefficients:
+
+```{r}
+as.numeric(coef(model1)[1] + coef(model1)[2] * 27)
+```
+
+
+Estimating the parameters of this model is an important computational step. Although the details of this are beyond the scope of this book, the reader should be aware of the maximum likelihood (ML) and the least squares (LS) methods. For more details on parameter estimation methods, you can refer the book of Casella and Berger (2002) amongst others.
+
+Let's see the fitted regression line on the scatter plot:
+
+```{r fig1, out.width = '70%'}
+plot(BMI ~ Age, data=mydata,
+     xlab ="Age", ylab="BMI")
+abline(model1, lwd = 2, col = "purple")
+```
+
+* We say that this fitted line minimizes the average squares differences between the data and itself and these differences are called *residuals*. 
+
+## Statistical Inference
+
+At the previous part, we learned how to fit the model and acquire the parameter estimations. In this part, we may want to answer the following question:
+
+*Can I find a statistical evidence to support the presence of a relationship between the response and explanatory variables?*
+
+First, instead of simply using the name of the fitted model, we may add `summary` function to see more details:
+
+```{r}
+summary(model1)
+```
+
+Right now, in addition to the estimated regression coefficients, we have standard errors of these statistics. It is known that these coefficients follow a t-distribution with $n-2$ degrees of freedom (n: the number of observations). Please keep in mind that we assumed that the coefficients are estimated using least-squares which is the default estimation method in R. 
+
+Here is the hypothesis to test the statistical significance of the coefficients which is shown with $\beta_j$:
+
++------------+
+| Hypothesis |
++============+
+| $H_0: \beta_j = 0$ |
+|                    |
++----------------------+
+| $H_A: \beta_j \ne 0$ |
+|                      |
++----------------------+
+
+There are several ways to test the truth of the $H_0$ hypothesis which implies the explanatory variable(s) has no effect on the response. In this example, we find a strong evidence against null hypothesis with a small p-value ($0.000189$). We can make a similar interpretation for the intercept ($< 2 \times 10^{-16}$), but it is not the priority for inferences (remember the interpretation for the intercept).   
+
+* We say that the fitted model suggests the evidence an increase in BMI is related with an increase in age among the population being studied. 
+
+Let's check out the confidence intervals for the estimations:
+
+```{r}
+confint(model1, level=0.95)
+```
+
+We are 95% confident the true value of $\beta_1$ lies somewhere between
+`r round(confint(model1,level=0.95)[2,1], 3)` and `r round(confint(model1,level=0.95)[2,2], 3)`.
+
+Two coefficients of determination are also reported on the output of `summary` function - R-squared and Adjusted R-squared. 
+
+```{r}
+summary(model1)$r.squared
+```
+
+
+Besides `summary` function, `glance` function in `broom` library reports these coefficients and more:
+
+```{r}
+broom::glance(model1)
+broom::glance(model1)$r.squared
+``` 
+
+* We say that about `r round(summary(model1)$r.squared, 3)` percent of the variation in the BMI can be attributed to age. 
+
+Note: To get better understanding on basic concepts, we are only using a toy example. In your real life examples, you may expect to get higher $R^2$ values for your models. 
+
+<!-- The "residual standard error"" is the estimated standard error of the $\epsilon$ term. -->
+
+If your output does not support $R^2$, you can always calculate it by hand:
+
+```{r}
+rsquared <- cor(mydata$BMI, predict(model1))^2
+rsquared
+```
+
+We will talk about the `predict()` function on the next section.
+
+### Prediction
+
+Comparing the observed (real/training) and fitted data is a common way to see how well your model working on your data. `predict` function can be used to get the predictions for the corresponding model and ggplot can be used to visualize them:
+
+```{r, include=FALSE}
+library(ggplot2)
+```
+
+
+```{r fig2, out.width = '70%'}
+mydata$pred <- predict(model1)
+ggplot(mydata, aes(pred, BMI)) +
+        geom_point() +
+        geom_abline(color = "red") +
+        ggtitle("BMI vs. model prediction")
+```
+
+This graph gives you an idea to see how well your model fit the observed/training data. If you had all your points on the red line, that means your model perfectly fits your data (in that case your model probably overfitting your data which should make you more careful on test data predictions, for more details check out Hastie et al. (2017)).
+
+Additionally, you may want to get some predictions for a new data (test data):
+
+```{r}
+mynewdata <- data.frame(Age = 24)
+mynewdata$pred <- predict(model1, newdata = mynewdata)
+mynewdata
+```
+
+The prediction for the 24 value of age will be `r round(mynewdata[2], 3)`. Please remember that at the previous section, we got that prediction for the age of 27 by extracting model coefficients. 
+
+Also, if you want to see the prediction performance of your model and compare it with others, you can use root mean squared error (RMSE):
+
+$RMSE = \sqrt{\frac{\sum_{i=1}^n (\hat{y_i}-y_i)^2}{n}}$.
+
+We can easily find this term as following:
+
+```{r}
+RMSE = sqrt(mean((mydata$BMI - mydata$pred)^2))
+RMSE
+sd(mydata$BMI)
+```
+
+When we simply compare the RMSE (`r round(RMSE, 3)`) with the standard deviation of the outcome (`r round(sd(mydata$BMI), 3)`), RMSE is slightly smaller than the standard deviation. So, model tends to estimate the outcome better than just using the average as an estimate for the prediction. 
+
+##### Confidence Intervals and Prediction Intervals:
+
+R has a built-in function to find confidence intervals of the mean BMI values for the patients with some particular age values - say for 25 and 55. Firstly, create a data frame with these values and then use `predict` function with `interval` option in here:
+
+```{r}
+xvalues <- data.frame(Age = c(25, 55))
+xvalues
+myci <- predict(model1, newdata=xvalues, interval="confidence", level=0.95)
+myci
+```
+
+The first column of this call gives the prediction values, and the lower and upper CI limits for the second and the third columns. 
+
+* We say that we are 95 percent confidence that the mean BMI of a patient with an age of 25 lies somewhere between `r round(myci[1,2], 3)` and `r round(myci[1,3], 3)` and lies somewhere between `r round(myci[2,2], 3)` and `r round(myci[2,3], 3)` for an age of 55.
+
+The `predict` function also provides the prediction intervals just by adding `interval="prediction"` option in your call:
+
+```{r}
+mypi <- predict(model1, newdata=xvalues, interval="prediction", level=0.95)
+mypi
+```
+
+Even it is very similar to the confidence interval, the interpretations are different:
+
+* We say that we are 95 percent confidence that for an of 25, the model predicts individual observations to lie somewhere between  `r round(mypi[1,2], 3)` and `r round(mypi[1,3], 3)`; for an age of 55, the same PI is estimated at `r round(mypi[2,2], 3)` and `r round(mypi[2,3], 3)`.
+
+## Linear Model Diagnostics
+
+To be continued..
+
+## Linear Model with Categorical Variables
+
+To be continued..
+
+# References
+
+Casella, G. and Berger, R.L., 2002, Statistical Inference, Duxbury, CA, USA.
+
+Hastie, T., Tibshirani, R. and Friedman, J., 2017, Elements of Statistical Learning,  Springer.
