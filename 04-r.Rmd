@@ -2015,6 +2015,110 @@ for (friend in friends) {
 ```
 </details>
 
+##### Are there examples in which for loops are not appropriate to use? {#r-for-loops-versus-vectorized-functions}
+
+<details>
+    <summary>Click here for solution</summary>
+
+This is usually how we write loops in other languages, e.g., C, C++, Java, Python, etc., if we want to add the first 10 billion integers.
+```{r, eval=T}
+mytotal <- 0
+for (i in 1:10000000000) {
+  mytotal <- mytotal + i
+}
+mytotal
+```
+
+but this takes a long time to evaluate.  It is easier to write, and much faster to evaluate, if we use the `sum` function, which is vectorized, i.e., which works on an entire vector of data all at once.
+
+Here, for instance, we add the first 10 billion integers, and the computation occurs almost immediately.
+```{r, eval=T}
+sum(1:10000000000)
+```
+
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_1zf8kq5h&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_agm08ttm" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+
+</details>
+
+##### Can you show an example of how to do the same thing, with a for loop and without a for loop? {#r-example-for-loops-compared-to-vectorized-functions}
+
+<details>
+    <summary>Click here for solution</summary>
+
+Yes, here is an example about how to compute the average cost of a line of the grocery store data.
+
+```{r, eval=T}
+myDF <- read.csv("/class/datamine/data/8451/The_Complete_Journey_2_Master/5000_transactions.csv")
+head(myDF)
+```
+
+This is how we find the average cost per line in other languages, for instance, C/C++, Python, Java, etc.
+```{r, eval=T}
+amountspent <- 0       # we initialize a variable to keep track of the entire price of the purchases
+numberofitems <- 0     # and we initialize a variable to keep track of the number of purchases
+for (myprice in myDF$SPEND) {
+  amountspent <- amountspent + myprice     # we add the price of the current purchase
+  numberofitems <- numberofitems + 1       # and we increment (by 1) the number o purchases processed so far
+}
+amountspent     # this is the total amount spent on all purchases
+numberofitems   # this is the total number of purchases
+amountspent/numberofitems       # so this is the average
+amountspent/length(myDF$SPEND)  # this is an equivalent way to compute the average
+```
+
+For comparison, this is the much easier way that we can use a vectorized function in R, to accomplish the same purpose.  The vector is the column `myDF$SPEND`.  We can just focus our attention on that column from the data frame, and take a mean.
+```{r, eval=T}
+mean(myDF$SPEND)
+```
+
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_pz7cg2sc&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_y3e1j45c" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+
+</details>
+
+##### Can you show an example of how to make a new column in a data frame, which classifies things, based on another column? {#r-example-safe-versus-contaminated}
+
+<details>
+    <summary>Click here for solution</summary>
+
+Yes, we can make a new column in the grocery store data set.
+
+```{r, eval=T}
+myDF <- read.csv("/class/datamine/data/8451/The_Complete_Journey_2_Master/5000_transactions.csv")
+head(myDF)
+```
+
+Let's first make a new vector (the same length as a column of the data frame) in which all of the entries are `safe`.
+
+```{r, eval=T}
+mystatus <- rep("safe", times=nrow(myDF))
+```
+
+and then we can change the entries for the elements of `mystatus` that occurred on `05-JUL-16` or on `06-JUL-16` to be `contaminated`.
+```{r, eval=T}
+mystatus[(myDF$PURCHASE_ == "05-JUL-16")|(myDF$PURCHASE_ == "06-JUL-16")] <- "contaminated"
+```
+
+and finally change this into a factor, and add it as a new column in the data frame.
+```{r, eval=T}
+myDF$safetystatus <- factor(mystatus)
+```
+
+Now the head of the data frame looks like this:
+```{r, eval=T}
+head(myDF)
+```
+
+and the number of `contaminated` rows versus `safe` rows is this:
+```{r, eval=T}
+table(myDF$safetystatus)
+```
+
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_fru4k006&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_cxr17wtf" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+
+</details>
+
+
+
 ## Apply functions {#r-apply-functions}
 
 ### Examples
