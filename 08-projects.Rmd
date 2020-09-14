@@ -2017,6 +2017,62 @@ head(dat)
 
 Let's work towards getting this data into an easier format to analyze. From now on, we will focus on the `listings.csv.gz` datasets.
 
+##### Solution
+
+The `calendar.csv.gz` file for 2019-07-08 in Hawaii
+describes the `listing_id`, `date`, `available` (t or f), `price`, 
+`adjusted_price`, `minimum_nights`, and `maximum_nights`
+```{r, echo=F}
+hawaii_calendar <- read.csv("http://llc.stat.purdue.edu/calendar.csv.gz")
+```
+
+```{r, eval=F}
+hawaii_calendar <- read.csv("/class/datamine/data/airbnb/united-states/hi/hawaii/2019-07-08/data/calendar.csv.gz")
+```
+
+```{r}
+head(hawaii_calendar, n=50)
+```
+
+The `listings.csv.gz` file for 2019-07-08 in Hawaii
+has 106 variables, which describe the very specific
+attributes of the airbnb listings.
+```{r, echo=F}
+hawaii_calendar <- read.csv("http://llc.stat.purdue.edu/listings.csv.gz")
+```
+
+```{r, eval=F}
+hawaii_calendar <- read.csv("/class/datamine/data/airbnb/united-states/hi/hawaii/2019-07-08/data/listings.csv.gz")
+```
+
+```{r}
+dim(hawaii_listings)
+```
+
+The `reviews.csv.gz` file for 2019-07-08 in Hawaii
+describes the `listing_id`, `id`, `date`, `reviewer_id`,
+`reviewer_name`, and `comments`
+```{r, echo=F}
+hawaii_calendar <- read.csv("http://llc.stat.purdue.edu/reviews.csv.gz")
+```
+
+```{r, eval=F}
+hawaii_calendar <- read.csv("/class/datamine/data/airbnb/united-states/hi/hawaii/2019-07-08/data/reviews.csv.gz")
+```
+
+```{r}
+head(hawaii_reviews, n=50)
+```
+
+The variables that might be used to compare the tables are:
+`date`, `id`, `listing_id`, `maximum_nights`, `minimum_nights`, `price`
+```{r}
+t <- table(c(names(hawaii_calendar), names(hawaii_listings), names(hawaii_reviews)))
+t[t > 1]
+```
+
+
+
 ##### 2. Write a function called `get_paths_for_country`, that, given a string with the country name, returns a vector with the full paths for all `listings.csv.gz` files, starting with `/class/datamine/data/airbnb/...`.
 
 ##### For example, the output from `get_paths_for_country("united-states")` should have 28 entries.  Here are the first 5 entries in the output:
@@ -2039,6 +2095,31 @@ Let's work towards getting this data into an easier format to analyze. From now 
 - Chunk of code for your `get_paths_for_country` function.
 ```
 
+##### Solution
+
+We extract all 28 of the listings for the United States first:
+```{r, eval=F}
+myprefix <- "/class/datamine/data/airbnb/united-states/"
+paste0(myprefix, grep("listings.csv.gz", list.files(myprefix, recursive=T), value=T))
+```
+
+Now we build a function that can do the same thing, for any country
+```{r, eval=F}
+get_paths_for_country <- function(mycountry) {
+  myprefix <- paste0("/class/datamine/data/airbnb/", mycountry, "/")
+  paste0(myprefix, grep("listings.csv.gz", list.files(myprefix, recursive=T), value=T))
+}
+```
+
+and we test this for several countries:
+```{r, eval=F}
+get_paths_for_country("united-states")
+get_paths_for_country("brazil")
+get_paths_for_country("south-africa")
+get_paths_for_country("canada")
+```
+
+
 ##### 3. Write a function called `get_data_for_country` that, given a string with the country name, returns a data.frame containing the all listings data for that country. Use your previously written function to help you. 
 
 **Hint:** Use `stringsAsFactors=F` in the `read.csv` function.
@@ -2052,6 +2133,65 @@ Let's work towards getting this data into an easier format to analyze. From now 
 
 - Chunk of code for your `get_data_for_country` function.
 ```
+
+##### Solution
+
+We first get the data from the Canada entries.
+To do this, we sapply the `read.csv` function to each
+of the 6 results from `get_paths_for_country("canada")`
+In other words, we read in these 6 data frames.
+```{r, eval=F}
+myresults <- sapply(get_paths_for_country("canada"), read.csv, stringsAsFactors=F, simplify=F)
+```
+
+We get a list of 6 data frames:
+```{r, eval=F}
+length(myresults)
+class(myresults)
+class(myresults[[1]])
+class(myresults[[6]])
+```
+
+and we can check the dimensions of each of the 6 data frames
+```{r, eval=F}
+dim(myresults[[1]])
+dim(myresults[[2]])
+dim(myresults[[3]])
+dim(myresults[[4]])
+dim(myresults[[5]])
+dim(myresults[[6]])
+```
+
+this is more easily accomplished with another `sapply`:
+```{r, eval=F}
+sapply(myresults, dim)
+```
+
+We can `rbind` all 6 of these data frames into one big data frame as follows:
+```{r, eval=F}
+bigDF <- do.call(rbind, myresults)
+class(bigDF)
+dim(bigDF)
+```
+
+Now we create the desired function called `get_data_for_country`
+```{r, eval=F}
+get_data_for_country <- function(mycountry) {
+  myresults <- sapply(get_paths_for_country(mycountry), read.csv, stringsAsFactors=F, simplify=F)
+  do.call(rbind, myresults)
+}
+```
+
+and we test it on Canada.
+```{r, eval=F}
+mynewbigDF <- get_data_for_country("canada")
+```
+
+The result has the same size as before
+```{r, eval=F}
+dim(mynewbigDF)
+```
+
 
 ##### 4. Use your `get_data_for_country` to get the data for a country of your choice, and make sure to name the data.frame `listings`. Take a look at the following columns: `host_is_superhost`, `host_has_profile_pic`, `host_identity_verified`, and  `is_location_exact`. What is the data type for each column?  (You can use `class` or `typeof` or `str` to see the data type.)
 
@@ -2068,6 +2208,121 @@ Let's work towards getting this data into an easier format to analyze. From now 
 - Type of `transform_column(listings$host_is_superhost)`.
 ```
 
+##### Solution
+
+
+These 4 columns from `mynewbigDF` (which has the data for Canada)
+only have values `"t", "f", ""`
+```{r, eval=F}
+head(mynewbigDF$host_is_superhost)
+head(mynewbigDF$host_has_profile_pic)
+head(mynewbigDF$host_identity_verified)
+head(mynewbigDF$is_location_exact)
+```
+
+Please note the 44 values of `""` (which are easy to miss)
+In the first 3 out of 4 of these columns:
+```{r, eval=F}
+table(mynewbigDF$host_is_superhost)
+table(mynewbigDF$host_has_profile_pic)
+table(mynewbigDF$host_identity_verified)
+table(mynewbigDF$is_location_exact)
+```
+
+These are all character vectors, which we can check using `class`, `typeof`, or `str`:
+```{r, eval=F}
+class(mynewbigDF$host_is_superhost)
+class(mynewbigDF$host_has_profile_pic)
+class(mynewbigDF$host_identity_verified)
+class(mynewbigDF$is_location_exact)
+
+typeof(mynewbigDF$host_is_superhost)
+typeof(mynewbigDF$host_has_profile_pic)
+typeof(mynewbigDF$host_identity_verified)
+typeof(mynewbigDF$is_location_exact)
+
+str(mynewbigDF$host_is_superhost)
+str(mynewbigDF$host_has_profile_pic)
+str(mynewbigDF$host_identity_verified)
+str(mynewbigDF$is_location_exact)
+```
+
+We have several ways to transform a column.
+For example, we could go element-by-element, and make substitutions, like this:
+```{r, eval=F}
+v <- mynewbigDF$host_is_superhost
+```
+
+Here is the way that the values look at the start:
+```{r, eval=F}
+table(v)
+v[toupper(v)=="T"] <- TRUE
+v[toupper(v)=="F"] <- FALSE
+v[toupper(v)==""] <- NA
+```
+and here are the values now:
+```{r, eval=F}
+table(v)
+```
+You might think that the `NA` values disappeared,
+but they just do not show up in the table by default.
+You can force them to appear, and then we see that 
+the counts of the three values are the same as before.
+```{r, eval=F}
+table(v, useNA="always")
+```
+
+Here is the function:
+```{r, eval=F}
+transform_column <- function(v) {
+  v[toupper(v)=="T"] <- TRUE
+  v[toupper(v)=="F"] <- FALSE
+  v[toupper(v)==""] <- NA
+  v
+}
+```
+
+We can try the function on `mynewbigDF$host_is_superhost`:
+```{r, eval=F}
+head(transform_column(mynewbigDF$host_is_superhost))
+table(transform_column(mynewbigDF$host_is_superhost))
+```
+
+Another possibility is to make a map, in which we put
+the old values as the names, and the new values as the values in the vector:
+```{r, eval=F}
+mymap <- c(TRUE, FALSE, NA)
+names(mymap) <- c("T", "F", "")
+head(mymap[toupper(mynewbigDF$host_is_superhost)])
+```
+and if you do not want the names to appear on the vector,
+you can remove them, like this:
+```{r, eval=F}
+head(unname(mymap[toupper(mynewbigDF$host_is_superhost)]))
+```
+Finally we can check the table of the results:
+```{r, eval=F}
+table(mymap[toupper(mynewbigDF$host_is_superhost)])
+```
+This might seem strange, and if you do not like it,
+you can just use the solution given above.
+If you do like this, and want to wrap it into a function, we can write:
+```{r, eval=F}
+transform_column <- function(v) {
+  mymap <- c(TRUE, FALSE, NA)
+  names(mymap) <- c("T", "F", "")
+  unname(mymap[toupper(v)])
+}
+```
+
+and again we can try this new version
+of the function on `mynewbigDF$host_is_superhost`:
+```{r, eval=F}
+head(transform_column(mynewbigDF$host_is_superhost))
+table(transform_column(mynewbigDF$host_is_superhost))
+```
+
+
 ##### 5. Apply your function `transform_column` to the columns `instant_bookable` and `is_location_exact` in your `listings` data.
 
 ##### Based on your `listings` data, if you are looking at an instant bookable listing (where `instant_bookable` is `TRUE`), would you expect the location to be exact (where `is_location_exact` is `TRUE`)? Why or why not?
@@ -2082,6 +2337,27 @@ Let's work towards getting this data into an easier format to analyze. From now 
 - Chunk of code to get a frequency table.
 - 1-2 sentences explaining whether or not we would expect the location to be exact if we were looking at a instant bookable listing.
 ```
+
+##### Solution
+
+Now we look at the Canada results,
+for which `instant_bookable` is `TRUE`,
+to see if `is_location_exact` is `TRUE` or `FALSE`:
+```{r, eval=F}
+table(transform_column(mynewbigDF$is_location_exact)[transform_column(mynewbigDF$instant_bookable) == TRUE])
+```
+
+In other words, if `instant_bookable` is `TRUE`, then we
+expect the value for `is_location_exact` to usually be `TRUE` as well.
+
+As a closing note, we could remove the check to see whether the inner values are `TRUE`
+because, by default, we will only exact the `TRUE` values when we do a lookup like this:
+```{r, eval=F}
+table(transform_column(mynewbigDF$is_location_exact)[transform_column(mynewbigDF$instant_bookable)])
+```
+
+
+
 
 ---
 
@@ -4108,6 +4384,62 @@ head(dat)
 
 Let's work towards getting this data into an easier format to analyze. From now on, we will focus on the `listings.csv.gz` datasets.
 
+##### Solution
+
+The `calendar.csv.gz` file for 2019-07-08 in Hawaii
+describes the `listing_id`, `date`, `available` (t or f), `price`, 
+`adjusted_price`, `minimum_nights`, and `maximum_nights`
+```{r, echo=F}
+hawaii_calendar <- read.csv("http://llc.stat.purdue.edu/calendar.csv.gz")
+```
+
+```{r, eval=F}
+hawaii_calendar <- read.csv("/class/datamine/data/airbnb/united-states/hi/hawaii/2019-07-08/data/calendar.csv.gz")
+```
+
+```{r}
+head(hawaii_calendar, n=50)
+```
+
+The `listings.csv.gz` file for 2019-07-08 in Hawaii
+has 106 variables, which describe the very specific
+attributes of the airbnb listings.
+```{r, echo=F}
+hawaii_calendar <- read.csv("http://llc.stat.purdue.edu/listings.csv.gz")
+```
+
+```{r, eval=F}
+hawaii_calendar <- read.csv("/class/datamine/data/airbnb/united-states/hi/hawaii/2019-07-08/data/listings.csv.gz")
+```
+
+```{r}
+dim(hawaii_listings)
+```
+
+The `reviews.csv.gz` file for 2019-07-08 in Hawaii
+describes the `listing_id`, `id`, `date`, `reviewer_id`,
+`reviewer_name`, and `comments`
+```{r, echo=F}
+hawaii_calendar <- read.csv("http://llc.stat.purdue.edu/reviews.csv.gz")
+```
+
+```{r, eval=F}
+hawaii_calendar <- read.csv("/class/datamine/data/airbnb/united-states/hi/hawaii/2019-07-08/data/reviews.csv.gz")
+```
+
+```{r}
+head(hawaii_reviews, n=50)
+```
+
+The variables that might be used to compare the tables are:
+`date`, `id`, `listing_id`, `maximum_nights`, `minimum_nights`, `price`
+```{r}
+t <- table(c(names(hawaii_calendar), names(hawaii_listings), names(hawaii_reviews)))
+t[t > 1]
+```
+
+
+
 ##### 2. Write a function called `get_paths_for_country`, that, given a string with the country name, returns a vector with the full paths for all `listings.csv.gz` files, starting with `/class/datamine/data/airbnb/...`.
 
 ##### For example, the output from `get_paths_for_country("united-states")` should have 28 entries.  Here are the first 5 entries in the output:
@@ -4130,6 +4462,32 @@ Let's work towards getting this data into an easier format to analyze. From now 
 - Chunk of code for your `get_paths_for_country` function.
 ```
 
+
+##### Solution
+
+We extract all 28 of the listings for the United States first:
+```{r, eval=F}
+myprefix <- "/class/datamine/data/airbnb/united-states/"
+paste0(myprefix, grep("listings.csv.gz", list.files(myprefix, recursive=T), value=T))
+```
+
+Now we build a function that can do the same thing, for any country
+```{r, eval=F}
+get_paths_for_country <- function(mycountry) {
+  myprefix <- paste0("/class/datamine/data/airbnb/", mycountry, "/")
+  paste0(myprefix, grep("listings.csv.gz", list.files(myprefix, recursive=T), value=T))
+}
+```
+
+and we test this for several countries:
+```{r, eval=F}
+get_paths_for_country("united-states")
+get_paths_for_country("brazil")
+get_paths_for_country("south-africa")
+get_paths_for_country("canada")
+```
+
+
 ##### 3. Write a function called `get_data_for_country` that, given a string with the country name, returns a data.frame containing the all listings data for that country. Use your previously written function to help you. 
 
 **Hint:** Use `stringsAsFactors=F` in the `read.csv` function.
@@ -4143,6 +4501,66 @@ Let's work towards getting this data into an easier format to analyze. From now 
 
 - Chunk of code for your `get_data_for_country` function.
 ```
+
+##### Solution
+
+We first get the data from the Canada entries.
+To do this, we sapply the `read.csv` function to each
+of the 6 results from `get_paths_for_country("canada")`
+In other words, we read in these 6 data frames.
+```{r, eval=F}
+myresults <- sapply(get_paths_for_country("canada"), read.csv, stringsAsFactors=F, simplify=F)
+```
+
+We get a list of 6 data frames:
+```{r, eval=F}
+length(myresults)
+class(myresults)
+class(myresults[[1]])
+class(myresults[[6]])
+```
+
+and we can check the dimensions of each of the 6 data frames
+```{r, eval=F}
+dim(myresults[[1]])
+dim(myresults[[2]])
+dim(myresults[[3]])
+dim(myresults[[4]])
+dim(myresults[[5]])
+dim(myresults[[6]])
+```
+
+this is more easily accomplished with another `sapply`:
+```{r, eval=F}
+sapply(myresults, dim)
+```
+
+We can `rbind` all 6 of these data frames into one big data frame as follows:
+```{r, eval=F}
+bigDF <- do.call(rbind, myresults)
+class(bigDF)
+dim(bigDF)
+```
+
+Now we create the desired function called `get_data_for_country`
+```{r, eval=F}
+get_data_for_country <- function(mycountry) {
+  myresults <- sapply(get_paths_for_country(mycountry), read.csv, stringsAsFactors=F, simplify=F)
+  do.call(rbind, myresults)
+}
+```
+
+and we test it on Canada.
+```{r, eval=F}
+mynewbigDF <- get_data_for_country("canada")
+```
+
+The result has the same size as before
+```{r, eval=F}
+dim(mynewbigDF)
+```
+
+
 
 ##### 4. Use your `get_data_for_country` to get the data for a country of your choice, and make sure to name the data.frame `listings`. Take a look at the following columns: `host_is_superhost`, `host_has_profile_pic`, `host_identity_verified`, and  `is_location_exact`. What is the data type for each column?  (You can use `class` or `typeof` or `str` to see the data type.)
 
@@ -4159,6 +4577,123 @@ Let's work towards getting this data into an easier format to analyze. From now 
 - Type of `transform_column(listings$host_is_superhost)`.
 ```
 
+
+##### Solution
+
+
+These 4 columns from `mynewbigDF` (which has the data for Canada)
+only have values `"t", "f", ""`
+```{r, eval=F}
+head(mynewbigDF$host_is_superhost)
+head(mynewbigDF$host_has_profile_pic)
+head(mynewbigDF$host_identity_verified)
+head(mynewbigDF$is_location_exact)
+```
+
+Please note the 44 values of `""` (which are easy to miss)
+In the first 3 out of 4 of these columns:
+```{r, eval=F}
+table(mynewbigDF$host_is_superhost)
+table(mynewbigDF$host_has_profile_pic)
+table(mynewbigDF$host_identity_verified)
+table(mynewbigDF$is_location_exact)
+```
+
+These are all character vectors, which we can check using `class`, `typeof`, or `str`:
+```{r, eval=F}
+class(mynewbigDF$host_is_superhost)
+class(mynewbigDF$host_has_profile_pic)
+class(mynewbigDF$host_identity_verified)
+class(mynewbigDF$is_location_exact)
+
+typeof(mynewbigDF$host_is_superhost)
+typeof(mynewbigDF$host_has_profile_pic)
+typeof(mynewbigDF$host_identity_verified)
+typeof(mynewbigDF$is_location_exact)
+
+str(mynewbigDF$host_is_superhost)
+str(mynewbigDF$host_has_profile_pic)
+str(mynewbigDF$host_identity_verified)
+str(mynewbigDF$is_location_exact)
+```
+
+We have several ways to transform a column.
+For example, we could go element-by-element, and make substitutions, like this:
+```{r, eval=F}
+v <- mynewbigDF$host_is_superhost
+```
+
+Here is the way that the values look at the start:
+```{r, eval=F}
+table(v)
+v[toupper(v)=="T"] <- TRUE
+v[toupper(v)=="F"] <- FALSE
+v[toupper(v)==""] <- NA
+```
+and here are the values now:
+```{r, eval=F}
+table(v)
+```
+You might think that the `NA` values disappeared,
+but they just do not show up in the table by default.
+You can force them to appear, and then we see that 
+the counts of the three values are the same as before.
+```{r, eval=F}
+table(v, useNA="always")
+```
+
+Here is the function:
+```{r, eval=F}
+transform_column <- function(v) {
+  v[toupper(v)=="T"] <- TRUE
+  v[toupper(v)=="F"] <- FALSE
+  v[toupper(v)==""] <- NA
+  v
+}
+```
+
+We can try the function on `mynewbigDF$host_is_superhost`:
+```{r, eval=F}
+head(transform_column(mynewbigDF$host_is_superhost))
+table(transform_column(mynewbigDF$host_is_superhost))
+```
+
+Another possibility is to make a map, in which we put
+the old values as the names, and the new values as the values in the vector:
+```{r, eval=F}
+mymap <- c(TRUE, FALSE, NA)
+names(mymap) <- c("T", "F", "")
+head(mymap[toupper(mynewbigDF$host_is_superhost)])
+```
+and if you do not want the names to appear on the vector,
+you can remove them, like this:
+```{r, eval=F}
+head(unname(mymap[toupper(mynewbigDF$host_is_superhost)]))
+```
+Finally we can check the table of the results:
+```{r, eval=F}
+table(mymap[toupper(mynewbigDF$host_is_superhost)])
+```
+This might seem strange, and if you do not like it,
+you can just use the solution given above.
+If you do like this, and want to wrap it into a function, we can write:
+```{r, eval=F}
+transform_column <- function(v) {
+  mymap <- c(TRUE, FALSE, NA)
+  names(mymap) <- c("T", "F", "")
+  unname(mymap[toupper(v)])
+}
+```
+
+and again we can try this new version
+of the function on `mynewbigDF$host_is_superhost`:
+```{r, eval=F}
+head(transform_column(mynewbigDF$host_is_superhost))
+table(transform_column(mynewbigDF$host_is_superhost))
+```
+
+
+
 ##### 5. Create a histogram for response rates (`host_response_rate`) for super hosts (where `host_is_superhost` is `TRUE`). If your listings do not contain any super hosts, load data from a different country. Note that we first need to convert `host_response_rate` from a character containing "%" signs to a numeric variable.
 
 **Relevant topics:** [gsub](#r-writing-functions), as.numeric
@@ -4169,6 +4704,37 @@ Let's work towards getting this data into an easier format to analyze. From now 
 - Chunk of code used to answer the question.
 - Histogram of response rates for super hosts.
 ```
+
+##### Solution
+
+Now we look at the Canada results,
+for which `host_is_superhost` is `TRUE`.
+We make a histogram of the `host_response_rate` for those values.
+To do this, we first get the `host_response_rate` values
+(for which `host_is_superhost` is `TRUE`)
+
+```{r, eval=F}
+myvalues <- mynewbigDF$host_response_rate[transform_column(mynewbigDF$host_is_superhost) == TRUE]
+```
+
+and then we remove the percentage symbols from `myvalues`
+and convert the character vector to numbers,
+and then finally make the histogram.
+
+```{r, eval=F}
+hist(as.numeric(gsub("%", "", myvalues)))
+```
+
+As a closing note, we could remove the check to see whether the inner values are `TRUE`
+because, by default, we will only exact the `TRUE` values when we do a lookup like this:
+
+```{r, eval=F}
+myvalues <- mynewbigDF$host_response_rate[transform_column(mynewbigDF$host_is_superhost)]
+hist(as.numeric(gsub("%", "", myvalues)))
+```
+
+
+
 
 ---
 
