@@ -1014,4 +1014,154 @@ A quick introduction to stdin, stdout, stderr, redirection, and piping.
 
 ## Vim {#vim}
 
-## Writing scripts {#writing-scripts}
+## Writing scripts {#unix-writing-scripts}
+
+bash stands for "Bourne Again Shell". There are many types of shells, including but not limited to: ksh, zsh, csh, tcsh, fish. When you open a terminal emulator, it will typically run a shell. You can write a bash script, zsh script, csh script, etc. Typically, when you have an [interpreter](https://en.wikipedia.org/wiki/Interpreter_(computing)), you can write scripts for them. For example, even though R and Python are not shells, we can write scripts for those languages. As bash is the default shell for many linux operating systems today, we will keep referring to scripts as "bash scripts", but take note that in general the same applies for other shells too.
+
+A bash script is more or less a series of bash commands used to perform a sequence of actions. It is similar to a `.R` script, but instead of R code, we have bash commands.
+
+A bash script starts with the "shebang" or "bang" line or "hash-bang" -- `#!/bin/bash`. The shebang is used to indicate which interpreter to use to execute the script. For example, if you were using zsh instead, your shebang might read `#!/bin/zsh`.
+
+Take the following bash script:
+
+```{bash, eval=F}
+#!/bin/bash
+
+echo "First argument: $1"
+echo "Second argument: $2"
+```
+
+If you were to place that text inside of a file called `my_script`:
+
+```{bash, eval=F}
+echo '#!/bin/bash
+
+echo "First argument: $1"
+echo "Second argument: $2"' > $HOME/my_script
+```
+
+And then run it:
+
+```{bash, eval=F}
+cd $HOME
+./my_script okay cool
+```
+
+You would get the following result:
+
+````
+First argument: okay
+Second argument: cool
+````
+
+The operating system would use the interpreter located `/bin/bash` to execute the script. This would produce the same results:
+
+```{bash, eval=F}
+cd $HOME
+/bin/bash my_script okay cool
+```
+
+But instead we only have to run:
+
+```{bash, eval=F}
+cd $HOME
+./my_script okay cool
+```
+
+Note that if you were to change the shebang to say `#!/usr/bin/python` and try running the following:
+
+```{bash, eval=F}
+cd $HOME
+./my_script okay cool
+```
+
+You would get an error that reads:
+
+````
+File "./my_script", line 3
+  echo "First argument: $1"
+                          ^
+SyntaxError: invalid syntax
+````
+
+The reason is that the operating system is using the Python interpreter located `/usr/bin/python` to run the _bash_ code in our script, `my_script`. Since our code is not Python code, we get this error.
+
+### Arguments {#unix-bash-arguments}
+
+A bash script can accept arguments. This is just like many programs we've used to date (`grep`, `cut`, `awk`, etc.). For example:
+
+```{bash, eval=F}
+grep -i 'special'
+```
+
+Here, `-i` and `'special'` are arguments to `grep`. `-i` is the first argument, and `'special'` is the second. If you run the following script:
+
+```{bash, eval=F}
+#!/bin/bash
+
+echo "First argument: $1"
+echo "Second argument: $2"
+```
+
+You can see that this is indeed the truth:
+
+```{bash, eval=F}
+cd $HOME
+./my_script -i 'special'
+```
+
+````
+First argument: -i
+Second argument: special
+````
+
+In a bash script the first argument is denoted by `$1` the second by `$2` the third by `$3` etc. In fact, `$0` denotes the command used to run the script:
+
+```{bash, eval=F}
+#!/bin/bash
+
+echo "Command: $0"
+echo "First argument: $1"
+echo "Second argument: $2"
+```
+
+```{bash, eval=F}
+cd $HOME
+./my_script okay cool
+```
+
+````
+Command: ./my_script
+First argument: okay
+Second argument: cool
+````
+
+### Examples {#unix-bash-script-examples}
+
+##### Write a script called `indyflights.sh` that takes a file from this directoy as its input: `/class/datamine/data/flights/subset` and returns the number of flights that have `IND` as the origin or destination. {#unix-bash-script-example-01}
+
+<details>
+    <summary>Click here for solution</summary>
+```{bash, eval=F}
+#!/bin/bash
+
+cat /class/datamine/data/flights/subset/$1 | cut -d, -f17,18 | grep IND | wc -l
+```
+</details>
+
+##### Modify your script from [this problem](#unix-bash-script-example-01) to accept an argument containing an airport code (for example `IND`). Your script should determine how many flights have origin or destination `IND` (or your given airport code) altogether (across all years in all of the flights files).
+
+<details>
+    <summary>Click here for solution</summary>
+```{bash, eval=F}
+#!/bin/bash
+for i in {1987..2008}; do
+  count=$(cat /class/datamine/data/flights/subset/$i.csv | cut -d, -f17,18 | grep $1 | wc -l)
+  sum=$((sum + count))
+done
+
+echo "$sum"
+```
+</details>
+
+
