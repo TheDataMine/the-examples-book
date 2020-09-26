@@ -1542,6 +1542,30 @@ df$biweekly <- cut(df$times, breaks="2 weeks")
 ```
 </details>
 
+
+For an example with the 7581 data set:
+```{r, eval=F}
+myDF <- read.csv("/class/datamine/data/fars/7581.csv")
+```
+
+These are the values of the `HOUR` column:
+```{r, eval=F}
+table(myDF$HOUR)
+```
+
+We can break these values into 6-hour intervals:
+```{r, eval=F}
+table( cut(myDF$HOUR, breaks=c(0,6,12,18,24,99), include.lowest=T) )
+```
+
+and then find the total number of `PERSONS` who are involved in accidents during each 6-hour interval
+```{r, eval=F}
+tapply( myDF$PERSONS, cut(myDF$HOUR, breaks=c(0,6,12,18,24,99), include.lowest=T), sum )
+```
+
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_pjbc24vt&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_5fxuybgb" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+
+
 ### `subset` {#r-subset}
 
 `subset` is a function that helps you take subsets of data. By default, subset removes NA rows, so use with care. `subset` does not perform any operation that can't be accomplished by indexing, but can sometimes be easier to read.
@@ -2223,6 +2247,63 @@ If your `function` (in this case _mean_), requires extra arguments, you can pass
 ```{r}
 tapply(grades$grade, grades$year, mean, na.rm=T)
 ```
+
+## Amazon fine food tapply example {#r-Amazon-tapply-example}
+
+Here is an example using the Amazon fine food reviews
+```{r, eval=F}
+myDF <- read.csv("/class/datamine/data/amazon/amazon_fine_food_reviews.csv")
+```
+
+This is the data source:
+https://www.kaggle.com/snap/amazon-fine-food-reviews/
+
+The people who wrote the most reviews are
+```{r, eval=F}
+tail(sort(table(myDF$UserId)))
+```
+
+In particular, user A3OXHLG6DIBRW8 wrote the most reviews.
+
+The total number of people who read reviews that were written by A3OXHLG6DIBRW8 is:
+```{r, eval=F}
+sum(myDF$HelpfulnessDenominator[myDF$UserId == "A3OXHLG6DIBRW8"])
+```
+
+The number of people who found those reviews (written by A3OXHLG6DIBRW8) to be helpful is:
+```{r, eval=F}
+sum(myDF$HelpfulnessNumerator[myDF$UserId == "A3OXHLG6DIBRW8"])
+```
+
+So, altogether, when people read the reviews written by user A3OXHLG6DIBRW8,
+these reviews were rated as helpful 0.9795918 of the time
+```{r, eval=F}
+sum(myDF$HelpfulnessNumerator[myDF$UserId == "A3OXHLG6DIBRW8"])/sum(myDF$HelpfulnessDenominator[myDF$UserId == "A3OXHLG6DIBRW8"])
+```
+
+Now we can do this again, for all users.
+
+The total number of people who read reviews altogether, grouped by the user who wrote the review, is
+```{r, eval=F}
+head( tapply(myDF$HelpfulnessDenominator, myDF$UserId, sum) )
+```
+
+The total number of people who rated reviews as helpful, grouped by the user who wrote the review, is
+```{r, eval=F}
+head( tapply(myDF$HelpfulnessNumerator, myDF$UserId, sum) )
+```
+
+The percentages of people who found reviews to be helpful, grouped according to who wrote the review, are
+```{r, eval=F}
+head( tapply(myDF$HelpfulnessNumerator, myDF$UserId, sum)/tapply(myDF$HelpfulnessDenominator, myDF$UserId, sum) )
+```
+
+We can double-check our result for user "A3OXHLG6DIBRW8" as follows
+```{r, eval=F}
+( tapply(myDF$HelpfulnessNumerator, myDF$UserId, sum)/tapply(myDF$HelpfulnessDenominator, myDF$UserId, sum) )["A3OXHLG6DIBRW8"]
+```
+
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_24jmfygn&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_dti6orbo" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
 
 ## Writing functions {#r-writing-functions}
 
