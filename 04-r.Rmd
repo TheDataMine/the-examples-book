@@ -2246,6 +2246,74 @@ lapply(my_list, mean)
 ```
 </details>
 
+##### How can I find the average of several variables in the flight data, using only 1 line of R, with the `lapply` function?
+
+These are the flights from 2003:
+```{r, eval=F}
+myDF <- read.csv("/class/datamine/data/flights/subset/2003.csv")
+```
+
+We can break the flights into categories, depending on the `Distance` of the flight:
+
+less than 100 miles; from 100 to 200 miles; from 200 to 500 miles; from 500 to 1000 miles; from 1000 to 2000 miles; more than 2000 miles
+```{r, eval=F}
+my_distance_categories <- cut(myDF$Distance, breaks = c(0,100,200,500,1000,2000,Inf), include.lowest=T)
+```
+
+The numbers of flights in each category are:
+```{r, eval=F}
+table(my_distance_categories)
+```
+
+Here are the average values of 4 variables, in each of these 6 categories:
+```{r, eval=F}
+tapply( myDF$DepDelay, my_distance_categories, mean, na.rm=T) # the DepDelay in each category
+tapply( myDF$ArrDelay, my_distance_categories, mean, na.rm=T) # the ArrDelay in each category
+tapply( myDF$TaxiOut, my_distance_categories, mean, na.rm=T) # the time to TaxiOut in each category
+tapply( myDF$TaxiIn, my_distance_categories, mean, na.rm=T) # the time to TaxiIn in each category
+```
+
+OR, MUCH EASIER:  We can do all of this with just 1 line of R.  To make it easier to read, we can make a temporary data frame `flights_by_size` with these 4 variables.  Then we split the data into 6 data frames, according to the `Distance` of the flights, and we get the average `DepDelay`, `ArrDelay`, `TaxiOut`, and `TaxiIn`, in each of these 6 categories, with only 1 line of R.  Notice that this agrees *exactly* with the results of the 4 separate tapply functions, but it only takes us 1 call to the `lapply` function!!
+```{r, eval=F}
+flights_by_size <- split( data.frame(myDF$DepDelay, myDF$ArrDelay, myDF$TaxiOut, myDF$TaxiIn), my_distance_categories )
+lapply( flights_by_size, colMeans, na.rm=T )
+```
+
+Some closing remarks about this example:
+
+We use lapply on a `list`.  It only takes two arguments, namely, a `list` and a `function` to run on each piece of our `list`.  In this case, we are taking an average (`colMeans`) of each column in each piece of our `list`.
+
+The `flights_by_size` is a `list` of 6 data frames  You might want to check these out.
+```{r, eval=F}
+class( flights_by_size )
+length( flights_by_size )
+class(flights_by_size[[1]])
+class(flights_by_size[[2]])
+class(flights_by_size[[3]])
+class(flights_by_size[[4]])
+class(flights_by_size[[5]])
+class(flights_by_size[[6]])
+head(flights_by_size[[1]])
+head(flights_by_size[[2]])
+head(flights_by_size[[3]])
+head(flights_by_size[[4]])
+head(flights_by_size[[5]])
+head(flights_by_size[[6]])
+```
+
+You can take the `colMeans` within each of these data frames, like this:
+```{r, eval=F}
+colMeans(flights_by_size[[1]], na.rm=T)
+colMeans(flights_by_size[[2]], na.rm=T)
+colMeans(flights_by_size[[3]], na.rm=T)
+colMeans(flights_by_size[[4]], na.rm=T)
+colMeans(flights_by_size[[5]], na.rm=T)
+colMeans(flights_by_size[[6]], na.rm=T)
+```
+but this is all accomplished by the 1-line `lapply` that we did earlier, in a much easier way.
+
+
+
 #### `sapply` {#r-sapply}
 
 `sapply` is very similar to `lapply`, however, where `lapply` always returns a list, `sapply` will simplify the output of applying the function `FUN` to each element. 
