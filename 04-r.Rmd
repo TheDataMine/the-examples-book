@@ -2235,9 +2235,9 @@ my_list <- list(
 
 #### `lapply` {#r-lapply}
 
-`lapply` is a function that applies a function `FUN` to each element in a vector or list, and returns a list.
+`Lapply` is a function that applies a function `FUN` to each element in a vector or list, and returns a list.
 
-##### How do I get the mean value of each vector in our list, `my_list`, in another list?
+##### How do I get the mean value of each vector in our list, `my_list`, in another list? 
 
 <details>
     <summary>Click here for solution</summary>
@@ -2246,7 +2246,7 @@ lapply(my_list, mean)
 ```
 </details>
 
-##### How can I find the average of several variables in the flight data, using only 1 line of R, with the `lapply` function?
+#### How can I find the average of several variables in the flight data, using only 1 line of R, with the `lapply` function? {#r-lapply-flight-example}
 
 These are the flights from 2003:
 ```{r, eval=F}
@@ -2273,7 +2273,7 @@ tapply( myDF$TaxiOut, my_distance_categories, mean, na.rm=T) # the time to TaxiO
 tapply( myDF$TaxiIn, my_distance_categories, mean, na.rm=T) # the time to TaxiIn in each category
 ```
 
-OR, MUCH EASIER:  We can do all of this with just 1 line of R.  To make it easier to read, we can make a temporary data frame `flights_by_size` with these 4 variables.  Then we split the data into 6 data frames, according to the `Distance` of the flights, and we get the average `DepDelay`, `ArrDelay`, `TaxiOut`, and `TaxiIn`, in each of these 6 categories, with only 1 line of R.  Notice that this agrees *exactly* with the results of the 4 separate tapply functions, but it only takes us 1 call to the `lapply` function!!
+OR, MUCH EASIER:  We can do all of this with just 1 line of R.  To make it easier to read, we can make a temporary data frame `flights_by_size` with these 4 variables.  Then we split the data into 6 data frames, according to the `Distance` of the flights, and we get the average `DepDelay`, `ArrDelay`, `TaxiOut`, and `TaxiIn`, in each of these 6 categories, with only 1 line of R.  Notice that this agrees *exactly* with the results of the 4 separate `tapply` functions, but it only takes us 1 call to the `lapply` function!!
 ```{r, eval=F}
 flights_by_size <- split( data.frame(myDF$DepDelay, myDF$ArrDelay, myDF$TaxiOut, myDF$TaxiIn), my_distance_categories )
 lapply( flights_by_size, colMeans, na.rm=T )
@@ -2312,6 +2312,78 @@ colMeans(flights_by_size[[6]], na.rm=T)
 ```
 but this is all accomplished by the 1-line `lapply` that we did earlier, in a much easier way.
 
+#### How can I find the average of several variables in the fars data, using only 1 line of R, with the `lapply` function? {#r-lapply-fars-example}
+
+This is the fars data set, studied in STAT 19000 Project 6 (only the years 1975 to 1981)
+```{r, eval=F}
+dat <- read.csv("/class/datamine/data/fars/7581.csv")
+```
+
+We will learn a more efficient way to add the state names but for now, we do this in the same way as Project 6.
+```{r, eval=F}
+state_names <- read.csv("/class/datamine/data/fars/states.csv")
+v <- state_names$state
+names(v) <- state_names$code
+dat$mystates <- v[as.character(dat$STATE)]
+```
+
+In Project 6, Question 2, we found the average number of `DRUNK_DR`, according to the state:
+```{r, eval=F}
+tapply( dat$DRUNK_DR, dat$mystates, mean)
+```
+We might also want to find the average number fatalities (`FATALS`) per accident, according to the state:
+```{r, eval=F}
+tapply( dat$FATALS, dat$mystates, mean)
+```
+and the average number of people (`PERSONS`) involved per accident, according to the state:
+```{r, eval=F}
+tapply( dat$PERSONS, dat$mystates, mean)
+```
+
+OR, MUCH EASIER:  We can do all 3 of these calculations with just 1 line of R.  To make it easier to read, we can make a temporary data frame `accidents_by_state` with these 3 variables. Then we split the data into 51 data frames, according to the state where the accident occurred, and we get the average `DRUNK_DR`, `FATALS`, and `PERSONS` in each of these 51 categories, with only 1 line of R. Notice that this agrees **exactly** with the results of the 3 separate `tapply` functions, but it only takes us 1 call to the `lapply` function!!
+
+```{r, eval=F}
+accidents_by_state <- Split( data.frame(dat$DRUNK_DR, dat$FATALS, dat$PERSONS), dat$mystates )
+lapply( accidents_by_state, colMeans )
+```
+
+Again, some closing remarks:  We use `lapply` on a list. It only takes two arguments, namely, a `list` and a `function` to run on each piece of our list. In this case, we are taking an average (`colMeans`) of each column in each piece of our list.
+
+The `accidents_by_state` is a list of 51 data frames.  You might want to check these out.
+```{r, eval=F}
+class( accidents_by_state )
+length( accidents_by_state )
+class(accidents_by_state[[1]])
+class(accidents_by_state[[2]])
+# etc., etc.
+class(accidents_by_state[[50]])
+class(accidents_by_state[[51]])
+```
+
+```{r, eval=F}
+head(accidents_by_state[[1]])
+head(accidents_by_state[[2]])
+# etc., etc.
+head(accidents_by_state[[50]])
+head(accidents_by_state[[51]])
+```
+
+You can also extract the elements of the list according to their names, e.g.,
+```{r, eval=F}
+head(accidents_by_state$Indiana)
+colMeans(accidents_by_state$Indiana)
+
+head(accidents_by_state$Illinois)
+colMeans(accidents_by_state$Illinois)
+
+head(accidents_by_state$Ohio)
+colMeans(accidents_by_state$Ohio)
+
+head(accidents_by_state$Michigan)
+colMeans(accidents_by_state$Michigan)
+```
+
+but this is all accomplished by the 1-line `lapply` that we did earlier, in a much easier way.
 
 
 #### `sapply` {#r-sapply}
