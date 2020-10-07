@@ -385,120 +385,6 @@ cut -d '|' -f1,3 office.csv
 ```
 </details>
 
-### `awk` {#awk}
-
-`awk` is a powerful programming language that specializes in processing and manipulating text data. 
-
-In awk, a command looks something like this:
-
-`awk -F, 'BEGIN{  }  {  }  END{  }'`
-
-The delimiter is specified with the `-F` option (in this case our delimiter is a comma). The BEGIN chunk is run only once at the start of execution. The middle chunk is run once per line of the file. The END chunk is run only once, at the end of execution.
-
-The BEGIN and END portions are always optional. 
-
-The variables: `$1`, `$2`, `$3`, etc., refer to the 1st, 2nd, and 3rd fields in a line of data. For example, the following would print the 4th field of every row in a csv file:
-
-```{bash, eval=F}
-awk -F, '{print $4}'
-```
-
-`$0` represents the entire row.
-
-`awk` is very powerful. We can achieve the same effect as using `cut`:
-
-```{bash, eval=F}
-head 5000_products.csv | cut -d, -f3
-
-# or
-
-head 5000_products.csv | awk -F, '{print $3}'
-```
-
-#### Built in variables {#unix-awk-built-in-variables}
-
-`awk` has some special built in variables that can be very useful. See [here](https://www.thegeekstuff.com/2010/01/8-powerful-awk-built-in-variables-fs-ofs-rs-ors-nr-nf-filename-fnr/).
-
-#### Examples
-
-##### How do I print only rows where the `DAYOFWEEK` is `5`?
-
-<details>
-    <summary>Click here for solution</summary>
-```{bash, eval=T}
-head metadata.csv | awk -F, '{if ($3 == 5) {print $0}}'
-```
-</details>
-
-##### How do I print the first, fourth, and fifth columns of rows where the `DAYOFWEEK` is `5`?
-
-<details>
-    <summary>Click here for solution</summary>
-```{bash, eval=T}
-head metadata.csv | awk -F, '{if ($3 == 5) {print $1, $4, $5}}'
-```
-</details>
-
-##### How do I print only rows where `DAYOFWEEK` is `5` OR `YEAR` is `2015`?
-
-<details>
-    <summary>Click here for solution</summary>
-```{bash, eval=T}
-head metadata.csv | awk -F, '{if ($3 == 5 || $7 == 2015) {print $0}}'
-```
-</details>
-
-##### How do I print only rows where `DAYOFWEEK` is `5` AND `YEAR` is `2015`?
-
-<details>
-    <summary>Click here for solution</summary>
-```{bash, eval=T}
-head metadata.csv | awk -F, '{if ($3 == 5 && $7 == 2015) {print $0}}'
-```
-</details>
-
-##### How do I get the average of values in a column containing the max temperature, `WDWMAXTEMP`?
-
-<details>
-    <summary>Click here for solution</summary>
-```{bash, eval=T}
-# Here NR represents the number of rows
-head metadata.csv | awk -F, '{sum = sum + $19}END{print "Average max temp: " sum/NR}'
-
-# Or alternatively we could track the number of rows as we go
-head metadata.csv | awk -F, '{sum = sum + $19; count++}END{print "Average max temp: " sum/count}'
-```
-</details>
-
-##### How do I get counts of each unique value in a column, `SEASON`?
-
-<details>
-    <summary>Click here for solution</summary>
-When executing the middle chunk of code, `awk` will create a set of values called `seasons`, whose elements are named by unique values in the 8-th column `SEASON`. For the `SEASON` value in a line, `awk` will add 1 to the corresponding element (this is `++`). Thus, we get the count for each unique value.  
-In the END chunk of code, we print out `season` by going through its elements. The `season` in `for (season in seasons)` refers to the name of the elements. To access the actual value, we use `seasons[season]`.  
-This is just one example of arrays in `awk`. You can find more details here: https://www.gnu.org/software/gawk/manual/html_node/Arrays.html
-```{bash, eval=T}
-cat metadata.csv | awk -F, '{seasons[$8]++}END{for (season in seasons) {print season, seasons[season]}}'
-```
-</details>
-
-##### How do I get counts of each unique value in a column, `SEASON`, but only print the values for `FALL`, `WINTER`, `SUMMER`, and `SPRING`?
-
-<details>
-    <summary>Click here for solution</summary>
-```{bash, eval=T}
-cat metadata.csv | awk -F, '{seasons[$8]++}END{for (season in seasons) {if (season == "FALL" || season == "SUMMER" || season == "WINTER" || season == "SPRING") print season, seasons[season]}}'
-```
-Or a better solution would be to use the `~` operator:
-```{bash, eval=T}
-cat metadata.csv | awk -F, '{seasons[$8]++}END{for (season in seasons) {if (season ~ /WINTER|SPRING|SUMMER|FALL/) print season, seasons[season]}}'
-```
-If you want to exclude "SUMMER BREAK", use the `$` regular expression anchor. This forces it to only accept strings where the entire string ends in "SUMMER" so "SUMMER BREAK" is excluded as it ends in " BREAK" not "SUMMER":
-```{bash, eval=T}
-cat metadata.csv | awk -F, '{seasons[$8]++}END{for (season in seasons) {if (season ~ /WINTER|SPRING|SUMMER$|FALL/) print season, seasons[season]}}'
-```
-</details>
-
 ### `sed` {#sed}
 
 ### `grep` {#grep}
@@ -873,6 +759,120 @@ sort -t, -k18,18 -k4,4r test.csv
 ### `git` {#git-ref-01}
 
 See [here](#git).
+
+## `awk` {#awk}
+
+`awk` is a powerful programming language that specializes in processing and manipulating text data. 
+
+In awk, a command looks something like this:
+
+`awk -F, 'BEGIN{  }  {  }  END{  }'`
+
+The delimiter is specified with the `-F` option (in this case our delimiter is a comma). The BEGIN chunk is run only once at the start of execution. The middle chunk is run once per line of the file. The END chunk is run only once, at the end of execution.
+
+The BEGIN and END portions are always optional. 
+
+The variables: `$1`, `$2`, `$3`, etc., refer to the 1st, 2nd, and 3rd fields in a line of data. For example, the following would print the 4th field of every row in a csv file:
+
+```{bash, eval=F}
+awk -F, '{print $4}'
+```
+
+`$0` represents the entire row.
+
+`awk` is very powerful. We can achieve the same effect as using `cut`:
+
+```{bash, eval=F}
+head 5000_products.csv | cut -d, -f3
+
+# or
+
+head 5000_products.csv | awk -F, '{print $3}'
+```
+
+### Built in variables {#unix-awk-built-in-variables}
+
+`awk` has some special built in variables that can be very useful. See [here](https://www.thegeekstuff.com/2010/01/8-powerful-awk-built-in-variables-fs-ofs-rs-ors-nr-nf-filename-fnr/).
+
+### Examples
+
+##### How do I print only rows where the `DAYOFWEEK` is `5`?
+
+<details>
+    <summary>Click here for solution</summary>
+```{bash, eval=T}
+head metadata.csv | awk -F, '{if ($3 == 5) {print $0}}'
+```
+</details>
+
+##### How do I print the first, fourth, and fifth columns of rows where the `DAYOFWEEK` is `5`?
+
+<details>
+    <summary>Click here for solution</summary>
+```{bash, eval=T}
+head metadata.csv | awk -F, '{if ($3 == 5) {print $1, $4, $5}}'
+```
+</details>
+
+##### How do I print only rows where `DAYOFWEEK` is `5` OR `YEAR` is `2015`?
+
+<details>
+    <summary>Click here for solution</summary>
+```{bash, eval=T}
+head metadata.csv | awk -F, '{if ($3 == 5 || $7 == 2015) {print $0}}'
+```
+</details>
+
+##### How do I print only rows where `DAYOFWEEK` is `5` AND `YEAR` is `2015`?
+
+<details>
+    <summary>Click here for solution</summary>
+```{bash, eval=T}
+head metadata.csv | awk -F, '{if ($3 == 5 && $7 == 2015) {print $0}}'
+```
+</details>
+
+##### How do I get the average of values in a column containing the max temperature, `WDWMAXTEMP`?
+
+<details>
+    <summary>Click here for solution</summary>
+```{bash, eval=T}
+# Here NR represents the number of rows
+head metadata.csv | awk -F, '{sum = sum + $19}END{print "Average max temp: " sum/NR}'
+
+# Or alternatively we could track the number of rows as we go
+head metadata.csv | awk -F, '{sum = sum + $19; count++}END{print "Average max temp: " sum/count}'
+```
+</details>
+
+##### How do I get counts of each unique value in a column, `SEASON`?
+
+<details>
+    <summary>Click here for solution</summary>
+When executing the middle chunk of code, `awk` will create a set of values called `seasons`, whose elements are named by unique values in the 8-th column `SEASON`. For the `SEASON` value in a line, `awk` will add 1 to the corresponding element (this is `++`). Thus, we get the count for each unique value.  
+In the END chunk of code, we print out `season` by going through its elements. The `season` in `for (season in seasons)` refers to the name of the elements. To access the actual value, we use `seasons[season]`.  
+This is just one example of arrays in `awk`. You can find more details here: https://www.gnu.org/software/gawk/manual/html_node/Arrays.html
+```{bash, eval=T}
+cat metadata.csv | awk -F, '{seasons[$8]++}END{for (season in seasons) {print season, seasons[season]}}'
+```
+</details>
+
+##### How do I get counts of each unique value in a column, `SEASON`, but only print the values for `FALL`, `WINTER`, `SUMMER`, and `SPRING`?
+
+<details>
+    <summary>Click here for solution</summary>
+```{bash, eval=T}
+cat metadata.csv | awk -F, '{seasons[$8]++}END{for (season in seasons) {if (season == "FALL" || season == "SUMMER" || season == "WINTER" || season == "SPRING") print season, seasons[season]}}'
+```
+Or a better solution would be to use the `~` operator:
+```{bash, eval=T}
+cat metadata.csv | awk -F, '{seasons[$8]++}END{for (season in seasons) {if (season ~ /WINTER|SPRING|SUMMER|FALL/) print season, seasons[season]}}'
+```
+If you want to exclude "SUMMER BREAK", use the `$` regular expression anchor. This forces it to only accept strings where the entire string ends in "SUMMER" so "SUMMER BREAK" is excluded as it ends in " BREAK" not "SUMMER":
+```{bash, eval=T}
+cat metadata.csv | awk -F, '{seasons[$8]++}END{for (season in seasons) {if (season ~ /WINTER|SPRING|SUMMER$|FALL/) print season, seasons[season]}}'
+```
+</details>
 
 ## ~ & . & .. {#dots}
 
