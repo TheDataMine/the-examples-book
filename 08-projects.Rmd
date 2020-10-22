@@ -1823,7 +1823,7 @@ The following questions will use the dataset found in Scholar:
 
 ##### 3. In (2) we found a pretty interesting question. What is the percentage of users that Google someone before the first date? Does the proportion change by gender (as defined by `gender2`)? How about by `gender_orientation`?
 
-**Hint:** If you look at the question column for this question, you should notice that this column is a `factor` with two possible answers: "No. Why spoil the mystery?" and "Yes. Knowledge is power!". If you start by creating a function that calculates the percentage of people who answer each question, you could use `tapply` in combination with this function to break the answer down by gender.
+**Hint:** If you look at the question column (`text` in the `questions` dataframe) for this question, you should notice that this column is a `chr` with two possible answers: "No. Why spoil the mystery?" and "Yes. Knowledge is power!". If you start by creating a function that calculates the percentage of people who answer each question, you could use `tapply` in combination with this function to break the answer down by gender.
 
 **Relevant topics:** [functions](#r-writing-functions), [tapply](#r-tapply), [table](#r-table), [prop.table](#r-table)
 
@@ -1835,7 +1835,7 @@ The following questions will use the dataset found in Scholar:
 - Written answers to the questions.
 ```
 
-##### 4. In project (8) we created a function called `count_words`. Use this function and `sapply` to create a vector with the length (in words) of the questions. Add a new column called `question_length` to our question data.frame that contains these word counts.
+##### 4. In project (8) we created a function called `count_words`. Use this function and `sapply` to create a vector which contains the number of words in each row of the column `text` from the `questions` dataframe. Call the new vector `question_length`, and add it as a column to the `questions` dataframe.
 
 ```{r, eval=F}
 count_words <- function(my_column) {
@@ -1866,7 +1866,7 @@ is_empty <- function(my_question_option) {
 }
 ```
 
-##### What percentage of questions have 1, 2, 3, and 4 options? Add this data to a new column in our questions dataset called `number_options`.
+##### What percentage of questions have 1, 2, 3, and 4 options? Create a new column in the `questions` dataset called `number_options` which contained the number of answer options for each question.
 
 **Hint:** Use `sapply` to apply your function to every id in the vector (`questions$X`). After this, you should be able to use `table` and `prop.table` to calculate percentages.
 
@@ -4544,11 +4544,8 @@ sqlite3 /class/datamine/data/lahman/lahman.db
 
 #### Dataset
 
-The following questions will use the dataset found in Scholar:
-
-`/class/datamine/data/lahman/lahman.db`
-
-This is the Lahman Baseball Database. You can find its documentation [here](http://www.seanlahman.com/files/database/readme2017.txt), including the definitions of the tables and columns.
+The following questions will use the dataset similar to the one from Project 9, but this time we will use a MariaDB version of the database, which is also hosted on Scholar, at `scholar-db.rcac.purdue.edu`.
+As in Project 9, this is the Lahman Baseball Database.  You can find its documentation [here](http://www.seanlahman.com/files/database/readme2017.txt), including the definitions of the tables and columns.
 
 #### Questions 
 
@@ -4565,21 +4562,16 @@ library(RMariaDB)
 ##### 1. Connect to RStudio Server https://rstudio.scholar.rcac.purdue.edu, and, rather than navigating to the terminal like we did in the previous project, instead, create a connection to our MariaDB lahman database using the `RMariaDB` package in R, and the credentials below. Confirm the connection by running the following code chunk:
 
 ```{r, eval=F}
-host <- "scholar-db.rcac.purdue.edu"
-dbname <- "lahmandb"
-user <- "lahman_user"
-password <- "HitAH0merun"
-
 con <- dbConnect(RMariaDB::MariaDB(), 
-                 host=host, 
-                 db=dbname, 
-                 user=user, 
-                 password=password)
+                 host="scholar-db.rcac.purdue.edu", 
+                 db="lahmandb", 
+                 user="lahman_user", 
+                 password="HitAH0merun")
 
 head(dbGetQuery(con, "SHOW tables;"))
 ```
 
-**Hint:** In the example provided, the variable `con` is the connection. Change `con` to whatever you name the result of `dbConnect`.
+**Hint:** In the example provided, the variable `con` from the `dbConnect` function is the connection. Each query that you make, using the `dbGetQuery`, needs to use this connection `con`.  You can change the name `con` if you want to (it is user defined), but if you change the name `con`, you need to change it on all of your connections.  If your connection to the database dies while you are working on the project, you can always re-run the `dbConnect` line again, to reset your connection to the database.
 
 **Relevant topics:** RMariaDB, dbConnect, dbGetQuery
 
@@ -4590,19 +4582,36 @@ head(dbGetQuery(con, "SHOW tables;"))
 - Output from running your (potentially modified) `head(dbGetQuery(con, "SHOW tables;"))`.
 ```
 
-##### 2. Find Corey Kluber's totals for his career. Include his strikeouts (`SO`), walks (`BB`), and his Strikeouts to Walks ratio. A Strikeout to Walks ratio is calculated by this equation: $\frac{Strikeouts}{Walks}$. 
+##### 2. How many players are members of the 40/40 club? These are players that have stolen at least 40 bases (`SB`) and hit at least 40 home runs (`HR`) in one year.
 
-**Important note:** In our [project template](https://raw.githubusercontent.com/TheDataMine/the-examples-book/master/files/project_template.Rmd), we show 2 primary ways to run SQL queries from within R/RMarkdown. In question 5, we wrap our queries in R code. In question 6, we use the database connection, `con`, to run SQL queries directly within an SQL code chunk. In this project, we will just use the first method as it has the advantage of having the result of the query ready to be used within our R environment. 
+**Hint:** Use the `batting` table.
+
+**Relevant topics:** dbGetQuery, AND/OR, DISTINCT, COUNT
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- R code used to solve the problem.
+- The result of running the R code.
+```
 
 **Important note:** You only need to run `library(RMariaDB)` and the `dbConnect` portion of the code a single time towards the top of your project. After that, you can simply reuse your connection `con` to run queries. 
-
-**Important note:** Questions in this project need to be solved using SQL when possible. You will not receive credit for a question if you use `sum` in R rather than `SUM` in SQL. 
 
 **Hint:** You can use `dbGetQuery` to run your queries from within R. Example:
 
 ```{r, eval=F}
 dbGetQuery(con, "SELECT * FROM battings LIMIT 5;")
 ```
+
+**Note:** We already demonstrated the correct SQL query to use for the 40/40 club in this video, but now we want you to use `RMariaDB` to solve this query:
+
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_os59oucz&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_gy4f8y6j" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+
+##### 3. Find Corey Kluber's lifetime across his career (i.e., use `SUM` from `SQL` to summarize his achievements) in two categories: strikeouts (`SO`) and walks (`BB`).  Also display his Strikeouts to Walks ratio. A Strikeout to Walks ratio is calculated by this equation: $\frac{Strikeouts}{Walks}$. 
+
+**Important note:** In our [project template](https://raw.githubusercontent.com/TheDataMine/the-examples-book/master/files/project_template.Rmd), for this project, make all of the SQL queries using the `dbGetQuery` function, which returns the results directly in `R`.  Therefore, your `RMarkdown` blocks for this project should all be `{r}` blocks (as opposed to the `{sql}` blocks used in Project 9).
+
+**Important note:** Questions in this project need to be solved using SQL when possible. You will not receive credit for a question if you use `sum` in R rather than `SUM` in SQL. 
 
 **Hint:** Use the `people` table to find the `playerID` and use the `pitching` table to find the statistics.
 
@@ -4615,7 +4624,7 @@ dbGetQuery(con, "SELECT * FROM battings LIMIT 5;")
 - The result of running the R code.
 ```
 
-##### 3. How many times in total has Giancarlo Stanton struck out in years in which he played for "MIA" or "FLO"?
+##### 4. How many times in total has Giancarlo Stanton struck out in years in which he played for "MIA" or "FLO"?
 
 **Hint:** Use the `people` table to find the `playerID` and use the `batting` table to find the statistics.
 
@@ -4628,7 +4637,7 @@ dbGetQuery(con, "SELECT * FROM battings LIMIT 5;")
 - The result of running the R code.
 ```
 
-##### 4. The [Batting Average](https://en.wikipedia.org/wiki/Batting_average_(baseball)) is a metric for a batter's performance. The Batting Average in a year is calculated by $\frac{H}{AB}$ (the number of hits divided by at-bats). Calculate the seasonal Batting Average for batters between 2000 and 2010 who had more than 300 at-bats in one year. List the top 5 batting averages next to `playerID`, `teamID`, and `yearID.`
+##### 5. The [Batting Average](https://en.wikipedia.org/wiki/Batting_average_(baseball)) is a metric for a batter's performance. The Batting Average in a year is calculated by $\frac{H}{AB}$ (the number of hits divided by at-bats).  Considering (only) the years between 2000 and 2010, calculate the (seasonal) Batting Average for each batter who had more than 300 at-bats in a season. List the top 5 batting averages next to `playerID`, `teamID`, and `yearID.`
 
 **Hint:** Use the `batting` table.
 
@@ -4641,26 +4650,13 @@ dbGetQuery(con, "SELECT * FROM battings LIMIT 5;")
 - The result of running the R code.
 ```
 
-##### 5. How many unique players have hit > 50 home runs (`HR`) in a season? 
+##### 6. How many unique players have hit > 50 home runs (`HR`) in a season? 
 
 **Hint:** Use the `batting` table.
 
 **Hint:** If you view `DISTINCT` as being paired with `SELECT`, instead, think of it as being paired with one of the fields you are selecting.
 
 **Relevant topics:** dbGetQuery, DISTINCT, COUNT
-
-```{block, type="bbox"}
-**Item(s) to submit:**
-
-- R code used to solve the problem.
-- The result of running the R code.
-```
-
-##### 6. How many players are members of the 40/40 club? These are players that have stolen at least 40 bases (`SB`) and hit at least 40 home runs (`HR`) in one year.
-
-**Hint:** Use the `batting` table.
-
-**Relevant topics:** dbGetQuery, AND/OR, DISTINCT, COUNT
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
@@ -7448,11 +7444,8 @@ sqlite3 /class/datamine/data/lahman/lahman.db
 
 #### Dataset
 
-The following questions will use the dataset found in Scholar:
-
-`/class/datamine/data/lahman/lahman.db`
-
-This is the Lahman Baseball Database. You can find its documentation [here](http://www.seanlahman.com/files/database/readme2017.txt), including the definitions of the tables and columns.
+The following questions will use the dataset similar to the one from Project 9, but this time we will use a MariaDB version of the database, which is also hosted on Scholar, at `scholar-db.rcac.purdue.edu`.
+As in Project 9, this is the Lahman Baseball Database.  You can find its documentation [here](http://www.seanlahman.com/files/database/readme2017.txt), including the definitions of the tables and columns.
 
 #### Questions 
 
@@ -7469,21 +7462,16 @@ library(RMariaDB)
 ##### 1. Connect to RStudio Server https://rstudio.scholar.rcac.purdue.edu, and, rather than navigating to the terminal like we did in the previous project, instead, create a connection to our MariaDB lahman database using the `RMariaDB` package in R, and the credentials below. Confirm the connection by running the following code chunk:
 
 ```{r, eval=F}
-host <- "scholar-db.rcac.purdue.edu"
-dbname <- "lahmandb"
-user <- "lahman_user"
-password <- "HitAH0merun"
-
 con <- dbConnect(RMariaDB::MariaDB(), 
-                 host=host, 
-                 db=dbname, 
-                 user=user, 
-                 password=password)
+                 host="scholar-db.rcac.purdue.edu", 
+                 db="lahmandb", 
+                 user="lahman_user", 
+                 password="HitAH0merun")
 
 head(dbGetQuery(con, "SHOW tables;"))
 ```
 
-**Hint:** In the example provided, the variable `con` is the connection. Change `con` to whatever you name the result of `dbConnect`.
+**Hint:** In the example provided, the variable `con` from the `dbConnect` function is the connection. Each query that you make, using the `dbGetQuery`, needs to use this connection `con`.  You can change the name `con` if you want to (it is user defined), but if you change the name `con`, you need to change it on all of your connections.  If your connection to the database dies while you are working on the project, you can always re-run the `dbConnect` line again, to reset your connection to the database.
 
 **Relevant topics:** RMariaDB, dbConnect, dbGetQuery
 
@@ -7494,19 +7482,36 @@ head(dbGetQuery(con, "SHOW tables;"))
 - Output from running your (potentially modified) `head(dbGetQuery(con, "SHOW tables;"))`.
 ```
 
-##### 2. How many times in total has Giancarlo Stanton struck out in years in which he played for "MIA" or "FLO"?
+##### 2. How many players are members of the 40/40 club? These are players that have stolen at least 40 bases (`SB`) and hit at least 40 home runs (`HR`) in one year.
 
-**Important note:** In our [project template](https://raw.githubusercontent.com/TheDataMine/the-examples-book/master/files/project_template.Rmd), we show 2 primary ways to run SQL queries from within R/RMarkdown. In question 5, we wrap our queries in R code. In question 6, we use the database connection, `con`, to run SQL queries directly within an SQL code chunk. In this project, we will just use the first method as it has the advantage of having the result of the query ready to be used within our R environment.
+**Hint:** Use the `batting` table.
+
+**Relevant topics:** dbGetQuery, AND/OR, DISTINCT, COUNT
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- R code used to solve the problem.
+- The result of running the R code.
+```
 
 **Important note:** You only need to run `library(RMariaDB)` and the `dbConnect` portion of the code a single time towards the top of your project. After that, you can simply reuse your connection `con` to run queries. 
-
-**Important note:** Questions in this project need to be solved using SQL when possible. You will not receive credit for a question if you use `sum` in R rather than `SUM` in SQL. 
 
 **Hint:** You can use `dbGetQuery` to run your queries from within R. Example:
 
 ```{r, eval=F}
 dbGetQuery(con, "SELECT * FROM battings LIMIT 5;")
 ```
+
+**Note:** We already demonstrated the correct SQL query to use for the 40/40 club in this video, but now we want you to use `RMariaDB` to solve this query:
+
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_os59oucz&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_gy4f8y6j" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+
+##### 3. How many times in total has Giancarlo Stanton struck out in years in which he played for "MIA" or "FLO"?
+
+**Important note:** In our [project template](https://raw.githubusercontent.com/TheDataMine/the-examples-book/master/files/project_template.Rmd), for this project, make all of the SQL queries using the `dbGetQuery` function, which returns the results directly in `R`.  Therefore, your `RMarkdown` blocks for this project should all be `{r}` blocks (as opposed to the `{sql}` blocks used in Project 9).
+
+**Important note:** Questions in this project need to be solved using SQL when possible. You will not receive credit for a question if you use `sum` in R rather than `SUM` in SQL. 
 
 **Hint:** Use the `people` table to find the `playerID` and use the `batting` table to find the statistics.
 
@@ -7519,7 +7524,7 @@ dbGetQuery(con, "SELECT * FROM battings LIMIT 5;")
 - The result of running the R code.
 ```
 
-##### 3. The [Batting Average](https://en.wikipedia.org/wiki/Batting_average_(baseball)) is a metric for a batter's performance. The Batting Average in a year is calculated by $\frac{H}{AB}$ (the number of hits divided by at-bats). Calculate the seasonal Batting Average for batters between 2000 and 2010 who had more than 300 at-bats in one year. List the top 5 batting averages next to `playerID`, `teamID`, and `yearID.`
+##### 4. The [Batting Average](https://en.wikipedia.org/wiki/Batting_average_(baseball)) is a metric for a batter's performance. The Batting Average in a year is calculated by $\frac{H}{AB}$ (the number of hits divided by at-bats).  Considering (only) the years between 2000 and 2010, calculate the (seasonal) Batting Average for each batter who had more than 300 at-bats in a season. List the top 5 batting averages next to `playerID`, `teamID`, and `yearID.`
 
 **Hint:** Use the `batting` table.
 
@@ -7532,22 +7537,11 @@ dbGetQuery(con, "SELECT * FROM battings LIMIT 5;")
 - The result of running the R code.
 ```
 
-##### 4. How many unique players have hit > 50 home runs (`HR`) in a season? 
+##### 5. How many unique players have hit > 50 home runs (`HR`) in a season? 
 
 **Hint:** If you view `DISTINCT` as being paired with `SELECT`, instead, think of it as being paired with one of the fields you are selecting.
 
 **Relevant topics:** dbGetQuery, DISTINCT, COUNT
-
-```{block, type="bbox"}
-**Item(s) to submit:**
-
-- R code used to solve the problem.
-- The result of running the R code.
-```
-
-##### 5. How many players are members of the 40/40 club? These are players that have stolen at least 40 bases (`SB`) and hit at least 40 home runs (`HR`) in one year.
-
-**Relevant topics:** dbGetQuery, AND/OR, DISTINCT, COUNT
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
