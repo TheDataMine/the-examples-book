@@ -3549,6 +3549,81 @@ We can control the border width with the `size` argument as well.
 ```{r}
 plot_usmap("states", labels=T, include=c("IL", "MI", "IN", "OH"), label_color=c("blue", "green", "gold", "tomato"), fill="grey", color="white", size=2)
 ```
+Of course, it is important to be able to utilize a dataset with `plot_usmap`. To do so you must use the `data` and `values` arguments. 
+
+The `data` argument expects a data.frame with at least two columns. One column to indicate which state or county, and another to indicate the associated values (whatever they may be). The column indicating the state or value must be named either `fips` or `state`. The other column can be anything as long as you use the `values` argument to specify the name.
+
+```{r}
+myDF <- data.frame(state=state.abb, val=datasets::state.area)
+head(myDF)
+```
+
+```{r}
+plot_usmap(data=myDF, values="val", labels=T, include=c("IL", "MI", "IN", "OH"))
+```
+To move the legend out of the way, you can use `theme` from `ggplot2`. 
+
+```{r}
+library(ggplot2)
+plot_usmap(data=myDF, values="val", labels=T, include=c("IL", "MI", "IN", "OH")) +
+  theme(legend.position = "right")
+```
+If we wanted to change the colors and way the shading works, we can use `scale_fill_continous` from `ggplot2`.
+
+```{r}
+library(ggplot2)
+plot_usmap(data=myDF, values="val", labels=T, include=c("IL", "MI", "IN", "OH")) +
+  theme(legend.position = "right") +
+  scale_fill_continuous(low="white", high="navy")
+```
+It would probably look better if we had more than 4 points. Let's try with the entire US.
+
+```{r}
+library(ggplot2)
+plot_usmap(data=myDF, values="val", labels=T) +
+  theme(legend.position = "right") +
+  scale_fill_continuous(low="white", high="navy")
+```
+It really puts AK's area into perspective! How about if we remove AK using the `exclude` argument?
+
+```{r}
+library(ggplot2)
+plot_usmap(data=myDF, values="val", labels=T, exclude=c("AK")) +
+  theme(legend.position = "right") +
+  scale_fill_continuous(low="white", high="navy")
+```
+Note that if the `regions` argument is "state" or "states", either the state name, abbreviation, or fips code would work to identify the state. The full 5-digit fips code is required to identify counties, however. To get a fips code for a certain county, you can do the following.
+
+```{r}
+usmap::fips(state = "IN", county="Tippecanoe")
+```
+Note that the first 2 digits of the 5 digit fips code is the state fips code.
+
+```{r}
+usmap::fips(state = "IN")
+```
+
+What if we wanted to show area by the percentage of area that the state represents? First we would need to calculate it.
+
+```{r}
+myDF$percent_area <- myDF$val/sum(myDF$val)
+```
+
+```{r}
+library(ggplot2)
+plot_usmap(data=myDF, values="percent_area", labels=T) +
+  theme(legend.position = "right") +
+  scale_fill_continuous(low="white", high="navy")
+```
+After that, we can use the `scales` packages to fix the legend up.
+
+```{r}
+library(ggplot2)
+plot_usmap(data=myDF, values="percent_area", labels=T) +
+  theme(legend.position = "right") +
+  scale_fill_continuous(low="white", high="navy", name="Percent of US area", label=scales::percent)
+```
+If you were working with data that would be better represented by dollars instead of percentages, you could simply change the `label` argument to `scales::dollars`.
 
 #### Resources
 
