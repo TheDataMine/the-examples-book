@@ -1519,6 +1519,21 @@ The following questions will use the dataset found in Scholar:
 - The result of running the R code.
 ```
 
+##### Solution
+
+```{r, eval=F}
+books <- read.csv("/class/datamine/data/goodreads/csv/books_sample.csv")
+authors <- read.csv("/class/datamine/data/goodreads/csv/goodreads_book_authors.csv")
+
+dim(books)
+dim(authors)
+
+# or
+
+str(books)
+str(authors)
+```
+
 ##### 2. We want to figure out how book size (`num_pages`) is associated with various metrics. First, let's create a vector called `book_size`, that categorizes books into 4 categories based on `num_pages`: `small` (up to 250 pages), `medium` (250-500 pages), `large` (500-1000 pages), `huge` (1000+ pages). 
 
 **Note:** This [video and code](#r-lapply-flight-example) might be helpful.
@@ -1532,6 +1547,41 @@ The following questions will use the dataset found in Scholar:
 - The result of `table(book_size)`.
 ```
 
+##### Solution
+
+```{r, eval=F}
+book_size <- cut(books$num_pages, breaks=c(-Inf, 250, 500, 1000, Inf), labels=c("small", "medium", "large", "huge"))
+table(book_size)
+```
+
+```{r, eval=F}
+head(books$num_pages)
+
+# We can split each element into categories,
+# based on how num_pages compares to 0, 250, 500, 1000, 
+# and a huge number (say, 50000000, or Inf for infinity)
+head(cut(books$num_pages, breaks=c(0,250,500,1000,50000000),include.lowest=T))
+
+# Or like this:
+head(cut(books$num_pages, breaks=c(0,250,500,1000,Inf),include.lowest=T))
+
+# It is worthwhile to make sure that we included every book.  
+# For instance, if you do not use include.lowest=T, then we 
+# will miss the pages that are exactly equal to 0.
+# Or if you do not use a big enough number on the right hand side,
+# then you will miss the very long pages.
+# We know, from question 1, that we should have 1000000 books
+# and we can verify that we got them all here:
+table( cut(books$num_pages, breaks=c(0,250,500,1000,Inf),include.lowest=T), useNA="always" )
+sum(table( cut(books$num_pages, breaks=c(0,250,500,1000,Inf),include.lowest=T), useNA="always" ))
+
+# Now we create the book_size vector:
+book_size <- cut(books$num_pages, breaks=c(0,250,500,1000,Inf), include.lowest=T)
+
+# and we can check that the first several entries look reasonable.
+head(book_size)
+```
+
 ##### 3. Use `tapply` to calculate the mean `average_rating`, `text_reviews_count`, and `publication_year` by `book_size`. Did any of the result surprise you? Why or why not?
 
 **Relevant topics:** [tapply](#r-tapply)
@@ -1541,6 +1591,17 @@ The following questions will use the dataset found in Scholar:
 
 - R code used to solve the problem.
 - The output from running the R code.
+```
+
+##### Solution
+
+```{r, eval=F}
+tapply(books$average_rating, book_size, mean, na.rm=T)
+tapply(books$text_reviews_count, book_size, mean, na.rm=T)
+tapply(books$publication_year, book_size, mean, na.rm=T)
+# It might be surprising, for instance, that longer books get 
+# more reviews and higher reviews. Answers to this part of the 
+# question will vary.
 ```
 
 ##### 4. Notice in (3) how we used `tapply` 3 times. This would get burdensome if we decided to calculate 4 or 5 or 6 columns instead. Instead of using tapply, we can use `split`, `lapply`, and `colMeans` to perform the same calculations.
@@ -1556,6 +1617,30 @@ The following questions will use the dataset found in Scholar:
 
 - R code used to solve the problem.
 - The output from running the code.
+```
+
+##### Solution
+
+```{r, eval=F}
+books_by_size <- split(books[,c('text_reviews_count','average_rating','publication_year')], book_size)
+lapply(books_by_size, colMeans, na.rm=TRUE)
+```
+
+```{r, eval=F}
+# We can build a temporarily data frame that has the 3 desired variables:
+head(data.frame(books$average_rating, books$text_reviews_count, books$publication_year))
+
+# and split it according to the book_size.
+# We get a list of length 4 as a result:
+books_by_size <- split(data.frame(books$average_rating, books$text_reviews_count, books$publication_year), book_size)
+class(books_by_size)
+length(books_by_size)
+str(books_by_size)
+
+# and then we can take the colMeans of each of these 4 parts of the list:
+lapply(books_by_size, colMeans, na.rm=T)
+
+# and the results agree with the results from question 3.
 ```
 
 ##### 5. We are working with a lot more data than we really want right now. We've provided you with the following code to filter out non-English books and only keep columns of interest.  This will create a data frame called `en_books`.
@@ -1581,7 +1666,44 @@ Do the dimensions (using `dim`) of `en_books` and `res` agree?  Why or why not? 
 - 1-2 sentences explaining why or why not.
 ```
 
-##### 6. We now have a nice and tidy subset of data, called `res`. It would be really nice to get some information on the authors. We can find that information in `authors` dataset loaded in question 1! In question 2 of the previous project, we had a similar issue with the states names. There is a *much* better and easier way to solve these types of problems. Use the `merge` function to combine `res` and `authors` in a way which appends all information from `author` when there is a match in `res`.  Use the condition `by="author_id"` in the merge.  This is all you need to do:
+##### Solution
+
+```{r, eval=F}
+en_books_subset <- subset(books, language_code %in% c("en-US", "en-CA", "en-GB", "eng", "en", "en-IN") & publication_year > 2000, select=c(author_id, book_id, average_rating,description, title, ratings_count, language_code, publication_year))
+
+
+en_books <- books[books$language_code %in% c("en-US", "en-CA", "en-GB", "eng", "en", "en-IN") & books$publication_year > 2000, c("author_id", "book_id", "average_rating", "description", "title", "ratings_count", "language_code", "publication_year")]
+
+dim(en_books)
+dim(en_books_subset)
+
+sum(is.na(en_books_subset$language_code))
+sum(is.na(en_books$language_code))
+
+# you can see that without the NAs the results are the same
+all.equal(en_books_subset, en_books[!is.na(en_books$language_code),], check.attributes=F)
+
+# subset is automatically removing NAs
+```
+
+```{r, eval=F}
+en_books <- books[books$language_code %in% c("en-US", "en-CA", "en-GB", "eng", "en", "en-IN") & books$publication_year > 2000, c("author_id", "book_id", "average_rating", "description", "title", "ratings_count", "language_code", "publication_year")]
+
+# We build a new data frame called res that takes a subset
+# of the data frame books that meet the two given conditions 
+# on language_code and publication_year and that contains the 8 
+# desired columns.
+res <- subset(books, subset=language_code %in% c("en-US", "en-CA", "en-GB", "eng", "en", "en-IN") & publication_year > 2000, select=c("author_id", "book_id", "average_rating", "description", "title", "ratings_count", "language_code", "publication_year"))
+class(res)
+dim(res)
+
+# This data frame is smaller.
+# The earlier data frame has some rows with missing information,
+# which are not included here.
+# (We might want to give examples/details about what is missing.)
+```
+
+##### 6. We now have a nice and tidy subset of data, called `res`. It would be really nice to get some information on the authors. We can find that information in `authors` dataset loaded in question 1! In question 2 of the previous project, we had a similar issue with the states names. There is a *much* better and easier way to solve these types of problems. Use the `merge` function to combine `res` and `authors` in a way which appends all information from `author` when there is a match in `res`.  Use the condition `by="author_id"` in the merge. This is all you need to do:
 
 ```{r, eval=F}
 mymergedDF <- merge(res, authors, by="author_id")
@@ -1589,7 +1711,7 @@ mymergedDF <- merge(res, authors, by="author_id")
 
 **Note:** The resulting data frame will have all of the columns that are found in either `res` or `authors`.  When we perform the merge, we only insist that the `author_id` should match. We do not expect that the `ratings_count` or `average_rating` should agree in `res` versus `authors`. Why?  In the `res` data frame, the `ratings_count` and `average_rating` refer to the specific book, but in the `authors` data frame, the `ratings_count` and `average_rating` refer to the total works by the author.  Therefore, in `mymergedDF`, there are columns `ratings_count.x` and `average_rating.x` from `res`, and there are columns `ratings_count.y` and `average_rating.y` from `authors`.
 
-**Note:** Although we provided the necessary code for this example, you might want to know more about the merge function.  This [video and code](#r-merge-fars-example) and also this [video and code](#r-merge-flights-example) might be helpful.
+**Note:** Although we provided the necessary code for this example, you might want to know more about the merge function. This [video and code](#r-merge-fars-example) and also this [video and code](#r-merge-flights-example) might be helpful.
 
 **Relevant topics:** [merge](#r-merge)
 
@@ -1598,6 +1720,13 @@ mymergedDF <- merge(res, authors, by="author_id")
 
 - the given R code used to solve the problem.
 - The `dim` of the newly merged data.frame.
+```
+
+##### Solution
+
+```{r, eval=F}
+res <- merge(books, authors, by="author_id")
+dim(res)
 ```
 
 ##### 7. For an author of your choice (that _is_ in the dataset), find the author's highest rated book. Do you agree?
@@ -1610,6 +1739,27 @@ mymergedDF <- merge(res, authors, by="author_id")
 - R code used to solve the problem.
 - The title of the highest rated book (from your author).
 - 1-2 sentences explaining why or why not you agree with it being the highest rated book from that author.
+```
+
+##### Solution
+
+```{r, eval=F}
+brandons_books <- res[res$name=="Brandon Sanderson",]
+brandons_books[which.max(brandons_books$average_rating_books),]
+```
+
+```{r, eval=F}
+myDF <- merge(res, authors, by="author_id")
+
+# Here are the books by author Sandra Cisneros:
+myfavoriteDF <- myDF[myDF$name=="Sandra Cisneros", ]
+myfavoriteDF
+
+# Her highest rated book has the rating 4.23:
+max(myfavoriteDF$average_rating.x)
+
+# It is called "A House of My Own: Stories from My Life":
+myfavoriteDF[which.max(myfavoriteDF$average_rating.x), ]$title
 ```
 
 ##### OPTIONAL QUESTION. Look at the column names of the new dataframe created in question 6. Notice that there are two values for `ratings_count` and two values for `average_rating`. The names that have an appended `x` are those values from the first argument to `merge`, and the names that have an appended `y`, are those values from the second argument to `merge`. Rename these columns to indicate if they refer to a book, or an author. 
@@ -1625,6 +1775,17 @@ mymergedDF <- merge(res, authors, by="author_id")
 - The `names` of the new data.frame.
 ```
 
+##### Solution
+
+```{r, eval=F}
+res <- merge(books, authors, by="author_id")
+
+# rename columns
+names(res) <- gsub("\\.x", "_books", names(res))
+names(res) <- gsub("\\.y", "_author", names(res))
+
+dim(res)
+```
 
 ---
 
