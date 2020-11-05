@@ -2238,6 +2238,24 @@ The following questions will use the dataset found in Scholar:
 - 1-2 sentences describing what each file contains and how they are related.
 ```
 
+##### Solution
+
+```{r, eval=F}
+# You can show files and subdirectories using list.files
+list.files("/class/datamine/data/okcupid")
+
+# You can also take a look at files using file.info
+file.info("/class/datamine/data/okcupid/filtered/questions.csv")
+
+# You can peek at a file before reading it all in using readLines
+readLines("/class/datamine/data/okcupid/filtered/questions.csv", n=10) 
+
+# we can see things are separated by semicolons
+
+users <- read.csv("/class/datamine/data/okcupid/filtered/users.csv")
+questions <- read.csv("/class/datamine/data/okcupid/filtered/questions.csv", sep=";")
+```
+
 ##### 2. `grep` is an incredibly powerful tool available to us in R. We will learn more about `grep` in the future, but for now, know that a simple application of `grep` is to find a word in a string. In R, `grep` is vectorized and can be applied to an entire vector of strings. Use `grep` to find a question that references "google". What is the question?
 
 <details>
@@ -2262,6 +2280,12 @@ The following questions will use the dataset found in Scholar:
 
 - R code used to solve the problem.
 - The `text` of the question that references Google.
+```
+
+##### Solution
+
+```{r, eval=F}
+questions[grep("google", questions$text, ignore.case=T),]
 ```
 
 ##### 3. In (2) we found a pretty interesting question. What is the percentage of users that Google someone before the first date? Does the proportion change by gender (as defined by `gender2`)? How about by `gender_orientation`?
@@ -2290,6 +2314,26 @@ and use this as your function in the `tapply`:
 - Written answers to the questions.
 ```
 
+##### Solution
+
+```{r, eval=F}
+prop.table(table(users_filtered$`q170849`))
+
+prop_google <- function(answers_to_q170849){
+  return(prop.table(table(answers_to_q170849))[2])
+}
+
+tapply(users_filtered$`q170849`, users_filtered$gender2, prop_google)
+tapply(users_filtered$`q170849`, users_filtered$gender_orientation, prop_google)
+
+# ~35% of people Google people before the first date.
+
+# According to this set of data, men Google woman 10% less than woman Google men before the first date.
+
+# When broken down by the provided gender orientations, hetero females, bisexual females, and gay males tend to
+# Google people before the first date more than bisexual males, gay females, and hetero males.
+```
+
 ##### 4. In project (8) we created a function called `count_words`. Use this function and `sapply` to create a vector which contains the number of words in each row of the column `text` from the `questions` dataframe. Call the new vector `question_length`, and add it as a column to the `questions` dataframe.
 
 ```{r, eval=F}
@@ -2305,7 +2349,6 @@ count_words <- function(my_text) {
 <iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_b3mpapel&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_d8ebd3xf" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
 </details>
 
-
 **Relevant topics:** [sapply](#r-sapply)
 
 ```{block, type="bbox"}
@@ -2315,13 +2358,25 @@ count_words <- function(my_text) {
 - The result of `str(questions)` (this shows how your `questions` data frame looks, after adding the new column called `question_length`).
 ```
 
+##### Solution
+
+```{r, eval=F}
+count_words <- function(description) {
+    split_desc <- unlist(strsplit(description, " "))
+    
+    return(length(split_desc[split_desc!=""]))
+}
+
+questions$question_length <- sapply(as.character(questions$text), count_words)
+```
+
 ##### 5. Consider this function called `number_of_options` that accepts a data frame (for instance, `questions`)
 
-````
+```{r, eval=F}
 number_of_options <- function(myDF) {
    table(apply(as.matrix(myDF[ ,3:6]), 1, function(x) {sum(!(x==""))}))
 }
-````
+```
 
 and counts the number of questions that have each possible number of responses.
 For instance, if we calculate: `number_of_options(questions)` we get:
@@ -2337,20 +2392,19 @@ which means that:
 519 questions have 3 possible responses; and 
 746 questions have 4 possible responses.
 
-Now use the `split` function to break the data frame `questions` into 7 smaller data frames, according to the value in `questions$Keywords`.  Then use the `sapply` function to determine, for each possible value of `questions$Keywords`, the analogous breakdown of questions with different numbers of responses, as we did above.
+Now use the `split` function to break the data frame `questions` into 7 smaller data frames, according to the value in `questions$Keywords`. Then use the `sapply` function to determine, for each possible value of `questions$Keywords`, the analogous breakdown of questions with different numbers of responses, as we did above.
 
 **Hint:** You can write:
 
-````
+```{r, eval=F}
 mylist <- split(questions, questions$Keywords)
 sapply(mylist, number_of_options)
-````
+```
 
 <details>
     <summary><strong>Click here for video</strong></summary>
 <iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_3bqgn6rw&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_hsk9kd48" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
 </details>
-
 
 **Background/explanation:** The way `sapply` works is the the first argument is by default the first argument to your function, the second argument is the function you want applied, and after that you can specify arguments by name. For example:
 
@@ -2384,6 +2438,7 @@ sapply(mylist, mean, na.rm=T, trim=0.5)
 mean(mylist$first, na.rm=T, trim=0.5)
 mean(mylist$second, na.rm=T, trim=0.5)
 ```
+
 **Relevant topics:** [sapply](#r-sapply), [functions](#r-writing-functions), [indexing](#r-indexing)
 
 ```{block, type="bbox"}
@@ -2391,6 +2446,19 @@ mean(mylist$second, na.rm=T, trim=0.5)
 
 - R code used to solve this problem.
 - The results of the running the code.
+```
+
+##### Solution
+
+```{r, eval=F}
+number_of_options <- function(myDF) {
+    table(apply(as.matrix(myDF[ ,3:6]), 1, function(x) {sum(!(x==""))}))
+}
+
+number_of_options(questions)
+
+mylist <- split(questions, questions$Keywords)
+sapply(mylist, number_of_options)
 ```
 
 ##### 6. _Lots_ of questions are asked in this `okcupid` dataset. Explore the dataset, and either calculate an interesting statistic/result using `sapply`, or generate a graphic (with good x-axis and/or y-axis labels, main labels, legends, etc.), or both! Write 1-2 sentences about your analysis and/or graphic, and explain what you thought you'd find, and what you actually discovered.
@@ -2410,6 +2478,12 @@ mean(mylist$second, na.rm=T, trim=0.5)
 - 1-2 sentences about your analysis and/or graphic, and explain what you thought you'd find, and what you actually discovered.
 ```
 
+##### Solution
+
+```{r, eval=F}
+# Could be anything.
+```
+
 ##### OPTIONAL QUESTION. Does it appear that there is an association between the length of the question and whether or not users answered the question? Assume NA means "unanswered". First create a function called `percent_answered` that, given a vector, returns the percentage of values that are not NA. Use `percent_answered` and `sapply` to calculate the percentage of users who answer each question. Plot this result, against the length of the questions. 
 
 **Hint:** `length_of_questions <- questions$question_length[grep("^q", questions$X)]`
@@ -2424,6 +2498,39 @@ mean(mylist$second, na.rm=T, trim=0.5)
 - R code used to solve this problem.
 - The plot.
 - Whether or not you think there may or may not be an association between question length and whether or not the question is answered. 
+```
+
+##### Solution
+
+```{r, eval=F}
+number_of_options <- function(questions, question_id) {
+    
+    is_empty <- function(value) {
+        if (is.na(value)) return(TRUE)
+        else if (value=="") return(TRUE)
+        else return(FALSE)
+    }
+    
+    question <- questions[questions$X==question_id,]
+    
+    is_empty(question$option_1) + is_empty(question$option_2) + is_empty(question$option_3) + is_empty(question$option_4)
+    
+}
+prop.table(table(sapply(questions$X, number_of_options, questions = questions)))
+
+questions$number_options <- sapply(questions$X, number_of_options, questions = questions)
+
+prop.table(table(sapply(questions$X, number_of_options, questions = questions)))
+
+questions$number_options <- sapply(questions$X, number_of_options, questions = questions)
+
+percent_answered <- function(col) {
+    sum(!is.na(col))/length(col)
+}
+
+p_answered <- sapply(users[,grep("^q", names(users))], percent_answered)
+length_of_questions <- questions$question_length[grep("^q", questions$X)]
+plot(length_of_questions, p_answered)
 ```
 
 ---
