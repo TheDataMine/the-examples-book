@@ -5572,18 +5572,24 @@ head(dbGetQuery(con, "SHOW tables;"))
 - Output from running your (potentially modified) `head(dbGetQuery(con, "SHOW tables;"))`.
 ```
 
+##### Solution
+
+```{r, eval=F}
+library(RMariaDB)
+host <- "scholar-db.rcac.purdue.edu"
+dbname <- "lahmandb"
+user <- "lahman_user"
+password <- "HitAH0merun"
+con <- dbConnect(MariaDB(),host=host,
+                 dbname=dbname,
+                 user=user,
+                 password=password)
+head(dbGetQuery(con, "SHOW tables;"))
+```
+
 ##### 2. How many players are members of the 40/40 club? These are players that have stolen at least 40 bases (`SB`) and hit at least 40 home runs (`HR`) in one year.
 
 **Hint:** Use the `batting` table.
-
-**Relevant topics:** dbGetQuery, AND/OR, DISTINCT, COUNT
-
-```{block, type="bbox"}
-**Item(s) to submit:**
-
-- R code used to solve the problem.
-- The result of running the R code.
-```
 
 **Important note:** You only need to run `library(RMariaDB)` and the `dbConnect` portion of the code a single time towards the top of your project. After that, you can simply reuse your connection `con` to run queries. 
 
@@ -5601,6 +5607,21 @@ dbGetQuery(con, "SELECT * FROM battings LIMIT 5;")
     <summary><strong>Click here for video</strong></summary>
 <iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_os59oucz&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_gy4f8y6j" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
 </details>
+
+**Relevant topics:** dbGetQuery, AND/OR, DISTINCT, COUNT
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- R code used to solve the problem.
+- The result of running the R code.
+```
+
+##### Solution
+
+```{r, eval=F}
+dbGetQuery(con,"SELECT DISTINCT COUNT(*) FROM batting WHERE HR>=40 AND SB>=40;")
+```
 
 ##### 3. Find Corey Kluber's lifetime across his career (i.e., use `SUM` from `SQL` to summarize his achievements) in two categories: strikeouts (`SO`) and walks (`BB`).  Also display his Strikeouts to Walks ratio. A Strikeout to Walks ratio is calculated by this equation: $\frac{Strikeouts}{Walks}$. 
 
@@ -5622,6 +5643,13 @@ dbGetQuery(con, "SELECT * FROM battings LIMIT 5;")
 - The result of running the R code.
 ```
 
+##### Solution
+
+```{r, eval=F}
+dbGetQuery(con, "SELECT playerID FROM people WHERE nameFirst ='Corey' AND nameLast = 'Kluber';")
+dbGetQuery(con, "SELECT SUM(SO), SUM(BB), SUM(SO)/SUM(BB) FROM pitching WHERE playerID ='klubeco01';")
+```
+
 ##### 4. How many times in total has Giancarlo Stanton struck out in years in which he played for "MIA" or "FLO"?
 
 **Hint:** Use the `people` table to find the `playerID` and use the `batting` table to find the statistics.
@@ -5635,6 +5663,13 @@ dbGetQuery(con, "SELECT * FROM battings LIMIT 5;")
 - The result of running the R code.
 ```
 
+##### Solution
+
+```{r, eval=F}
+dbGetQuery(con, "SELECT playerID FROM people WHERE nameFirst ='Giancarlo' AND nameLast = 'Stanton';")
+dbGetQuery(con, "SELECT COUNT(*), SUM(SO) FROM batting WHERE playerID = 'stantmi03' AND (teamID = 'MIA' OR teamID = 'FLO');")
+```
+
 ##### 5. The [Batting Average](https://en.wikipedia.org/wiki/Batting_average_(baseball)) is a metric for a batter's performance. The Batting Average in a year is calculated by $\frac{H}{AB}$ (the number of hits divided by at-bats).  Considering (only) the years between 2000 and 2010, calculate the (seasonal) Batting Average for each batter who had more than 300 at-bats in a season. List the top 5 batting averages next to `playerID`, `teamID`, and `yearID.`
 
 **Hint:** Use the `batting` table.
@@ -5646,6 +5681,14 @@ dbGetQuery(con, "SELECT * FROM battings LIMIT 5;")
 
 - R code used to solve the problem.
 - The result of running the R code.
+```
+
+##### Solution
+
+```{r, eval=F}
+dbGetQuery(con,"SELECT playerID, teamID, yearID, H, AB, H/AB FROM batting
+  WHERE yearID BETWEEN 2000 AND 2010 AND AB>300
+  ORDER BY H/AB DESC LIMIT 5;")
 ```
 
 ##### 6. How many unique players have hit > 50 home runs (`HR`) in a season? 
@@ -5663,6 +5706,15 @@ dbGetQuery(con, "SELECT * FROM battings LIMIT 5;")
 - The result of running the R code.
 ```
 
+##### Solution
+
+```{r, eval=F}
+dbGetQuery(con, "SELECT COUNT(DISTINCT playerID) FROM batting WHERE HR>50;")
+# As you can see, DISTINCT is with the field playerID, not with SELECT. 
+# The following query should help distinguish this.
+dbGetQuery(con, "SELECT COUNT(DISTINCT playerID), COUNT(playerID) FROM batting WHERE HR>50;")
+```
+
 ##### 7. Find the number of unique players that attended Purdue University. Start by finding the `schoolID` for Purdue and then find the number of players who played there. Do the same for IU. Who had more? Purdue or IU? Use the information you have in the database, and the power of R to create a misleading graphic that makes Purdue look better than IU, even if just at first glance. Make sure you label the graphic.
 
 **Hint:** Use the `schools` table to get the `schoolID`s, and the `collegeplaying` table to get the statistics.
@@ -5678,6 +5730,17 @@ dbGetQuery(con, "SELECT * FROM battings LIMIT 5;")
 
 - R code used to solve the problem.
 - The result of running the R code.
+```
+
+```{r, eval=F}
+dbGetQuery(con, "SELECT schoolID FROM schools WHERE name_full='Purdue University';")
+dbGetQuery(con, "SELECT schoolID FROM schools WHERE LIKE '%indiana%';")
+dbGetQuery(con,"SELECT COUNT(DISTINCT playerID) FROM collegeplaying WHERE schoolID ='purdue';")
+dbGetQuery(con,"SELECT DISTINCT playerID FROM collegeplaying WHERE schoolID ='indiana';")
+purdue <- length(unique(dbGetQuery(con,"SELECT playerID FROM collegeplaying WHERE schoolID ='purdue';"))$playerID)
+iu <- length(unique(dbGetQuery(con,"SELECT playerID FROM collegeplaying WHERE schoolID ='indiana';"))$playerID)
+barplot(purdue, iu)
+barplot(log(c(purdue, iu)), main="Pro baseball players: Indiana vs. Purdue", col=c("#990000","#CFB53B"), names.arg=c("Purdue", "IU"), cex.names=.5, ylab="Log count")
 ```
 
 ---
