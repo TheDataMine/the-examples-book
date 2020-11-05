@@ -4889,6 +4889,27 @@ Sometimes if you are about to dig into a dataset, it is good to quickly do some 
 - 1-2 sentences explaining whether or not the results are what you expected.
 ```
 
+##### Solution
+
+```{bash, eval=F}
+cut -d, -f3 1987.csv | sort -nu
+cut -d, -f4 1987.csv | sort -nu
+cut -d, -f2 1987.csv | sort -nu
+```
+
+```{bash, eval=F}
+# We can print the unique values in the DayOfWeek, DayOfMonth, and Month,
+# using these three respectively pipelines in bash shell:
+cat /class/datamine/data/flights/subset/1987.csv | cut -d, -f4 | sort | uniq
+cat /class/datamine/data/flights/subset/1987.csv | cut -d, -f3 | sort | uniq
+cat /class/datamine/data/flights/subset/1987.csv | cut -d, -f2 | sort | uniq
+
+# or we can do this equivalently with awk:
+cat /class/datamine/data/flights/subset/1987.csv | awk -F, '{print $4}' | sort | uniq
+cat /class/datamine/data/flights/subset/1987.csv | awk -F, '{print $3}' | sort | uniq
+cat /class/datamine/data/flights/subset/1987.csv | awk -F, '{print $2}' | sort | uniq
+```
+
 ##### 2. Our files should have 29 columns. For a given file, write a line of code that prints any lines that do *not* have 29 columns. Test it on `1987.csv`, were there any rows without 29 columns?
 
 **Hint:** See [here](#unix-awk-built-in-variables). `NF` looks like it may be useful!
@@ -4902,6 +4923,20 @@ Sometimes if you are about to dig into a dataset, it is good to quickly do some 
 - 1-2 sentences explaining whether or not there were any rows without 29 columns.
 ```
 
+##### Solution
+
+```{bash, eval=F}
+awk -F, '{if (NF != 29) print $0}' 1987.csv
+```
+
+```{bash, eval=F}
+# We can print any lines that do not have 29 columns, as follows:
+cat /class/datamine/data/flights/subset/1987.csv | awk -F, '{if (NF !=
+29) {print $0}}'
+# Note that there are no such lines.
+# In other words, every line has exactly 29 columns.
+```
+
 ##### 3. Write a bash script that, given a "begin" year and "end" year, cycles through the associated files and prints any lines that do *not* have 29 columns.
 
 **Relevant topics:** [awk](#awk), [bash scripts](#unix-writing-scripts)
@@ -4911,6 +4946,35 @@ Sometimes if you are about to dig into a dataset, it is good to quickly do some 
 
 - The content of your bash script (starting with "#!/bin/bash") in a code chunk.
 - The results of running your bash scripts from year 1987 to 2008.
+```
+
+##### Solution
+
+```{bash, eval=F}
+#!/bin/bash
+for ((f=$1; f<=$2; f++)); do
+  awk -F, '{if (NF != 29) print $0}' $f.csv
+done
+```
+
+```{bash, eval=F}
+# Here is a bash script for which the variable i cycles through the
+# desired years, and the script prints any lines that do not have 29 fields.
+
+#!/bin/bash
+for (( i=$1; i<=$2; i++ ))
+  do
+cat /class/datamine/data/flights/subset/${i}.csv | awk -F, '{if (NF
+!= 29) {print $0}}'
+done
+
+# change permissions, to make the script executable
+chmod 755 myscript.sh 
+
+./myscript.sh 1987 2008  # run the bash script
+
+# As in question 2, note that there are no such lines.
+# In other words, every line has exactly 29 columns.
 ```
 
 ##### 4. `awk` is a really good tool to quickly get some data and manipulate it a little bit. The column `Distance` contains the distances of the flights in miles. Use `awk` to calculate the total distance traveled by the flights in 1990, and show the results in both miles and kilometers. To convert from miles to kilometers, simply multiply by 1.609344.
@@ -4929,6 +4993,20 @@ Kilometers: 19867.35168
 
 - The code used to solve the problem. 
 - The results of running the code.
+```
+
+##### Solution
+
+```{bash, eval=F}
+awk -F, '{miles=miles+$19}END{print "Miles: " miles, "\nKilometers:" miles*1.609344}' 1990.csv
+```
+
+```{bash, eval=F}
+# The total distance traveled in miles is stored in mytotaldistance
+# and at the end, we print mytotaldistance (which is given in miles)
+# and also mytotaldistance*1.609344 (which is the total distance in
+# kilometers).
+cat /class/datamine/data/flights/subset/1990.csv | awk -F, '{mytotaldistance = mytotaldistance + $19} END{print "The total distance is ", mytotaldistance, " miles."; print "Equivalently, this is ", mytotaldistance*1.609344, " kilometers."}'
 ```
 
 ##### 5. Use `awk` to calculate the sum of the number of `DepDelay` minutes, grouped according to `DayOfWeek`. Use `2007.csv`.
@@ -4957,6 +5035,18 @@ DayOfWeek:  0
 - The output from running the code.
 ```
 
+##### Solution
+
+```{bash, eval=F}
+awk -F, '{delay[$4]=delay[$4]+$16}END{for (d in delay) print d": ", delay[d]}' 2007.csv | sort -n
+```
+
+```{bash, eval=F}
+# We store the DepDelay in an array called mytotaldelays:
+cat /class/datamine/data/flights/subset/2007.csv | awk -F, '{mytotaldelays[$4] = mytotaldelays[$4] + $16} END{for (i=1; i<=7; i++) {print "The total DepDelay in minutes is ", mytotaldelays[i], " on day
+", i, " of the week."}}'
+```
+
 ##### 6. It wouldn't be fair to compare the total `DepDelay` minutes by `DayOfWeek` as the number of flights may vary. One way to take this into account is to instead calculate an average. Modify (5) to calculate the average number of `DepDelay` minutes by the number of flights per `DayOfWeek`. Use `2007.csv`.
 
 **Example output:**
@@ -4979,6 +5069,17 @@ DayOfWeek:  0
 
 - The code used to solve the problem.
 - The output from running the code.
+```
+
+##### Solution
+
+```{bash, eval=F}
+awk -F, '{delay[$4]=delay[$4]+$16; flights[$4]++}END{for (d in delay) print d": ", delay[d]/flights[d]}' 2007.csv | sort -n
+```
+
+```{bash, eval=F}
+# Now we also keep track of mynumberofflights on each day of the week.
+cat /class/datamine/data/flights/subset/2007.csv | awk -F, '{mytotaldelays[$4] = mytotaldelays[$4] + $16; mynumberofflights[$4] = mynumberofflights[$4] + 1} END{for (i=1; i<=7; i++) {print "The average DepDelay in minutes is ", mytotaldelays[i]/mynumberofflights[i], " on day ", i, " of the week."}}'
 ```
 
 ---
