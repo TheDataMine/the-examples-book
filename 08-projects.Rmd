@@ -8393,7 +8393,7 @@ grep -i IND 2007.csv | awk -F, '{taxi=taxi+$20+$21; count++}END{print taxi/count
 
 **Motivation:** A bash script is a powerful tool to perform repeated tasks. RCAC uses bash scripts to automate a variety of tasks. In fact, we use bash scripts on Scholar to do things like link Python kernels to your account, fix potential isues with Firefox, etc. `awk` is a programming language designed for text processing. The combination of these tools can be really powerful and useful for a variety of quick tasks.
 
-**Context:** This is the last part in a series of projects that are designed to exercise skills around UNIX utilities, with a focus on writing bash scripts and `awk`. You will get the opportunity to manipulate data without leaving the terminal. At first it may seem overwhelming, however, with just a little practice you will be able to accomplish data wrangling tasks really efficiently. 
+**Context:** This is the last part in a series of projects that are designed to exercise skills around UNIX utilities, with a focus on writing bash scripts and `awk`. You will get the opportunity to manipulate data without leaving the terminal. At first it may seem overwhelming, however, with just a little practice you will be able to accomplish data wrangling tasks really efficiently.
 
 **Scope:** awk, UNIX utilities, bash scripts
 
@@ -8436,6 +8436,16 @@ An example of the data for the year 1987 can be found [here](https://www.datadep
 - The result: the average number of flights on the weekend days, followed by the average number of flights on the weekdays for the flights during 2008.
 ```
 
+##### Solution
+
+```{bash, eval=F}
+awk -F, '{if ($4 ~ /1|2|3|4/) weekday++; else (weekend++)}END{print weekend,weekday}' 2008.csv
+```
+
+```{bash, eval=F}
+awk -F, '{if ($4 ~ /1|2|3|4/) weekday++; else (weekend++)}END{print weekend/3,weekday/4}' 2008.csv
+```
+
 ##### 2. We want to look to see if there may be some truth to the whole "snow bird" concept where people will travel to warmer states like Florida and Arizona during the Winter. Let's use the tools we've learned to explore this a little bit. 
 
 ##### Take a look at `airports.csv`. In particular run the following:
@@ -8466,6 +8476,12 @@ cat new_airports.csv | wc -l # should be 159 without header
 - Line of `awk` code used to create the new dataset.
 ```
 
+##### Solution
+
+```{bash, eval=F}
+awk -F, '{gsub(/"/, ""); print $0}' airports.csv > new_airports.csv
+```
+
 ##### 3. Write a line of commands that creates a new dataset called `az_fl_airports.txt`. `az_fl_airports.txt` should _only_ contain a list of airport codes for all airports from both Arizona (AZ) and Florida (FL). Use the file we created in (3),`new_airports.csv` as a starting point.
 
 ##### How many airports are there? Did you expect this? Use a line of bash code to count this.
@@ -8490,6 +8506,13 @@ cat az_fl_flights.txt | wc -l # should be 484705
 - 1-2 sentences explaining whether you expected this number of airports.
 ```
 
+##### Solution
+
+```{bash, eval=F}
+awk -F, '{if ($4 == "AZ" || $4 == "FL") print $1}' new_airports.csv > az_fl_airports.txt
+wc -l az_fl_airports.txt
+```
+
 ##### 4. Write a bash script that accepts the start year, end year, and filename containing airport codes (`az_fl_airports.txt`), and outputs the data for flights into or out of any of the airports listed in the provided filename (`az_fl_airports.txt`). The script should output data for flights using _all_ of the years of data in the provided range. Run the bash script to create a new file called `az_fl_flights_total.csv`.
 
 **Relevant topics:** [bash scripts](#writing-scripts), [grep](#grep), [for loop](#r-for-loops), [redirection](#redirection)
@@ -8499,6 +8522,19 @@ cat az_fl_flights.txt | wc -l # should be 484705
 
 - The content of your bash script (starting with "#!/bin/bash") in a code chunk.
 - The line of UNIX code you used to execute the script and create the new dataset.
+```
+
+##### Solution
+
+```{bash, eval=F}
+#!/bin/bash
+for ((f=$1; f<=$2; f++)); do
+  grep -w -F -f $3 $f.csv
+done
+```
+
+```{bash, eval=F}
+./my_script.sh 1987 2008 az_fl_airports.txt > az_fl_flights_total.csv
 ```
 
 ##### 5. Use the newly created dataset, `az_fl_flights_total.csv`, from question 4 to calculate the total number of flights into and out of both states by month, and by year, for a total of 3 columns (year, month, flights). Export this information to a new file called `snowbirds.csv`.
@@ -8516,6 +8552,24 @@ cat az_fl_flights.txt | wc -l # should be 484705
 - Code used to create the visualization in a code chunk.
 - The generated plot as either a png or jpg/jpeg.
 - 1-2 sentences describing your plot and your conclusion.
+```
+
+##### Solution
+
+```{bash, eval=F}
+awk -F, '{M[$1","$2]++}END{for (monthyear in M) print monthyear","M[monthyear]}' az_fl_flights_total.csv > snowbirds.csv
+```
+
+```{r, eval=F}
+library(ggplot2)
+dat <- read.csv("snowbirds.csv", header=F)
+names(dat) <- c("year", "month", "n_flights")
+ggplot(dat) + 
+  geom_line(aes(x=month, y=n_flights, group=year, col = as.factor(year))) + 
+  geom_point(aes(x=month, y=n_flights)) + 
+  theme_classic(base_size=14) + 
+  scale_x_continuous(breaks=1:12, labels = month.abb) +
+  labs(x= 'Month', y='', title = 'Total flights per month in/out AZ and FL (1987-2008)', col='Year')
 ```
 
 ---
