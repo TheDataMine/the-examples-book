@@ -34,6 +34,130 @@ connection <- dbConnect(RMariaDB::MariaDB(),
                       password="your-password")
 ```
 
+## Joins {#sql-joins}
+
+Joins are SQL clauses that combine data from two tables. There are 4 primary types of SQL joins: INNER JOIN, LEFT OUTER JOIN, RIGHT OUTER JOIN, and FULL OUTER JOIN. 
+
+When talking about an SQL JOIN statement, sometimes the first table in the SQL statement is referred to as the "left" table, and the second table is referred to as the right table. For instance, in the following query, `A` is the left table and `B` is the right table.
+
+```{sql, eval=F}
+SELECT * FROM A INNER JOIN B ON A.id=B.a_id;
+```
+
+While there can be cases where using RIGHT JOIN and FULL JOIN can make your SQL statement more concise, both RIGHT JOIN and FULL JOIN are redundant and can be fully emulated using LEFT JOIN and UNION ALL clauses.
+
+For the purposes of illustration, we will be using a common example of a database for an online store. This online store has two primary tables, `orders` and `customers`, shown below.
+
+**orders**
+
+|id|description|customer_id|value|
+|--|-----------|-----------|----:|
+|1|Water bottle|1|15.00|
+|2|Key chain|1|7.50|
+|3|Computer|3|2000.00|
+|4|Thumb drive|3|25.00|
+|5|Notebook|4|9.00|
+|6|Shampoo||5.00|
+|7|Paper||4.00|
+
+**customers**
+
+|id|first_name|last_name|email|
+|--|----------|---------|-----|
+|1|Natalie|Wright|wright@example.com|
+|2|Ana|Sousa|sousa@example.com|
+|3|Ben|Schwartz|schwartz@example.com|
+|4|Chen|Xi|xi@example.com|
+|5|Frank|Zhang|zhang@example.com|
+|6|Tianchi|Liu|liu@example.com|
+|7|Jake|Jons|jons@example.com|
+
+### INNER JOIN {#sql-inner-join}
+
+An INNER JOIN, often referred to as simply JOIN, returns rows/records where there is a match in the right table from the left table. Records from the left table that don't have a match in the right table are excluded. Records from the right table that don't have a match in the left table are also excluded.
+
+This is appropriate any time you need data from two separate tables, but only when the two tables have something in common. For example, what if our online company decided it wanted to query the database to send an email of appreciation for all customers who have placed at least 1 order. In this case, we want _only_ the emails of those who don't appear in _both_ the **customers** and **orders** table.
+
+```{sql, eval=F}
+SELECT customers.email FROM orders INNER JOIN customers ON orders.customer_id=customers.id;
+```
+
+Which would result in the following table.
+
+|email|
+|-----|
+|wright@example.com|
+|schwartz@example.com|
+|xi@example.com|
+
+### LEFT OUTER JOIN {#sql-left-join}
+
+A LEFT OUTER JOIN, often referred to as simply a LEFT JOIN, returns rows/records where every value in the left table is present in addition to additional data from the right table, when there exists a match in the right table.
+
+This is appropriate any time you want all of the data from the left table, and any extra data from the right table if there happens to be a match. For example, what if our online company wanted a list of all orders placed, and if the order wasn't placed from a guest account, send an email to the customer thanking them for their purchase? In this case, it would make sense to append email information to the order when there is a match.
+
+```{sql, eval=F}
+SELECT orders.description, orders.value, customers.email FROM orders LEFT JOIN customers ON order.customer_id=customers.id;
+```
+
+Which would result in the following table, enabling the employee to see orders as well as send out thank you emails.
+
+|description|value|first_name|last_name|email|
+|-----------|----:|
+|Water bottle|15.00|Natalie|Wright|wright@example.com|
+|Key chain|7.50|Natalie|Wright|wright@example.com|
+|Computer|2000.00|Ben|Schwartz|schwartz@example.com|
+|Thumb drive|25.00|Ben|Schwartz|schwartz@example.com|
+|Notebook|9.00|Chen|Xi|xi@example.com|
+|Shampoo|5.00||||
+|Paper|4.00||||
+
+Had we instead used an INNER JOIN, our list would be missing critical order information.
+
+```{sql, eval=F}
+SELECT orders.description, orders.value, customers.email FROM orders INNER JOIN customers ON order.customer_id=customers.id;
+```
+
+|description|value|first_name|last_name|email|
+|-----------|----:|
+|Water bottle|15.00|Natalie|Wright|wright@example.com|
+|Key chain|7.50|Natalie|Wright|wright@example.com|
+|Computer|2000.00|Ben|Schwartz|schwartz@example.com|
+|Thumb drive|25.00|Ben|Schwartz|schwartz@example.com|
+|Notebook|9.00|Chen|Xi|xi@example.com|
+
+## Aliasing
+
+Aliasing is the process of giving a table or a table column a temporary name. Aliases are commonly used to either make the query easier to write, or more readable. An example of using table aliases to make a query shorter would be the following.
+
+```{sql, eval=F}
+SELECT orders.description, orders.value, customers.email FROM orders INNER JOIN customers ON order.customer_id=customers.id;
+```
+
+By using table aliases, this can be reduced greatly.
+
+```{sql, eval=F}
+SELECT o.description, o.value, c.email FROM orders AS o INNER JOIN customers AS c ON o.customer_id=c.id;
+```
+
+Note that aliases only last for the duration of a single query. If we were to subsequently use the following query, it would fail.
+
+```{sql, eval=F}
+SELECT o.description, o.value, c.email FROM o INNER JOIN c ON o.customer_id=c.id;
+```
+
+In addition to table aliases, we can give fields aliases as well. For example, we could reduce `customer_id` to just `c_id`.
+
+```{sql, eval=F}
+SELECT orders.customer_id AS c_id FROM orders INNER JOIN customers ON order.c_id=customers.id;
+```
+
+Alternatively, we could change `customer_id` to `Customer ID`, however, whenever we want an alias to contain spaces, we need to use either double quotes or square brackets.
+
+```{sql, eval=F}
+SELECT orders.customer_id AS "Customer ID" FROM orders INNER JOIN customers ON order."Customer ID"=customers.id;
+```
+
 ### RDBMS {#sql-rdbms}
 
 ### SQL in R {#sql-in-r}
