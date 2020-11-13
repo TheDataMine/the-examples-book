@@ -3016,6 +3016,26 @@ R code used to solve the problem.
 </ul>
 </div>
 </div>
+<div id="solution-59" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">zipc &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;/class/datamine/data/zillow/Zip_time_series.csv&quot;</span>)
+fix_zip &lt;-<span class="st"> </span><span class="cf">function</span>(x) {
+    <span class="cf">if</span> (<span class="kw">nchar</span>(x) <span class="op">==</span><span class="st"> </span><span class="dv">5</span>) {
+        <span class="kw">return</span>(<span class="kw">as.character</span>(x))
+    }
+    <span class="kw">paste0</span>(<span class="kw">strrep</span>(<span class="st">&quot;0&quot;</span>, <span class="dv">5</span><span class="op">-</span><span class="kw">nchar</span>(x)), x)
+}
+<span class="kw">sapply</span>(zipc<span class="op">$</span>RegionName, fix_zip)
+
+<span class="co"># OR</span>
+
+zipc &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;/class/datamine/data/zillow/Zip_time_series.csv&quot;</span>, <span class="dt">colClasses =</span> <span class="kw">c</span>(<span class="st">&quot;RegionName&quot;</span>=<span class="st">&quot;character&quot;</span>))
+
+<span class="co"># OR</span>
+
+zipc &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="kw">fread</span>(<span class="st">&quot;/class/datamine/data/zillow/Zip_time_series.csv&quot;</span>))
+zipc<span class="op">$</span>Date &lt;-<span class="st"> </span><span class="kw">as.Date</span>(zipc<span class="op">$</span>Date)</code></pre></div>
+</div>
 <div id="one-might-assume-that-the-owner-of-a-house-tends-to-value-that-house-more-than-the-buyer.-if-that-was-the-case-perhaps-the-median-listing-price-the-price-which-the-seller-puts-the-house-on-the-market-or-ask-price-would-be-higher-than-the-zhvi-zillow-home-value-index----essentially-an-estimate-of-the-home-value.-for-those-rows-where-both-medianlistingprice_allhomes-and-zhvi_allhomes-have-non-na-values-on-average-how-much-higher-or-lower-is-the-median-listing-price-can-you-think-of-any-other-reasons-why-this-may-be" class="section level5">
 <h5>2. One might assume that the owner of a house tends to value that house more than the buyer. If that was the case, perhaps the median listing price (the price which the seller puts the house on the market, or ask price) would be higher than the ZHVI (Zillow Home Value Index -- essentially an estimate of the home value). For those rows where both <code>MedianListingPrice_AllHomes</code> and <code>ZHVI_AllHomes</code> have non-NA values, on average how much higher or lower is the median listing price? Can you think of any other reasons why this may be?</h5>
 <p><strong>Relevant topics:</strong> <a href="r.html#r-mean">mean</a></p>
@@ -3032,6 +3052,10 @@ The result itself and 1-2 sentences talking about whether or not you can think o
 </li>
 </ul>
 </div>
+</div>
+<div id="solution-60" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">mean</span>(zipc<span class="op">$</span>MedianListingPrice_AllHomes <span class="op">-</span><span class="st"> </span>zipc<span class="op">$</span>ZHVI_AllHomes, <span class="dt">na.rm=</span>T)</code></pre></div>
 </div>
 <div id="convert-the-date-column-to-a-date-using-as.date.-how-many-years-of-data-do-we-have-in-this-dataset-create-a-line-plot-with-lines-for-the-average-medianlistingprice_allhomes-and-average-zhvi_allhomes-by-year.-the-result-should-be-a-single-plot-with-multiple-lines-on-it." class="section level5">
 <h5>3. Convert the <code>Date</code> column to a date using <code>as.Date</code>. How many years of data do we have in this dataset? Create a line plot with lines for the average <code>MedianListingPrice_AllHomes</code> and average <code>ZHVI_AllHomes</code> by year. The result should be a single plot with multiple lines on it.</h5>
@@ -3056,6 +3080,21 @@ The results of running the code.
 </ul>
 </div>
 </div>
+<div id="solution-61" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">zipc<span class="op">$</span>Date &lt;-<span class="st"> </span><span class="kw">as.Date</span>(zipc<span class="op">$</span>Date, <span class="dt">format=</span><span class="st">&quot;%Y-%m-%d&quot;</span>)
+
+zipc<span class="op">$</span>Year &lt;-<span class="st"> </span><span class="kw">cut</span>(zipc<span class="op">$</span>Date, <span class="dt">breaks=</span><span class="st">&quot;year&quot;</span>)
+zipc<span class="op">$</span>Year &lt;-<span class="st"> </span><span class="kw">substr</span>(zipc<span class="op">$</span>Year, <span class="dv">1</span>, <span class="dv">4</span>)
+
+listings &lt;-<span class="st"> </span><span class="kw">tapply</span>(zipc<span class="op">$</span>MedianListingPrice_AllHomes, zipc<span class="op">$</span>Year, mean, <span class="dt">na.rm=</span>T)
+zhvis &lt;-<span class="st"> </span><span class="kw">tapply</span>(zipc<span class="op">$</span>ZHVI_AllHomes, zipc<span class="op">$</span>Year, mean, <span class="dt">na.rm=</span>T)
+
+<span class="kw">plot</span>(<span class="kw">names</span>(listings), listings, <span class="dt">type=</span><span class="st">&quot;l&quot;</span>, <span class="dt">ylim=</span><span class="kw">c</span>(<span class="dv">118000</span>, <span class="dv">320000</span>), <span class="dt">col=</span><span class="st">&quot;blue&quot;</span>, <span class="dt">lwd=</span><span class="dv">2</span>)
+<span class="kw">lines</span>(<span class="kw">names</span>(zhvis), zhvis, <span class="dt">col=</span><span class="st">&quot;tomato&quot;</span>, <span class="dt">lwd=</span><span class="dv">2</span>)
+<span class="kw">legend</span>(<span class="st">&quot;topleft&quot;</span>, <span class="dt">legend=</span><span class="kw">c</span>(<span class="st">&quot;Listing price&quot;</span>, <span class="st">&quot;ZHVI&quot;</span>), <span class="dt">lwd=</span><span class="dv">2</span>, <span class="dt">col=</span><span class="kw">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;tomato&quot;</span>))
+<span class="kw">abline</span>(<span class="dt">v=</span><span class="st">&quot;2008&quot;</span>, <span class="dt">lty=</span><span class="st">&quot;dotted&quot;</span>)</code></pre></div>
+</div>
 <div id="read-classdataminedatazillowstate_time_series.csv-into-a-data.frame-called-states.-calculate-the-average-median-listing-price-by-state-and-create-a-map-using-plot_usmap-from-the-usmap-package-that-shows-the-average-median-price-by-state." class="section level5">
 <h5>4. Read <code>/class/datamine/data/zillow/State_time_series.csv</code> into a data.frame called <code>states</code>. Calculate the average median listing price by state, and create a map using <code>plot_usmap</code> from the <code>usmap</code> package that shows the average median price by state.</h5>
 <p><strong>Hint:</strong> We give a full example about how to plot values, by State, on a map.</p>
@@ -3077,6 +3116,20 @@ The resulting map.
 </ul>
 </div>
 </div>
+<div id="solution-62" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">states &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;/class/datamine/data/zillow/State_time_series.csv&quot;</span>)
+aux &lt;-<span class="st"> </span><span class="kw">tapply</span>(states<span class="op">$</span>MedianListingPrice_AllHomes, states<span class="op">$</span>RegionName, mean, <span class="dt">na.rm=</span>T)
+dat &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">state=</span><span class="kw">names</span>(aux), <span class="dt">val=</span>aux)
+dat<span class="op">$</span>state &lt;-<span class="st"> </span><span class="kw">trimws</span>(<span class="kw">gsub</span>(<span class="st">&#39;([[:upper:]])&#39;</span>, <span class="st">&#39; </span><span class="ch">\\</span><span class="st">1&#39;</span>, dat<span class="op">$</span>state))
+dat<span class="op">$</span>state[dat<span class="op">$</span>state<span class="op">==</span><span class="st">&quot;Districtof Columbia&quot;</span>] &lt;-<span class="st"> &quot;District of Columbia&quot;</span>
+
+<span class="kw">plot_usmap</span>(<span class="dt">data =</span> dat, <span class="dt">values =</span> <span class="st">&quot;val&quot;</span>, <span class="dt">color =</span> <span class="st">&quot;black&quot;</span>) <span class="op">+</span>
+<span class="st">    </span><span class="kw">scale_fill_continuous</span>(<span class="dt">low =</span> <span class="st">&quot;white&quot;</span>, <span class="dt">high =</span> <span class="st">&quot;#C28E0E&quot;</span>,
+                          <span class="dt">name =</span> <span class="st">&quot;Median price listing&quot;</span>,
+                          <span class="dt">label =</span> scales<span class="op">::</span>dollar) <span class="op">+</span>
+<span class="st">    </span><span class="kw">theme</span>(<span class="dt">legend.position =</span> <span class="st">&quot;right&quot;</span>)</code></pre></div>
+</div>
 <div id="read-classdataminedatazillowcounty_time_series.csv-into-a-data.frame-named-counties.-choose-a-state-or-states-that-you-would-like-to-dig-down-into-county-level-data-for-and-create-a-plot-or-plots-like-in-4-that-show-some-interesting-statistic-by-county.-you-can-choose-average-median-listing-price-if-you-so-desire-however-you-dont-need-to-there-are-other-cool-data" class="section level5">
 <h5>5. Read <code>/class/datamine/data/zillow/County_time_series.csv</code> into a data.frame named <code>counties</code>. Choose a state (or states) that you would like to &quot;dig down&quot; into county-level data for, and create a plot (or plots) like in (4) that show some interesting statistic by county. You can choose average median listing price if you so desire, however, you don't need to! There are other cool data!</h5>
 <p><strong>Hint:</strong> Make sure that you remember to aggregate your data by <code>RegionName</code> so the plot renders correctly.</p>
@@ -3096,6 +3149,17 @@ The resulting map.
 </li>
 </ul>
 </div>
+</div>
+<div id="solution-63" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">counties_avg &lt;-<span class="st"> </span><span class="kw">tapply</span>(counties<span class="op">$</span>MedianListingPrice_AllHomes, counties<span class="op">$</span>RegionName, mean, <span class="dt">na.rm=</span>T)
+counties_avg &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">fips =</span> <span class="kw">names</span>(counties_avg), <span class="dt">MedianListingPrice =</span> <span class="kw">unname</span>(counties_avg))
+
+<span class="kw">plot_usmap</span>(<span class="dt">data =</span> counties_avg, <span class="dt">values =</span> <span class="st">&quot;MedianListingPrice&quot;</span>, <span class="dt">include=</span><span class="kw">c</span>(<span class="st">&quot;CA&quot;</span>), <span class="dt">color =</span> <span class="st">&quot;black&quot;</span>) <span class="op">+</span>
+<span class="st">    </span><span class="kw">scale_fill_continuous</span>(<span class="dt">low =</span> <span class="st">&quot;white&quot;</span>, <span class="dt">high =</span> <span class="st">&quot;#C28E0E&quot;</span>,
+                          <span class="dt">name =</span> <span class="st">&quot;Average median price listing&quot;</span>,
+                          <span class="dt">label =</span> scales<span class="op">::</span>dollar) <span class="op">+</span>
+<span class="st">    </span><span class="kw">theme</span>(<span class="dt">legend.position =</span> <span class="st">&quot;right&quot;</span>)</code></pre></div>
 <hr />
 </div>
 </div>
@@ -3803,7 +3867,7 @@ Name(s) of variable(s) that could be used to join them.
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">dat &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;/class/datamine/data/airbnb/brazil/rj/rio-de-janeiro/2019-06-19/data/calendar.csv.gz&quot;</span>)
 <span class="kw">head</span>(dat)</code></pre></div>
 </div>
-<div id="solution-59" class="section level5">
+<div id="solution-64" class="section level5">
 <h5>Solution</h5>
 <p>The <code>calendar.csv.gz</code> file for 2019-07-08 in Hawaii describes the <code>listing_id</code>, <code>date</code>, <code>available</code> (t or f), <code>price</code>, <code>adjusted_price</code>, <code>minimum_nights</code>, and <code>maximum_nights</code></p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hawaii_calendar &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;/class/datamine/data/airbnb/united-states/hi/hawaii/2019-07-08/data/calendar.csv.gz&quot;</span>)</code></pre></div>
@@ -3842,7 +3906,7 @@ Chunk of code for your <code>get_paths_for_country</code> function.
 </ul>
 </div>
 </div>
-<div id="solution-60" class="section level5">
+<div id="solution-65" class="section level5">
 <h5>Solution</h5>
 <p>We extract all 28 of the listings for the United States first:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">myprefix &lt;-<span class="st"> &quot;/class/datamine/data/airbnb/united-states/&quot;</span>
@@ -3874,7 +3938,7 @@ Chunk of code for your <code>get_data_for_country</code> function.
 </ul>
 </div>
 </div>
-<div id="solution-61" class="section level5">
+<div id="solution-66" class="section level5">
 <h5>Solution</h5>
 <p>We first get the data from the Canada entries. To do this, we sapply the <code>read.csv</code> function to each of the 6 results from <code>get_paths_for_country(&quot;canada&quot;)</code> In other words, we read in these 6 data frames.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">myresults &lt;-<span class="st"> </span><span class="kw">sapply</span>(<span class="kw">get_paths_for_country</span>(<span class="st">&quot;canada&quot;</span>), read.csv, <span class="dt">stringsAsFactors=</span>F, <span class="dt">simplify=</span>F)</code></pre></div>
@@ -3929,7 +3993,7 @@ Type of <code>transform_column(listings$host_is_superhost)</code>.
 </ul>
 </div>
 </div>
-<div id="solution-62" class="section level5">
+<div id="solution-67" class="section level5">
 <h5>Solution</h5>
 <p>These 4 columns from <code>mynewbigDF</code> (which has the data for Canada) only have values <code>&quot;t&quot;, &quot;f&quot;, &quot;&quot;</code></p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(mynewbigDF<span class="op">$</span>host_is_superhost)
@@ -4016,7 +4080,7 @@ Chunk of code to get a frequency table.
 </ul>
 </div>
 </div>
-<div id="solution-63" class="section level5">
+<div id="solution-68" class="section level5">
 <h5>Solution</h5>
 <p>Now we look at the Canada results, for which <code>instant_bookable</code> is <code>TRUE</code>, to see if <code>is_location_exact</code> is <code>TRUE</code> or <code>FALSE</code>:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">table</span>(<span class="kw">transform_column</span>(mynewbigDF<span class="op">$</span>is_location_exact)[<span class="kw">transform_column</span>(mynewbigDF<span class="op">$</span>instant_bookable) <span class="op">==</span><span class="st"> </span><span class="ot">TRUE</span>])</code></pre></div>
@@ -4062,7 +4126,7 @@ Some *marked* **up** text.
 </p>
 </div>
 </div>
-<div id="solution-64" class="section level5">
+<div id="solution-69" class="section level5">
 <h5>Solution</h5>
 <p>We can achieve this style of text:</p>
 <p><strong>This needs to be **very** bold</strong></p>
@@ -4083,7 +4147,7 @@ _This needs to be \_very\_ italicized._</code></pre>
 </p>
 </div>
 </div>
-<div id="solution-65" class="section level5">
+<div id="solution-70" class="section level5">
 <h5>Solution</h5>
 <p>An unordered list of my top 3 favorite academic interests is:</p>
 <ul>
@@ -4111,7 +4175,7 @@ _This needs to be \_very\_ italicized._</code></pre>
 </p>
 </div>
 </div>
-<div id="solution-66" class="section level5">
+<div id="solution-71" class="section level5">
 <h5>Solution</h5>
 </div>
 <div id="about" class="section level5">
@@ -4178,7 +4242,7 @@ Make improvements to this section, and place it all under the Question 4 header 
 </ul>
 </div>
 </div>
-<div id="solution-67" class="section level5">
+<div id="solution-72" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_variable &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>)</code></pre></div>
 <p>*** All About the Iris Dataset</p>
@@ -4208,11 +4272,11 @@ Code chunk under that creates and displays a plot using a built-in dataset like 
 </ul>
 </div>
 </div>
-<div id="solution-68" class="section level5">
+<div id="solution-73" class="section level5">
 <h5>Solution</h5>
 <p>We create the figure called &quot;Sepal Length for the Iris Data Set&quot;.</p>
-<div class="figure"><span id="fig:unnamed-chunk-875"></span>
-<img src="the-datamine-examples_files/figure-html/unnamed-chunk-875-1.png" alt="Sepal Length for the Iris Data Set" width="672" />
+<div class="figure"><span id="fig:unnamed-chunk-880"></span>
+<img src="the-datamine-examples_files/figure-html/unnamed-chunk-880-1.png" alt="Sepal Length for the Iris Data Set" width="672" />
 <p class="caption">
 Figure 1: Sepal Length for the Iris Data Set
 </p>
@@ -4243,7 +4307,7 @@ A sentence explaining what the second problem was.
 </ul>
 </div>
 </div>
-<div id="solution-69" class="section level5">
+<div id="solution-74" class="section level5">
 <h5>Solution</h5>
 <p>We needed to change the section title from <code>install-packages</code> to a new name, since we already had a section with this same title.</p>
 <p>In the section called <code>declare-variable</code>, we had <code>eval=F</code>, and as a result, the variable <code>my_variable</code> was never declared. So we removed the option <code>eval=F</code>.</p>
@@ -4317,7 +4381,7 @@ List of modifications you made to your Global Options.
 </ul>
 </div>
 </div>
-<div id="solution-70" class="section level5">
+<div id="solution-75" class="section level5">
 <h5>Solution</h5>
 <p>Here are some changes Kevin likes:</p>
 <ul>
@@ -4353,7 +4417,7 @@ The <code>bash</code> code used to show your home directory or current directory
 </ul>
 </div>
 </div>
-<div id="solution-71" class="section level5">
+<div id="solution-76" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># whatever is stored in the $HOME environment variable </span>
 <span class="co"># is what ~ represents</span>
@@ -4408,7 +4472,7 @@ Command used to confirm you are in the home directory.
 </ul>
 </div>
 </div>
-<div id="solution-72" class="section level5">
+<div id="solution-77" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># navigate to the data directory using `cd` (change directory)</span>
 <span class="bu">cd</span> /class/datamine/data
@@ -4457,7 +4521,7 @@ Command used to navigate back to your home directory that uses a <em>relative</e
 </ul>
 </div>
 </div>
-<div id="solution-73" class="section level5">
+<div id="solution-78" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="bu">cd</span> /class/datamine/data
 <span class="bu">pwd</span>
@@ -4533,7 +4597,7 @@ Number of kilobytes that the script takes up.
 </ul>
 </div>
 </div>
-<div id="solution-74" class="section level5">
+<div id="solution-79" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># navigate to my scratch folder</span>
 <span class="bu">cd</span> /scratch/scholar/<span class="va">$USER</span>
@@ -4602,7 +4666,7 @@ Command used to remove the <code>im_empty.txt</code> file.
 </ul>
 </div>
 </div>
-<div id="solution-75" class="section level5">
+<div id="solution-80" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># navigate to the scratch folder</span>
 <span class="bu">cd</span> /scratch/scholar/<span class="va">$USER</span>
@@ -4676,7 +4740,7 @@ The name and location in Scholar of the dataset.
 </ul>
 </div>
 </div>
-<div id="solution-76" class="section level5">
+<div id="solution-81" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">grep</span> -Ri <span class="st">&quot;bears. beets. battlestar galactica.&quot;</span> /class/datamine </code></pre></div>
 <p><code>/class/datamine/data/movies_and_tv/the_office_dialogue.csv</code></p>
@@ -4701,7 +4765,7 @@ The line of UNIX commands used to find the character and original dialogue line 
 </ul>
 </div>
 </div>
-<div id="solution-77" class="section level5">
+<div id="solution-82" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">grep</span> -i <span class="st">&quot;bears. beets. battlestar galactica.&quot;</span> /class/datamine/data/movies_and_tv/the_office_dialogue.csv <span class="kw">|</span> <span class="fu">cut</span> -d <span class="st">&quot;,&quot;</span> -f 7,8  </code></pre></div>
 </div>
@@ -4727,7 +4791,7 @@ The number of megabytes (to the nearest 1/10th of a megabyte) that the new file 
 </ul>
 </div>
 </div>
-<div id="solution-78" class="section level5">
+<div id="solution-83" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">grep</span> -i <span class="st">&quot;jim\|pam&quot;</span> /class/datamine/data/movies_and_tv/the_office_dialogue.csv <span class="kw">|</span> <span class="fu">cut</span> -d <span class="st">&quot;,&quot;</span> -f4,7,8,9,12 <span class="op">&gt;</span> jim_and_pam.csv</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">wc</span> -l jim_and_pam.csv</code></pre></div>
@@ -4752,7 +4816,7 @@ The number of lines where either Jim/Pam/Michael/Dwight's name is followed by an
 </ul>
 </div>
 </div>
-<div id="solution-79" class="section level5">
+<div id="solution-84" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">grep</span> -E <span class="st">&#39;(Jim|Pam|Michael|Dwight)!&#39;</span> the_office_dialogue.csv
 
@@ -4777,7 +4841,7 @@ The number of lines that contain the text &quot;that's what&quot; followed by an
 </ul>
 </div>
 </div>
-<div id="solution-80" class="section level5">
+<div id="solution-85" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">grep</span> -i <span class="st">&quot;that&#39;s what .* said&quot;</span> /class/datamine/data/movies_and_tv/the_office_dialogue.csv</code></pre></div>
 <p>Regular expressions are really a useful semi language-agnostic tool. What this means is regardless of the programming language your are using, there will be some package that allows you to use regular expressions. In fact, we can use them in both R and Python! This can be particularly useful when dealing with strings. Load up the dataset you discovered in (1) using <code>read.csv</code>. Name the resulting data.frame <code>dat</code>.</p>
@@ -4818,7 +4882,7 @@ How many lines have &gt;= 5 directions?
 </ul>
 </div>
 </div>
-<div id="solution-81" class="section level5">
+<div id="solution-86" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">dat<span class="op">$</span>has_direction &lt;-<span class="st"> </span><span class="kw">grepl</span>(<span class="st">&quot;(</span><span class="ch">\\</span><span class="st">[.*</span><span class="ch">\\</span><span class="st">])+&quot;</span>, dat<span class="op">$</span>text_w_direction)
 
@@ -4847,7 +4911,7 @@ The R code used to solve this problem.
 </ul>
 </div>
 </div>
-<div id="solution-82" class="section level5">
+<div id="solution-87" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">dat<span class="op">$</span>direction_correct &lt;-<span class="st"> </span><span class="kw">str_extract_all</span>(dat<span class="op">$</span>text_w_direction, <span class="st">&quot;(</span><span class="ch">\\</span><span class="st">[[^</span><span class="ch">\\</span><span class="st">[</span><span class="ch">\\</span><span class="st">]]*</span><span class="ch">\\</span><span class="st">])&quot;</span>, <span class="dt">simplify=</span>F)
 
@@ -4928,7 +4992,7 @@ The <code>Id</code> of the most helpful review.
 </ul>
 </div>
 </div>
-<div id="solution-83" class="section level5">
+<div id="solution-88" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f5 amazon_fine_food_reviews.csv<span class="kw">|</span> <span class="fu">sort</span> -nr <span class="kw">|</span> <span class="fu">head</span> -n3</code></pre></div>
 </div>
@@ -4952,7 +5016,7 @@ The ratio of unique <code>Summary</code>'s.
 </ul>
 </div>
 </div>
-<div id="solution-84" class="section level5">
+<div id="solution-89" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f9 amazon_fine_food_reviews.csv <span class="kw">|</span> <span class="fu">sort</span> -u <span class="kw">|</span> <span class="fu">wc</span> -l
 <span class="fu">cut</span> -d, -f9 amazon_fine_food_reviews.csv <span class="kw">|</span> <span class="fu">wc</span> -l
@@ -4976,7 +5040,7 @@ The frequency table.
 </ul>
 </div>
 </div>
-<div id="solution-85" class="section level5">
+<div id="solution-90" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f7 amazon_fine_food_reviews.csv <span class="kw">|</span> <span class="fu">sort</span> -n <span class="kw">|</span> <span class="fu">uniq</span> -c</code></pre></div>
 </div>
@@ -5000,7 +5064,7 @@ The frequency table.
 </ul>
 </div>
 </div>
-<div id="solution-86" class="section level5">
+<div id="solution-91" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f3 amazon_fine_food_reviews.csv <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span> -c <span class="kw">|</span> <span class="fu">sort</span> -nr <span class="kw">|</span> <span class="fu">head</span> -n1
 
@@ -5021,7 +5085,7 @@ The line of UNIX commands used to solve the problem.
 </ul>
 </div>
 </div>
-<div id="solution-87" class="section level5">
+<div id="solution-92" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">grep</span> -i <span class="st">&#39;A3OXHLG6DIBRW8&#39;</span> amazon_fine_food_reviews.csv <span class="kw">|</span> <span class="fu">cut</span> -d, -f7 <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span> -c</code></pre></div>
 </div>
@@ -5043,7 +5107,7 @@ The lines of UNIX commands used to solve the problem.
 </ul>
 </div>
 </div>
-<div id="solution-88" class="section level5">
+<div id="solution-93" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">sort</span> -t, -k7rn,7 -k5rn,5 amazon_fine_food_reviews.csv <span class="kw">|</span> <span class="fu">head</span> -n2
 <span class="fu">sort</span> -t, -k7n,7 -k5rn,5 amazon_fine_food_reviews.csv <span class="kw">|</span> <span class="fu">head</span> -n2</code></pre></div>
@@ -5062,7 +5126,7 @@ The line of UNIX commands used to solve the problem.
 </ul>
 </div>
 </div>
-<div id="solution-89" class="section level5">
+<div id="solution-94" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f2,7 amazon_fine_food_reviews.csv<span class="kw">|</span> <span class="fu">grep</span> -Ei <span class="st">&#39;(B00012182G|B003EMQGVI|B00065LI0A)&#39;</span> <span class="op">&gt;</span> scores.csv</code></pre></div>
 <hr />
@@ -5119,7 +5183,7 @@ One line of UNIX commands to solve the problem using <code>awk</code>.
 </ul>
 </div>
 </div>
-<div id="solution-90" class="section level5">
+<div id="solution-95" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f17 1987.csv
 <span class="fu">awk</span> -F, <span class="st">&#39;{print $17}&#39;</span> 1987.csv</code></pre></div>
@@ -5170,7 +5234,7 @@ The content of your bash script (starting with <code>#!/bin/bash</code>) in a co
 </ul>
 </div>
 </div>
-<div id="solution-91" class="section level5">
+<div id="solution-96" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co">#!/bin/bash</span>
 <span class="fu">awk</span> -F, -v col=<span class="va">$2</span> <span class="st">&#39;{print $col}&#39;</span> <span class="va">$1</span>.csv</code></pre></div>
@@ -5197,7 +5261,7 @@ The number of flights that arrived at Indianapolis (IND) in 2008.
 </ul>
 </div>
 </div>
-<div id="solution-92" class="section level5">
+<div id="solution-97" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f18 2008.csv <span class="kw">|</span> <span class="fu">grep</span> <span class="st">&#39;IND&#39;</span> <span class="kw">|</span> <span class="fu">wc</span> -l
 <span class="fu">awk</span> -F, <span class="st">&#39;{if ($18 == &quot;IND&quot;) count++}END{print count}&#39;</span> 2008.csv</code></pre></div>
@@ -5224,7 +5288,7 @@ The number of unique values per category (<code>Origin</code>, <code>Dest</code>
 </ul>
 </div>
 </div>
-<div id="solution-93" class="section level5">
+<div id="solution-98" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f17 2008.csv <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span> <span class="kw">|</span> <span class="fu">wc</span> -l
 <span class="fu">cut</span> -d, -f18 2008.csv <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span> <span class="kw">|</span> <span class="fu">wc</span> -l</code></pre></div>
@@ -5250,7 +5314,7 @@ The list of <code>Dest</code>s that don't appear in <code>Origin</code>.
 </ul>
 </div>
 </div>
-<div id="solution-94" class="section level5">
+<div id="solution-99" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">comm</span> -23 <span class="op">&lt;(</span><span class="fu">cut</span> -d, -f17 2008.csv <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span><span class="op">)</span> <span class="op">&lt;(</span><span class="fu">cut</span> -d, -f18 2008.csv <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span><span class="op">)</span>
 <span class="fu">comm</span> -13 <span class="op">&lt;(</span><span class="fu">cut</span> -d, -f17 2008.csv <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span><span class="op">)</span> <span class="op">&lt;(</span><span class="fu">cut</span> -d, -f18 2008.csv <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span><span class="op">)</span></code></pre></div>
@@ -5275,7 +5339,7 @@ The percentage of flights in 2008 per unique <code>Origin</code> with the <code>
 </ul>
 </div>
 </div>
-<div id="solution-95" class="section level5">
+<div id="solution-100" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{if($18==&quot;IND&quot;) print $17}&#39;</span> 2008.csv <span class="kw">|</span> <span class="fu">sort</span> -u <span class="kw">|</span> <span class="fu">wc</span> -l
 <span class="fu">awk</span> -F, <span class="st">&#39;{if($18==&quot;IND&quot;) print $17}&#39;</span> 2008.csv <span class="kw">|</span> <span class="fu">grep</span> -i PHX <span class="kw">|</span> <span class="fu">wc</span> -l</code></pre></div>
@@ -5300,7 +5364,7 @@ The output of the script given <code>1991</code> and <code>ORD</code> as inputs.
 </ul>
 </div>
 </div>
-<div id="solution-96" class="section level5">
+<div id="solution-101" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co">#!/bin/bash</span>
 <span class="va">FLIGHTS_OUT=</span><span class="st">&quot;</span><span class="va">$(</span><span class="fu">cut</span> -d, -f17 <span class="va">$1</span>.csv <span class="kw">|</span> <span class="fu">grep</span> -i <span class="va">$2</span> <span class="kw">|</span> <span class="fu">wc</span> -l<span class="va">)</span><span class="st">&quot;</span>
@@ -5354,7 +5418,7 @@ Use piping and redirection within the terminal to pass around data between utili
 </ul>
 </div>
 </div>
-<div id="solution-97" class="section level5">
+<div id="solution-102" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f3 1987.csv <span class="kw">|</span> <span class="fu">sort</span> -nu
 <span class="fu">cut</span> -d, -f4 1987.csv <span class="kw">|</span> <span class="fu">sort</span> -nu
@@ -5388,7 +5452,7 @@ Line of code used to solve the problem.
 </ul>
 </div>
 </div>
-<div id="solution-98" class="section level5">
+<div id="solution-103" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{if (NF != 29) print $0}&#39;</span> 1987.csv</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># We can print any lines that do not have 29 columns, as follows:</span>
@@ -5414,7 +5478,7 @@ The results of running your bash scripts from year 1987 to 2008.
 </ul>
 </div>
 </div>
-<div id="solution-99" class="section level5">
+<div id="solution-104" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co">#!/bin/bash</span>
 <span class="kw">for</span> <span class="kw">((</span>f=<span class="va">$1</span>; f&lt;=<span class="va">$2</span>; f++<span class="kw">))</span>; <span class="kw">do</span>
@@ -5458,7 +5522,7 @@ The results of running the code.
 </ul>
 </div>
 </div>
-<div id="solution-100" class="section level5">
+<div id="solution-105" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{miles=miles+$19}END{print &quot;Miles: &quot; miles, &quot;\nKilometers:&quot; miles*1.609344}&#39;</span> 1990.csv</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># The total distance traveled in miles is stored in mytotaldistance</span>
@@ -5494,7 +5558,7 @@ The output from running the code.
 </ul>
 </div>
 </div>
-<div id="solution-101" class="section level5">
+<div id="solution-106" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{delay[$4]=delay[$4]+$16}END{for (d in delay) print d&quot;: &quot;, delay[d]}&#39;</span> 2007.csv <span class="kw">|</span> <span class="fu">sort</span> -n</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># We store the DepDelay in an array called mytotaldelays:</span>
@@ -5527,7 +5591,7 @@ The output from running the code.
 </ul>
 </div>
 </div>
-<div id="solution-102" class="section level5">
+<div id="solution-107" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{delay[$4]=delay[$4]+$16; flights[$4]++}END{for (d in delay) print d&quot;: &quot;, delay[d]/flights[d]}&#39;</span> 2007.csv <span class="kw">|</span> <span class="fu">sort</span> -n</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># Now we also keep track of mynumberofflights on each day of the week.</span>
@@ -5583,7 +5647,7 @@ The result: the number of flights on the weekend days, followed by the number of
 </ul>
 </div>
 </div>
-<div id="solution-103" class="section level5">
+<div id="solution-108" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{if ($4==1 || $4==2 || $4==3 || $4==4) weekday++; else (weekend++)}END{print weekend,weekday}&#39;</span> 2008.csv
 <span class="fu">awk</span> -F, <span class="st">&#39;{if ($4 ~ /1|2|3|4/) weekday++; else (weekend++)}END{print weekend,weekday}&#39;</span> 2008.csv</code></pre></div>
@@ -5606,7 +5670,7 @@ The result: the average number of flights on the weekend days, followed by the a
 </ul>
 </div>
 </div>
-<div id="solution-104" class="section level5">
+<div id="solution-109" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{if ($4==1 || $4==2 || $4==3 || $4==4) weekday++; else (weekend++)}END{print weekend/3,weekday/4}&#39;</span> 2008.csv
 <span class="fu">awk</span> -F, <span class="st">&#39;{if ($4 ~ /1|2|3|4/) weekday++; else (weekend++)}END{print weekend/3,weekday/4}&#39;</span> 2008.csv</code></pre></div>
@@ -5637,7 +5701,7 @@ Line of <code>awk</code> code used to create the new dataset.
 </ul>
 </div>
 </div>
-<div id="solution-105" class="section level5">
+<div id="solution-110" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{gsub(/&quot;/, &quot;&quot;); print $0}&#39;</span> airports.csv <span class="op">&gt;</span> new_airports.csv</code></pre></div>
 </div>
@@ -5670,7 +5734,7 @@ The number of airports.
 </ul>
 </div>
 </div>
-<div id="solution-106" class="section level5">
+<div id="solution-111" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{if ($4 == &quot;AZ&quot; || $4 == &quot;FL&quot;) print $1}&#39;</span> new_airports.csv <span class="op">&gt;</span> az_fl_airports.txt
 <span class="fu">wc</span> -l az_fl_airports.txt
@@ -5693,7 +5757,7 @@ The line of UNIX code you used to execute the script and create the new dataset.
 </ul>
 </div>
 </div>
-<div id="solution-107" class="section level5">
+<div id="solution-112" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co">#!/bin/bash</span>
 <span class="kw">for</span> <span class="kw">((</span>f=<span class="va">$1</span>; f&lt;=<span class="va">$2</span>; f++<span class="kw">))</span>; <span class="kw">do</span>
@@ -5770,7 +5834,7 @@ The sqlite3 commands used to figure out how many tables are available.
 </ul>
 </div>
 </div>
-<div id="solution-108" class="section level5">
+<div id="solution-113" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql">.tables</code></pre></div>
 </div>
@@ -5794,7 +5858,7 @@ The first 10 results of the query.
 </ul>
 </div>
 </div>
-<div id="solution-109" class="section level5">
+<div id="solution-114" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> parkname, city <span class="kw">FROM</span> parks <span class="kw">LIMIT</span> <span class="dv">10</span>;</code></pre></div>
 </div>
@@ -5817,7 +5881,7 @@ The first 10 results of the query.
 </ul>
 </div>
 </div>
-<div id="solution-110" class="section level5">
+<div id="solution-115" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> teamID, yearID, teamID, HR <span class="kw">FROM</span> batting <span class="kw">WHERE</span> HR&gt;=<span class="dv">60</span>;</code></pre></div>
 </div>
@@ -5840,7 +5904,7 @@ The first 10 results of the query.
 </ul>
 </div>
 </div>
-<div id="solution-111" class="section level5">
+<div id="solution-116" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> nameFirst, nameLast, birthYear <span class="kw">FROM</span> people
   <span class="kw">WHERE</span> birthMonth==<span class="dv">5</span> <span class="kw">AND</span> birthDay==<span class="dv">29</span>
@@ -5865,7 +5929,7 @@ The first 10 results of the query.
 </ul>
 </div>
 </div>
-<div id="solution-112" class="section level5">
+<div id="solution-117" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> playerID, W, L, SO <span class="kw">FROM</span> pitching 
     <span class="kw">WHERE</span> teamID==<span class="st">&#39;CLE&#39;</span> <span class="kw">AND</span> yearID==<span class="dv">2016</span>
@@ -5892,7 +5956,7 @@ The first 10 results of the query.
 </ul>
 </div>
 </div>
-<div id="solution-113" class="section level5">
+<div id="solution-118" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> teamID, franchID, yearID, W, L, E <span class="kw">FROM</span> teams
   <span class="kw">WHERE</span> yearID <span class="kw">BETWEEN</span> <span class="dv">1960</span> <span class="kw">AND</span> <span class="dv">1970</span>
@@ -5925,7 +5989,7 @@ The first 10 results of the query.
 </ul>
 </div>
 </div>
-<div id="solution-114" class="section level5">
+<div id="solution-119" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> playerID <span class="kw">FROM</span> people
   <span class="kw">WHERE</span> nameFirst==<span class="st">&#39;Bob&#39;</span> <span class="kw">AND</span> nameLast==<span class="st">&#39;Lemon&#39;</span>;</code></pre></div>
@@ -5997,7 +6061,7 @@ Output from running your (potentially modified) <code>head(dbGetQuery(con, &quot
 </ul>
 </div>
 </div>
-<div id="solution-115" class="section level5">
+<div id="solution-120" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(RMariaDB)
 host &lt;-<span class="st"> &quot;scholar-db.rcac.purdue.edu&quot;</span>
@@ -6034,7 +6098,7 @@ The result of running the R code.
 </ul>
 </div>
 </div>
-<div id="solution-116" class="section level5">
+<div id="solution-121" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">dbGetQuery</span>(con,<span class="st">&quot;SELECT DISTINCT COUNT(*) FROM batting WHERE HR&gt;=40 AND SB&gt;=40;&quot;</span>)</code></pre></div>
 </div>
@@ -6058,7 +6122,7 @@ The result of running the R code.
 </ul>
 </div>
 </div>
-<div id="solution-117" class="section level5">
+<div id="solution-122" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">dbGetQuery</span>(con, <span class="st">&quot;SELECT playerID FROM people WHERE nameFirst =&#39;Corey&#39; AND nameLast = &#39;Kluber&#39;;&quot;</span>)
 <span class="kw">dbGetQuery</span>(con, <span class="st">&quot;SELECT SUM(SO), SUM(BB), SUM(SO)/SUM(BB) FROM pitching WHERE playerID =&#39;klubeco01&#39;;&quot;</span>)</code></pre></div>
@@ -6081,7 +6145,7 @@ The result of running the R code.
 </ul>
 </div>
 </div>
-<div id="solution-118" class="section level5">
+<div id="solution-123" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">dbGetQuery</span>(con, <span class="st">&quot;SELECT playerID FROM people WHERE nameFirst =&#39;Giancarlo&#39; AND nameLast = &#39;Stanton&#39;;&quot;</span>)
 <span class="kw">dbGetQuery</span>(con, <span class="st">&quot;SELECT COUNT(*), SUM(SO) FROM batting WHERE playerID = &#39;stantmi03&#39; AND (teamID = &#39;MIA&#39; OR teamID = &#39;FLO&#39;);&quot;</span>)</code></pre></div>
@@ -6104,7 +6168,7 @@ The result of running the R code.
 </ul>
 </div>
 </div>
-<div id="solution-119" class="section level5">
+<div id="solution-124" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">dbGetQuery</span>(con,<span class="st">&quot;SELECT playerID, teamID, yearID, H, AB, H/AB FROM batting</span>
 <span class="st">  WHERE yearID BETWEEN 2000 AND 2010 AND AB&gt;300</span>
@@ -6129,7 +6193,7 @@ The result of running the R code.
 </ul>
 </div>
 </div>
-<div id="solution-120" class="section level5">
+<div id="solution-125" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">dbGetQuery</span>(con, <span class="st">&quot;SELECT COUNT(DISTINCT playerID) FROM batting WHERE HR&gt;50;&quot;</span>)
 <span class="co"># As you can see, DISTINCT is with the field playerID, not with SELECT. </span>
@@ -6253,6 +6317,11 @@ The number of rows in the <code>elections</code> table in the <code>elections</c
 </ul>
 </div>
 </div>
+<div id="solution-126" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">ls</span> -la *.txt <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{ total += $4; }END{print total/1000000}&#39;</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> <span class="fu">COUNT</span>(*) <span class="kw">FROM</span> elections;</code></pre></div>
+</div>
 <div id="write-a-sql-query-using-the-like-command-to-find-a-unique-list-of-zip_codes-that-start-with-479." class="section level5">
 <h5>2. Write a SQL query using the <code>LIKE</code> command to find a unique list of <code>zip_code</code>s that start with &quot;479&quot;.</h5>
 </div>
@@ -6277,6 +6346,11 @@ The first 5 results from running the query.
 </ul>
 </div>
 </div>
+<div id="solution-127" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> <span class="kw">DISTINCT</span> zip_code <span class="kw">FROM</span> elections <span class="kw">WHERE</span> zip_code <span class="kw">LIKE</span> <span class="st">&#39;479%&#39;</span> <span class="kw">LIMIT</span> <span class="dv">5</span>;
+<span class="kw">SELECT</span> <span class="fu">COUNT</span>(<span class="kw">DISTINCT</span> zip_code) <span class="kw">FROM</span> elections <span class="kw">WHERE</span> zip_code <span class="kw">LIKE</span> <span class="st">&#39;479%&#39;</span>;</code></pre></div>
+</div>
 <div id="write-a-sql-query-that-counts-the-number-of-donations-rows-that-are-from-indiana.-how-many-donations-are-from-indiana-rewrite-the-query-and-create-an-alias-for-our-field-so-it-doesnt-read-count-but-rather-indiana-donations." class="section level5">
 <h5>3. Write a SQL query that counts the number of donations (rows) that are from Indiana. How many donations are from Indiana? Rewrite the query and create an <em>alias</em> for our field so it doesn't read <code>COUNT(*)</code> but rather <code>Indiana Donations</code>.</h5>
 <p><strong>Hint:</strong> You may enclose an alias's name in quotation marks (single or double) when the name contains space.</p>
@@ -6295,6 +6369,11 @@ The result of the SQL query.
 </ul>
 </div>
 </div>
+<div id="solution-128" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> <span class="fu">COUNT</span>(*) <span class="kw">FROM</span> elections <span class="kw">WHERE</span> state=<span class="st">&#39;IN&#39;</span>;
+<span class="kw">SELECT</span> <span class="fu">COUNT</span>(*) <span class="kw">AS</span> <span class="st">&#39;Indiana Donations&#39;</span> <span class="kw">FROM</span> elections <span class="kw">WHERE</span> state=<span class="st">&#39;IN&#39;</span>;</code></pre></div>
+</div>
 <div id="rewrite-the-query-in-3-so-the-result-is-displayed-like-in-1234567.-note-if-instead-of-in-we-wanted-oh-only-the-where-clause-should-be-modified-and-the-display-should-automatically-change-to-oh-1234567.-in-other-words-the-state-abbreviation-should-be-dynamic-not-static." class="section level5">
 <h5>4. Rewrite the query in (3) so the result is displayed like: <code>IN: 1234567</code>. Note, if instead of &quot;IN&quot; we wanted &quot;OH&quot;, only the WHERE clause should be modified, and the display should automatically change to <code>OH: 1234567</code>. In other words, the state abbreviation should be dynamic, not static.</h5>
 <p><strong>Note:</strong> This video demonstrates how to use CONCAT in a MySQL query.</p>
@@ -6312,6 +6391,10 @@ SQL query used to answer the question.
 </li>
 </ul>
 </div>
+</div>
+<div id="solution-129" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> <span class="fu">CONCAT</span>(state, <span class="ot">&quot;: &quot;</span>, <span class="fu">COUNT</span>(*)) <span class="kw">AS</span> <span class="st">&#39;Donations&#39;</span> <span class="kw">FROM</span> elections <span class="kw">WHERE</span> state=<span class="st">&#39;IN&#39;</span>;</code></pre></div>
 </div>
 <div id="in-2-we-wrote-a-query-that-returns-a-unique-list-of-zip_codes-that-start-with-479.-in-3-we-wrote-a-query-that-counts-the-number-of-donations-that-are-from-indiana.-use-our-query-from-2-as-a-sub-query-to-find-how-many-donations-come-from-areas-with-zip_codes-starting-with-479.-what-percent-of-donations-in-indiana-come-from-said-zip_codes" class="section level5">
 <h5>5. In (2) we wrote a query that returns a unique list of <code>zip_code</code>s that start with &quot;479&quot;. In (3) we wrote a query that counts the number of donations that are from Indiana. Use our query from (2) as a sub-query to find how many donations come from areas with <code>zip_code</code>s starting with &quot;479&quot;. What percent of donations in Indiana come from said <code>zip_code</code>s?</h5>
@@ -6333,6 +6416,10 @@ The percentage of donations from Indiana from <code>zip_code</code>s starting wi
 </ul>
 </div>
 </div>
+<div id="solution-130" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> <span class="fu">COUNT</span>(*) <span class="kw">FROM</span> elections <span class="kw">WHERE</span> zip_code <span class="kw">IN</span> (<span class="kw">SELECT</span> <span class="kw">DISTINCT</span> zip_code <span class="kw">FROM</span> elections <span class="kw">WHERE</span> zip_code <span class="kw">LIKE</span> <span class="st">&#39;479%&#39;</span>);</code></pre></div>
+</div>
 <div id="in-3-we-wrote-a-query-that-counts-the-number-of-donations-that-are-from-indiana.-when-running-queries-like-this-a-natural-next-question-is-to-ask-the-same-question-about-another-state.-sql-gives-us-the-ability-to-calculate-functions-in-aggregate-when-grouping-by-a-certain-column.-write-a-sql-query-that-returns-the-state-number-of-donations-from-each-state-the-sum-of-the-donations-transaction_amt.-which-5-states-gave-the-most-donations-highest-count-order-you-result-from-most-to-least." class="section level5">
 <h5>6. In (3) we wrote a query that counts the number of donations that are from Indiana. When running queries like this, a natural &quot;next question&quot; is to ask the same question about another state. SQL gives us the ability to calculate functions in aggregate when grouping by a certain column. Write a SQL query that returns the state, number of donations from each state, the sum of the donations (<code>transaction_amt</code>). Which 5 states gave the most donations (highest count)? Order you result from most to least.</h5>
 <p><strong>Note:</strong> In this video we demonstrate <code>GROUP BY</code>, <code>ORDER BY</code>, <code>DESC</code>, and other aspects of MySQL that might help with this question.</p>
@@ -6352,6 +6439,10 @@ Which 5 states gave the most donations?
 </li>
 </ul>
 </div>
+</div>
+<div id="solution-131" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> state, <span class="fu">COUNT</span>(*) <span class="kw">AS</span> <span class="st">&#39;cnt&#39;</span>, <span class="fu">SUM</span>(transaction_amt) <span class="kw">AS</span> <span class="st">&#39;total&#39;</span> <span class="kw">FROM</span> elections <span class="kw">GROUP</span> <span class="kw">BY</span> state <span class="kw">ORDER</span> <span class="kw">BY</span> cnt <span class="kw">DESC</span>;</code></pre></div>
 <hr />
 </div>
 </div>
@@ -6990,7 +7081,7 @@ Name(s) of variable(s) that could be used to join them.
 <span class="kw">head</span>(dat)</code></pre></div>
 <p>Let's work towards getting this data into an easier format to analyze. From now on, we will focus on the <code>listings.csv.gz</code> datasets.</p>
 </div>
-<div id="solution-121" class="section level5">
+<div id="solution-132" class="section level5">
 <h5>Solution</h5>
 <p>The <code>calendar.csv.gz</code> file for 2019-07-08 in Hawaii describes the <code>listing_id</code>, <code>date</code>, <code>available</code> (t or f), <code>price</code>, <code>adjusted_price</code>, <code>minimum_nights</code>, and <code>maximum_nights</code></p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hawaii_calendar &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;/class/datamine/data/airbnb/united-states/hi/hawaii/2019-07-08/data/calendar.csv.gz&quot;</span>)</code></pre></div>
@@ -7028,7 +7119,7 @@ Chunk of code for your <code>get_paths_for_country</code> function.
 </ul>
 </div>
 </div>
-<div id="solution-122" class="section level5">
+<div id="solution-133" class="section level5">
 <h5>Solution</h5>
 <p>We extract all 28 of the listings for the United States first:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">myprefix &lt;-<span class="st"> &quot;/class/datamine/data/airbnb/united-states/&quot;</span>
@@ -7060,7 +7151,7 @@ Chunk of code for your <code>get_data_for_country</code> function.
 </ul>
 </div>
 </div>
-<div id="solution-123" class="section level5">
+<div id="solution-134" class="section level5">
 <h5>Solution</h5>
 <p>We first get the data from the Canada entries. To do this, we sapply the <code>read.csv</code> function to each of the 6 results from <code>get_paths_for_country(&quot;canada&quot;)</code> In other words, we read in these 6 data frames.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">myresults &lt;-<span class="st"> </span><span class="kw">sapply</span>(<span class="kw">get_paths_for_country</span>(<span class="st">&quot;canada&quot;</span>), read.csv, <span class="dt">stringsAsFactors=</span>F, <span class="dt">simplify=</span>F)</code></pre></div>
@@ -7115,7 +7206,7 @@ Type of <code>transform_column(listings$host_is_superhost)</code>.
 </ul>
 </div>
 </div>
-<div id="solution-124" class="section level5">
+<div id="solution-135" class="section level5">
 <h5>Solution</h5>
 <p>These 4 columns from <code>mynewbigDF</code> (which has the data for Canada) only have values <code>&quot;t&quot;, &quot;f&quot;, &quot;&quot;</code></p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(mynewbigDF<span class="op">$</span>host_is_superhost)
@@ -7198,7 +7289,7 @@ Histogram of response rates for super hosts.
 </ul>
 </div>
 </div>
-<div id="solution-125" class="section level5">
+<div id="solution-136" class="section level5">
 <h5>Solution</h5>
 <p>Now we look at the Canada results, for which <code>host_is_superhost</code> is <code>TRUE</code>. We make a histogram of the <code>host_response_rate</code> for those values. To do this, we first get the <code>host_response_rate</code> values (for which <code>host_is_superhost</code> is <code>TRUE</code>)</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">myvalues &lt;-<span class="st"> </span>mynewbigDF<span class="op">$</span>host_response_rate[<span class="kw">transform_column</span>(mynewbigDF<span class="op">$</span>host_is_superhost) <span class="op">==</span><span class="st"> </span><span class="ot">TRUE</span>]</code></pre></div>
@@ -7246,7 +7337,7 @@ Some *marked* **up** text.
 </p>
 </div>
 </div>
-<div id="solution-126" class="section level5">
+<div id="solution-137" class="section level5">
 <h5>Solution</h5>
 <p>We can achieve this style of text:</p>
 <p><strong>This needs to be **very** bold</strong></p>
@@ -7267,7 +7358,7 @@ _This needs to be \_very\_ italicized._</code></pre>
 </p>
 </div>
 </div>
-<div id="solution-127" class="section level5">
+<div id="solution-138" class="section level5">
 <h5>Solution</h5>
 <p>An unordered list of my top 3 favorite academic interests is:</p>
 <ul>
@@ -7295,7 +7386,7 @@ _This needs to be \_very\_ italicized._</code></pre>
 </p>
 </div>
 </div>
-<div id="solution-128" class="section level5">
+<div id="solution-139" class="section level5">
 <h5>Solution</h5>
 </div>
 <div id="about-1" class="section level5">
@@ -7324,7 +7415,7 @@ Replicate the equation using LaTeX under the Question 4 header in your template.
 </ul>
 </div>
 </div>
-<div id="solution-129" class="section level5">
+<div id="solution-140" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_variable &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>)</code></pre></div>
 <p>*** All About the Iris Dataset</p>
@@ -7393,11 +7484,11 @@ Make improvements to this section, and place it all under the Question 5 header 
 </ul>
 </div>
 </div>
-<div id="solution-130" class="section level5">
+<div id="solution-141" class="section level5">
 <h5>Solution</h5>
 <p>Here are the <code>Sepal.Length</code> values from the <code>iris</code> data set.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(iris<span class="op">$</span>Sepal.Length, <span class="dt">main=</span><span class="st">&quot;Iris Sepal Lengths&quot;</span>)</code></pre></div>
-<p><img src="the-datamine-examples_files/figure-html/unnamed-chunk-1118-1.png" width="672" /></p>
+<p><img src="the-datamine-examples_files/figure-html/unnamed-chunk-1130-1.png" width="672" /></p>
 </div>
 <div id="create-a-plot-using-a-built-in-dataset-like-iris-mtcars-or-titanic-and-display-the-plot-using-a-code-chunk.-make-sure-the-code-used-to-generate-the-plot-is-hidden.-include-a-descriptive-caption-for-the-image.-make-sure-to-use-an-rmarkdown-chunk-option-to-create-the-caption.-1" class="section level5">
 <h5>6. Create a plot using a built-in dataset like <code>iris</code>, <code>mtcars</code>, or <code>Titanic</code>, and display the plot using a code chunk. Make sure the code used to generate the plot is hidden. Include a descriptive caption for the image. Make sure to use an RMarkdown chunk option to create the caption.</h5>
@@ -7438,7 +7529,7 @@ A sentence explaining what the second problem was.
 </ul>
 </div>
 </div>
-<div id="solution-131" class="section level5">
+<div id="solution-142" class="section level5">
 <h5>Solution</h5>
 <p>We needed to change the section title from <code>install-packages</code> to a new name, since we already had a section with this same title.</p>
 <p>In the section called <code>declare-variable</code>, we had <code>eval=F</code>, and as a result, the variable <code>my_variable</code> was never declared. So we removed the option <code>eval=F</code>.</p>
@@ -7527,7 +7618,7 @@ List of modifications you made to your Global Options.
 </ul>
 </div>
 </div>
-<div id="solution-132" class="section level5">
+<div id="solution-143" class="section level5">
 <h5>Solution</h5>
 <p>Here are some changes Kevin likes:</p>
 <ul>
@@ -7563,7 +7654,7 @@ The <code>bash</code> code used to show your home directory or current directory
 </ul>
 </div>
 </div>
-<div id="solution-133" class="section level5">
+<div id="solution-144" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># whatever is stored in the $HOME environment variable </span>
 <span class="co"># is what ~ represents</span>
@@ -7618,7 +7709,7 @@ Commnad used to confirm you are in the home directory.
 </ul>
 </div>
 </div>
-<div id="solution-134" class="section level5">
+<div id="solution-145" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># navigate to the data directory using `cd` (change directory)</span>
 <span class="bu">cd</span> /class/datamine/data
@@ -7667,7 +7758,7 @@ Command used to navigate back to your home directory that uses a <em>relative</e
 </ul>
 </div>
 </div>
-<div id="solution-135" class="section level5">
+<div id="solution-146" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="bu">cd</span> /class/datamine/data
 <span class="bu">pwd</span>
@@ -7743,7 +7834,7 @@ Number of kilobytes that the script takes up.
 </ul>
 </div>
 </div>
-<div id="solution-136" class="section level5">
+<div id="solution-147" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># navigate to my scratch folder</span>
 <span class="bu">cd</span> /scratch/scholar/<span class="va">$USER</span>
@@ -7812,7 +7903,7 @@ Command used to remove the <code>im_empty.txt</code> file.
 </ul>
 </div>
 </div>
-<div id="solution-137" class="section level5">
+<div id="solution-148" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># navigate to the scratch folder</span>
 <span class="bu">cd</span> /scratch/scholar/<span class="va">$USER</span>
@@ -7891,7 +7982,7 @@ Use <code>grep</code> and <code>grepl</code> within R to solve a data-driven pro
 </ul>
 </div>
 </div>
-<div id="solution-138" class="section level5">
+<div id="solution-149" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">grep</span> -Ri <span class="st">&quot;bears. beets. battlestar galactica.&quot;</span> /class/datamine </code></pre></div>
 <p><code>/class/datamine/data/the_office/the_office_dialogue.csv</code></p>
@@ -7916,7 +8007,7 @@ The line of UNIX commands used to find the character and original dialogue line 
 </ul>
 </div>
 </div>
-<div id="solution-139" class="section level5">
+<div id="solution-150" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">grep</span> -i <span class="st">&quot;bears. beets. battlestar galactica.&quot;</span> /class/datamine/data/movies_and_tv/the_office_dialogue.csv <span class="kw">|</span> <span class="fu">cut</span> -d <span class="st">&quot;,&quot;</span> -f 7,8  </code></pre></div>
 </div>
@@ -7935,7 +8026,7 @@ The UNIX command used to solve this problem.
 </ul>
 </div>
 </div>
-<div id="solution-140" class="section level5">
+<div id="solution-151" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">grep</span> -Pi <span class="st">&#39;(?&lt;!Pam )Beesley&#39;</span></code></pre></div>
 <p>Regular expressions are really a useful semi language-agnostic tool. What this means is regardless of the programming language your are using, there will be some package that allows you to use regular expressions. In fact, we can use them in both R and Python! This can be particularly useful when dealing with strings. Load up the dataset you discovered in (1) using <code>read.csv</code>. Name the resulting data.frame <code>dat</code>.</p>
@@ -7976,7 +8067,7 @@ How many lines have &gt;= 5 directions?
 </ul>
 </div>
 </div>
-<div id="solution-141" class="section level5">
+<div id="solution-152" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">dat<span class="op">$</span>has_direction &lt;-<span class="st"> </span><span class="kw">grepl</span>(<span class="st">&quot;(</span><span class="ch">\\</span><span class="st">[.*</span><span class="ch">\\</span><span class="st">])+&quot;</span>, dat<span class="op">$</span>text_w_direction)
 
@@ -8005,7 +8096,7 @@ The R code used to solve this problem.
 </ul>
 </div>
 </div>
-<div id="solution-142" class="section level5">
+<div id="solution-153" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">dat<span class="op">$</span>direction_correct &lt;-<span class="st"> </span><span class="kw">str_extract_all</span>(dat<span class="op">$</span>text_w_direction, <span class="st">&quot;(</span><span class="ch">\\</span><span class="st">[[^</span><span class="ch">\\</span><span class="st">[</span><span class="ch">\\</span><span class="st">]]*</span><span class="ch">\\</span><span class="st">])&quot;</span>, <span class="dt">simplify=</span>F)
 
@@ -8038,7 +8129,7 @@ The R code used to solve this problem.
 </ul>
 </div>
 </div>
-<div id="solution-143" class="section level5">
+<div id="solution-154" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">dat<span class="op">$</span>direction_correct &lt;-<span class="st"> </span><span class="kw">str_extract_all</span>(dat<span class="op">$</span>text_w_direction, <span class="st">&quot;(</span><span class="ch">\\</span><span class="st">[[^</span><span class="ch">\\</span><span class="st">[</span><span class="ch">\\</span><span class="st">]]*</span><span class="ch">\\</span><span class="st">])&quot;</span>, <span class="dt">simplify=</span>F)
 
@@ -8119,7 +8210,7 @@ The <code>Id</code> of the most helpful review.
 </ul>
 </div>
 </div>
-<div id="solution-144" class="section level5">
+<div id="solution-155" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f5 amazon_fine_food_reviews.csv<span class="kw">|</span> <span class="fu">sort</span> -nr <span class="kw">|</span> <span class="fu">head</span> -n3</code></pre></div>
 </div>
@@ -8143,7 +8234,7 @@ The ratio of unique <code>Summary</code>'s.
 </ul>
 </div>
 </div>
-<div id="solution-145" class="section level5">
+<div id="solution-156" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f9 amazon_fine_food_reviews.csv <span class="kw">|</span> <span class="fu">sort</span> -u <span class="kw">|</span> <span class="fu">wc</span> -l
 <span class="fu">cut</span> -d, -f9 amazon_fine_food_reviews.csv <span class="kw">|</span> <span class="fu">wc</span> -l</code></pre></div>
@@ -8165,7 +8256,7 @@ The frequency table.
 </ul>
 </div>
 </div>
-<div id="solution-146" class="section level5">
+<div id="solution-157" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f7 amazon_fine_food_reviews.csv <span class="kw">|</span> <span class="fu">sort</span> -n <span class="kw">|</span> <span class="fu">uniq</span> -c</code></pre></div>
 </div>
@@ -8189,7 +8280,7 @@ The frequency table.
 </ul>
 </div>
 </div>
-<div id="solution-147" class="section level5">
+<div id="solution-158" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f3 amazon_fine_food_reviews.csv <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span> -c <span class="kw">|</span> <span class="fu">sort</span> -nr <span class="kw">|</span> <span class="fu">head</span> -n1</code></pre></div>
 </div>
@@ -8208,7 +8299,7 @@ The line of UNIX commands used to solve the problem.
 </ul>
 </div>
 </div>
-<div id="solution-148" class="section level5">
+<div id="solution-159" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">grep</span> -i <span class="st">&#39;A3OXHLG6DIBRW8&#39;</span> amazon_fine_food_reviews.csv <span class="kw">|</span> <span class="fu">cut</span> -d, -f7 <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span> -c</code></pre></div>
 </div>
@@ -8230,7 +8321,7 @@ The lines of UNIX commands used to solve the problem.
 </ul>
 </div>
 </div>
-<div id="solution-149" class="section level5">
+<div id="solution-160" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">sort</span> -t, -k7rn,7 -k5rn,5 amazon_fine_food_reviews.csv <span class="kw">|</span> <span class="fu">head</span> -n2
 <span class="fu">sort</span> -t, -k7n,7 -k5rn,5 amazon_fine_food_reviews.csv <span class="kw">|</span> <span class="fu">head</span> -n2</code></pre></div>
@@ -8249,7 +8340,7 @@ The line of UNIX commands used to solve the problem.
 </ul>
 </div>
 </div>
-<div id="solution-150" class="section level5">
+<div id="solution-161" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f2,7 amazon_fine_food_reviews.csv<span class="kw">|</span> <span class="fu">grep</span> -Ei <span class="st">&#39;(B00012182G|B003EMQGVI|B00065LI0A)&#39;</span> <span class="op">&gt;</span> scores.csv</code></pre></div>
 </div>
@@ -8273,7 +8364,7 @@ R code used to create the histograms.
 </ul>
 </div>
 </div>
-<div id="solution-151" class="section level5">
+<div id="solution-162" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">dat &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;scores.csv&quot;</span>, <span class="dt">header=</span>F)
 <span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">3</span>))
@@ -8333,7 +8424,7 @@ One line of UNIX commands to solve the problem using <code>awk</code>.
 </ul>
 </div>
 </div>
-<div id="solution-152" class="section level5">
+<div id="solution-163" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f17 1987.csv
 <span class="fu">awk</span> -F, <span class="st">&#39;{print $17}&#39;</span> 1987.csv</code></pre></div>
@@ -8384,7 +8475,7 @@ The content of your bash script (starting with <code>#!/bin/bash</code>) in a co
 </ul>
 </div>
 </div>
-<div id="solution-153" class="section level5">
+<div id="solution-164" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co">#!/bin/bash</span>
 <span class="fu">awk</span> -F, -v col=<span class="va">$2</span> <span class="st">&#39;{print $col}&#39;</span> <span class="va">$1</span>.csv</code></pre></div>
@@ -8411,7 +8502,7 @@ The number of flights that arrived at Indianapolis (IND) in 2008.
 </ul>
 </div>
 </div>
-<div id="solution-154" class="section level5">
+<div id="solution-165" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f18 2008.csv <span class="kw">|</span> <span class="fu">grep</span> <span class="st">&#39;IND&#39;</span> <span class="kw">|</span> <span class="fu">wc</span> -l
 <span class="fu">awk</span> -F, <span class="st">&#39;{if ($18 == &quot;IND&quot;) count++}END{print count}&#39;</span> 2008.csv</code></pre></div>
@@ -8438,7 +8529,7 @@ The number of unique values per category (<code>Origin</code>, <code>Dest</code>
 </ul>
 </div>
 </div>
-<div id="solution-155" class="section level5">
+<div id="solution-166" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f17 2008.csv <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span> <span class="kw">|</span> <span class="fu">wc</span> -l
 <span class="fu">cut</span> -d, -f18 2008.csv <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span> <span class="kw">|</span> <span class="fu">wc</span> -l</code></pre></div>
@@ -8464,7 +8555,7 @@ The list of <code>Dest</code>s that don't appear in <code>Origin</code>.
 </ul>
 </div>
 </div>
-<div id="solution-156" class="section level5">
+<div id="solution-167" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">comm</span> -23 <span class="op">&lt;(</span><span class="fu">cut</span> -d, -f17 2008.csv <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span><span class="op">)</span> <span class="op">&lt;(</span><span class="fu">cut</span> -d, -f18 2008.csv <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span><span class="op">)</span>
 <span class="fu">comm</span> -13 <span class="op">&lt;(</span><span class="fu">cut</span> -d, -f17 2008.csv <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span><span class="op">)</span> <span class="op">&lt;(</span><span class="fu">cut</span> -d, -f18 2008.csv <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span><span class="op">)</span></code></pre></div>
@@ -8489,7 +8580,7 @@ The percentage of flights in 2008 per unique <code>Origin</code> with the <code>
 </ul>
 </div>
 </div>
-<div id="solution-157" class="section level5">
+<div id="solution-168" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{if($18==&quot;IND&quot;) print $17}&#39;</span> 2008.csv <span class="kw">|</span> <span class="fu">sort</span> -u <span class="kw">|</span> <span class="fu">wc</span> -l
 <span class="fu">awk</span> -F, <span class="st">&#39;{if($18==&quot;IND&quot;) print $17}&#39;</span> 2008.csv <span class="kw">|</span> <span class="fu">grep</span> -i PHX <span class="kw">|</span> <span class="fu">wc</span> -l</code></pre></div>
@@ -8514,7 +8605,7 @@ The output of the script given <code>1991</code> and <code>ORD</code> as inputs.
 </ul>
 </div>
 </div>
-<div id="solution-158" class="section level5">
+<div id="solution-169" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co">#!/bin/bash</span>
 <span class="va">FLIGHTS_OUT=</span><span class="st">&quot;</span><span class="va">$(</span><span class="fu">cut</span> -d, -f17 <span class="va">$1</span>.csv <span class="kw">|</span> <span class="fu">grep</span> -i <span class="va">$2</span> <span class="kw">|</span> <span class="fu">wc</span> -l<span class="va">)</span><span class="st">&quot;</span>
@@ -8535,7 +8626,7 @@ The content of your bash script (starting with &quot;#!/bin/bash&quot;) in a cod
 </ul>
 </div>
 </div>
-<div id="solution-159" class="section level5">
+<div id="solution-170" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co">#!/bin/bash</span>
 <span class="kw">for</span> <span class="kw">((</span>f=<span class="va">$1</span>; f&lt;=<span class="va">$2</span>; f++<span class="kw">))</span>; <span class="kw">do</span> 
@@ -8564,7 +8655,7 @@ R code used to create the chart.
 </ul>
 </div>
 </div>
-<div id="solution-160" class="section level5">
+<div id="solution-171" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">dat &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;my_airport.csv&quot;</span>, <span class="dt">header=</span>F)
 <span class="kw">plot</span>(dat[,<span class="dv">2</span>], dat[,<span class="dv">1</span>],<span class="dt">xlab=</span><span class="st">&quot;Year&quot;</span>, <span class="dt">ylab=</span><span class="st">&quot;Num Flights&quot;</span>, <span class="dt">main=</span><span class="st">&quot;JFK&quot;</span>, <span class="dt">type=</span><span class="st">&quot;l&quot;</span>)</code></pre></div>
@@ -8617,7 +8708,7 @@ Use piping and redirection within the terminal to pass around data between utili
 </ul>
 </div>
 </div>
-<div id="solution-161" class="section level5">
+<div id="solution-172" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">cut</span> -d, -f3 1987.csv <span class="kw">|</span> <span class="fu">sort</span> -nu
 <span class="fu">cut</span> -d, -f4 1987.csv <span class="kw">|</span> <span class="fu">sort</span> -nu
@@ -8641,7 +8732,7 @@ Line of code used to solve the problem.
 </ul>
 </div>
 </div>
-<div id="solution-162" class="section level5">
+<div id="solution-173" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{if (NF != 29) print $0}&#39;</span> 1987.csv</code></pre></div>
 </div>
@@ -8662,7 +8753,7 @@ The results of running your bash scripts from year 1987 to 2008.
 </ul>
 </div>
 </div>
-<div id="solution-163" class="section level5">
+<div id="solution-174" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co">#!/bin/bash</span>
 <span class="kw">for</span> <span class="kw">((</span>f=<span class="va">$1</span>; f&lt;=<span class="va">$2</span>; f++<span class="kw">))</span>; <span class="kw">do</span>
@@ -8689,7 +8780,7 @@ The results of running the code.
 </ul>
 </div>
 </div>
-<div id="solution-164" class="section level5">
+<div id="solution-175" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{miles=miles+$19}END{print &quot;Miles: &quot; miles, &quot;\nKilometers:&quot; miles*1.609344}&#39;</span> 1990.csv</code></pre></div>
 </div>
@@ -8720,7 +8811,7 @@ The output from running the code.
 </ul>
 </div>
 </div>
-<div id="solution-165" class="section level5">
+<div id="solution-176" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{delay[$4]=delay[$4]+$16}END{for (d in delay) print d&quot;: &quot;, delay[d]}&#39;</span> 2007.csv <span class="kw">|</span> <span class="fu">sort</span> -n</code></pre></div>
 </div>
@@ -8750,7 +8841,7 @@ The output from running the code.
 </ul>
 </div>
 </div>
-<div id="solution-166" class="section level5">
+<div id="solution-177" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{delay[$4]=delay[$4]+$16; flights[$4]++}END{for (d in delay) print d&quot;: &quot;, delay[d]/flights[d]}&#39;</span> 2007.csv <span class="kw">|</span> <span class="fu">sort</span> -n</code></pre></div>
 </div>
@@ -8772,7 +8863,7 @@ The output from running the code.
 </ul>
 </div>
 </div>
-<div id="solution-167" class="section level5">
+<div id="solution-178" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">grep</span> -i IND 2007.csv <span class="kw">|</span> <span class="fu">awk</span> -F, <span class="st">&#39;{taxi=taxi+$20+$21; count++}END{print taxi/count}&#39;</span></code></pre></div>
 <hr />
@@ -8833,7 +8924,7 @@ The result: the average number of flights on the weekend days, followed by the a
 </ul>
 </div>
 </div>
-<div id="solution-168" class="section level5">
+<div id="solution-179" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{if ($4 ~ /1|2|3|4/) weekday++; else (weekend++)}END{print weekend,weekday}&#39;</span> 2008.csv</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{if ($4 ~ /1|2|3|4/) weekday++; else (weekend++)}END{print weekend/3,weekday/4}&#39;</span> 2008.csv</code></pre></div>
@@ -8864,7 +8955,7 @@ Line of <code>awk</code> code used to create the new dataset.
 </ul>
 </div>
 </div>
-<div id="solution-169" class="section level5">
+<div id="solution-180" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{gsub(/&quot;/, &quot;&quot;); print $0}&#39;</span> airports.csv <span class="op">&gt;</span> new_airports.csv</code></pre></div>
 </div>
@@ -8897,7 +8988,7 @@ The number of airports.
 </ul>
 </div>
 </div>
-<div id="solution-170" class="section level5">
+<div id="solution-181" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{if ($4 == &quot;AZ&quot; || $4 == &quot;FL&quot;) print $1}&#39;</span> new_airports.csv <span class="op">&gt;</span> az_fl_airports.txt
 <span class="fu">wc</span> -l az_fl_airports.txt</code></pre></div>
@@ -8919,7 +9010,7 @@ The line of UNIX code you used to execute the script and create the new dataset.
 </ul>
 </div>
 </div>
-<div id="solution-171" class="section level5">
+<div id="solution-182" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="co">#!/bin/bash</span>
 <span class="kw">for</span> <span class="kw">((</span>f=<span class="va">$1</span>; f&lt;=<span class="va">$2</span>; f++<span class="kw">))</span>; <span class="kw">do</span>
@@ -8954,7 +9045,7 @@ The generated plot as either a png or jpg/jpeg.
 </ul>
 </div>
 </div>
-<div id="solution-172" class="section level5">
+<div id="solution-183" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">awk</span> -F, <span class="st">&#39;{M[$1&quot;,&quot;$2]++}END{for (monthyear in M) print monthyear&quot;,&quot;M[monthyear]}&#39;</span> az_fl_flights_total.csv <span class="op">&gt;</span> snowbirds.csv</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(ggplot2)
@@ -9036,7 +9127,7 @@ The sqlite3 commands used to figure out how many tables are available.
 </ul>
 </div>
 </div>
-<div id="solution-173" class="section level5">
+<div id="solution-184" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql">.tables</code></pre></div>
 </div>
@@ -9060,7 +9151,7 @@ The first 10 results of the query.
 </ul>
 </div>
 </div>
-<div id="solution-174" class="section level5">
+<div id="solution-185" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> parkname, city <span class="kw">FROM</span> parks <span class="kw">LIMIT</span> <span class="dv">10</span>;</code></pre></div>
 </div>
@@ -9083,7 +9174,7 @@ The first 10 results of the query.
 </ul>
 </div>
 </div>
-<div id="solution-175" class="section level5">
+<div id="solution-186" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> teamID, yearID, teamID, HR <span class="kw">FROM</span> batting <span class="kw">WHERE</span> HR&gt;=<span class="dv">60</span>;</code></pre></div>
 </div>
@@ -9106,7 +9197,7 @@ The first 10 results of the query.
 </ul>
 </div>
 </div>
-<div id="solution-176" class="section level5">
+<div id="solution-187" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> nameFirst, nameLast, birthYear <span class="kw">FROM</span> people
   <span class="kw">WHERE</span> birthMonth==<span class="dv">5</span> <span class="kw">AND</span> birthDay==<span class="dv">29</span>
@@ -9131,7 +9222,7 @@ The first 10 results of the query.
 </ul>
 </div>
 </div>
-<div id="solution-177" class="section level5">
+<div id="solution-188" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> playerID, W, L, SO <span class="kw">FROM</span> pitching 
     <span class="kw">WHERE</span> teamID==<span class="st">&#39;CLE&#39;</span> <span class="kw">AND</span> yearID==<span class="dv">2016</span>
@@ -9158,7 +9249,7 @@ The first 10 results of the query.
 </ul>
 </div>
 </div>
-<div id="solution-178" class="section level5">
+<div id="solution-189" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> teamID, franchID, yearID, W, L, E <span class="kw">FROM</span> teams
   <span class="kw">WHERE</span> yearID <span class="kw">BETWEEN</span> <span class="dv">1960</span> <span class="kw">AND</span> <span class="dv">1970</span>
@@ -9191,7 +9282,7 @@ The first 10 results of the query.
 </ul>
 </div>
 </div>
-<div id="solution-179" class="section level5">
+<div id="solution-190" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> playerID <span class="kw">FROM</span> people
   <span class="kw">WHERE</span> nameFirst==<span class="st">&#39;Bob&#39;</span> <span class="kw">AND</span> nameLast==<span class="st">&#39;Lemon&#39;</span>;</code></pre></div>
@@ -9223,7 +9314,7 @@ The team-year combination that ranked top in each category.
 </ul>
 </div>
 </div>
-<div id="solution-180" class="section level5">
+<div id="solution-191" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> teamID, yearID, HR, BB, SB <span class="kw">FROM</span> teams
   <span class="kw">WHERE</span> lgID==<span class="st">&#39;AL&#39;</span> <span class="kw">AND</span> divID==<span class="st">&#39;W&#39;</span>
@@ -9258,7 +9349,7 @@ The first 10 results of the query.
 </ul>
 </div>
 </div>
-<div id="solution-181" class="section level5">
+<div id="solution-192" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> teamID, yearID, W, L, HR, HRA, attendance <span class="kw">FROM</span> teams
   <span class="kw">WHERE</span> teamID==<span class="st">&#39;DET&#39;</span> <span class="kw">AND</span> (WSWin==<span class="st">&#39;Y&#39;</span> <span class="kw">OR</span> LgWin==<span class="st">&#39;Y&#39;</span>);</code></pre></div>
@@ -9324,7 +9415,7 @@ Output from running your (potentially modified) <code>head(dbGetQuery(con, &quot
 </ul>
 </div>
 </div>
-<div id="solution-182" class="section level5">
+<div id="solution-193" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(RMariaDB)
 host &lt;-<span class="st"> &quot;scholar-db.rcac.purdue.edu&quot;</span>
@@ -9361,7 +9452,7 @@ The result of running the R code.
 </ul>
 </div>
 </div>
-<div id="solution-183" class="section level5">
+<div id="solution-194" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">dbGetQuery</span>(con,<span class="st">&quot;SELECT DISTINCT COUNT(*) FROM batting WHERE HR&gt;=40 AND SB&gt;=40;&quot;</span>)</code></pre></div>
 </div>
@@ -9385,7 +9476,7 @@ The result of running the R code.
 </ul>
 </div>
 </div>
-<div id="solution-184" class="section level5">
+<div id="solution-195" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">dbGetQuery</span>(con, <span class="st">&quot;SELECT playerID FROM people WHERE nameFirst =&#39;Giancarlo&#39; AND nameLast = &#39;Stanton&#39;;&quot;</span>)
 <span class="kw">dbGetQuery</span>(con, <span class="st">&quot;SELECT COUNT(*), SUM(SO) FROM batting WHERE playerID = &#39;stantmi03&#39; AND (teamID = &#39;MIA&#39; OR teamID = &#39;FLO&#39;);&quot;</span>)</code></pre></div>
@@ -9408,7 +9499,7 @@ The result of running the R code.
 </ul>
 </div>
 </div>
-<div id="solution-185" class="section level5">
+<div id="solution-196" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">dbGetQuery</span>(con,<span class="st">&quot;SELECT playerID, teamID, yearID, H, AB, H/AB FROM batting</span>
 <span class="st">  WHERE yearID BETWEEN 2000 AND 2010 AND AB&gt;300</span>
@@ -9432,7 +9523,7 @@ The result of running the R code.
 </ul>
 </div>
 </div>
-<div id="solution-186" class="section level5">
+<div id="solution-197" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">dbGetQuery</span>(con, <span class="st">&quot;SELECT COUNT(DISTINCT playerID) FROM batting WHERE HR&gt;50;&quot;</span>)
 <span class="co"># As you can see, DISTINCT is with the field playerID, not with SELECT. </span>
@@ -9459,7 +9550,7 @@ The result of running the R code.
 </ul>
 </div>
 </div>
-<div id="solution-187" class="section level5">
+<div id="solution-198" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">dbGetQuery</span>(con, <span class="st">&quot;SELECT schoolID FROM schools WHERE name_full=&#39;Purdue University&#39;;&quot;</span>)
 <span class="kw">dbGetQuery</span>(con, <span class="st">&quot;SELECT schoolID FROM schools WHERE LIKE &#39;%indiana%&#39;;&quot;</span>)
@@ -9487,7 +9578,7 @@ The result of running the R code.
 </ul>
 </div>
 </div>
-<div id="solution-188" class="section level5">
+<div id="solution-199" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Could be anything.</span></code></pre></div>
 <hr />
@@ -9580,6 +9671,11 @@ The number of rows in the <code>elections</code> table in the <code>elections</c
 </ul>
 </div>
 </div>
+<div id="solution-200" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="fu">ls</span> -la *.txt <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{ total += $4; }END{print total/1000000}&#39;</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> <span class="fu">COUNT</span>(*) <span class="kw">FROM</span> elections;</code></pre></div>
+</div>
 <div id="write-a-sql-query-using-the-like-command-to-find-a-unique-list-of-zip_codes-that-start-with-479.-1" class="section level5">
 <h5>2. Write a SQL query using the <code>LIKE</code> command to find a unique list of <code>zip_code</code>s that start with &quot;479&quot;.</h5>
 </div>
@@ -9604,6 +9700,11 @@ The first 5 results from running the query.
 </ul>
 </div>
 </div>
+<div id="solution-201" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> <span class="kw">DISTINCT</span> zip_code <span class="kw">FROM</span> elections <span class="kw">WHERE</span> zip_code <span class="kw">LIKE</span> <span class="st">&#39;479%&#39;</span> <span class="kw">LIMIT</span> <span class="dv">5</span>;
+<span class="kw">SELECT</span> <span class="fu">COUNT</span>(<span class="kw">DISTINCT</span> zip_code) <span class="kw">FROM</span> elections <span class="kw">WHERE</span> zip_code <span class="kw">LIKE</span> <span class="st">&#39;479%&#39;</span>;</code></pre></div>
+</div>
 <div id="write-a-sql-query-that-counts-the-number-of-donations-rows-that-are-from-indiana.-how-many-donations-are-from-indiana-rewrite-the-query-and-create-an-alias-for-our-field-so-it-doesnt-read-count-but-rather-indiana-donations.-1" class="section level5">
 <h5>3. Write a SQL query that counts the number of donations (rows) that are from Indiana. How many donations are from Indiana? Rewrite the query and create an <em>alias</em> for our field so it doesn't read <code>COUNT(*)</code> but rather <code>Indiana Donations</code>.</h5>
 <p><strong>Hint:</strong> You may enclose an alias's name in quotation marks (single or double) when the name contains space.</p>
@@ -9622,6 +9723,11 @@ The result of the SQL query.
 </ul>
 </div>
 </div>
+<div id="solution-202" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> <span class="fu">COUNT</span>(*) <span class="kw">FROM</span> elections <span class="kw">WHERE</span> state=<span class="st">&#39;IN&#39;</span>;
+<span class="kw">SELECT</span> <span class="fu">COUNT</span>(*) <span class="kw">AS</span> <span class="st">&#39;Indiana Donations&#39;</span> <span class="kw">FROM</span> elections <span class="kw">WHERE</span> state=<span class="st">&#39;IN&#39;</span>;</code></pre></div>
+</div>
 <div id="rewrite-the-query-in-3-so-the-result-is-displayed-like-in-1234567.-note-if-instead-of-in-we-wanted-oh-only-the-where-clause-should-be-modified-and-the-display-should-automatically-change-to-oh-1234567.-in-other-words-the-state-abbreviation-should-be-dynamic-not-static.-1" class="section level5">
 <h5>4. Rewrite the query in (3) so the result is displayed like: <code>IN: 1234567</code>. Note, if instead of &quot;IN&quot; we wanted &quot;OH&quot;, only the WHERE clause should be modified, and the display should automatically change to <code>OH: 1234567</code>. In other words, the state abbreviation should be dynamic, not static.</h5>
 <p><strong>Note:</strong> This video demonstrates how to use CONCAT in a MySQL query.</p>
@@ -9639,6 +9745,10 @@ SQL query used to answer the question.
 </li>
 </ul>
 </div>
+</div>
+<div id="solution-203" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> <span class="fu">CONCAT</span>(state, <span class="ot">&quot;: &quot;</span>, <span class="fu">COUNT</span>(*)) <span class="kw">AS</span> <span class="st">&#39;Donations&#39;</span> <span class="kw">FROM</span> elections <span class="kw">WHERE</span> state=<span class="st">&#39;IN&#39;</span>;</code></pre></div>
 </div>
 <div id="in-2-we-wrote-a-query-that-returns-a-unique-list-of-zip_codes-that-start-with-479.-in-3-we-wrote-a-query-that-counts-the-number-of-donations-that-are-from-indiana.-use-our-query-from-2-as-a-sub-query-to-find-how-many-donations-come-from-areas-with-zip_codes-starting-with-479.-what-percent-of-donations-in-indiana-come-from-said-zip_codes-1" class="section level5">
 <h5>5. In (2) we wrote a query that returns a unique list of <code>zip_code</code>s that start with &quot;479&quot;. In (3) we wrote a query that counts the number of donations that are from Indiana. Use our query from (2) as a sub-query to find how many donations come from areas with <code>zip_code</code>s starting with &quot;479&quot;. What percent of donations in Indiana come from said <code>zip_code</code>s?</h5>
@@ -9660,6 +9770,10 @@ The percentage of donations from Indiana from <code>zip_code</code>s starting wi
 </ul>
 </div>
 </div>
+<div id="solution-204" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> <span class="fu">COUNT</span>(*) <span class="kw">FROM</span> elections <span class="kw">WHERE</span> zip_code <span class="kw">IN</span> (<span class="kw">SELECT</span> <span class="kw">DISTINCT</span> zip_code <span class="kw">FROM</span> elections <span class="kw">WHERE</span> zip_code <span class="kw">LIKE</span> <span class="st">&#39;479%&#39;</span>);</code></pre></div>
+</div>
 <div id="in-3-we-wrote-a-query-that-counts-the-number-of-donations-that-are-from-indiana.-when-running-queries-like-this-a-natural-next-question-is-to-ask-the-same-question-about-another-state.-sql-gives-us-the-ability-to-calculate-functions-in-aggregate-when-grouping-by-a-certain-column.-write-a-sql-query-that-returns-the-state-number-of-donations-from-each-state-the-sum-of-the-donations-transaction_amt.-which-5-states-gave-the-most-donations-highest-count-order-you-result-from-most-to-least.-1" class="section level5">
 <h5>6. In (3) we wrote a query that counts the number of donations that are from Indiana. When running queries like this, a natural &quot;next question&quot; is to ask the same question about another state. SQL gives us the ability to calculate functions in aggregate when grouping by a certain column. Write a SQL query that returns the state, number of donations from each state, the sum of the donations (<code>transaction_amt</code>). Which 5 states gave the most donations (highest count)? Order you result from most to least.</h5>
 <p><strong>Note:</strong> In this video we demonstrate <code>GROUP BY</code>, <code>ORDER BY</code>, <code>DESC</code>, and other aspects of MySQL that might help with this question.</p>
@@ -9679,6 +9793,10 @@ Which 5 states gave the most donations?
 </li>
 </ul>
 </div>
+</div>
+<div id="solution-205" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode sql"><code class="sourceCode sql"><span class="kw">SELECT</span> state, <span class="fu">COUNT</span>(*) <span class="kw">AS</span> <span class="st">&#39;cnt&#39;</span>, <span class="fu">SUM</span>(transaction_amt) <span class="kw">AS</span> <span class="st">&#39;total&#39;</span> <span class="kw">FROM</span> elections <span class="kw">GROUP</span> <span class="kw">BY</span> state <span class="kw">ORDER</span> <span class="kw">BY</span> cnt <span class="kw">DESC</span>;</code></pre></div>
 </div>
 <div id="write-a-query-that-gets-the-number-of-donations-and-sum-of-donations-by-year-for-indiana.-create-one-or-more-graphics-that-highlights-the-year-by-year-changes.-write-a-short-1-2-sentences-explaining-your-graphics." class="section level5">
 <h5>7. Write a query that gets the number of donations, and sum of donations, by year, for Indiana. Create one or more graphics that highlights the year-by-year changes. Write a short 1-2 sentences explaining your graphic(s).</h5>
@@ -9702,6 +9820,30 @@ R code used to create your graphic(s).
 </li>
 </ul>
 </div>
+</div>
+<div id="solution-206" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(RMariaDB)
+<span class="kw">library</span>(ggplot2)
+<span class="kw">library</span>(tidyverse)
+db &lt;-<span class="st"> </span><span class="kw">dbConnect</span>(RMariaDB<span class="op">::</span><span class="kw">MariaDB</span>(), <span class="dt">host=</span><span class="st">&quot;scholar-db.rcac.purdue.edu&quot;</span>, <span class="dt">db=</span><span class="st">&quot;elections&quot;</span>, <span class="dt">user=</span><span class="st">&quot;elections_user&quot;</span>, <span class="dt">password=</span><span class="st">&quot;Dataelect!98&quot;</span>)
+dat &lt;-<span class="st"> </span><span class="kw">dbGetQuery</span>(db, <span class="st">&quot;SELECT COUNT(*) as cnt, SUM(transaction_amt) as amt, YEAR(transaction_dt) as yr FROM elections WHERE state=&#39;IN&#39; GROUP BY yr ORDER BY yr;&quot;</span>)
+filtered_dat =<span class="st"> </span><span class="kw">filter</span>(dat, <span class="kw">between</span>(yr, <span class="dv">1978</span>, <span class="dv">2020</span>))
+<span class="kw">ggplot</span>(filtered_dat, <span class="kw">aes</span>(<span class="dt">x=</span>yr,<span class="dt">y=</span>amt<span class="op">/</span><span class="fl">1e6</span>)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_line</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">theme_bw</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;Year&#39;</span>, <span class="dt">y=</span><span class="st">&#39;Amount in millions&#39;</span>)
+<span class="kw">ggplot</span>(filtered_dat, <span class="kw">aes</span>(<span class="dt">x=</span>yr,<span class="dt">y=</span>amt<span class="op">/</span>(<span class="fl">1e3</span><span class="op">*</span>cnt))) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_line</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">theme_bw</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;Year&#39;</span>, <span class="dt">y=</span><span class="st">&#39;Average amount in thousands&#39;</span>)
+<span class="kw">ggplot</span>(filtered_dat, <span class="kw">aes</span>(<span class="dt">x=</span>yr,<span class="dt">y=</span><span class="kw">as.numeric</span>(cnt)<span class="op">/</span><span class="fl">1e3</span>)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_line</span>()  <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">theme_bw</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;Year&#39;</span>, <span class="dt">y=</span><span class="st">&#39;Number of donations in thousands&#39;</span>)</code></pre></div>
 <hr />
 </div>
 </div>
