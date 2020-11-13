@@ -2582,6 +2582,28 @@ The following questions will use the dataset found in Scholar:
 - `head` of the `RegionName` column.
 ```
 
+##### Solution
+
+```{r, eval=F}
+zipc <- read.csv("/class/datamine/data/zillow/Zip_time_series.csv")
+fix_zip <- function(x) {
+    if (nchar(x) == 5) {
+        return(as.character(x))
+    }
+    paste0(strrep("0", 5-nchar(x)), x)
+}
+sapply(zipc$RegionName, fix_zip)
+
+# OR
+
+zipc <- read.csv("/class/datamine/data/zillow/Zip_time_series.csv", colClasses = c("RegionName"="character"))
+
+# OR
+
+zipc <- data.frame(fread("/class/datamine/data/zillow/Zip_time_series.csv"))
+zipc$Date <- as.Date(zipc$Date)
+```
+
 ##### 2. One might assume that the owner of a house tends to value that house more than the buyer. If that was the case, perhaps the median listing price (the price which the seller puts the house on the market, or ask price) would be higher than the ZHVI (Zillow Home Value Index -- essentially an estimate of the home value). For those rows where both `MedianListingPrice_AllHomes` and `ZHVI_AllHomes` have non-NA values, on average how much higher or lower is the median listing price? Can you think of any other reasons why this may be?
 
 **Relevant topics:** [mean](#r-mean)
@@ -2591,6 +2613,12 @@ The following questions will use the dataset found in Scholar:
 
 - R code used to solve the problem.
 - The result itself and 1-2 sentences talking about whether or not you can think of any other reasons that may explain the result.
+```
+
+##### Solution
+
+```{r, eval=F}
+mean(zipc$MedianListingPrice_AllHomes - zipc$ZHVI_AllHomes, na.rm=T)
 ```
 
 ##### 3. Convert the `Date` column to a date using `as.Date`. How many years of data do we have in this dataset? Create a line plot with lines for the average `MedianListingPrice_AllHomes` and average `ZHVI_AllHomes` by year. The result should be a single plot with multiple lines on it.
@@ -2624,6 +2652,23 @@ abline(v="2008", lty="dotted")
 - The results of running the code.
 ```
 
+##### Solution
+
+```{r, eval=F}
+zipc$Date <- as.Date(zipc$Date, format="%Y-%m-%d")
+
+zipc$Year <- cut(zipc$Date, breaks="year")
+zipc$Year <- substr(zipc$Year, 1, 4)
+
+listings <- tapply(zipc$MedianListingPrice_AllHomes, zipc$Year, mean, na.rm=T)
+zhvis <- tapply(zipc$ZHVI_AllHomes, zipc$Year, mean, na.rm=T)
+
+plot(names(listings), listings, type="l", ylim=c(118000, 320000), col="blue", lwd=2)
+lines(names(zhvis), zhvis, col="tomato", lwd=2)
+legend("topleft", legend=c("Listing price", "ZHVI"), lwd=2, col=c("blue", "tomato"))
+abline(v="2008", lty="dotted")
+```
+
 ##### 4. Read `/class/datamine/data/zillow/State_time_series.csv` into a data.frame called `states`. Calculate the average median listing price by state, and create a map using `plot_usmap` from the `usmap` package that shows the average median price by state.
 
 **Hint:** We give a full example about how to plot values, by State, on a map.
@@ -2646,6 +2691,22 @@ abline(v="2008", lty="dotted")
 - The resulting map.
 ```
 
+##### Solution
+
+```{r, eval=F}
+states <- read.csv("/class/datamine/data/zillow/State_time_series.csv")
+aux <- tapply(states$MedianListingPrice_AllHomes, states$RegionName, mean, na.rm=T)
+dat <- data.frame(state=names(aux), val=aux)
+dat$state <- trimws(gsub('([[:upper:]])', ' \\1', dat$state))
+dat$state[dat$state=="Districtof Columbia"] <- "District of Columbia"
+
+plot_usmap(data = dat, values = "val", color = "black") +
+    scale_fill_continuous(low = "white", high = "#C28E0E",
+                          name = "Median price listing",
+                          label = scales::dollar) +
+    theme(legend.position = "right")
+```
+
 ##### 5. Read `/class/datamine/data/zillow/County_time_series.csv` into a data.frame named `counties`. Choose a state (or states) that you would like to "dig down" into county-level data for, and create a plot (or plots) like in (4) that show some interesting statistic by county. You can choose average median listing price if you so desire, however, you don't need to! There are other cool data! 
 
 **Hint:** Make sure that you remember to aggregate your data by `RegionName` so the plot renders correctly.
@@ -2661,6 +2722,19 @@ abline(v="2008", lty="dotted")
 
 - R code used to solve the problem.
 - The resulting map.
+```
+
+##### Solution
+
+```{r, eval=F}
+counties_avg <- tapply(counties$MedianListingPrice_AllHomes, counties$RegionName, mean, na.rm=T)
+counties_avg <- data.frame(fips = names(counties_avg), MedianListingPrice = unname(counties_avg))
+
+plot_usmap(data = counties_avg, values = "MedianListingPrice", include=c("CA"), color = "black") +
+    scale_fill_continuous(low = "white", high = "#C28E0E",
+                          name = "Average median price listing",
+                          label = scales::dollar) +
+    theme(legend.position = "right")
 ```
 
 ---
@@ -5859,6 +5933,16 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - The number of rows in the `elections` table in the `elections` database.
 ```
 
+##### Solution
+
+```{bash, eval=F}
+ls -la *.txt | awk '{ total += $4; }END{print total/1000000}'
+```
+
+```{sql, eval=F}
+SELECT COUNT(*) FROM elections;
+```
+
 ##### 2. Write a SQL query using the `LIKE` command to find a unique list of `zip_code`s that start with "479". 
 
 ##### Write another SQL query and answer: How many unique `zip_code`s are there that begin with "479"?
@@ -5883,6 +5967,13 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - The first 5 results from running the query.
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT DISTINCT zip_code FROM elections WHERE zip_code LIKE '479%' LIMIT 5;
+SELECT COUNT(DISTINCT zip_code) FROM elections WHERE zip_code LIKE '479%';
+```
+
 ##### 3. Write a SQL query that counts the number of donations (rows) that are from Indiana. How many donations are from Indiana? Rewrite the query and create an _alias_ for our field so it doesn't read `COUNT(*)` but rather `Indiana Donations`. 
 
 **Hint:** You may enclose an alias's name in quotation marks (single or double) when the name contains space.
@@ -5894,6 +5985,13 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 
 - SQL query used to answer the question.
 - The result of the SQL query.
+```
+
+##### Solution
+
+```{sql, eval=F}
+SELECT COUNT(*) FROM elections WHERE state='IN';
+SELECT COUNT(*) AS 'Indiana Donations' FROM elections WHERE state='IN';
 ```
 
 ##### 4. Rewrite the query in (3) so the result is displayed like: `IN: 1234567`. Note, if instead of "IN" we wanted "OH", only the WHERE clause should be modified, and the display should automatically change to `OH: 1234567`. In other words, the state abbreviation should be dynamic, not static.
@@ -5917,6 +6015,12 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - SQL query used to answer the question.
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT CONCAT(state, ": ", COUNT(*)) AS 'Donations' FROM elections WHERE state='IN';
+```
+
 ##### 5. In (2) we wrote a query that returns a unique list of `zip_code`s that start with "479". In (3) we wrote a query that counts the number of donations that are from Indiana. Use our query from (2) as a sub-query to find how many donations come from areas with `zip_code`s starting with "479". What percent of donations in Indiana come from said `zip_code`s?
 
 **Note:** This video gives two examples of sub-queries.
@@ -5937,6 +6041,12 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - The percentage of donations from Indiana from `zip_code`s starting with "479".
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT COUNT(*) FROM elections WHERE zip_code IN (SELECT DISTINCT zip_code FROM elections WHERE zip_code LIKE '479%');
+```
+
 ##### 6. In (3) we wrote a query that counts the number of donations that are from Indiana. When running queries like this, a natural "next question" is to ask the same question about another state. SQL gives us the ability to calculate functions in aggregate when grouping by a certain column. Write a SQL query that returns the state, number of donations from each state, the sum of the donations (`transaction_amt`). Which 5 states gave the most donations (highest count)? Order you result from most to least.
 
 **Note:** In this video we demonstrate `GROUP BY`, `ORDER BY`, `DESC`, and other aspects of MySQL that might help with this question.
@@ -5955,6 +6065,12 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 
 - SQL query used to answer the question. 
 - Which 5 states gave the most donations?
+```
+
+##### Solution
+
+```{sql, eval=F}
+SELECT state, COUNT(*) AS 'cnt', SUM(transaction_amt) AS 'total' FROM elections GROUP BY state ORDER BY cnt DESC;
 ```
 
 ---
@@ -9277,6 +9393,16 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - The number of rows in the `elections` table in the `elections` database.
 ```
 
+##### Solution
+
+```{bash, eval=F}
+ls -la *.txt | awk '{ total += $4; }END{print total/1000000}'
+```
+
+```{sql, eval=F}
+SELECT COUNT(*) FROM elections;
+```
+
 ##### 2. Write a SQL query using the `LIKE` command to find a unique list of `zip_code`s that start with "479". 
 
 ##### Write another SQL query and answer: How many unique `zip_code`s are there that begin with "479"?
@@ -9301,6 +9427,13 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - The first 5 results from running the query.
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT DISTINCT zip_code FROM elections WHERE zip_code LIKE '479%' LIMIT 5;
+SELECT COUNT(DISTINCT zip_code) FROM elections WHERE zip_code LIKE '479%';
+```
+
 ##### 3. Write a SQL query that counts the number of donations (rows) that are from Indiana. How many donations are from Indiana? Rewrite the query and create an _alias_ for our field so it doesn't read `COUNT(*)` but rather `Indiana Donations`. 
 
 **Hint:** You may enclose an alias's name in quotation marks (single or double) when the name contains space.
@@ -9312,6 +9445,13 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 
 - SQL query used to answer the question.
 - The result of the SQL query.
+```
+
+##### Solution
+
+```{sql, eval=F}
+SELECT COUNT(*) FROM elections WHERE state='IN';
+SELECT COUNT(*) AS 'Indiana Donations' FROM elections WHERE state='IN';
 ```
 
 ##### 4. Rewrite the query in (3) so the result is displayed like: `IN: 1234567`. Note, if instead of "IN" we wanted "OH", only the WHERE clause should be modified, and the display should automatically change to `OH: 1234567`. In other words, the state abbreviation should be dynamic, not static.
@@ -9335,6 +9475,12 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - SQL query used to answer the question.
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT CONCAT(state, ": ", COUNT(*)) AS 'Donations' FROM elections WHERE state='IN';
+```
+
 ##### 5. In (2) we wrote a query that returns a unique list of `zip_code`s that start with "479". In (3) we wrote a query that counts the number of donations that are from Indiana. Use our query from (2) as a sub-query to find how many donations come from areas with `zip_code`s starting with "479". What percent of donations in Indiana come from said `zip_code`s?
 
 **Note:** This video gives two examples of sub-queries.
@@ -9353,6 +9499,12 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 
 - SQL queries used to answer the question.
 - The percentage of donations from Indiana from `zip_code`s starting with "479".
+```
+
+##### Solution
+
+```{sql, eval=F}
+SELECT COUNT(*) FROM elections WHERE zip_code IN (SELECT DISTINCT zip_code FROM elections WHERE zip_code LIKE '479%');
 ```
 
 ##### 6. In (3) we wrote a query that counts the number of donations that are from Indiana. When running queries like this, a natural "next question" is to ask the same question about another state. SQL gives us the ability to calculate functions in aggregate when grouping by a certain column. Write a SQL query that returns the state, number of donations from each state, the sum of the donations (`transaction_amt`). Which 5 states gave the most donations (highest count)? Order you result from most to least.
@@ -9375,6 +9527,12 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - Which 5 states gave the most donations?
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT state, COUNT(*) AS 'cnt', SUM(transaction_amt) AS 'total' FROM elections GROUP BY state ORDER BY cnt DESC;
+```
+
 ##### 7. Write a query that gets the number of donations, and sum of donations, by year, for Indiana. Create one or more graphics that highlights the year-by-year changes. Write a short 1-2 sentences explaining your graphic(s).
 
 **Relevant topics:** [SQL in R](#r-sql), [GROUP](#sql-groupby), [date functions in SQL](https://www.tutorialspoint.com/sql/sql-date-functions.htm)
@@ -9386,6 +9544,32 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - R code used to create your graphic(s).
 - 1 or more graphics in png/jpeg format.
 - 1-2 sentences summarizing your graphic(s).
+```
+
+##### Solution
+
+```{r, eval=F}
+library(RMariaDB)
+library(ggplot2)
+library(tidyverse)
+db <- dbConnect(RMariaDB::MariaDB(), host="scholar-db.rcac.purdue.edu", db="elections", user="elections_user", password="Dataelect!98")
+dat <- dbGetQuery(db, "SELECT COUNT(*) as cnt, SUM(transaction_amt) as amt, YEAR(transaction_dt) as yr FROM elections WHERE state='IN' GROUP BY yr ORDER BY yr;")
+filtered_dat = filter(dat, between(yr, 1978, 2020))
+ggplot(filtered_dat, aes(x=yr,y=amt/1e6)) +
+  geom_line() +
+  geom_point() +
+  theme_bw() +
+  labs(x='Year', y='Amount in millions')
+ggplot(filtered_dat, aes(x=yr,y=amt/(1e3*cnt))) +
+  geom_line() +
+  geom_point() +
+  theme_bw() +
+  labs(x='Year', y='Average amount in thousands')
+ggplot(filtered_dat, aes(x=yr,y=as.numeric(cnt)/1e3)) +
+  geom_line()  +
+  geom_point() +
+  theme_bw() +
+  labs(x='Year', y='Number of donations in thousands')
 ```
 
 ---
