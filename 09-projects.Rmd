@@ -2582,6 +2582,28 @@ The following questions will use the dataset found in Scholar:
 - `head` of the `RegionName` column.
 ```
 
+##### Solution
+
+```{r, eval=F}
+zipc <- read.csv("/class/datamine/data/zillow/Zip_time_series.csv")
+fix_zip <- function(x) {
+    if (nchar(x) == 5) {
+        return(as.character(x))
+    }
+    paste0(strrep("0", 5-nchar(x)), x)
+}
+sapply(zipc$RegionName, fix_zip)
+
+# OR
+
+zipc <- read.csv("/class/datamine/data/zillow/Zip_time_series.csv", colClasses = c("RegionName"="character"))
+
+# OR
+
+zipc <- data.frame(fread("/class/datamine/data/zillow/Zip_time_series.csv"))
+zipc$Date <- as.Date(zipc$Date)
+```
+
 ##### 2. One might assume that the owner of a house tends to value that house more than the buyer. If that was the case, perhaps the median listing price (the price which the seller puts the house on the market, or ask price) would be higher than the ZHVI (Zillow Home Value Index -- essentially an estimate of the home value). For those rows where both `MedianListingPrice_AllHomes` and `ZHVI_AllHomes` have non-NA values, on average how much higher or lower is the median listing price? Can you think of any other reasons why this may be?
 
 **Relevant topics:** [mean](#r-mean)
@@ -2591,6 +2613,12 @@ The following questions will use the dataset found in Scholar:
 
 - R code used to solve the problem.
 - The result itself and 1-2 sentences talking about whether or not you can think of any other reasons that may explain the result.
+```
+
+##### Solution
+
+```{r, eval=F}
+mean(zipc$MedianListingPrice_AllHomes - zipc$ZHVI_AllHomes, na.rm=T)
 ```
 
 ##### 3. Convert the `Date` column to a date using `as.Date`. How many years of data do we have in this dataset? Create a line plot with lines for the average `MedianListingPrice_AllHomes` and average `ZHVI_AllHomes` by year. The result should be a single plot with multiple lines on it.
@@ -2624,6 +2652,23 @@ abline(v="2008", lty="dotted")
 - The results of running the code.
 ```
 
+##### Solution
+
+```{r, eval=F}
+zipc$Date <- as.Date(zipc$Date, format="%Y-%m-%d")
+
+zipc$Year <- cut(zipc$Date, breaks="year")
+zipc$Year <- substr(zipc$Year, 1, 4)
+
+listings <- tapply(zipc$MedianListingPrice_AllHomes, zipc$Year, mean, na.rm=T)
+zhvis <- tapply(zipc$ZHVI_AllHomes, zipc$Year, mean, na.rm=T)
+
+plot(names(listings), listings, type="l", ylim=c(118000, 320000), col="blue", lwd=2)
+lines(names(zhvis), zhvis, col="tomato", lwd=2)
+legend("topleft", legend=c("Listing price", "ZHVI"), lwd=2, col=c("blue", "tomato"))
+abline(v="2008", lty="dotted")
+```
+
 ##### 4. Read `/class/datamine/data/zillow/State_time_series.csv` into a data.frame called `states`. Calculate the average median listing price by state, and create a map using `plot_usmap` from the `usmap` package that shows the average median price by state.
 
 **Hint:** We give a full example about how to plot values, by State, on a map.
@@ -2646,6 +2691,22 @@ abline(v="2008", lty="dotted")
 - The resulting map.
 ```
 
+##### Solution
+
+```{r, eval=F}
+states <- read.csv("/class/datamine/data/zillow/State_time_series.csv")
+aux <- tapply(states$MedianListingPrice_AllHomes, states$RegionName, mean, na.rm=T)
+dat <- data.frame(state=names(aux), val=aux)
+dat$state <- trimws(gsub('([[:upper:]])', ' \\1', dat$state))
+dat$state[dat$state=="Districtof Columbia"] <- "District of Columbia"
+
+plot_usmap(data = dat, values = "val", color = "black") +
+    scale_fill_continuous(low = "white", high = "#C28E0E",
+                          name = "Median price listing",
+                          label = scales::dollar) +
+    theme(legend.position = "right")
+```
+
 ##### 5. Read `/class/datamine/data/zillow/County_time_series.csv` into a data.frame named `counties`. Choose a state (or states) that you would like to "dig down" into county-level data for, and create a plot (or plots) like in (4) that show some interesting statistic by county. You can choose average median listing price if you so desire, however, you don't need to! There are other cool data! 
 
 **Hint:** Make sure that you remember to aggregate your data by `RegionName` so the plot renders correctly.
@@ -2661,6 +2722,19 @@ abline(v="2008", lty="dotted")
 
 - R code used to solve the problem.
 - The resulting map.
+```
+
+##### Solution
+
+```{r, eval=F}
+counties_avg <- tapply(counties$MedianListingPrice_AllHomes, counties$RegionName, mean, na.rm=T)
+counties_avg <- data.frame(fips = names(counties_avg), MedianListingPrice = unname(counties_avg))
+
+plot_usmap(data = counties_avg, values = "MedianListingPrice", include=c("CA"), color = "black") +
+    scale_fill_continuous(low = "white", high = "#C28E0E",
+                          name = "Average median price listing",
+                          label = scales::dollar) +
+    theme(legend.position = "right")
 ```
 
 ---
@@ -2810,7 +2884,7 @@ library(lubridate)
 
 ---
 
-**Motivation:** Its important to be able to lookup and understand the documentation of a new function. You may have looked up the documentation of functions like `paste0` or `sapply`, and noticed that in the "usage" section, one of the arguments is an ellipsis (`...`). Well, unless you understand what this does, its hard to really _get_ it. In this project, we will experiment with ellipsis, and write our own function that utilizes one.
+**Motivation:** It's important to be able to lookup and understand the documentation of a new function. You may have looked up the documentation of functions like `paste0` or `sapply`, and noticed that in the "usage" section, one of the arguments is an ellipsis (`...`). Well, unless you understand what this does, it's hard to really _get_ it. In this project, we will experiment with ellipsis, and write our own function that utilizes one.
 
 **Context:** We've learned about, used, and written functions in many projects this semester. In this project, we will utilize some of the less-known features of functions.
 
@@ -2840,7 +2914,11 @@ The following questions will use the dataset found in Scholar:
 
 ##### 1. Read `/class/datamine/data/beer/beers.csv` into a data.frame named `beers`. Read `/class/datamine/data/beer/breweries.csv` into a data.frame named `breweries`. Read `/class/datamine/data/beer/reviews.csv` into a data.frame named `reviews`. 
 
-**Hint:** Wow! `reviews.csv` is a _large_ file. Luckily, we will now introduce a function that is part of the famous `data.table` package called `fread`. `fread` is _much_ faster than `read.csv`. It reads the data into a class called `data.table`. We will learn more about this later on. For now, convert the `data.table` into a `data.frame` by wrapping the result of `fread` in the `data.frame` function.
+**Hint:** Notice that `reviews.csv` is a _large_ file. Luckily, you can use a function from the famous `data.table` package called `fread`. The function `fread` is _much_ faster at reading large file compared to `read.csv`. It reads the data into a class called `data.table`. We will learn more about this later on. For now, use `fread` to read in the `reviews.csv` data then convert it from  the `data.table` class into a `data.frame` by wrapping the result of `fread` in the `data.frame` function.
+
+**Hint:** Do not forget to load the `data.table` library before attempeting to use the `fread` function.
+
+Below we show you an example of how fast the `fread` function is compared to`read.csv`.
 
 ```{r, eval=F}
 microbenchmark(read.csv("/class/datamine/data/beer/reviews.csv", nrows=100000), data.frame(fread("/class/datamine/data/beer/reviews.csv", nrows=100000)), times=5)
@@ -2856,7 +2934,14 @@ data.frame(fread("/class/datamine/data/beer/reviews.csv", nrows = 1e+05))
   120.7705  122.3812  127.9842  128.7794  133.7695  134.2205     5
 ```
 
-**Relevant topics:** fread, [data.frame](#r-data-frames)
+**Hint:** This video demonstrates how to read the `reviews` data using `fread`.
+
+<details>
+    <summary><strong>Click here for video</strong></summary>
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_ehwecfrs&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_59izstx6" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+</details>
+
+**Relevant topics:** [fread](#r-fread), [data.frame](#r-data-frames)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
@@ -2866,7 +2951,14 @@ data.frame(fread("/class/datamine/data/beer/reviews.csv", nrows = 1e+05))
 
 ##### 2. Take some time to explore the datasets. Like many datasets, our data is broken into 3 "tables". What columns connect each table? How many breweries in `breweries` don't have an associated beer in `beers`? How many beers in `beers` don't have an associated brewery in `breweries`?
 
-**Relevant topics:** [names](#r-names), %in%, [logical operators](#r-logical-operators), [unique](#r-unique)
+**Hint:** We compare lists of names using `sum` or `intersect`.  Similar techniques can be used for Question 2.
+
+<details>
+    <summary><strong>Click here for video</strong></summary>
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_jasp90lt&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_ulj22bjk" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+</details>
+
+**Relevant topics:** [names](#r-names), [in](#r-in), [logical operators](#r-logical-operators), [unique](#r-unique)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
@@ -2877,11 +2969,18 @@ data.frame(fread("/class/datamine/data/beer/reviews.csv", nrows = 1e+05))
 - How many beers don't have an associated brewery in `breweries`.
 ```
 
-##### 3. Run `?sapply` and look at the usage section for `sapply`. If you look at the description for the `...` argument, you'll see it is "optional arguments to `FUN`". What this means is you can specify additional input for the function you are passing to `sapply`. One example would be passing `T` to `na.rm` in the mean function: `sapply(dat, mean, na.rm=T)`. Use `sapply` and the `strsplit` function to separate the types of breweries (`types`) by commas. Use another `sapply` to loop through your results and count the number of types for each brewery. Be sure to name your final results `n_types`. What is the average amount of services (`n_types`) breweries in IN and MI offer? Does that surprise you?
+##### 3. Run `?sapply` and look at the usage section for `sapply`. If you look at the description for the `...` argument, you'll see it is "optional arguments to `FUN`". What this means is you can specify additional input for the function you are passing to `sapply`. One example would be passing `T` to `na.rm` in the mean function: `sapply(dat, mean, na.rm=T)`. Use `sapply` and the `strsplit` function to separate the types of breweries (`types`) by commas. Use another `sapply` to loop through your results and count the number of types for each brewery. Be sure to name your final results `n_types`. What is the average amount of services (`n_types`) breweries in IN and MI offer (we are looking for the average of IN and MI _combined_)? Does that surprise you?
 
 **Note:** When you have one `sapply` inside of another, or one loop inside of another, or an if/else statement inside of another, this is commonly referred to as nesting. So when Googling, you can type "nested sapply" or "nested if statements", etc.
 
-**Relevant topics:** [...](#dots), [sapply](#r-sapply), [strplit](#r-writing-functions), %in%, [mean](#r-mean)
+**Hint:** We show, in this video, how to find the average number of parts in a midwesterner's name.  Perhaps surprisingly, this same technique will be useful in solving Question 3.
+
+<details>
+    <summary><strong>Click here for video</strong></summary>
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_yypsv2ab&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_bc0lctho" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+</details>
+
+**Relevant topics:** [sapply](#r-sapply), [...](#r-ellipsis),[strplit](#r-writing-functions), [in](#r-in), [mean](#r-mean)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
@@ -2890,20 +2989,43 @@ data.frame(fread("/class/datamine/data/beer/reviews.csv", nrows = 1e+05))
 - 1-2 sentences answering the average amount of services breweries in Indiana and Michigan offer, and commenting on this answer.
 ```
 
-##### 4. Write a function called `compare_beers` that accepts a function `FUN`, and any number of vectors of beer ids. `compare_beers` should cycle through each group of `beer_id`s, compute `FUN` on the subset of reviews, and print "Group X: some_score" where X is the number 1+, and some_score is the result of applying `FUN` on the subset of data.
+##### 4. Write a function called `compare_beers` that accepts a function that you will call `FUN`, and any number of vectors of beer ids. The function, `compare_beers`, should cycle through each vector/groups of `beer_id`s, compute the function, `FUN`, on the subset of `reviews`, and print "Group X: some_score" where X is the number 1+, and some_score is the result of applying `FUN` on the subset of the `reviews` data.
+
+In the example below the function `FUN` is the `median` function and we have two vectors/groups of `beer_id`s passed with c(271781) being group 1 and c(125646, 82352) group 2. Note that even though our example only passes two vectors to our `compare_beers` function, we want to write the function in a way that we could pass as many vectors as we want to.
 
 Example:
 ```{r, eval=F}
 compare_beers(reviews, median, c(271781), c(125646, 82352))
 ```
 
-Fake output:
+This example gives the output:
 ```{txt}
-Group 1: 16
-Group 2: 2.3
+Group 1: 4
+Group 2: 4.56
 ```
 
-**Relevant topics:** [...](#r-dots), %in%, [indexing](#r-indexing), [paste0](#r-paste), [for loops](#r-for-loops)
+For your solution to this question, find the behavior of `compare_beers` in this example:
+```{r, eval=F}
+compare_beers(reviews, median, c(88,92,7971), c(74986,1904), c(34,102,104,355))
+```
+
+**Hint:** There are different approaches to this question. You can use for loops or `sapply`. It will probably help to start small and build slowly toward the solution.
+
+**Hint:** This first video shows how to use `...` in defining a function.
+
+<details>
+    <summary><strong>Click here for video</strong></summary>
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_ic3jh9iz&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_wr4fpano" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+</details>
+
+**Hint:** This second video basically walks students through how to build this function.  If you use this video to learn how to build this function, please be sure to acknowledge this in your project solutions.
+
+<details>
+    <summary><strong>Click here for video</strong></summary>
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_llfzgpvc&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_gzsmppek" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+</details>
+
+**Relevant topics:** [in](#r-in), [...](#r-ellipsis), [indexing](#r-indexing), [paste0](#r-paste), [for loops](#r-for-loops)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
@@ -2912,19 +3034,26 @@ Group 2: 2.3
 - The result from running the provided example.
 ```
 
-##### 5. Beer wars! IN and MI against AZ and CO. Use the function in (4) to compare beer_id from each group of states. Make a cool plot of some sort. Be sure to comment on your plot.
+##### 5. Beer wars! IN and MI against AZ and CO. Use the function you wrote in question (4) to compare beer_id from each group of states. Make a cool plot of some sort. Be sure to comment on your plot.
 
-**Hint:** Create a vector of `beer_ids` per group before passing it to your function from (3).
+**Hint:** Create a vector of `beer_ids` per group before passing it to your function from (4).
 
-**Relevant topics:** [...](#dots), %in%, [indexing](#r-indexing), [paste0](#r-paste), [for loops](#r-for-loops)
+**Hint:** This video demonstrates an example of how to use the `compare_beers` function.
+
+<details>
+    <summary><strong>Click here for video</strong></summary>
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_8jjxs470&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_ebc161jc" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+</details>
+
+**Relevant topics:** [in](#r-in), [...](#r-ellipsis), [indexing](#r-indexing), [paste0](#r-paste), [for loops](#r-for-loops)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
 
 - R code used to solve the problem.
-- The result from running the your function.
+- The result from running your function.
 - The resulting plot.
-- 1-2 sentecens commenting on your plot.
+- 1-2 sentence commenting on your plot.
 ```
 
 ---
@@ -2956,9 +3085,9 @@ The following questions will use the dataset found in Scholar:
 
 #### Questions
 
-##### 1. Read `/class/datamine/data/beer/beers.csv` into a data.frame named `beers`. Read `/class/datamine/data/beer/breweries.csv` into a data.frame named `breweries`. Read `/class/datamine/data/beer/reviews.csv` into a data.frame named `reviews`. As in the previous project, make sure you used the `fread` function from `data.table` package, and convert the `data.table` to a `data.frame`. We want to create a very basic beer recommender. We will start simple. Create a function called `recommend_a_beer` that takes as input `my_beer_id` (a single value) and returns a vector of `beer_ids` from the same `style`. Test your function on `2093`.
+##### 1. Read `/class/datamine/data/beer/beers.csv` into a data.frame named `beers`. Read `/class/datamine/data/beer/breweries.csv` into a data.frame named `breweries`. Read `/class/datamine/data/beer/reviews.csv` into a data.frame named `reviews`. As in the previous project, make sure you used the `fread` function from the `data.table` package, and convert the `data.table` to a `data.frame`. We want to create a very basic beer recommender. We will start simple. Create a function called `recommend_a_beer` that takes as input `my_beer_id` (a single value) and returns a vector of `beer_ids` from the same `style`. Test your function on `2093`.
 
-**Hint:** Make sure you do not include the given `my_beer_id` from your recommended beer vector.
+**Hint:** Make sure you do not include the given `my_beer_id` in the vector of `beer_ids` containing the `beer_ids`of your recommended beers.
 
 **Hint:** You may find the function `setdiff` useful. Run the example below to get an idea of what it does.
 
@@ -2971,7 +3100,7 @@ setdiff(x,y)
 setdiff(y,x)
 ```
 
-**Relevant topics:** fread, [data.frame](#r-data-frames), [function](#r-writing-functions)
+**Relevant topics:** [fread](#r-fread), [data.frame](#r-data-frames), [function](#r-writing-functions), [setdiff](#r-setdiff)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
@@ -2981,11 +3110,11 @@ setdiff(y,x)
 - The result of `2093 %in% recommend_a_beer(2093)`.
 ```
 
-##### 2. That is a lot of beer recommendations! Let's try to narrow it down. Include an argument in your function called `min_score` with default value of 4.5. Our recommender will only recommend `beer_ids` with at least one score of at least `min_score`. Test your improved beer recommender with the same `beer_id` from (1).
+##### 2. That is a lot of beer recommendations! Let's try to narrow it down. Include an argument in your function called `min_score` with default value of 4.5. Our recommender will only recommend `beer_ids` with a review score of at least `min_score`. Test your improved beer recommender with the same `beer_id` from question (1).
 
 **Hint:** Note that now we need to look at both `beers` and `reviews` datasets.
 
-**Relevant topics:** %in%, [unique](#r-unique), [subset](#r-subset)/[indexing](#r-indexing)
+**Relevant topics:** [in](#r-in), [unique](#r-unique), [subset](#r-subset)/[indexing](#r-indexing)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
@@ -2994,7 +3123,7 @@ setdiff(y,x)
 - Length of result from `recommend_a_beer(2093)`.
 ```
 
-##### 3. There is still room for improvement (obviously) for our beer recommender. Include a new argument in your function called `same_brewery_only` with default value `FALSE`. This argument will determine whether or not our beer recommender will return only beers from the same brewery. Test our newly improved beer recommender with the same `beer_id` from (1) with `same_brewery_only` set as `TRUE`.
+##### 3. There is still room for improvement (obviously) for our beer recommender. Include a new argument in your function called `same_brewery_only` with default value `FALSE`. This argument will determine whether or not our beer recommender will return only beers from the same brewery. Test our newly improved beer recommender with the same `beer_id` from question (1) with the argument `same_brewery_only` set to `TRUE`.
 
 **Hint:** You may find the function `intersect` useful. Run the example below to get an idea of what it does.
 
@@ -3005,7 +3134,7 @@ intersect(x,y)
 intersect(y,x)
 ```
 
-**Relevant topics:** [if/else](#r-if-else), [subset](#r-subset), intersect, [indexing](#r-indexing)
+**Relevant topics:** [if/else](#r-if-else), [subset](#r-subset), [intersect](#r-intersect), [indexing](#r-indexing)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
@@ -3014,9 +3143,9 @@ intersect(y,x)
 - Length of result from `recommend_a_beer(2093, same_brewery_only=TRUE)`.
 ```
 
-##### 4. Oops! Bad idea! Maybe including only beers from the same brewery is not the best option. Add an argument to our beer recommender named `type`. If `type=style` our recommender will recommend beers based on the `style` as we did in (3). If `type=reviewers`, our recommender will recommend beers based on reviewers with "similar taste". Select reviewers that have a `min_score` for the given beer id (`my_beer_id`). For those reviewers, find the `beer_ids` for other beers that these reviewers have given a score of at least `min_score`. These `beer_ids` are the ones our recommender will return. Be sure to test our improved recommender on the same `beer_id` as in (1)-(3).
+##### 4. Oops! Bad idea! Maybe including only beers from the same brewery is not the best idea. Add an argument to our beer recommender named `type`. If `type=style` our recommender will recommend beers based on the `style` as we did in question (3). If `type=reviewers`, our recommender will recommend beers based on reviewers with "similar taste". Select reviewers that gave score equal to or greater than `min_score` for the given beer id (`my_beer_id`). For those reviewers, find the `beer_ids` for other beers that these reviewers have given a score of at least `min_score`. These `beer_ids` are the ones our recommender will return. Be sure to test our improved recommender on the same `beer_id` as in (1)-(3).
 
-**Relevant topics:** [if](#r-if-else), [subset](#r-subset), %in%, setdiff, [unique](#r-unique)
+**Relevant topics:** [if](#r-if-else), [subset](#r-subset), [in](#r-in), [setdiff](#r-setdiff), [unique](#r-unique)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
@@ -3029,7 +3158,7 @@ intersect(y,x)
 
 **Hint:** You may find the function `is.null` useful.
 
-**Relevant topics:** [if](#r-if-else), [>=](#r-logical-operators), [<=](#r-logical-operators), intersect
+**Relevant topics:** [if](#r-if-else), [>=](#r-logical-operators), [<=](#r-logical-operators), [intersect](#r-intersect)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
@@ -5846,6 +5975,16 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - The number of rows in the `elections` table in the `elections` database.
 ```
 
+##### Solution
+
+```{bash, eval=F}
+ls -la *.txt | awk '{ total += $4; }END{print total/1000000}'
+```
+
+```{sql, eval=F}
+SELECT COUNT(*) FROM elections;
+```
+
 ##### 2. Write a SQL query using the `LIKE` command to find a unique list of `zip_code`s that start with "479". 
 
 ##### Write another SQL query and answer: How many unique `zip_code`s are there that begin with "479"?
@@ -5870,6 +6009,13 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - The first 5 results from running the query.
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT DISTINCT zip_code FROM elections WHERE zip_code LIKE '479%' LIMIT 5;
+SELECT COUNT(DISTINCT zip_code) FROM elections WHERE zip_code LIKE '479%';
+```
+
 ##### 3. Write a SQL query that counts the number of donations (rows) that are from Indiana. How many donations are from Indiana? Rewrite the query and create an _alias_ for our field so it doesn't read `COUNT(*)` but rather `Indiana Donations`. 
 
 **Hint:** You may enclose an alias's name in quotation marks (single or double) when the name contains space.
@@ -5881,6 +6027,13 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 
 - SQL query used to answer the question.
 - The result of the SQL query.
+```
+
+##### Solution
+
+```{sql, eval=F}
+SELECT COUNT(*) FROM elections WHERE state='IN';
+SELECT COUNT(*) AS 'Indiana Donations' FROM elections WHERE state='IN';
 ```
 
 ##### 4. Rewrite the query in (3) so the result is displayed like: `IN: 1234567`. Note, if instead of "IN" we wanted "OH", only the WHERE clause should be modified, and the display should automatically change to `OH: 1234567`. In other words, the state abbreviation should be dynamic, not static.
@@ -5904,6 +6057,12 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - SQL query used to answer the question.
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT CONCAT(state, ": ", COUNT(*)) AS 'Donations' FROM elections WHERE state='IN';
+```
+
 ##### 5. In (2) we wrote a query that returns a unique list of `zip_code`s that start with "479". In (3) we wrote a query that counts the number of donations that are from Indiana. Use our query from (2) as a sub-query to find how many donations come from areas with `zip_code`s starting with "479". What percent of donations in Indiana come from said `zip_code`s?
 
 **Note:** This video gives two examples of sub-queries.
@@ -5924,6 +6083,12 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - The percentage of donations from Indiana from `zip_code`s starting with "479".
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT COUNT(*) FROM elections WHERE zip_code IN (SELECT DISTINCT zip_code FROM elections WHERE zip_code LIKE '479%');
+```
+
 ##### 6. In (3) we wrote a query that counts the number of donations that are from Indiana. When running queries like this, a natural "next question" is to ask the same question about another state. SQL gives us the ability to calculate functions in aggregate when grouping by a certain column. Write a SQL query that returns the state, number of donations from each state, the sum of the donations (`transaction_amt`). Which 5 states gave the most donations (highest count)? Order you result from most to least.
 
 **Note:** In this video we demonstrate `GROUP BY`, `ORDER BY`, `DESC`, and other aspects of MySQL that might help with this question.
@@ -5942,6 +6107,12 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 
 - SQL query used to answer the question. 
 - Which 5 states gave the most donations?
+```
+
+##### Solution
+
+```{sql, eval=F}
+SELECT state, COUNT(*) AS 'cnt', SUM(transaction_amt) AS 'total' FROM elections GROUP BY state ORDER BY cnt DESC;
 ```
 
 ---
@@ -6131,54 +6302,59 @@ The following questions will use the dataset found in Scholar:
 
 `/class/datamine/data/movies_and_tv/imdb.db`
 
-A public sample of the data can be found [here](https://www.datadepot.rcac.purdue.edu/datamine/data/movies-and-tv/imdb.db).
+**Important note:** For this project you will use SQLite to access the data. To connect to the database, copy and paste the following before your solutions in your .Rmd:
+
+````markdown
+```{r, include=F}`r ''`
+library(RSQLite)
+imdb <- dbConnect(RSQLite::SQLite(), "/class/datamine/data/movies_and_tv/imdb.db")
+```
+````
+
+If you want to use a SQLite-specific function like `.tables` (or prefer to test things in the Terminal), you will need to use the Terminal to connect to the database and run queries. To do so, you can connect to RStudio Server at https://rstudio.scholar.rcac.purdue.edu, and navigate to the terminal. In the terminal execute the command:
+
+```{bash, eval=F}
+sqlite3 /class/datamine/data/movies_and_tv/imdb.db
+```
+
+From there, the SQLite-specific commands will function properly. They will _not_ function properly in an SQL code chunk. To display the SQLite-specific commands in a code chunk without running the code, use a code chunk with the option `eval=F` like this:
+
+````markdown
+```{sql, connection=imdb, eval=F}`r ''`
+SELECT * FROM titles LIMIT 5;
+```
+````
+
+This will allow the code to be displayed without throwing an error.
 
 #### Questions
 
-##### 1. A primary key is a field in a table which uniquely identifies a row in the table. Primary keys _must_ be unique values, and this is enforced at the database level. A foreign key is a field whose value matches a primary key in a different table. A table can have 0-1 primary key, but it can have 0+ foreign keys. Examine the `titles` table. Do you think there are any primary keys? How about foreign keys? 
+##### 1. A primary key is a field in a table which uniquely identifies a row in the table. Primary keys _must_ be unique values, and this is enforced at the database level. A foreign key is a field whose value matches a primary key in a different table. A table can have 0-1 primary key, but it can have 0+ foreign keys. Examine the `titles` table. Do you think there are any primary keys? How about foreign keys?  Now examine the `episodes` table. Based on observation and the column names, do you think there are any primary keys? How about foreign keys?
 
-**Relevant topics:** primary key, foreign key
+**Hint:** A primary key can also be a foreign key.
+
+**Hint:** Here are two videos.  The first video will remind you how to find the names of all of the tables in the `imdb` database.  The second video will introduce you to the `titles` and `episodes` tables in the `imdb` database.
+
+<details>
+    <summary><strong>Click here for video</strong></summary>
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_7ktvbhc9&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_ae112udc" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+</details>
+
+<details>
+    <summary><strong>Click here for video</strong></summary>
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_wc2hl3xm&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_y7qo7jpu" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+</details>
+
+**Relevant topics:** [primary key](https://www.geeksforgeeks.org/difference-between-primary-key-and-foreign-key/), [foreign key](https://www.geeksforgeeks.org/difference-between-primary-key-and-foreign-key/)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
 
 - List any primary or foreign keys in the `titles` table.
-```
-
-##### 2. Examine the `episodes` table. Based on observation and the column names, do you think there are any primary keys? How about foreign keys?
-
-**Relevant topics:** primary key, foreign key
-
-```{block, type="bbox"}
-**Item(s) to submit:**
-
 - List any primary or foreign keys in the `episodes` table.
 ```
 
-If you paste a `title_id` to the end of the following url, it will pull up the page for the title. For example, https://www.imdb.com/title/tt0413573 leads to the page for the TV series Grey's Anatomy. 
-
-##### 3. Write a query to confirm that the `title_id` tt0413573 does indeed belong to Grey's Anatomy.
-
-**Relevant topics:** [select](#sql), [where](#sql-where)
-
-```{block, type="bbox"}
-**Item(s) to submit:**
-
-- SQL query used to solve the problem in a code chunk.
-- Output of the query.
-```
-
-##### 4. The `episode_title_id` column in the `episodes` table references titles of individual episodes of a tv series. The `show_title_id` references the titles of the show itself. With that in mind, write a query that gets a list of all of the episodes and titles of Grey's Anatomy.
-
-**Relevant topics:** [inner join](#sql-inner-join)
-
-```{block, type="bbox"}
-**Item(s) to submit:**
-
-- SQL query used to solve the problem in a code chunk.
-```
-
-##### 5. Like we explained in (3), you can find the `title_id` of a tv show, a tv show episodes, or a movie by browsing imdb.com and getting the `title_id` directly from the url. Browse imdb.com and find your favorite tv show. Get the `title_id` from the url and run the following query to confirm that the tv show is in our database:
+##### 2. If you paste a `title_id` to the end of the following url, it will pull up the page for the title. For example, https://www.imdb.com/title/tt0413573 leads to the page for the TV series _Grey's Anatomy_.  Write a SQL query to confirm that the `title_id` tt0413573 does indeed belong to _Grey's Anatomy_.  Then browse imdb.com and find your favorite TV show. Get the `title_id` from the url of your favorite TV show and run the following query, to confirm that the TV show is in our database:
 
 ```{sql, eval=F}
 SELECT * FROM titles WHERE title_id='<title id here>';
@@ -6186,16 +6362,48 @@ SELECT * FROM titles WHERE title_id='<title id here>';
 
 Make sure to replace "\<title id here\>" with the `title_id` of your favorite show. If your show does not appear, or has only a single season, pick another show until you find one we have in our database with multiple seasons.
 
+**Relevant topics:** [SELECT](#sql-examples), WHERE
+
 ```{block, type="bbox"}
 **Item(s) to submit:**
 
-- The `title_id` of your favorite tv show.
-- The output from running the provided (modified) query.
+- SQL query used to confirm that `title_id` tt0413573 does indeed belong to _Grey's Anatomy_.
+- The output of the query.
+- The `title_id` of your favorite TV show.
+- SQL query used to confirm the `title_id` for your favorite TV show.
+- The output of the query.
+
 ```
 
-##### 6. We want to write a query that returns the title and rating of the highest rated episode of the tv show you chose in (5). In order to do so, first write a query that returns a list of `episode_title_id`s (found in the `episodes` table), with the `primary_title` (found in the `titles` table) of the episode. 
+##### 3. The `episode_title_id` column in the `episodes` table references titles of individual episodes of a TV series. The `show_title_id` references the titles of the show itself. With that in mind, write a query that gets a list of all of the `episodes_title_id`s (found in the `episodes` table), with the associated `primary_title` (found in the `titles` table) for each episode of _Grey's Anatomy_.
 
-**Relevant topics:** [inner join](#sql-inner-join), [aliasing](#sql-aliasing)
+**Relevant topics:** [INNER JOIN](#sql-inner-join)
+
+**Hint:** This video shows how to extract titles of episodes in the `imdb` database.
+
+<details>
+    <summary><strong>Click here for video</strong></summary>
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_uhg3atol&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_wmo98brv" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+</details>
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- SQL query used to solve the problem in a code chunk.
+```
+
+##### 4. We want to write a query that returns the title and rating of the highest rated episode of your favorite TV show, which you chose in (2). In order to do so, we will break the task into two parts in (4) and (5). First, write a query that returns a list of `episode_title_id`s (found in the `episodes` table), with the associated `primary_title` (found in the `titles` table) for each episode. 
+
+**Hint:** This part is just like question (3) but this time with your favorite TV show, which you chose in (2).
+
+**Hint:** This video shows how to use a subquery, to `JOIN` a total of three tables in the `imdb` database.
+
+<details>
+    <summary><strong>Click here for video</strong></summary>
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_jb8vd4nc&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_sc5yje1a" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+</details>
+
+**Relevant topics:** [INNER JOIN](#sql-inner-join), [aliasing](#sql-aliasing)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
@@ -6204,9 +6412,9 @@ Make sure to replace "\<title id here\>" with the `title_id` of your favorite sh
 - The first 5 results from your query.
 ```
 
-##### 7. Write a query that adds the rating to the end of each episode. To do so, use the query you wrote in (6) as a subquery. Was this also your favorite episode?
+##### 5. Write a query that adds the rating to the end of each episode. To do so, use the query you wrote in (4) as a subquery. Which episode has the highest rating? Is it also your favorite episode?
 
-**Relevant topics:** inner join, aliasing, subqueries, desc, limit, order by
+**Relevant topics:** [INNER JOIN](#sql-inner-join), [aliasing](#sql-aliasing), subqueries, ORDER BY, DESC, LIMIT
 
 **Note**: Various helpful examples that utilize the relevant topics in this problem can be found [here](#sql-examples).
 
@@ -6214,8 +6422,8 @@ Make sure to replace "\<title id here\>" with the `title_id` of your favorite sh
 **Item(s) to submit:**
 
 - SQL query used to solve the problem in a code chunk.
-- The `episode_title_id`, `primary_title`, and `rating` of the top rated episode from the tv series from (5).
-- A statement saying whether it is also your favorite episode.
+- The `episode_title_id`, `primary_title`, and `rating` of the top rated episode from your favorite TV series, in question (2).
+- A statement saying whether the highest rated episode is also your favorite episode.
 ```
 
 ---
@@ -6226,7 +6434,7 @@ Make sure to replace "\<title id here\>" with the `title_id` of your favorite sh
 
 **Motivation:** As we learned earlier in the semester, bash scripts are a powerful tool when you need to perform repeated tasks in a UNIX-like system. In addition, sometimes preprocessing data using UNIX tools prior to analysis in R or Python is useful. Ample practice is integral to becoming proficient with these tools. As such, we will be reviewing topics learned earlier in the semester.
 
-**Context:** We've just ended a series of projects focused on SQL. In this project we will begin to review topics learned throughout the semester, starting writing bash scripts using the various UNIX tools we learned about.
+**Context:** We've just ended a series of projects focused on SQL. In this project we will begin to review topics learned throughout the semester, starting writing bash scripts using the various UNIX tools we learned about in Projects 3 through 8.
 
 **Scope:** awk, UNIX utilities, bash scripts, fread
 
@@ -6245,23 +6453,13 @@ Make sure to replace "\<title id here\>" with the `title_id` of your favorite sh
 
 #### Dataset 
 
-The following questions will use the dataset found in Scholar:
+The following questions will use PLOTSNAP.csv from the data folder found in Scholar:
 
 `/class/datamine/data/forest`
 
-To read more about the two files from this dataset that you will be working with:
-
-PLOTSNAP.csv: 
+To read more about PLOTSNAP.csv that you will be working with:
 
 https://www.uvm.edu/femc/data/archive/project/federal-forest-inventory-analysis-data-for/dataset/plot-level-data-gathered-through-forest/metadata#fields
-
-TREE.csv: 
-
-https://www.uvm.edu/femc/data/archive/project/federal-forest-inventory-analysis-data-for/dataset/tree-level-data-gathered-through-forest/metadata 
-
-AND 
-
-https://www.uvm.edu/femc/data/archive/project/federal-forest-inventory-analysis-data-for/dataset/tree-level-data-gathered-through-forest/data
 
 #### Questions
 
@@ -6289,7 +6487,7 @@ https://www.uvm.edu/femc/data/archive/project/federal-forest-inventory-analysis-
 - The output of your code piped to `head`.
 ```
 
-##### 3. `fread` is a "Fast and Friendly File Finagler". It is part of the very popular `data.table` package in R. We will learn more about this package next semester. For now, read the documentation [here](https://www.rdocumentation.org/packages/data.table/versions/1.12.8/topics/fread) and use the `cmd` argument in conjunction with your bash code from (2) to preprocess data prior to reading it into a `data.table` in your R environment. 
+##### 3. `fread` is a "Fast and Friendly File Finagler". It is part of the very popular `data.table` package in R. We will learn more about this package next semester. For now, read the documentation [here](https://www.rdocumentation.org/packages/data.table/versions/1.12.8/topics/fread) and use the `cmd` argument in conjunction with your bash code from (2) to read the data of `STATECD`, `LAT`, and `LON` into a `data.table` in your R environment. 
 
 **Relevant topics:** fread
 
@@ -6300,7 +6498,7 @@ https://www.uvm.edu/femc/data/archive/project/federal-forest-inventory-analysis-
 - The `head` of the resulting `data.table`.
 ```
 
-##### 4. Follow the directions [here]() to install `ggmap` and get an API key. There are over 4 million rows in our dataset -- we do _not_ want to hit Google's API that many times, nor would that work. Instead, do the following:
+##### 4. Follow the directions [here](#r-ggmap) to load `ggmap` using `library(ggmap)` (**note:** you do _not_ need to install `ggmap`, it is already installed) and get an API key. There are over 4 million rows in our dataset -- we do _not_ want to hit Google's API that many times, nor would that work. Instead, do the following:
 
 - Unless you feel comfortable using `data.table`, convert your `data.table` to a `data.frame`:
 
@@ -6357,8 +6555,6 @@ geo
 The following questions will use the dataset found in Scholar:
 
 `/class/datamine/data/movies_and_tv/imdb.db`
-
-A public sample of the data can be found [here](https://www.datadepot.rcac.purdue.edu/datamine/data/movies-and-tv/imdb.db).
 
 In this project we want to offer the flexibility of using your choice of R and/or Python. To keep things as consistent as possible, please use Rmarkdown on https://rstudio.scholar.rcac.purdue.edu/. See [here](#python-on-scholar) to learn how to run Python in this environment.
 
@@ -9253,6 +9449,16 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - The number of rows in the `elections` table in the `elections` database.
 ```
 
+##### Solution
+
+```{bash, eval=F}
+ls -la *.txt | awk '{ total += $4; }END{print total/1000000}'
+```
+
+```{sql, eval=F}
+SELECT COUNT(*) FROM elections;
+```
+
 ##### 2. Write a SQL query using the `LIKE` command to find a unique list of `zip_code`s that start with "479". 
 
 ##### Write another SQL query and answer: How many unique `zip_code`s are there that begin with "479"?
@@ -9277,6 +9483,13 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - The first 5 results from running the query.
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT DISTINCT zip_code FROM elections WHERE zip_code LIKE '479%' LIMIT 5;
+SELECT COUNT(DISTINCT zip_code) FROM elections WHERE zip_code LIKE '479%';
+```
+
 ##### 3. Write a SQL query that counts the number of donations (rows) that are from Indiana. How many donations are from Indiana? Rewrite the query and create an _alias_ for our field so it doesn't read `COUNT(*)` but rather `Indiana Donations`. 
 
 **Hint:** You may enclose an alias's name in quotation marks (single or double) when the name contains space.
@@ -9288,6 +9501,13 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 
 - SQL query used to answer the question.
 - The result of the SQL query.
+```
+
+##### Solution
+
+```{sql, eval=F}
+SELECT COUNT(*) FROM elections WHERE state='IN';
+SELECT COUNT(*) AS 'Indiana Donations' FROM elections WHERE state='IN';
 ```
 
 ##### 4. Rewrite the query in (3) so the result is displayed like: `IN: 1234567`. Note, if instead of "IN" we wanted "OH", only the WHERE clause should be modified, and the display should automatically change to `OH: 1234567`. In other words, the state abbreviation should be dynamic, not static.
@@ -9311,6 +9531,12 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - SQL query used to answer the question.
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT CONCAT(state, ": ", COUNT(*)) AS 'Donations' FROM elections WHERE state='IN';
+```
+
 ##### 5. In (2) we wrote a query that returns a unique list of `zip_code`s that start with "479". In (3) we wrote a query that counts the number of donations that are from Indiana. Use our query from (2) as a sub-query to find how many donations come from areas with `zip_code`s starting with "479". What percent of donations in Indiana come from said `zip_code`s?
 
 **Note:** This video gives two examples of sub-queries.
@@ -9329,6 +9555,12 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 
 - SQL queries used to answer the question.
 - The percentage of donations from Indiana from `zip_code`s starting with "479".
+```
+
+##### Solution
+
+```{sql, eval=F}
+SELECT COUNT(*) FROM elections WHERE zip_code IN (SELECT DISTINCT zip_code FROM elections WHERE zip_code LIKE '479%');
 ```
 
 ##### 6. In (3) we wrote a query that counts the number of donations that are from Indiana. When running queries like this, a natural "next question" is to ask the same question about another state. SQL gives us the ability to calculate functions in aggregate when grouping by a certain column. Write a SQL query that returns the state, number of donations from each state, the sum of the donations (`transaction_amt`). Which 5 states gave the most donations (highest count)? Order you result from most to least.
@@ -9351,6 +9583,12 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - Which 5 states gave the most donations?
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT state, COUNT(*) AS 'cnt', SUM(transaction_amt) AS 'total' FROM elections GROUP BY state ORDER BY cnt DESC;
+```
+
 ##### 7. Write a query that gets the number of donations, and sum of donations, by year, for Indiana. Create one or more graphics that highlights the year-by-year changes. Write a short 1-2 sentences explaining your graphic(s).
 
 **Relevant topics:** [SQL in R](#r-sql), [GROUP](#sql-groupby), [date functions in SQL](https://www.tutorialspoint.com/sql/sql-date-functions.htm)
@@ -9362,6 +9600,32 @@ When a question involves SQL queries in this project, you may use a SQL code chu
 - R code used to create your graphic(s).
 - 1 or more graphics in png/jpeg format.
 - 1-2 sentences summarizing your graphic(s).
+```
+
+##### Solution
+
+```{r, eval=F}
+library(RMariaDB)
+library(ggplot2)
+library(tidyverse)
+db <- dbConnect(RMariaDB::MariaDB(), host="scholar-db.rcac.purdue.edu", db="elections", user="elections_user", password="Dataelect!98")
+dat <- dbGetQuery(db, "SELECT COUNT(*) as cnt, SUM(transaction_amt) as amt, YEAR(transaction_dt) as yr FROM elections WHERE state='IN' GROUP BY yr ORDER BY yr;")
+filtered_dat = filter(dat, between(yr, 1978, 2020))
+ggplot(filtered_dat, aes(x=yr,y=amt/1e6)) +
+  geom_line() +
+  geom_point() +
+  theme_bw() +
+  labs(x='Year', y='Amount in millions')
+ggplot(filtered_dat, aes(x=yr,y=amt/(1e3*cnt))) +
+  geom_line() +
+  geom_point() +
+  theme_bw() +
+  labs(x='Year', y='Average amount in thousands')
+ggplot(filtered_dat, aes(x=yr,y=as.numeric(cnt)/1e3)) +
+  geom_line()  +
+  geom_point() +
+  theme_bw() +
+  labs(x='Year', y='Number of donations in thousands')
 ```
 
 ---
@@ -9558,58 +9822,65 @@ Note that this is the output if you use `sqlite` in the terminal. While the outp
 - Identify primary and foreign keys in a SQL table.
 ```
 
-#### Dataset
+#### Dataset 
+
+The following questions will use the dataset found in Scholar:
 
 `/class/datamine/data/movies_and_tv/imdb.db`
 
-A public sample of the data can be found [here](https://www.datadepot.rcac.purdue.edu/datamine/data/movies-and-tv/imdb.db).
+**Important note:** For this project you will use SQLite to access the data. To connect to the database, copy and paste the following before your solutions in your .Rmd:
+
+````markdown
+```{r, include=F}`r ''`
+library(RSQLite)
+imdb <- dbConnect(RSQLite::SQLite(), "/class/datamine/data/movies_and_tv/imdb.db")
+```
+````
+
+If you want to use a SQLite-specific function like `.tables` (or prefer to test things in the Terminal), you will need to use the Terminal to connect to the database and run queries. To do so, you can connect to RStudio Server at https://rstudio.scholar.rcac.purdue.edu, and navigate to the terminal. In the terminal execute the command:
+
+```{bash, eval=F}
+sqlite3 /class/datamine/data/movies_and_tv/imdb.db
+```
+
+From there, the SQLite-specific commands will function properly. They will _not_ function properly in an SQL code chunk. To display the SQLite-specific commands in a code chunk without running the code, use a code chunk with the option `eval=F` like this:
+
+````markdown
+```{sql, connection=imdb, eval=F}`r ''`
+SELECT * FROM titles LIMIT 5;
+```
+````
+
+This will allow the code to be displayed without throwing an error.
 
 #### Questions
 
-##### 1. A primary key is a field in a table which uniquely identifies a row in the table. Primary keys _must_ be unique values, and this is enforced at the database level. A foreign key is a field whose value matches a primary key in a different table. A table can have 0-1 primary key, but it can have 0+ foreign keys. Examine the `titles` table. Do you think there are any primary keys? How about foreign keys? 
+##### 1. A primary key is a field in a table which uniquely identifies a row in the table. Primary keys _must_ be unique values, and this is enforced at the database level. A foreign key is a field whose value matches a primary key in a different table. A table can have 0-1 primary key, but it can have 0+ foreign keys. Examine the `titles` table. Do you think there are any primary keys? How about foreign keys?  Now examine the `episodes` table. Based on observation and the column names, do you think there are any primary keys? How about foreign keys?
 
-**Relevant topics:** primary key, foreign key
+**Hint:** A primary key can also be a foreign key.
+
+**Hint:** Here are two videos.  The first video will remind you how to find the names of all of the tables in the `imdb` database.  The second video will introduce you to the `titles` and `episodes` tables in the `imdb` database.
+
+<details>
+    <summary><strong>Click here for video</strong></summary>
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_7ktvbhc9&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_ae112udc" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+</details>
+
+<details>
+    <summary><strong>Click here for video</strong></summary>
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_wc2hl3xm&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_y7qo7jpu" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+</details>
+
+**Relevant topics:** [primary key](https://www.geeksforgeeks.org/difference-between-primary-key-and-foreign-key/), [foreign key](https://www.geeksforgeeks.org/difference-between-primary-key-and-foreign-key/)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
 
+- List any primary or foreign keys in the `titles` table.
 - List any primary or foreign keys in the `episodes` table.
 ```
 
-##### 2. Examine the `episodes` table. Based on observation and the column names, do you think there are any primary keys? How about foreign keys?
-
-**Relevant topics:** primary key, foreign key
-
-```{block, type="bbox"}
-**Item(s) to submit:**
-
-- List any primary or foreign keys in the `episodes` table.
-```
-
-If you paste a `title_id` to the end of the following url, it will pull up the page for the title. For example, https://www.imdb.com/title/tt0413573 leads to the page for the TV series Grey's Anatomy. 
-
-##### 3. Write a query to confirm that the `title_id` tt0413573 does indeed belong to Grey's Anatomy.
-
-**Relevant topics:** [select](#sql-examples), [where](#sql-where)
-
-```{block, type="bbox"}
-**Item(s) to submit:**
-
-- SQL query used to solve the problem in a code chunk.
-- Output of the query.
-```
-
-##### 4. The `episode_title_id` column in the `episodes` table references titles of individual episodes of a tv series. The `show_title_id` references the titles of the show itself. With that in mind, write a query that gets a list of all of the episodes and titles of Grey's Anatomy.
-
-**Relevant topics:** [inner join](#sql-inner-join)
-
-```{block, type="bbox"}
-**Item(s) to submit:**
-
-- SQL query used to solve the problem in a code chunk.
-```
-
-##### 5. Like we explained in (3), you can find the `title_id` of a tv show, a tv show episodes, or a movie by browsing imdb.com and getting the `title_id` directly from the url. Browse imdb.com and find your favorite tv show. Get the `title_id` from the url and run the following query to confirm that the tv show is in our database:
+##### 2. If you paste a `title_id` to the end of the following url, it will pull up the page for the title. For example, https://www.imdb.com/title/tt0413573 leads to the page for the TV series _Grey's Anatomy_.  Write a SQL query to confirm that the `title_id` tt0413573 does indeed belong to _Grey's Anatomy_.  Then browse imdb.com and find your favorite TV show. Get the `title_id` from the url of your favorite TV show and run the following query, to confirm that the TV show is in our database:
 
 ```{sql, eval=F}
 SELECT * FROM titles WHERE title_id='<title id here>';
@@ -9617,16 +9888,48 @@ SELECT * FROM titles WHERE title_id='<title id here>';
 
 Make sure to replace "\<title id here\>" with the `title_id` of your favorite show. If your show does not appear, or has only a single season, pick another show until you find one we have in our database with multiple seasons.
 
+**Relevant topics:** [SELECT](#sql-examples), WHERE
+
 ```{block, type="bbox"}
 **Item(s) to submit:**
 
-- The `title_id` of your favorite tv show.
-- The output from running the provided (modified) query.
+- SQL query used to confirm that `title_id` tt0413573 does indeed belong to _Grey's Anatomy_.
+- The output of the query.
+- The `title_id` of your favorite TV show.
+- SQL query used to confirm the `title_id` for your favorite TV show.
+- The output of the query.
+
 ```
 
-##### 6. We want to write a query that returns the title and rating of the highest rated episode of the tv show you chose in (5). In order to do so, first write a query that returns a list of `episode_title_id`s (found in the `episodes` table), with the `primary_title` (found in the `titles` table) of the episode. 
+##### 3. The `episode_title_id` column in the `episodes` table references titles of individual episodes of a TV series. The `show_title_id` references the titles of the show itself. With that in mind, write a query that gets a list of all of the `episodes_title_id`s (found in the `episodes` table), with the associated `primary_title` (found in the `titles` table) for each episode of _Grey's Anatomy_.
 
-**Relevant topics:** [inner join](#sql-inner-join), [aliasing](#sql-aliasing)
+**Relevant topics:** [INNER JOIN](#sql-inner-join)
+
+**Hint:** This video shows how to extract titles of episodes in the `imdb` database.
+
+<details>
+    <summary><strong>Click here for video</strong></summary>
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_uhg3atol&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_wmo98brv" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+</details>
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- SQL query used to solve the problem in a code chunk.
+```
+
+##### 4. We want to write a query that returns the title and rating of the highest rated episode of your favorite TV show, which you chose in (2). In order to do so, we will break the task into two parts in (4) and (5). First, write a query that returns a list of `episode_title_id`s (found in the `episodes` table), with the associated `primary_title` (found in the `titles` table) for each episode. 
+
+**Hint:** This part is just like question (3) but this time with your favorite TV show, which you chose in (2).
+
+**Hint:** This video shows how to use a subquery, to `JOIN` a total of three tables in the `imdb` database.
+
+<details>
+    <summary><strong>Click here for video</strong></summary>
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_jb8vd4nc&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_sc5yje1a" width="400" height="285" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="Kaltura Player"></iframe>
+</details>
+
+**Relevant topics:** [INNER JOIN](#sql-inner-join), [aliasing](#sql-aliasing)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
@@ -9635,38 +9938,41 @@ Make sure to replace "\<title id here\>" with the `title_id` of your favorite sh
 - The first 5 results from your query.
 ```
 
-##### 7. Write a query that adds the rating to the end of each episode. To do so, use the query you wrote in (6) as a subquery. Was this also your favorite episode?
+##### 5. Write a query that adds the rating to the end of each episode. To do so, use the query you wrote in (4) as a subquery. Which episode has the highest rating? Is it also your favorite episode?
 
-**Relevant topics:** [inner join](#sql-inner-join), [aliasing](#sql-aliasing), subqueries, [desc](#sql-examples), [limit](#sql-examples), [order by](#sql-order-by)
+**Relevant topics:** [INNER JOIN](#sql-inner-join), [aliasing](#sql-aliasing), subqueries, ORDER BY, DESC, LIMIT
+
+**Note**: Various helpful examples that utilize the relevant topics in this problem can be found [here](#sql-examples).
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
 
 - SQL query used to solve the problem in a code chunk.
-- The `episode_title_id`, `primary_title`, and `rating` of the top rated episode from the tv series from (5).
-- A statement saying whether it is also your favorite episode.
+- The `episode_title_id`, `primary_title`, and `rating` of the top rated episode from your favorite TV series, in question (2).
+- A statement saying whether the highest rated episode is also your favorite episode.
 ```
 
-##### 8. Write a query that returns the `season_number` (from the `episodes` table), and average `rating` (from the `ratings` table) for each season. Write another query that only returns the season number and `rating` for the highest rated season. Consider the highest rated season the season with the highest average.
+##### 6. Write a query that returns the `season_number` (from the `episodes` table), and average `rating` (from the `ratings` table) for each season of your favorite TV show from (2). Write another query that only returns the season number and `rating` for the highest rated season. Consider the highest rated season the season with the highest average.
 
-**Relevant topics:** [inner join](#sql-inner-join), [aliasing](#sql-aliasing), [group by](#sql-groupby), having, [avg](#sql-avg)
+**Relevant topics:** [INNER JOIN](#sql-inner-join), [aliasing](#sql-aliasing), GROUP BY, AVG
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
 
-- The 2 SQL queries used to solve the problems in a code chunk.
+- The 2 SQL queries used to solve the problems in two code chunks.
 ```
 
-##### 9. Write a query that returns the `primary_title`, and `rating` of the highest rated episode per season for your tv show from (5). 
+##### 7. Write a query that returns the `primary_title` and `rating` of the highest rated episode per season for your favorite TV show from question (2). 
 
-**Relevant topics:** [max](#sql-max), subqueries, [group by](#sql-examples), having, [inner join](#sql-examples), [aliasing](#sql-aliasing)
+**Note:** You can show one highest rated episode for each season, without the need to worry about ties. 
+
+**Relevant topics:** MAX, subqueries, GROUP BY, [INNER JOIN](#sql-inner-join), [aliasing](#sql-aliasing)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
 
 - The SQL query used to solve the problem.
 - The output from your query.
-- 1-2 sentences explaining whether or not you agree.
 ```
 
 ---
@@ -9677,7 +9983,7 @@ Make sure to replace "\<title id here\>" with the `title_id` of your favorite sh
 
 **Motivation:** As we learned earlier in the semester, bash scripts are a powerful tool when you need to perform repeated tasks in a UNIX-like system. In addition, sometimes preprocessing data using UNIX tools prior to analysis in R or Python is useful. Ample practice is integral to becoming proficient with these tools. As such, we will be reviewing topics learned earlier in the semester.
 
-**Context:** We've just ended a series of projects focused on SQL. In this project we will begin to review topics learned throughout the semester, starting writing bash scripts using the various UNIX tools we learned about.
+**Context:** We've just ended a series of projects focused on SQL. In this project we will begin to review topics learned throughout the semester, starting writing bash scripts using the various UNIX tools we learned about in Projects 3 through 8.
 
 **Scope:** awk, UNIX utilities, bash scripts, fread
 
@@ -9696,7 +10002,7 @@ Make sure to replace "\<title id here\>" with the `title_id` of your favorite sh
 
 #### Dataset: 
 
-The following questions will use the dataset found in Scholar:
+The following questions will use PLOTSNAP.csv and TREE.csv from the data folder found in Scholar:
 
 `/class/datamine/data/forest` 
 
@@ -9740,7 +10046,7 @@ https://www.uvm.edu/femc/data/archive/project/federal-forest-inventory-analysis-
 - The output of your code piped to `head`.
 ```
 
-##### 3. `fread` is a "Fast and Friendly File Finagler". It is part of the very popular `data.table` package in R. We will learn more about this package next semester. For now, read the documentation [here](https://www.rdocumentation.org/packages/data.table/versions/1.12.8/topics/fread) and use the `cmd` argument in conjunction with your bash code from (2) to preprocess data prior to reading it into a `data.table` in your R environment. 
+##### 3. `fread` is a "Fast and Friendly File Finagler". It is part of the very popular `data.table` package in R. We will learn more about this package next semester. For now, read the documentation [here](https://www.rdocumentation.org/packages/data.table/versions/1.12.8/topics/fread) and use the `cmd` argument in conjunction with your bash code from (2) to read the data of `STATECD`, `LAT`, and `LON` into a `data.table` in your R environment. 
 
 **Relevant topics:** fread
 
@@ -9751,7 +10057,7 @@ https://www.uvm.edu/femc/data/archive/project/federal-forest-inventory-analysis-
 - The `head` of the resulting `data.table`.
 ```
 
-##### 4. Follow the directions [here]() to install `ggmap` and get an API key. There are over 4 million rows in our dataset -- we do _not_ want to hit Google's API that many times, nor would that work. Instead, do the following:
+##### 4. Follow the directions [here](#r-ggmap) to load `ggmap` using `library(ggmap)` (**note:** you do _not_ need to install `ggmap`, it is already installed) and get an API key. There are over 4 million rows in our dataset -- we do _not_ want to hit Google's API that many times, nor would that work. Instead, do the following:
 
 - Unless you feel comfortable using `data.table`, convert your `data.table` to a `data.frame`:
 
@@ -9792,7 +10098,7 @@ map <- get_map(location="United States", zoom=3)
 ggmap(map)
 ```
 
-**Hint:** See [here](https://stackoverflow.com/questions/23130604/plot-coordinates-on-map) for an example of adding points to a map.
+**Hint:** See [here](#how-do-i-add-latitude-and-longitude-points-to-a-map-of-purdue-university) for an example of adding points to a map.
 
 **Relevant topics:** [ggmap](#r-ggmap)
 
@@ -9803,7 +10109,7 @@ ggmap(map)
 - The map itself as output from running the code chunk.
 ```
 
-##### 6. Write a bash script that accepts at least 1 argument, and performs a useful task using at least 1 dataset from the `forest` folder in `/class/datamine/data/forest`. An example of a useful task could be printing a report of summary statistics for the data. Feel free to get creative. Note that tasks must be non-trivial -- a bash script that counts the number of lines in a file is _not_ appropriate. Make sure to properly document (via comments) what your bash script does. If you are in STAT 39000 ensure that your script returns columnar data with appropriate separating characters (for example a csv).
+##### 6. Write a bash script that accepts at least 1 argument, and performs a useful task using at least 1 dataset from the `forest` folder in `/class/datamine/data/forest`. An example of a useful task could be printing a report of summary statistics for the data. Feel free to get creative. Note that tasks must be non-trivial -- a bash script that counts the number of lines in a file is _not_ appropriate. Make sure to properly document (via comments) what your bash script does. Also ensure that your script returns columnar data with appropriate separating characters (for example a csv).
 
 **Relevant topics:** [bash scripts](#writing-scripts), [awk](#awk), [unix utilities](#unix-utilities)
 
@@ -9815,14 +10121,14 @@ ggmap(map)
 - A description of what your script does.
 ```
 
-##### 7. `fread` is a "Fast and Friendly File Finagler". It is part of the very popular `data.table` package in R. We will learn more about this package next semester. For now, read the documentation [here](https://www.rdocumentation.org/packages/data.table/versions/1.12.8/topics/fread) and use the `cmd` argument in conjunction with your script from (4) to preprocess data prior to reading it into a `data.table` in your R environment. 
+##### 7. You used `fread` in question (2). Now use the `cmd` argument in conjunction with your script from (6) to read the script output into a `data.table` in your R environment. 
 
 **Relevant topics:** fread
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
 
-- The R code used to read in and preprocess your data using your bash script from (3).
+- The R code used to read in and preprocess your data using your bash script from (6).
 - The `head` of the resulting `data.table`.
 ```
 
@@ -9848,8 +10154,6 @@ ggmap(map)
 #### Dataset
 
 `/class/datamine/data/movies_and_tv/imdb.db`
-
-A public sample of the data can be found [here](https://www.datadepot.rcac.purdue.edu/datamine/data/movies-and-tv/imdb.db).
 
 In this project we want to offer the flexibility of using your choice of R and/or Python. To keep things as consistent as possible, please use Rmarkdown on https://rstudio.scholar.rcac.purdue.edu/. See [here](#python-on-scholar) to learn how to run Python in this environment.
 
