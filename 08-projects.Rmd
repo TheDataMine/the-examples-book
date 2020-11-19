@@ -2780,6 +2780,15 @@ library(lubridate)
 - `class` and `typeof` column `Date`.
 ```
 
+##### Solution
+
+```{r, eval=F}
+library(lubridate)
+states <- read.csv("/class/datamine/data/zillow/State_time_series.csv")
+typeof(states$Date)
+class(states$Date)
+```
+
 ##### 2. Convert column `Date` to a corresponding date format using `lubridate`. Check that you correctly transformed it by checking its class like we did in question (1). Compare and contrast this method of conversion with the solution you came up with for question (3) in the previous project. Which method do you prefer?
 
 **Hint:** Take a look at the following functions from `lubridate`: `ymd`, `mdy`, `dym`.
@@ -2799,6 +2808,13 @@ library(lubridate)
 - R code used to solve the question.
 - `class` of modified column `Date`.
 - 1-2 sentences stating which method you prefer (if any) and why.
+```
+
+##### Solution
+
+```{r, eval=F}
+states$Date <- ymd(states$Date)
+class(states$Date)
 ```
 
 ##### 3. Create 3 new columns in `states` called `year`, `month`, `day_of_week` (Sun-Sat) using `lubridate`. Get the frequency table for your newly created columns. Do we have the same amount of data for all years, for all months, and for all days of the week? We did something similar in question (3) in the previous project -- specifically, we broke each date down by year. Which method do you prefer and why?
@@ -2825,6 +2841,18 @@ library(lubridate)
 - 1-2 sentences stating which method you prefer (if any) and why.
 ```
 
+##### Solution
+
+
+```{r, eval=F}
+states$year <- year(states$Date)
+states$month <- month(states$Date)
+states$day_of_week <- wday(states$Date, label=TRUE)
+table(states$year)
+table(states$month)
+table(states$day_of_week)
+```
+
 ##### 4. Is there a better month or set of months to put your house on the market? Use `tapply` to compare the average `DaysOnZillow_AllHomes` for all months. Make a barplot showing our results. Make sure your barplot includes "all of the fixings" (title, labeled axes, legend if necessary, etc. Make it look good.).
 
 **Relevant topics:** [tapply](#r-tapply), [barplot](#r-barplot)
@@ -2846,6 +2874,13 @@ library(lubridate)
 - 1-2 sentences answering the question "Is there a better time to put your house on the market?" based on your results.
 ```
 
+##### Solution
+
+```{r, eval=F}
+avgDaysPerMonth <- tapply(states$DaysOnZillow_AllHomes, states$month, mean, na.rm=T)
+barplot(avgDaysPerMonth, names.arg=month.abb, col='steelblue', main="Avg days on Zillow", ylab="# Days")
+```
+
 ##### 5. Filter the `states` data to contain only years from 2010+ and call it `states2010plus`. Make a lineplot showing the average `DaysOnZillow_AllHomes` by `Date` using `states2010plus` data. Can you spot any trends? Write 1-2 sentences explaining what (if any) trends you see.
 
 **Relevant topics:** [subset](#r-subset), [tapply](#r-tapply), [plot](#r-plot)
@@ -2856,6 +2891,14 @@ library(lubridate)
 - R code used to solve the question.
 - The time series lineplot for the average `DaysOnZillow_AllHomes` per date.
 - 1-2 sentences commenting on the patterns found in the plot, and your impressions of it.
+```
+
+##### Solution
+
+```{r, eval=F}
+states2010plus <- subset(states, year >= 2010)
+avgdays <- tapply(states2010plus$DaysOnZillow_AllHomes, states2010plus$Date, mean, na.rm=T)
+plot(ymd(names(avgdays)), avgdays, type='l')
 ```
 
 ##### 6. Do homes sell faster in certain states? For the following states: 'California', 'Indiana', 'NewYork' and 'Florida', make a lineplot for `DaysOnZillow_AllHomes` by `Date` with one line per state. Use the `states2010plus` dataset for this question. Make sure to have each state line colored differently, and to add a legend to your plot. Examine the plot and write 1-2 sentences about any observations you have.
@@ -2876,6 +2919,20 @@ library(lubridate)
 - R code used to solve the question.
 - The time series lineplot for `DaysOnZillow_AllHomes` per date for the 4 states.
 - 1-2 sentences commenting on the patterns found in the plot, and your answer to the question "Do homes sell faster in certain states rather than others?".
+```
+
+##### Solution
+
+```{r, eval=F}
+indiana <- subset(states2010plus, RegionName=="Indiana")
+california <- subset(states2010plus, RegionName=="California")
+florida <- subset(states2010plus, RegionName=="Florida")
+new_york <- subset(states2010plus, RegionName=="NewYork")
+plot(california$Date, california$DaysOnZillow_AllHomes, type='l', col='tomato', ylim = c(min(states2010plus$DaysOnZillow_AllHomes, na.rm=T), 210), ylab='Days on zillow', xlab = 'Date')
+lines(indiana$Date, indiana$DaysOnZillow_AllHomes, col='steelblue')
+lines(florida$Date, florida$DaysOnZillow_AllHomes, col='green')
+lines(new_york$Date, new_york$DaysOnZillow_AllHomes, col='black')
+legend('topright', legend=c('CA','IN','FL', 'NY'),lwd=2, col=c('tomato','steelblue','green','black'), ncol=2, cex=.7)
 ```
 
 ---
@@ -6198,6 +6255,12 @@ For example:
 - The first 5 records of information from the `station` table.
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT '('||id||') '||name||' @ ('||lat||','||long||')' FROM station LIMIT 5;
+```
+
 ##### 2. There is a variety of interesting weather information in the `weather` table. Write a query that finds the average `mean_temperature_f` by `zip_code`. Which is on average the warmest `zip_code`?
 
 Use aliases to format the result in the following way:
@@ -6224,6 +6287,12 @@ Note that this is the output if you use `sqlite` in the terminal. While the outp
 - The results of the query copy and pasted.
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT zip_code AS 'Zip Code', AVG(mean_temperature_f) AS 'Avg Temperature' FROM weather GROUP BY zip_code;
+```
+
 ##### 3. From (2) we can see that there are only 5 `zip_code`s with weather information. How many unique `zip_code`s do we have in the `trip` table? Write a query that finds the number of unique `zip_code`s in the `trip` table. Write another query that lists the `zip_code` and count of the number of times the `zip_code` appears. If we had originally assumed that the `zip_code` was related to the location of the trip itself, we were wrong. Can you think of a likely explanation for the unexpected `zip_code` values in the `trip` table?
 
 **Hint:** There could be missing values in `zip_code`. We want to avoid them in SQL queries, for now. You can learn more about the missing values (or NULL) in SQL [here](https://www.w3schools.com/sql/sql_null_values.asp).
@@ -6235,6 +6304,13 @@ Note that this is the output if you use `sqlite` in the terminal. While the outp
 
 - SQL queries used to solve this problem.
 - 1-2 sentences explainging what a possible explanation for the `zip_code`s could be.
+```
+
+##### Solution
+
+```{sql, eval=F}
+SELECT COUNT(DISTINCT zip_code) FROM trip;
+SELECT zip_code, COUNT(zip_code) FROM trip GROUP BY zip_code;
 ```
 
 ##### 4. In (2) we wrote a query that finds the average `mean_temperature_f` by `zip_code`. What if we want to tack on our results in (2) to information from each row in the `station` table based on the `zip_code`s? To do this, use an INNER JOIN. INNER JOIN combines tables based on specified fields, and returns only rows where there is a match in both the "left" and "right" tables.
@@ -6256,6 +6332,12 @@ Note that this is the output if you use `sqlite` in the terminal. While the outp
 - SQL query used to solve this problem.
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT * FROM station as s INNER JOIN (SELECT zip_code AS 'Zip Code', AVG(mean_temperature_f) AS 'Avg Temperature' FROM weather GROUP BY zip_code) AS sub ON s.zip_code=sub.'Zip Code';
+```
+
 ##### 5. In (3) we alluded to the fact that the `zip_code`s in the `trip` table aren't very consistent. Users can enter a zip code when using the app. This means that `zip_code` can be from anywhere in the world! With that being said, if the `zip_code` is one of the 5 `zip_code`s for which we have weather data (from question 2), we can add that weather information to matching rows of the `trip` table. In (4) we used an INNER JOIN to append some weather information to each row in the `station` table. For this question, write a query that performs an INNER JOIN and appends weather data from the `weather` table to the trip data from the `trip` table. Limit your output to 5 lines. 
 
 **Important note:** Notice that the weather data has about 1 row of weather information for each date and each zip code. This means you may have to join your data based on multiple constraints instead of just 1 like in (4). In the `trip` table, you can use `start_date` for for the date information.
@@ -6269,6 +6351,12 @@ Note that this is the output if you use `sqlite` in the terminal. While the outp
 
 - SQL query used to solve this problem.
 - First 5 lines of output.
+```
+
+##### Solution
+
+```{sql, eval=F}
+SELECT * FROM trip AS t INNER JOIN weather AS w ON t.zip_code=w.zip_code AND date(t.start_date)=date(w.date) LIMIT 5;
 ```
 
 --- 
@@ -9735,6 +9823,12 @@ For example:
 - The first 5 records of information from the `station` table.
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT '('||id||') '||name||' @ ('||lat||','||long||')' FROM station LIMIT 5;
+```
+
 ##### 2. There is a variety of interesting weather information in the `weather` table. Write a query that finds the average `mean_temperature_f` by `zip_code`. Which is on average the warmest `zip_code`?
 
 Use aliases to format the result in the following way:
@@ -9761,6 +9855,12 @@ Note that this is the output if you use `sqlite` in the terminal. While the outp
 - The results of the query copy and pasted.
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT zip_code AS 'Zip Code', AVG(mean_temperature_f) AS 'Avg Temperature' FROM weather GROUP BY zip_code;
+```
+
 ##### 3. From (2) we can see that there are only 5 `zip_code`s with weather information. How many unique `zip_code`s do we have in the `trip` table? Write a query that finds the number of unique `zip_code`s in the `trip` table. Write another query that lists the `zip_code` and count of the number of times the `zip_code` appears. If we had originally assumed that the `zip_code` was related to the location of the trip itself, we were wrong. Can you think of a likely explanation for the unexpected `zip_code` values in the `trip` table?
 
 **Hint:** There could be missing values in `zip_code`. We want to avoid them in SQL queries, for now. You can learn more about the missing values (or NULL) in SQL [here](https://www.w3schools.com/sql/sql_null_values.asp).
@@ -9772,6 +9872,13 @@ Note that this is the output if you use `sqlite` in the terminal. While the outp
 
 - SQL queries used to solve this problem.
 - 1-2 sentences explainging what a possible explanation for the `zip_code`s could be.
+```
+
+##### Solution
+
+```{sql, eval=F}
+SELECT COUNT(DISTINCT zip_code) FROM trip;
+SELECT zip_code, COUNT(zip_code) FROM trip GROUP BY zip_code;
 ```
 
 ##### 4. In (2) we wrote a query that finds the average `mean_temperature_f` by `zip_code`. What if we want to tack on our results in (2) to information from each row in the `station` table based on the `zip_code`s? To do this, use an INNER JOIN. INNER JOIN combines tables based on specified fields, and returns only rows where there is a match in both the "left" and "right" tables.
@@ -9793,6 +9900,12 @@ Note that this is the output if you use `sqlite` in the terminal. While the outp
 - SQL query used to solve this problem.
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT * FROM station as s INNER JOIN (SELECT zip_code AS 'Zip Code', AVG(mean_temperature_f) AS 'Avg Temperature' FROM weather GROUP BY zip_code) AS sub ON s.zip_code=sub.'Zip Code';
+```
+
 ##### 5. In (3) we alluded to the fact that the `zip_code`s in the `trip` table aren't very consistent. Users can enter a zip code when using the app. This means that `zip_code` can be from anywhere in the world! With that being said, if the `zip_code` is one of the 5 `zip_code`s for which we have weather data (from question 2), we can add that weather information to matching rows of the `trip` table. In (4) we used an INNER JOIN to append some weather information to each row in the `station` table. For this question, write a query that performs an INNER JOIN and appends weather data from the `weather` table to the trip data from the `trip` table. Limit your output to 5 lines. 
 
 **Important note:** Notice that the weather data has about 1 row of weather information for each date and each zip code. This means you may have to join your data based on multiple constraints instead of just 1 like in (4). In the `trip` table, you can use `start_date` for for the date information.
@@ -9808,6 +9921,12 @@ Note that this is the output if you use `sqlite` in the terminal. While the outp
 - First 5 lines of output.
 ```
 
+##### Solution
+
+```{sql, eval=F}
+SELECT * FROM trip AS t INNER JOIN weather AS w ON t.zip_code=w.zip_code AND date(t.start_date)=date(w.date) LIMIT 5;
+```
+
 ##### 6. How many rows are in the result from (5) (when not limiting to 5 lines)? How many rows are in the `trip` table? As you can see, a large proportion of the data from the `trip` table did not match the data from the `weather` table, and therefore was removed from the result. What if we want to keep all of the data from the `trip` table and add on data from the `weather` table if we have a match? Write a query to accomplish this. How many rows are in the result?
 
 ```{block, type="bbox"}
@@ -9819,6 +9938,24 @@ Note that this is the output if you use `sqlite` in the terminal. While the outp
 - The number of rows in the `trip` table.
 - SQL query to keep all of the data from the `trip` table and add on matching data from the `weather` table when available.
 - The number of rows in the result.
+```
+
+##### Solution
+
+```{sql, eval=F}
+SELECT COUNT(*) FROM trip AS t INNER JOIN weather AS w ON t.zip_code=w.zip_code AND date(t.start_date)=date(w.date);
+```
+
+```{sql, eval=F}
+SELECT COUNT(*) FROM trip;
+```
+
+```{sql, eval=F}
+SELECT * FROM trip AS t LEFT JOIN weather AS w ON t.zip_code=w.zip_code AND date(t.start_date)=date(w.date) LIMIT 5;
+```
+
+```{sql, eval=F}
+SELECT COUNT(*) FROM trip AS t LEFT JOIN weather AS w ON t.zip_code=w.zip_code AND date(t.start_date)=date(w.date);
 ```
 
 ---
