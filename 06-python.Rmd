@@ -437,6 +437,157 @@ A great introduction to `pandas`. Very quick.
 
 ## Scraping {#p-scraping}
 
+## XML {#p-xml}
+
+XML stands for Extensible Markup Language. To read more about XML see [here](#xml).
+
+### `lxml`
+
+[`lxml`](https://lxml.de/) is a package used for processing XML in Python. To get started, simply import the package:
+
+```{python, eval=T}
+from lxml import etree
+```
+
+To load XML from a string, do the following:
+
+```{python}
+my_string = f"""<html>
+    <head>
+        <title>My Title</title>
+    </head>
+    <body>
+        <div>
+            <div class="abc123 sktoe-sldjkt dkjfg3-dlgsk">
+                <div class="glkjr-slkd dkgj-0 dklfgj-00">
+                    <a class="slkdg43lk dlks" href="https://example.com/123456">
+                    </a>
+                </div>
+            </div>
+            <div>
+                <div class="ldskfg4">
+                    <span class="slktjoe" aria-label="123 comments, 43 Retweets, 4000 likes">Love it.</span>
+                </div>
+            </div>
+            <div data-amount="12">13</div>
+        </div>
+        <div>
+            <div class="abc123 sktoe-sls dkjfg-dlgsk">
+                <div class="glkj-slkd dkgj-0 dklfj-00">
+                    <a class="slkd3lk dls" href="https://example.com/123456">
+                    </a>
+                </div>
+            </div>
+            <div>
+                <div class="ldg4">
+                    <span class="sktjoe" aria-label="1000 comments, 455 Retweets, 40000 likes">Love it.</span>
+                </div>
+            </div>
+            <div data-amount="122">133</div>
+        </div>
+    </body>
+</html>"""
+tree = etree.fromstring(my_string)
+```
+
+Or, to load an XML file called `example.xml` do the following:
+
+```{python}
+tree = etree.parse("example.xml")
+```
+
+From there, you can use [xpath expressions](#xml-xpath) to parse the dataset.
+
+#### Examples
+
+##### How do I get the name of the root node from my `lxml` tree called `tree`?
+
+<details>
+    <summary>Click here for solution</summary>
+```{python}
+# remember "/" gets the node starting at the root node and "*" is a
+# wildcard that means "anything"
+tree.xpath("/*")[0].tag
+```
+</details>
+
+
+##### If the root node is named "html", how do I get the name of all nested tags?
+
+<details>
+    <summary>Click here for solution</summary>
+```{python}
+list_of_tags = [x.tag for x in tree.xpath("/html/*")]
+print(list_of_tags)
+
+# remember, this odd syntax is just a "list comprehension". It is 
+# essentially a nice short-hand way of writing a loop in Python.
+# It is the exact same as:
+for element in tree.xpath("/html/*"):
+  print(element.tag)
+```
+</details>
+
+##### How do I get the attributes of an element?
+
+<details>
+    <summary>Click here for solution</summary>
+```{python}
+import pandas as pd
+
+# as you can see, this prints the attributes in a dict-like object for each div element
+# in the node. 
+for element in tree.xpath("//div"):
+  print(element.attrib)
+  
+# Note, if you ever want to convert a list of dicts to a pandas dataframe
+# you will need to convert to a dict.
+list_of_dicts = []
+for element in tree.xpath("//div"):
+  list_of_dicts.append(element.attrib)
+
+myDF = pd.DataFrame(list_of_dicts)
+myDF.head() # unexpected
+
+list_of_dicts = []
+for element in tree.xpath("//div"):
+  list_of_dicts.append(dict(element.attrib))
+
+myDF = pd.DataFrame(list_of_dicts)
+myDF.head() # fixed
+```
+</details>
+
+##### How do I get the div elements with attribute "data-amount"?
+
+<details>
+    <summary>Click here for solution</summary>
+```{python}
+for element in tree.xpath("//div[@data-amount]"):
+  print(element.attrib)
+```
+</details>
+
+##### How do I get the div elements where data-amount is greater than 50?
+
+<details>
+    <summary>Click here for solution</summary>
+```{python}
+for element in tree.xpath("//div[@data-amount > 50]"):
+  print(element.attrib)
+```
+</details>
+
+##### How do I get the values of the span tags?
+
+<details>
+    <summary>Click here for solution</summary>
+```{python}
+for element in tree.xpath("//span"):
+  print(element.text)
+```
+</details>
+
 ## Plotting {#p-plotting}
 
 ### `matplotlib` {#p-matplotlib}
