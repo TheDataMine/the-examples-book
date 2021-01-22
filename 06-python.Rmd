@@ -1096,6 +1096,255 @@ A great introduction to `pandas`. Very quick.
 
 ## Scraping {#p-scraping}
 
+Web scraping is the process of programmatically scraping or downloading web content online and processing it into the desired format. It can roughly be broken into two steps:
+
+1. Scraping: The process of copying content from online. Typically the scraped content is HTML, but it can vary. Both the `requests` package and `selenium` package have the capability of scraping data. 
+2. Parsing: The process of programmatically extracting the desired information from the scraped content. [Xpath expressions](#xml-xpath), css selectors, and packages like `beautifulsoup4` are particularly useful for this task. `lxml`, `selenium`, and `beautifulsoup4` are all excellent packages to parse scraped content.
+
+With `lxml` and `selenium` we can use xpath expressions to locate the information we want. With that being said, that information is often returned in a Python class with some sort of name like Element (representing an HTML element). Learning how to access the information is important. The following is an example that strives to demonstrate how to: 
+
+1. Access the raw HTML of an element in `lxml`, `selenium`, and `beautifulsoup4`.
+2. Access attributes of an element in `lxml`, `selenium`, and `beautifulsoup4`.
+3. Access the values (the text between tags) of an element in `lxml`, `selenium`, and `beautifulsoup4`.
+4. Access the tag name of an element in `lxml`, `selenium`, and `beautifulsoup4`.
+
+First, let's setup the the tools to each be at the same stage -- with an element ready to go.
+
+```{python, eval=F}
+# SELENIUM SETUP
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+
+firefox_options = Options()
+firefox_options.add_argument("window-size=1920,1080")
+# Headless mode means no GUI
+firefox_options.add_argument("--headless")
+firefox_options.add_argument("start-maximized")
+firefox_options.add_argument("disable-infobars")
+firefox_options.add_argument("--disable-extensions")
+firefox_options.add_argument("--no-sandbox")
+firefox_options.add_argument("--disable-dev-shm-usage")`
+
+# Set the location of the executable Firefox program on Scholar
+firefox_options.binary_location = '/class/datamine/apps/firefox/firefox'
+
+# Set the location of the executable geckodriver program on Scholar
+driver = webdriver.Firefox(options=firefox_options, executable_path='/class/datamine/apps/geckodriver')
+driver.get("https://datamine.purdue.edu")
+
+# LXML SETUP
+import requests
+import lxml.html
+
+# note that without this header, a website may give you a puzzle to solve
+my_headers = {'User-Agent': 'Mozilla/5.0'}
+
+# scrape the webpage
+response = requests.get("https://datamine.purdue.edu", headers=my_headers)
+
+# load the webpage into an lxml tree
+tree = lxml.html.fromstring(response.text)
+
+# BEAUTIFULSOUP4 SETUP
+from bs4 import BeautifulSoup as bsoup
+
+my_headers = {'User-Agent': 'Mozilla/5.0'}
+html = requests.get('https://datamine.purdue.edu', headers=my_headers)
+soup = bsoup(html.text)
+```
+
+At this point in time, when you see us using the `soup` object, we are using `beautifulsoup4`. When you see us using the `tree` object, we are using `lxml`. When you see us using the `driver` object, we are using `selenium`.
+
+Scrape the entire webpage:
+
+```{python, eval=F}
+print(soup)
+
+import lxml.html
+print(lxml.html.tostring(tree))
+
+print(driver.page_source)
+```
+
+Get and print the hero on https://datamine.purdue.edu:
+
+````
+<section class="office__hero">
+  <h2>The Data Mine</h2>
+  <p>Advancing data science for undergraduates through collaboration, learning, research, innovation, and entrepreneurship.
+  <b>Open to all undergraduates!</b></p>
+</section>
+````
+
+```{python, eval=F}
+soup_element = soup.find('section', attrs={'class': 'office__hero'})
+# or
+soup_element = soup.find('section', class_='office__hero')
+print(soup_element)
+
+lxml_element = tree.xpath("//section[@class='office__hero']")[0]
+print(lxml.html.tostring(lxml_element))
+
+selenium_element = driver.find_element_by_xpath("//section[@class='office__hero']")
+print(selenium_element.get_attribute("outerHTML"))
+```
+
+Get the tag of our elements:
+
+```{python, eval=F}
+print(soup_element.name)
+
+print(lxml_element.tag)
+
+print(selenium_element.tag_name)
+```
+
+Get the "class" attribute of our elements:
+
+```{python, eval=F}
+print(soup_element.attrs.get("class")[0])
+
+print(lxml_element.attrib.get("class"))
+
+print(selenium_element.get_attribute("class"))
+```
+
+Get and print the nested `h2` element:
+
+```{python, eval=F}
+nested_soup_element = soup_element.find('h2')
+print(nested_soup_element)
+
+nested_lxml_element = lxml_element.xpath("h2")[0]
+print(lxml.html.tostring(nested_lxml_element))
+
+nested_selenium_element = selenium_element.find_element_by_xpath("//h2")
+print(nested_selenium_element.get_attribute("outerHTML"))
+```
+
+Get the contents or values of the nested element:
+
+```{python, eval=F}
+print(nested_soup_element.text)
+
+print(nested_lxml_element.text)
+
+print(nested_selenium_element.text)
+```
+
+### `requests`
+
+`requests` is a Python package used to make web requests over HTTP. 
+
+To summarize, HTTP is a protocol for communication between servers and clients. An example of a server would be a fancy computer running in an Amazon AWS warehouse. An example of a client would be your laptop when you are web surfing!
+
+HTTP has _requests_ and _responses_. A client (your browser, for example), sends a _request_ to a server. The server then returns a _response_ to the client. 
+
+HTTP has the following methods: GET, POST, PUT, HEAD, DELETE, PATCH, and OPTIONS. You can read more about those [here](https://www.w3schools.com/tags/ref_httpmethods.asp). The important thing is to realize that the `requests` package enables you to easily "use" these methods in Python. For example, the GET method is used to get data from a server:
+
+```{python, eval=T}
+import requests
+response = requests.get("https://datamine.purdue.edu/")
+print(response)
+```
+
+For simpler tasks, using `requests` to scrape the data, and a package like `lxml` or `beautifulsoup4` to parse the data, is appropriate.
+
+#### Examples
+
+##### How do I scrape the HTML from https://datamine.purdue.edu/?
+
+<details>
+    <summary>Click here for solution</summary>
+```{python, eval=T}
+response = requests.get("https://datamine.purdue.edu/")
+print(response.text[:500])
+```
+</details>
+
+#### Resources
+
+**[Official documentation](https://requests.readthedocs.io/en/master/)**
+
+The official documentation for the `requests` library.
+
+### `lxml` 
+
+[`lxml`](https://lxml.de/) is a package used for processing XML in Python. See [here](#p-lxml)
+
+### `selenium`
+
+`selenium` is an extremely powerful browser automation tool with official wrappers in Ruby, Java, Python, C#, Javascript. It is a tool that is used extensively in industry, and definitely worth while learning the basics. 
+
+For most websites, the tool combination of `requests` and `lxml` or `beautifulsoup4` will be more than adequate, and easier to jump right in. Where `selenium` really shines is the ability to interact with the browser before, during, and after scraping and parsing data. Many websites use javascript to load various pieces of HTML as the user interacts with the browser. For example, if you browse on https://pinterest.com, you will find that if you scroll very quickly, images will take a second or so to completely load. If you were to scrape these web pages with a tool like `requests`, the content you would be scraping would just be the content that was loaded in the original state. In the case of pinterest, this would mean that the _other_ 20 pictures you wanted to scrape wouldn't be present within the scraped content.
+
+To get by this limitation, we can use `selenium` to emulate a human browsing the web page. We can make the program "scroll down" _before_ scraping the web page, so the pictures would all be present.
+
+Other examples that could change the web page's state, hence changing the content we scrape could be: clicking on filters, using a search bar, hovering, etc.
+
+One other major way `selenium` differs from the other tools mentioned is the ability to interact with the browser, scrape, _and_ parse the data. It can do it all.
+
+Unfortunately `selenium` requires more setup than other packages. To get started with selenium you must first choose a browser: Firefox, Chrome, or Safari. In addition to your chosen browser, you will need an accompanying web driver. For Firefox, the web driver is [geckodriver](https://github.com/mozilla/geckodriver/releases). For Chrome, the web driver is [ChromeDriver](https://github.com/mozilla/geckodriver/releases), and for Safari you need to [enable SafariDriver](https://www.browserstack.com/guide/run-selenium-tests-on-safari-using-safaridriver). For simplicity, we will demonstrate with Firefox and geckodriver on Scholar. 
+Here are some sane configurations pre-made for you. We already have compatible Firefox and geckodriver versions available on Scholar. Note that if you were to comment out the `--headless` option, Firefox would literally launch and you could watch your program in action as it is being executed. If you wrote a program to scrape images off of a website, you'd be able to see the images load and the browser slowly scroll. Note that you would need to log in via ThinLinc to do this. By enabling headless mode, you prevent this, and just need to imagine how you would interact with a given web page. Feel free to copy and paste this code in your work.
+
+```{python, eval=F}
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+
+firefox_options = Options()
+firefox_options.add_argument("window-size=1920,1080")
+# Headless mode means no GUI
+firefox_options.add_argument("--headless")
+firefox_options.add_argument("start-maximized")
+firefox_options.add_argument("disable-infobars")
+firefox_options.add_argument("--disable-extensions")
+firefox_options.add_argument("--no-sandbox")
+firefox_options.add_argument("--disable-dev-shm-usage")`
+
+# Set the location of the executable Firefox program on Scholar
+firefox_options.binary_location = '/class/datamine/apps/firefox/firefox'
+
+# Set the location of the executable geckodriver program on Scholar
+driver = webdriver.Firefox(options=firefox_options, executable_path='/class/datamine/apps/geckodriver')
+```
+
+#### Examples
+
+##### How do I scrape a website using `selenium`?
+
+<details>
+    <summary>Click here for solution</summary>
+```{python, eval=F}
+driver = webdriver.Firefox(options=firefox_options, executable_path='/class/datamine/apps/geckodriver')
+driver.get("https://datamine.purdue.edu")
+print(driver.page_source[:500])
+```
+</details>
+
+##### How do I scrape the office "hero" on https://datamine.purdue.edu, with all of its contents?
+
+<details>
+    <summary>Click here for solution</summary>
+```{python, eval=F}
+driver = webdriver.Firefox(options=firefox_options, executable_path='/class/datamine/apps/geckodriver')
+driver.get("https://datamine.purdue.edu")
+my_element = driver.find_element_by_xpath("//section[@class='office__hero']")
+print(my_element.get_attribute("outerHTML"))
+```
+</details>
+
+##### How do I scrape the office "hero" on https://datamine.purdue.edu, with all of its contents, but _without_ the outermost HTML?
+
+<details>
+    <summary>Click here for solution</summary>
+```{python, eval=F}
+driver = webdriver.Firefox(options=firefox_options, executable_path='/class/datamine/apps/geckodriver')
+driver.get("https://datamine.purdue.edu")
+my_element = driver.find_element_by_xpath("//section[@class='office__hero']")
+print(my_element.get_attribute("innerHTML"))
+```
+</details>
+
 ## XML {#p-xml}
 
 XML stands for Extensible Markup Language. To read more about XML see [here](#xml).
@@ -1158,6 +1407,25 @@ tree = etree.parse("example.xml")
 From there, you can use [xpath expressions](#xml-xpath) to parse the dataset.
 
 #### Examples
+
+##### How do I load a webpage I scraped using `requests` into an `lxml` tree?
+
+<details>
+    <summary>Click here for solution</summary>
+```{python, eval=F}
+import requests
+import lxml.html
+
+# note that without this header, a website may give you a puzzle to solve
+my_headers = {'User-Agent': 'Mozilla/5.0'}
+
+# scrape the webpage
+response = requests.get("https://www.reddit.com/r/puppies/", headers=my_headers)
+
+# load the webpage into an lxml tree
+tree = lxml.html.fromstring(response.text)
+```
+</details>
 
 ##### How do I get the name of the root node from my `lxml` tree called `tree`?
 
