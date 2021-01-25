@@ -813,6 +813,60 @@ for i in my_list:
 
 ## Writing functions {#p-writing-functions}
 
+##### Write a function called `get_filename_from_url` that, given a url to a file, like https://image.shutterstock.com/image-vector/cute-dogs-line-art-border-260nw-1079902403.jpg returns the filename _with_ the extension. {#p-functions-example-01}
+
+<details>
+    <summary>Click here for solution</summary>
+```{python, eval=F}
+import os
+from urllib.parse import urlparse
+
+def get_filename_from_url(url: str) -> str:
+    """
+    Given a link to a file, return the filename with extension.
+
+    Args:
+        url (str): The url of the file.
+
+    Returns:
+        str: A string with the filename, including the file extension.
+    """
+    return os.path.basename(urlparse(url).path)
+```
+</details>
+
+##### Write a function that, given a url to an image, and a full path to a directory, saves the image to the provided directory. By default, have the function save the images to the user's home directory in a unix-like operating system. {#p-functions-example-02}
+
+<details>
+    <summary>Click here for solution</summary>
+```{python, eval=F}
+import requests
+from pathlib import Path
+import getpass
+
+def scrape_image(from_url: str, to_dir: str = f'/home/{getpass.getuser()}'):
+    """
+    Given a url to an image, scrape the image and save the image to the provided directory.
+    If no directory is provided, by default, save to the user's home directory.
+
+    Args:
+        from_url (str): U
+        to_dir (str, optional): [description]. Defaults to f'/home/{getpass.getuser()}'.
+    """
+    resp = requests.get(from_url)
+    
+    # this function is from the previous example
+    filename = get_filename_from_url(from_url)
+    
+    # Make directory if doesn't already exist
+    Path(to_dir).mkdir(parents=True, exist_ok=True)
+    
+    file = open(f'{to_dir}/{filename}', "wb")
+    file.write(resp.content)
+    file.close()
+```
+</details>
+
 ## Reading & Writing data {#p-reading-and-writing-data}
 
 ### `read_csv` 
@@ -1123,7 +1177,7 @@ firefox_options.add_argument("start-maximized")
 firefox_options.add_argument("disable-infobars")
 firefox_options.add_argument("--disable-extensions")
 firefox_options.add_argument("--no-sandbox")
-firefox_options.add_argument("--disable-dev-shm-usage")`
+firefox_options.add_argument("--disable-dev-shm-usage")
 
 # Set the location of the executable Firefox program on Scholar
 firefox_options.binary_location = '/class/datamine/apps/firefox/firefox'
@@ -1299,7 +1353,7 @@ firefox_options.add_argument("start-maximized")
 firefox_options.add_argument("disable-infobars")
 firefox_options.add_argument("--disable-extensions")
 firefox_options.add_argument("--no-sandbox")
-firefox_options.add_argument("--disable-dev-shm-usage")`
+firefox_options.add_argument("--disable-dev-shm-usage")
 
 # Set the location of the executable Firefox program on Scholar
 firefox_options.binary_location = '/class/datamine/apps/firefox/firefox'
@@ -1343,6 +1397,162 @@ driver.get("https://datamine.purdue.edu")
 my_element = driver.find_element_by_xpath("//section[@class='office__hero']")
 print(my_element.get_attribute("innerHTML"))
 ```
+</details>
+
+##### How do I scrape Shutterstock images of dogs from https://www.shutterstock.com/search/dog+side+view?
+
+<details>
+    <summary>Click here for solution</summary>
+    
+Start by opening your favorite browser and inspecting the HTML. Open the webpage https://www.shutterstock.com/search/dog+side+view, and right click on an image and select "Inspect Element". 
+
+![]()
+
+This should open a help menu towards the bottom of the browser that let's you examine the HTML. You can see that the `img` tag contains all of the information we want. Specifically, look at the link in the `src` attribute: https://image.shutterstock.com/image-photo/young-labrador-retriever-4-months-260nw-97138889.jpg. We need to write a function to scrape an image given a link like that. In addition, we first need to figure out how to extract these image links from the rest of the page. 
+
+It looks like the class attribute is not going to be of much value as it looks like a bunch of random numbers and letters. With that being said, it looks like the `data-automation` class _could_ be useful. What if we try to extract all elements where `data-automation` is equal to `mosaic-grid-cell-image`? Let's find out. 
+
+First, let's scrape the entire page using [requests](#p-requests):
+
+```{python, eval=F}
+import requests
+
+response = requests.get('https://www.shutterstock.com/search/dog+side+view')
+print(response.text[:500])
+```
+
+Hmm, the HTML looks like it _might_ be missing what we want. Let's find out for sure using lxml:
+
+```{python, eval=F}
+import lxml.html
+
+tree = lxml.html.fromstring(response.text)
+elements = tree.xpath("//img[@data-automation='mosaic-grid-cell-image']")
+print(len(elements))
+```
+
+Actually it looks like we found ~100 elements, great! If we had received a 406 error or some HTML that indicated we were being seen as a robot, we would try adding a header that makes our requests look like they come from a Firefox browser, like this:
+
+```{python, eval=F}
+my_headers = {'User-Agent': 'Mozilla/5.0'}
+html = requests.get('https://www.shutterstock.com/search/dog+side+view', headers=my_headers)
+```
+
+Great, let's continue. We want to get the `src` attribute from each element, because those links contain the paths to the images we want to scrape:
+
+```{python, eval=F}
+for element in elements:
+    print(element.attrib.get("src"))
+```
+
+Unfortunately, something has gone wrong. Only the first 20 or so image links have been scraped! What is going on here? This is a classic case of a website lazy loading images. What this means is the browser is waiting to fully render the images on the page until the user has the content (images) on the screen. In fact, if you load up shutterstock and then rapidly begin to scroll down, you will notice a lag where images don't load until after a few fractions of a second. 
+
+`requests` doesn't have the capability of scraping more images from this website -- at least not easily. This is a job better suited for `selenium` as `selenium` can completely emulate human interaction with the browser. What I mean is, what if we have `selenium` load the page up, scroll a little bit, pause, scroll a bit more, pause, and _then_ try scraping the content from the web page? Would this fix our issue? Let's find out. First, perform the "setup" steps outlined [here](#p-selenium):
+
+**Important note:** These settings will work on Scholar. In order to do the same on your own computer you will have to install compatible binaries for Firefox and geckodriver, and modify the paths in the code below accordingly.
+
+```{python, eval=F}
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+
+firefox_options = Options()
+firefox_options.add_argument("window-size=1920,1080")
+# Headless mode means no GUI
+firefox_options.add_argument("--headless")
+firefox_options.add_argument("start-maximized")
+firefox_options.add_argument("disable-infobars")
+firefox_options.add_argument("--disable-extensions")
+firefox_options.add_argument("--no-sandbox")
+firefox_options.add_argument("--disable-dev-shm-usage")
+
+# Set the location of the executable Firefox program on Scholar
+firefox_options.binary_location = '/class/datamine/apps/firefox/firefox'
+
+# Set the location of the executable geckodriver program on Scholar
+driver = webdriver.Firefox(options=firefox_options, executable_path='/class/datamine/apps/geckodriver')
+```
+
+Now, let's try to scroll and see if that fixes our issues:
+
+```{python, eval=F}
+driver.get("https://www.shutterstock.com/search/dog+side+view")
+
+# create a scroll function that emulates scrolling
+import time
+def scroll(driver, scroll_point):  
+    driver.execute_script(f'window.scrollTo(0, {scroll_point});')
+    time.sleep(5) 
+    
+# Needed to get the window size set right
+height = driver.execute_script('return document.body.scrollHeight')
+driver.set_window_size(900,height+100)
+
+# begin scrolling a bit, 1/4 of the page at a time, maybe
+scroll(driver, height/4)
+scroll(driver, height*2/4)
+scroll(driver, height*3/4)
+scroll(driver, height)
+
+# extract the image links
+elements = driver.find_elements_by_xpath("//img[@data-automation='mosaic-grid-cell-image']")
+for element in elements:
+  print(element.get_attribute("src"))
+```
+
+Excellent! Worked perfectly. Okay, so the next step would be to actually follow all of those links (or crawl them) and scrape the images themselves. You can write functions to do this, or use the examples [here](#p-functions-example-01) and [here](#p-functions-example-02) to help! For convenience:
+
+```{python, eval=F}
+import os
+from urllib.parse import urlparse
+
+def get_filename_from_url(url: str) -> str:
+    """
+    Given a link to a file, return the filename with extension.
+
+    Args:
+        url (str): The url of the file.
+
+    Returns:
+        str: A string with the filename, including the file extension.
+    """
+    return os.path.basename(urlparse(url).path)
+```
+
+```{python, eval=F}
+import requests
+from pathlib import Path
+import getpass
+
+def scrape_image(from_url: str, to_dir: str = f'/home/{getpass.getuser()}'):
+    """
+    Given a url to an image, scrape the image and save the image to the provided directory.
+    If no directory is provided, by default, save to the user's home directory.
+
+    Args:
+        from_url (str): U
+        to_dir (str, optional): [description]. Defaults to f'/home/{getpass.getuser()}'.
+    """
+    resp = requests.get(from_url)
+    
+    # this function is from the previous example
+    filename = get_filename_from_url(from_url)
+    
+    # Make directory if doesn't already exist
+    Path(to_dir).mkdir(parents=True, exist_ok=True)
+    
+    file = open(f'{to_dir}/{filename}', "wb")
+    file.write(resp.content)
+    file.close()
+```
+
+Let's cycle through and scrape each image, now:
+
+```{python, eval=F}
+for element in elements:
+    scrape_image(element.get_attribute("src"))
+```
+
+
 </details>
 
 ## XML {#p-xml}
