@@ -1878,6 +1878,147 @@ print(my_element.get_attribute("innerHTML"))
 ```
 </details>
 
+##### How do I use a search bar like Google with selenium? Search for "mdw" at https://purdue.edu/directory and scrape and print the data.
+
+<details>
+    <summary>Click here for solution</summary>
+```{python, eval=F}
+driver = webdriver.Firefox(options=firefox_options, executable_path='/class/datamine/apps/geckodriver')
+
+# get the webpage
+driver.get("https://www.purdue.edu/directory")
+
+# isolate the search bar "input" element
+element = driver.find_element_by_xpath("//input[@id='basicSearchInput']")
+
+# use "send_keys" to type in the search bar
+element.send_keys("mdw")
+
+# just like when you use a browser, you either need to push "enter" or click on the search button
+# this time, we will press enter
+from selenium.webdriver.common.keys import Keys
+element.send_keys(Keys.RETURN)
+
+# just how a browser can take a few seconds to fully load, let's wait for the page to load completely
+import time
+time.sleep(5)
+
+# get the table(s)
+elements = driver.find_elements_by_xpath("//table[@class='more']")
+
+# how many tables are there?
+print(len(elements))
+```
+
+Alternatively, we could click on the search button instead of pressing RETURN/enter:
+
+```{python, eval=F}
+driver = webdriver.Firefox(options=firefox_options, executable_path='/class/datamine/apps/geckodriver')
+
+# get the webpage
+driver.get("https://www.purdue.edu/directory")
+
+# isolate the search bar "input" element
+element = driver.find_element_by_xpath("//input[@id='basicSearchInput']")
+
+# use "send_keys" to type in the search bar
+element.send_keys("mdw")
+
+# find the button to execute the search
+button = driver.find_element_by_xpath("//a[@id='glass']")
+
+# click the button
+button.click()
+
+# just how a browser can take a few seconds to fully load, let's wait for the page to load completely
+import time
+time.sleep(5)
+
+# get the table(s)
+elements = driver.find_elements_by_xpath("//table[@class='more']")
+
+# how many tables are there?
+print(len(elements))
+```
+
+
+No matter which method you choose to use (click or enter), the table looks like this:
+
+```{html}
+<table class="more">
+    <thead>
+        <tr>
+            <th scope="col" colspan="2">mark daniel ward</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <th class="icon-key" scope="row">Alias</th>
+            <td>mdw</td>
+        </tr>
+        <tr>
+            <th class="icon-envelope-alt">Email</th>
+            <td><a href="mailto:mdw@purdue.edu">mdw@purdue.edu</a></td>
+        </tr>
+        <tr>
+            <th class="icon-library" scope="row">Campus</th>
+            <td>west lafayette</td>
+        </tr>
+        <tr>
+            <th class="icon-sitemap">Department</th>
+            <td>statistics</td>
+        </tr>
+        <tr>
+            <th class="icon-briefcase" scope="row">Title</th>
+            <td>professor of statistics</td>
+        </tr>
+    </tbody>
+</table>
+```
+
+And can be accessed by:
+
+```{python, eval=F}
+# note since we used find_elements_by_xpath, elements is a list. 
+# If we used find_element_by_xpath, we wouldn't need the [0] part
+elements[0].get_attribute("outerHTML")
+```
+
+Then, to parse through this data we could:
+
+```{python, eval=F}
+# first get the name
+# note that we now use .// -- this means search starting in the current element
+# if we used //, it would search the entire web page, not just our element
+name = elements[0].find_element_by_xpath(".//thead/tr/th").text
+print(name)
+
+# next, get the alias
+# the xpath expression here first gets the "th" element with class=icon-key. 
+# we want the content of the following td element. Since the next "td" 
+# element is at the same level of nesting as the "th" element, it is referred to
+# as a "sibling". following-sibling::td finds the "td" sibling immediately following 
+# the current "th" element
+alias = elements[0].find_element_by_xpath(".//th[@class='icon-key']/following-sibling::td").text
+print(alias)
+
+# next, get the email 
+# if you dont specify what the attribute is equal to, it will
+# evaluate to true if there is any value, and false otherwise
+email = elements[0].find_element_by_xpath(".//a[@href]").text
+print(email)
+
+# next, get the campus
+campus = elements[0].find_element_by_xpath(".//th[@class='icon-sitemap']/following-sibling::td").text
+print(campus)
+
+# next, get the title
+title = elements[0].find_element_by_xpath(".//th[@class='icon-briefcase']/following-sibling::td").text
+print(title)
+```
+
+</details>
+
 ##### How do I scrape Shutterstock images of dogs from https://www.shutterstock.com/search/dog+side+view?
 
 <details>
