@@ -1829,7 +1829,7 @@ The number of respondents that replied &quot;No&quot; to <code>Student</code>, y
 <div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> random
 
 <span class="bu">print</span>(<span class="ss">f&quot;A random integer between 1 and 100 is </span><span class="sc">{</span>random<span class="sc">.</span>randint(<span class="dv">1</span>, <span class="dv">101</span>)<span class="sc">}</span><span class="ss">&quot;</span>)</code></pre></div>
-<pre><code>## A random integer between 1 and 100 is 45</code></pre>
+<pre><code>## A random integer between 1 and 100 is 15</code></pre>
 </div>
 <div id="it-would-be-nice-to-visualize-these-results.-pandas-series-have-some-built-in-methods-to-create-plots.-use-this-method-to-generate-a-bar-plot-for-both-males-and-females.-how-do-they-compare" class="section level5">
 <h5>It would be nice to visualize these results. <code>pandas</code> Series have some built in methods to create plots. Use [this] method to generate a bar plot for both males and females. How do they compare?</h5>
@@ -2782,33 +2782,52 @@ Output from running your code.
 <p><strong>Important note:</strong> Do <strong>NOT</strong> include your password in your homework submission. Any time you need to type your password in you final submission just put something like &quot;SUPERSECRETPASSWORD&quot; or &quot;MYPASSWORD&quot;.</p>
 <p><strong>Hint:</strong> To include an image (or screenshot) in RMarkdown, try <code>![](./my_image.png)</code> where <code>my_image.png</code> is inside the same folder as your <code>.Rmd</code> file.</p>
 <p><strong>Hint:</strong> The spacing and tabs near the <code>message</code> variable are very important. Make sure to copy the code exactly. Otherwise, your subject may not end up in the subject of your email, or the email could end up being blank when sent.</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="kw">def</span> send_purdue_email(my_purdue_email, my_password, to):
-    <span class="im">import</span> smtplib, ssl
-    
-    port <span class="op">=</span> <span class="dv">587</span>  <span class="co"># For starttls</span>
-    smtp_server <span class="op">=</span> <span class="st">&quot;smtp.purdue.edu&quot;</span>
-    sender_email <span class="op">=</span> my_purdue_email
-    receiver_email <span class="op">=</span> to
-    password <span class="op">=</span> my_password
-    message <span class="op">=</span> <span class="ss">f&#39;&#39;&#39;\</span>
-<span class="ss">Subject: Test subject</span>
+<p><strong>Hint:</strong> Questions 4 and 5 were inspired by examples and borrowed from the code found at the <a href="https://realpython.com/python-send-email/">Real Python</a> website.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="kw">def</span> send_purdue_email(my_purdue_email, my_password, to, my_subject, my_message):
+  <span class="im">import</span> smtplib, ssl
+  <span class="im">from</span> email.mime.text <span class="im">import</span> MIMEText
+  <span class="im">from</span> email.mime.multipart <span class="im">import</span> MIMEMultipart
+  
+  message <span class="op">=</span> MIMEMultipart(<span class="st">&quot;alternative&quot;</span>)
+  message[<span class="st">&quot;Subject&quot;</span>] <span class="op">=</span> my_subject
+  message[<span class="st">&quot;From&quot;</span>] <span class="op">=</span> my_purdue_email
+  message[<span class="st">&quot;To&quot;</span>] <span class="op">=</span> to
+  
+  <span class="co"># Create the plain-text and HTML version of your message</span>
+  text <span class="op">=</span> <span class="ss">f&#39;&#39;&#39;\</span>
+<span class="ss">Subject: </span><span class="sc">{</span>my_subject<span class="sc">}</span>
 <span class="ss">To: </span><span class="sc">{to}</span>
 <span class="ss">From: </span><span class="sc">{</span>my_purdue_email<span class="sc">}</span>
-<span class="ss">    </span>
-<span class="ss">This is the email body.&#39;&#39;&#39;</span>
-    
-    context <span class="op">=</span> ssl.create_default_context()
-    <span class="cf">with</span> smtplib.SMTP(smtp_server, port) <span class="im">as</span> server:
-        server.ehlo()  <span class="co"># Can be omitted</span>
-        server.starttls(context<span class="op">=</span>context)
-        server.ehlo()  <span class="co"># Can be omitted</span>
-        server.login(sender_email, password)
-        server.sendmail(sender_email, receiver_email, message)
+<span class="ss">  </span>
+<span class="sc">{</span>my_message<span class="sc">}</span><span class="ss">&#39;&#39;&#39;</span>
+  html <span class="op">=</span> <span class="ss">f&#39;&#39;&#39;\</span>
+<span class="ss">&lt;html&gt;</span>
+<span class="ss">  &lt;body&gt;</span>
+<span class="ss">    </span><span class="sc">{</span>my_message<span class="sc">}</span>
+<span class="ss">  &lt;/body&gt;</span>
+<span class="ss">&lt;/html&gt;</span>
+<span class="ss">&#39;&#39;&#39;</span>
+  <span class="co"># Turn these into plain/html MIMEText objects</span>
+  part1 <span class="op">=</span> MIMEText(text, <span class="st">&quot;plain&quot;</span>)
+  part2 <span class="op">=</span> MIMEText(html, <span class="st">&quot;html&quot;</span>)
+  
+  <span class="co"># Add HTML/plain-text parts to MIMEMultipart message</span>
+  <span class="co"># The email client will try to render the last part first</span>
+  message.attach(part1)
+  message.attach(part2)
+  
+  context <span class="op">=</span> ssl.create_default_context()
+  <span class="cf">with</span> smtplib.SMTP(<span class="st">&quot;smtp.purdue.edu&quot;</span>, <span class="dv">587</span>) <span class="im">as</span> server:
+    server.ehlo()  <span class="co"># Can be omitted</span>
+    server.starttls(context<span class="op">=</span>context)
+    server.ehlo()  <span class="co"># Can be omitted</span>
+    server.login(my_purdue_email, my_password)
+    server.sendmail(my_purdue_email, to, message.as_string())
         
 <span class="co"># this sends an email from kamstut@purdue.edu to mdw@purdue.edu</span>
 <span class="co"># replace supersecretpassword with your own password</span>
 <span class="co"># do NOT include your password in your homework submission.</span>
-send_purdue_email(<span class="st">&quot;kamstut@purdue.edu&quot;</span>, <span class="st">&quot;supersecretpassword&quot;</span>, <span class="st">&quot;mdw@purdue.edu&quot;</span>)</code></pre></div>
+send_purdue_email(<span class="st">&quot;kamstut@purdue.edu&quot;</span>, <span class="st">&quot;supersecretpassword&quot;</span>, <span class="st">&quot;mdw@purdue.edu&quot;</span>, <span class="st">&quot;put subject here&quot;</span>, <span class="st">&quot;put message body here&quot;</span>)</code></pre></div>
 <p><strong>Relevant topics:</strong> <a href="python.html#p-writing-functions">functions</a></p>
 <div class="bbox">
 <p>
@@ -2829,28 +2848,46 @@ Screenshot showing your received the email.
 </div>
 <div id="the-following-is-the-content-of-a-new-python-script-called-is_in_stock.py" class="section level5">
 <h5>5. The following is the content of a new Python script called <code>is_in_stock.py</code>:</h5>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="kw">def</span> send_purdue_email(my_purdue_email, my_password, to):
-    <span class="im">import</span> smtplib, ssl
-    
-    port <span class="op">=</span> <span class="dv">587</span>  <span class="co"># For starttls</span>
-    smtp_server <span class="op">=</span> <span class="st">&quot;smtp.purdue.edu&quot;</span>
-    sender_email <span class="op">=</span> my_purdue_email
-    receiver_email <span class="op">=</span> to
-    password <span class="op">=</span> my_password
-    message <span class="op">=</span> <span class="ss">f&#39;&#39;&#39;\</span>
-<span class="ss">Subject: Test subject</span>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="kw">def</span> send_purdue_email(my_purdue_email, my_password, to, my_subject, my_message):
+  <span class="im">import</span> smtplib, ssl
+  <span class="im">from</span> email.mime.text <span class="im">import</span> MIMEText
+  <span class="im">from</span> email.mime.multipart <span class="im">import</span> MIMEMultipart
+  
+  message <span class="op">=</span> MIMEMultipart(<span class="st">&quot;alternative&quot;</span>)
+  message[<span class="st">&quot;Subject&quot;</span>] <span class="op">=</span> my_subject
+  message[<span class="st">&quot;From&quot;</span>] <span class="op">=</span> my_purdue_email
+  message[<span class="st">&quot;To&quot;</span>] <span class="op">=</span> to
+  
+  <span class="co"># Create the plain-text and HTML version of your message</span>
+  text <span class="op">=</span> <span class="ss">f&#39;&#39;&#39;\</span>
+<span class="ss">Subject: </span><span class="sc">{</span>my_subject<span class="sc">}</span>
 <span class="ss">To: </span><span class="sc">{to}</span>
 <span class="ss">From: </span><span class="sc">{</span>my_purdue_email<span class="sc">}</span>
-<span class="ss">    </span>
-<span class="ss">This is the email body.&#39;&#39;&#39;</span>
-    
-    context <span class="op">=</span> ssl.create_default_context()
-    <span class="cf">with</span> smtplib.SMTP(smtp_server, port) <span class="im">as</span> server:
-        server.ehlo()  <span class="co"># Can be omitted</span>
-        server.starttls(context<span class="op">=</span>context)
-        server.ehlo()  <span class="co"># Can be omitted</span>
-        server.login(sender_email, password)
-        server.sendmail(sender_email, receiver_email, message)
+<span class="ss">  </span>
+<span class="sc">{</span>my_message<span class="sc">}</span><span class="ss">&#39;&#39;&#39;</span>
+  html <span class="op">=</span> <span class="ss">f&#39;&#39;&#39;\</span>
+<span class="ss">&lt;html&gt;</span>
+<span class="ss">  &lt;body&gt;</span>
+<span class="ss">    </span><span class="sc">{</span>my_message<span class="sc">}</span>
+<span class="ss">  &lt;/body&gt;</span>
+<span class="ss">&lt;/html&gt;</span>
+<span class="ss">&#39;&#39;&#39;</span>
+  <span class="co"># Turn these into plain/html MIMEText objects</span>
+  part1 <span class="op">=</span> MIMEText(text, <span class="st">&quot;plain&quot;</span>)
+  part2 <span class="op">=</span> MIMEText(html, <span class="st">&quot;html&quot;</span>)
+  
+  <span class="co"># Add HTML/plain-text parts to MIMEMultipart message</span>
+  <span class="co"># The email client will try to render the last part first</span>
+  message.attach(part1)
+  message.attach(part2)
+  
+  context <span class="op">=</span> ssl.create_default_context()
+  <span class="cf">with</span> smtplib.SMTP(<span class="st">&quot;smtp.purdue.edu&quot;</span>, <span class="dv">587</span>) <span class="im">as</span> server:
+    server.ehlo()  <span class="co"># Can be omitted</span>
+    server.starttls(context<span class="op">=</span>context)
+    server.ehlo()  <span class="co"># Can be omitted</span>
+    server.login(my_purdue_email, my_password)
+    server.sendmail(my_purdue_email, to, message.as_string())
         
 <span class="kw">def</span> main():
     <span class="co"># scrape element from question 3</span>
@@ -3803,33 +3840,52 @@ Output from running your code.
 <p><strong>Important note:</strong> Do <strong>NOT</strong> include your password in your homework submission. Any time you need to type your password in you final submission just put something like &quot;SUPERSECRETPASSWORD&quot; or &quot;MYPASSWORD&quot;.</p>
 <p><strong>Hint:</strong> To include an image (or screenshot) in RMarkdown, try <code>![](./my_image.png)</code> where <code>my_image.png</code> is inside the same folder as your <code>.Rmd</code> file.</p>
 <p><strong>Hint:</strong> The spacing and tabs near the <code>message</code> variable are very important. Make sure to copy the code exactly. Otherwise, your subject may not end up in the subject of your email, or the email could end up being blank when sent.</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="kw">def</span> send_purdue_email(my_purdue_email, my_password, to):
-    <span class="im">import</span> smtplib, ssl
-    
-    port <span class="op">=</span> <span class="dv">587</span>  <span class="co"># For starttls</span>
-    smtp_server <span class="op">=</span> <span class="st">&quot;smtp.purdue.edu&quot;</span>
-    sender_email <span class="op">=</span> my_purdue_email
-    receiver_email <span class="op">=</span> to
-    password <span class="op">=</span> my_password
-    message <span class="op">=</span> <span class="ss">f&#39;&#39;&#39;\</span>
-<span class="ss">Subject: Test subject</span>
+<p><strong>Hint:</strong> Questions 4 and 5 were inspired by examples and borrowed from the code found at the <a href="https://realpython.com/python-send-email/">Real Python</a> website.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="kw">def</span> send_purdue_email(my_purdue_email, my_password, to, my_subject, my_message):
+  <span class="im">import</span> smtplib, ssl
+  <span class="im">from</span> email.mime.text <span class="im">import</span> MIMEText
+  <span class="im">from</span> email.mime.multipart <span class="im">import</span> MIMEMultipart
+  
+  message <span class="op">=</span> MIMEMultipart(<span class="st">&quot;alternative&quot;</span>)
+  message[<span class="st">&quot;Subject&quot;</span>] <span class="op">=</span> my_subject
+  message[<span class="st">&quot;From&quot;</span>] <span class="op">=</span> my_purdue_email
+  message[<span class="st">&quot;To&quot;</span>] <span class="op">=</span> to
+  
+  <span class="co"># Create the plain-text and HTML version of your message</span>
+  text <span class="op">=</span> <span class="ss">f&#39;&#39;&#39;\</span>
+<span class="ss">Subject: </span><span class="sc">{</span>my_subject<span class="sc">}</span>
 <span class="ss">To: </span><span class="sc">{to}</span>
 <span class="ss">From: </span><span class="sc">{</span>my_purdue_email<span class="sc">}</span>
-<span class="ss">    </span>
-<span class="ss">This is the email body.&#39;&#39;&#39;</span>
-    
-    context <span class="op">=</span> ssl.create_default_context()
-    <span class="cf">with</span> smtplib.SMTP(smtp_server, port) <span class="im">as</span> server:
-        server.ehlo()  <span class="co"># Can be omitted</span>
-        server.starttls(context<span class="op">=</span>context)
-        server.ehlo()  <span class="co"># Can be omitted</span>
-        server.login(sender_email, password)
-        server.sendmail(sender_email, receiver_email, message)
+<span class="ss">  </span>
+<span class="sc">{</span>my_message<span class="sc">}</span><span class="ss">&#39;&#39;&#39;</span>
+  html <span class="op">=</span> <span class="ss">f&#39;&#39;&#39;\</span>
+<span class="ss">&lt;html&gt;</span>
+<span class="ss">  &lt;body&gt;</span>
+<span class="ss">    </span><span class="sc">{</span>my_message<span class="sc">}</span>
+<span class="ss">  &lt;/body&gt;</span>
+<span class="ss">&lt;/html&gt;</span>
+<span class="ss">&#39;&#39;&#39;</span>
+  <span class="co"># Turn these into plain/html MIMEText objects</span>
+  part1 <span class="op">=</span> MIMEText(text, <span class="st">&quot;plain&quot;</span>)
+  part2 <span class="op">=</span> MIMEText(html, <span class="st">&quot;html&quot;</span>)
+  
+  <span class="co"># Add HTML/plain-text parts to MIMEMultipart message</span>
+  <span class="co"># The email client will try to render the last part first</span>
+  message.attach(part1)
+  message.attach(part2)
+  
+  context <span class="op">=</span> ssl.create_default_context()
+  <span class="cf">with</span> smtplib.SMTP(<span class="st">&quot;smtp.purdue.edu&quot;</span>, <span class="dv">587</span>) <span class="im">as</span> server:
+    server.ehlo()  <span class="co"># Can be omitted</span>
+    server.starttls(context<span class="op">=</span>context)
+    server.ehlo()  <span class="co"># Can be omitted</span>
+    server.login(my_purdue_email, my_password)
+    server.sendmail(my_purdue_email, to, message.as_string())
         
 <span class="co"># this sends an email from kamstut@purdue.edu to mdw@purdue.edu</span>
 <span class="co"># replace supersecretpassword with your own password</span>
 <span class="co"># do NOT include your password in your homework submission.</span>
-send_purdue_email(<span class="st">&quot;kamstut@purdue.edu&quot;</span>, <span class="st">&quot;supersecretpassword&quot;</span>, <span class="st">&quot;mdw@purdue.edu&quot;</span>)</code></pre></div>
+send_purdue_email(<span class="st">&quot;kamstut@purdue.edu&quot;</span>, <span class="st">&quot;supersecretpassword&quot;</span>, <span class="st">&quot;mdw@purdue.edu&quot;</span>, <span class="st">&quot;put subject here&quot;</span>, <span class="st">&quot;put message body here&quot;</span>)</code></pre></div>
 <p><strong>Relevant topics:</strong> <a href="python.html#p-writing-functions">functions</a></p>
 <div class="bbox">
 <p>
@@ -3850,28 +3906,46 @@ Screenshot showing your received the email.
 </div>
 <div id="the-following-is-the-content-of-a-new-python-script-called-is_in_stock.py-1" class="section level5">
 <h5>5. The following is the content of a new Python script called <code>is_in_stock.py</code>:</h5>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="kw">def</span> send_purdue_email(my_purdue_email, my_password, to):
-    <span class="im">import</span> smtplib, ssl
-    
-    port <span class="op">=</span> <span class="dv">587</span>  <span class="co"># For starttls</span>
-    smtp_server <span class="op">=</span> <span class="st">&quot;smtp.purdue.edu&quot;</span>
-    sender_email <span class="op">=</span> my_purdue_email
-    receiver_email <span class="op">=</span> to
-    password <span class="op">=</span> my_password
-    message <span class="op">=</span> <span class="ss">f&#39;&#39;&#39;\</span>
-<span class="ss">Subject: Test subject</span>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="kw">def</span> send_purdue_email(my_purdue_email, my_password, to, my_subject, my_message):
+  <span class="im">import</span> smtplib, ssl
+  <span class="im">from</span> email.mime.text <span class="im">import</span> MIMEText
+  <span class="im">from</span> email.mime.multipart <span class="im">import</span> MIMEMultipart
+  
+  message <span class="op">=</span> MIMEMultipart(<span class="st">&quot;alternative&quot;</span>)
+  message[<span class="st">&quot;Subject&quot;</span>] <span class="op">=</span> my_subject
+  message[<span class="st">&quot;From&quot;</span>] <span class="op">=</span> my_purdue_email
+  message[<span class="st">&quot;To&quot;</span>] <span class="op">=</span> to
+  
+  <span class="co"># Create the plain-text and HTML version of your message</span>
+  text <span class="op">=</span> <span class="ss">f&#39;&#39;&#39;\</span>
+<span class="ss">Subject: </span><span class="sc">{</span>my_subject<span class="sc">}</span>
 <span class="ss">To: </span><span class="sc">{to}</span>
 <span class="ss">From: </span><span class="sc">{</span>my_purdue_email<span class="sc">}</span>
-<span class="ss">    </span>
-<span class="ss">This is the email body.&#39;&#39;&#39;</span>
-    
-    context <span class="op">=</span> ssl.create_default_context()
-    <span class="cf">with</span> smtplib.SMTP(smtp_server, port) <span class="im">as</span> server:
-        server.ehlo()  <span class="co"># Can be omitted</span>
-        server.starttls(context<span class="op">=</span>context)
-        server.ehlo()  <span class="co"># Can be omitted</span>
-        server.login(sender_email, password)
-        server.sendmail(sender_email, receiver_email, message)
+<span class="ss">  </span>
+<span class="sc">{</span>my_message<span class="sc">}</span><span class="ss">&#39;&#39;&#39;</span>
+  html <span class="op">=</span> <span class="ss">f&#39;&#39;&#39;\</span>
+<span class="ss">&lt;html&gt;</span>
+<span class="ss">  &lt;body&gt;</span>
+<span class="ss">    </span><span class="sc">{</span>my_message<span class="sc">}</span>
+<span class="ss">  &lt;/body&gt;</span>
+<span class="ss">&lt;/html&gt;</span>
+<span class="ss">&#39;&#39;&#39;</span>
+  <span class="co"># Turn these into plain/html MIMEText objects</span>
+  part1 <span class="op">=</span> MIMEText(text, <span class="st">&quot;plain&quot;</span>)
+  part2 <span class="op">=</span> MIMEText(html, <span class="st">&quot;html&quot;</span>)
+  
+  <span class="co"># Add HTML/plain-text parts to MIMEMultipart message</span>
+  <span class="co"># The email client will try to render the last part first</span>
+  message.attach(part1)
+  message.attach(part2)
+  
+  context <span class="op">=</span> ssl.create_default_context()
+  <span class="cf">with</span> smtplib.SMTP(<span class="st">&quot;smtp.purdue.edu&quot;</span>, <span class="dv">587</span>) <span class="im">as</span> server:
+    server.ehlo()  <span class="co"># Can be omitted</span>
+    server.starttls(context<span class="op">=</span>context)
+    server.ehlo()  <span class="co"># Can be omitted</span>
+    server.login(my_purdue_email, my_password)
+    server.sendmail(my_purdue_email, to, message.as_string())
         
 <span class="kw">def</span> main():
     <span class="co"># scrape element from question 3</span>
