@@ -2873,6 +2873,111 @@ plt.close()
 
 #### boxplot {#p-matplotlib-boxplot}
 
+`boxplot` is a function that creates a boxplot. Boxplots and side-by-side boxplots are very good for understanding fundamental information about your data, like the quartiles, upper and lower bounds, potential outliers, etc. 
+
+First, we need to import `matplotlib`, and get our dataset.
+
+```{python, eval=T}
+import matplotlib.pyplot as plt
+from rdatasets import data
+
+myDF = data("trees")
+myDF.head()
+```
+
+Next, let's say a tree is tall if it is above 75, and short otherwise. We can use the `pandas` method `cut` to create a new column called `Size`.
+
+```{python, eval=T}
+import pandas as pd
+
+myDF['Size'] = pd.cut(myDF['Height'], bins = [0, 76, 100], labels = ['short', 'tall'])
+myDF.head()
+```
+
+Okay, great! Let's take a look at the girth of the two groups of trees.
+
+```{python, eval=T}
+import matplotlib.pyplot as plt
+
+plt.boxplot(myDF['Girth'])
+plt.show()
+```
+
+Uh oh, that looks like a boxplot for all of the trees girth. If we look at the [official documentation](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.boxplot.html), we can see that `boxplot` makes a plot for each column of `x` or each vector in sequence `x` where `x` is our first argument (the data). Let's get our data into the correct format first. 
+
+```{python, eval=T}
+import matplotlib.pyplot as plt
+
+tmp = myDF.pivot(columns="Size", values="Girth")
+plt.boxplot([tmp['short'], tmp['tall']])
+plt.show()
+plt.close()
+```
+
+Well, that didn't work. It looks like the NA's in each column are preventing `matplotlib` from working. Let's remove the NA's.
+
+```{python, eval=T}
+import matplotlib.pyplot as plt
+
+tmp = myDF.pivot(columns="Size", values="Girth")
+plt.boxplot([tmp['short'].dropna(), tmp['tall'].dropna()])
+plt.show()
+plt.close()
+```
+
+Okay, great! Now, let's add some proper labels.
+
+```{python, eval=T}
+import matplotlib.pyplot as plt
+
+tmp = myDF.pivot(columns="Size", values="Girth")
+plt.boxplot([tmp['short'].dropna(), tmp['tall'].dropna()])
+plt.title("Tree girth")
+plt.xticks([1,2], ['short', 'tall'])
+plt.ylabel("Girth in inches")
+plt.show()
+plt.close()
+```
+
+Let's add some color.
+
+```{python, eval=T}
+import matplotlib.pyplot as plt
+
+tmp = myDF.pivot(columns="Size", values="Girth")
+boxes = plt.boxplot([tmp['short'].dropna(), tmp['tall'].dropna()], patch_artist=True)
+plt.title("Tree girth")
+plt.xticks([1,2], ['short', 'tall'])
+plt.ylabel("Girth in inches")
+for box in boxes['boxes']:
+    box.set(facecolor='#90ee90')
+plt.show()
+plt.close()
+```
+
+Better, but that sure isn't too intuitive. Here is an eclectic color scheme to highlight how to change other components.
+
+```{python, eval=T}
+import matplotlib.pyplot as plt
+
+tmp = myDF.pivot(columns="Size", values="Girth")
+boxes = plt.boxplot([tmp['short'].dropna(), tmp['tall'].dropna()], patch_artist=True)
+plt.title("Tree girth")
+plt.xticks([1,2], ['short', 'tall'])
+plt.ylabel("Girth in inches")
+
+plt.setp(boxes["boxes"], color="red")
+for box in boxes['boxes']:
+    box.set(facecolor='#90ee90')
+plt.setp(boxes['whiskers'], color="pink")
+plt.setp(boxes['fliers'], color="blue") # outliers not present in this graph
+plt.setp(boxes['medians'], color="purple")
+plt.setp(boxes['caps'], color="grey")
+
+plt.show()
+plt.close()
+```
+
 #### piechart {#p-matplotlib-piechart}
 
 #### dotchart {#p-matplotlib-dotchart}
@@ -2983,7 +3088,7 @@ A decent introduction to pyplot.
 
 **[Official usage guide](https://matplotlib.org/tutorials/introductory/usage.html#sphx-glr-tutorials-introductory-usage-py)**
 
-A detailed explaination of the anatomy of a figure, terminology used with `matplotlib`, etc. Probably more detail than most people would want.
+A detailed explanation of the anatomy of a figure, terminology used with `matplotlib`, etc. Probably more detail than most people would want.
 
 
 ### `plotly` {#p-plotly}
