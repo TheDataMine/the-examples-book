@@ -1853,7 +1853,7 @@ The number of respondents that replied &quot;No&quot; to <code>Student</code>, y
 <div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> random
 
 <span class="bu">print</span>(<span class="ss">f&quot;A random integer between 1 and 100 is </span><span class="sc">{</span>random<span class="sc">.</span>randint(<span class="dv">1</span>, <span class="dv">101</span>)<span class="sc">}</span><span class="ss">&quot;</span>)</code></pre></div>
-<pre><code>## A random integer between 1 and 100 is 101</code></pre>
+<pre><code>## A random integer between 1 and 100 is 4</code></pre>
 </div>
 <div id="it-would-be-nice-to-visualize-these-results.-pandas-series-have-some-built-in-methods-to-create-plots.-use-this-method-to-generate-a-bar-plot-for-both-females-and-males.-how-do-they-compare" class="section level5">
 <h5>It would be nice to visualize these results. <code>pandas</code> Series have some built in methods to create plots. Use [this] method to generate a bar plot for both females and males. How do they compare?</h5>
@@ -2131,15 +2131,44 @@ fix_businesses_data(data_path<span class="op">=</span><span class="st">&quot;/cl
 p <span class="op">=</span> Path(<span class="ss">f&quot;/scratch/scholar/</span><span class="sc">{</span>my_username<span class="sc">}</span><span class="ss">&quot;</span>).glob(<span class="st">&#39;**/*&#39;</span>)
 files <span class="op">=</span> [x <span class="cf">for</span> x <span class="kw">in</span> p <span class="cf">if</span> x.is_file()]
 <span class="bu">print</span>(files)</code></pre></div>
-<p><strong>Important note:</strong> Make sure that either <code>/scratch/scholar/{my_username}</code> or <code>/scratch/scholar/{my_username}/</code> will work as arguments to <code>output_dir</code>.</p>
-<p><strong>Hint:</strong> Check out the code below:</p>
+<p><strong>Important note:</strong> Make sure that either <code>/scratch/scholar/{my_username}</code> or <code>/scratch/scholar/{my_username}/</code> will work as arguments to <code>output_dir</code>. If you use the <code>pathlib</code> library, as shown in the provided function &quot;skeleton&quot; below, both will work automatically!</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">from</span> pathlib <span class="im">import</span> Path
+
+<span class="kw">def</span> fix_businesses_data(data_path: <span class="bu">str</span>, output_dir: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="va">None</span>:
+    <span class="co">&quot;&quot;&quot;</span>
+<span class="co">    fix_data accepts a parquet file that contains data in a specific format. </span>
+<span class="co">    fix_data &quot;explodes&quot; the attributes and hours columns into 39+7 new </span>
+<span class="co">    columns.</span>
+<span class="co">    Args:</span>
+<span class="co">        data_path (str): Full path to a file in the same format as businesses.parquet.</span>
+<span class="co">        output_dir (str): Path to a directory where new_businesses.parquet should be output.</span>
+<span class="co">    &quot;&quot;&quot;</span>
+    <span class="co"># read in original parquet file</span>
+    businesses <span class="op">=</span> pd.read_parquet(data_path)
+    
+    <span class="co"># unnest the attributes column</span>
+    
+    <span class="co"># unnest the hours column</span>
+    
+    <span class="co"># output new file</span>
+    businesses.to_parquet(<span class="bu">str</span>(Path(<span class="ss">f&quot;</span><span class="sc">{</span>output_dir<span class="sc">}</span><span class="ss">&quot;</span>).joinpath(<span class="st">&quot;new_businesses.parquet&quot;</span>)))
+    
+    <span class="cf">return</span> <span class="va">None</span></code></pre></div>
+<p><strong>Hint:</strong> Check out the code below, notice how using <code>pathlib</code> handles whether or not we have the trailing <code>/</code>.</p>
 <div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">from</span> pathlib <span class="im">import</span> Path
 
 <span class="bu">print</span>(Path(<span class="st">&quot;/class/datamine/data/&quot;</span>).joinpath(<span class="st">&quot;my_file.txt&quot;</span>))
 <span class="bu">print</span>(Path(<span class="st">&quot;/class/datamine/data&quot;</span>).joinpath(<span class="st">&quot;my_file.txt&quot;</span>))</code></pre></div>
 <p><strong>Hint:</strong> You can test out your function on <code>/class/datamine/data/yelp/data/parquet/businesses_small.parquet</code> to not waste as much time.</p>
 <p><strong>Hint:</strong> If we were using R and the <code>tidyverse</code> package, this sort of behavior is called &quot;unnesting&quot;. You can read more about it <a href="https://tidyr.tidyverse.org/reference/nest.html">here</a>.</p>
-<p><strong>Hint:</strong> <a href="https://stackoverflow.com/questions/38231591/splitting-dictionary-list-inside-a-pandas-column-into-separate-columns">This</a> stackoverflow post should be <em>very</em> useful!</p>
+<p><strong>Hint:</strong> <a href="https://stackoverflow.com/questions/38231591/splitting-dictionary-list-inside-a-pandas-column-into-separate-columns">This</a> stackoverflow post should be <em>very</em> useful! Specifically, run this code and take a look at the output:</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">businesses
+businesses.loc[<span class="dv">0</span>:<span class="dv">4</span>, <span class="st">&quot;attributes&quot;</span>].<span class="bu">apply</span>(pd.Series)</code></pre></div>
+<p>Notice that some rows have json, and others have <code>None</code>:</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">businesses.loc[<span class="dv">0</span>, <span class="st">&quot;attributes&quot;</span>] <span class="co"># has json</span>
+businesses.loc[<span class="dv">2</span>, <span class="st">&quot;attributes&quot;</span>] <span class="co"># has None</span></code></pre></div>
+<p>This method allows us to handle both cases. If the row has json it converts the values, if it has <code>None</code> it just puts each column with a value of <code>None</code>.</p>
+<p><strong>Hint:</strong> <a href="https://stackoverflow.com/questions/44723377/pandas-combining-two-dataframes-horizontally">Here</a> is an example that shows you how to concatenate (combine) dataframes.</p>
 <p><strong>Relevant topics:</strong> <a href="python.html#p-pandas-indexing">pandas indexing</a>, <a href="python.html#p-writing-functions">functions</a>, <a href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.concat.html">concat</a>, <a href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.apply.html">apply</a></p>
 <div class="bbox">
 <p>
