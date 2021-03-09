@@ -1655,7 +1655,7 @@ myDF = pd.read_csv("./grades.csv")
 ```
 </details>
 
-### `read_parquet`` {#p-pandas-read_parquet}
+### `read_parquet` {#p-pandas-read_parquet}
 
 `read_parquet` is a function from the `pandas` library that allows you to read tabular data into a `pandas` DataFrame.
 
@@ -1901,6 +1901,96 @@ A great introduction to `pandas`. Very quick.
 
 The official user guide for indexing.
 
+### dates and times {#p-pandas-datetime}
+
+### `groupby` {#p-pandas-groupby}
+
+`groupby` is a powerful method of both DataFrames and Series. 
+
+For a DataFrame, `groupby` groups by each unique value in a given column, and allows you to perform operations on those groups. For example, given a sample of the flights data, what if you wanted to calculate the average departure delay, `DepDelay`, for each `Year` of data in the `Year` column?
+
+```{python, eval=T}
+import pandas as pd
+
+myDF = pd.read_csv("./flights_sample.csv")
+myDF.head()
+```
+
+```{python, eval=T}
+myDF.groupby("Year").mean()
+```
+
+As you can see, for each column with numeric values, the average is calculated for each of the 3 `Year`s, 1987, 1990, and 1991. You can isolate the `DepDelay`, before or after the calculation.
+
+```{python, eval=T}
+# before
+myDF.groupby("Year")['DepDelay'].mean()
+```
+
+or
+
+```
+# after
+myDF.groupby("Year").mean()['DepDelay']
+```
+
+You can group by multiple variables as well. For example, you could find the mean `DepDelay` for each day of the week for each year.
+
+```{python, eval=T}
+myDF.groupby(["Year", "DayOfWeek"])['DepDelay'].mean()
+```
+
+You may notice that the result is a Series, not a DataFrame. To move the `Year` and `DayOfWeek` indexes back to be columns of a DataFrame, you can use the `reset_index()` method.
+
+```{python, eval=T}
+myDF.groupby(["Year", "DayOfWeek"])['DepDelay'].mean().reset_index()
+```
+#### Examples
+
+##### How do I calculate the number of rows for each `Year`?
+
+<details>
+    <summary>Click here for solution</summary>
+```{python, eval=F}
+myDF.groupby("Year")["DepDelay"].count()
+```
+</details>
+
+##### How do I calculate the median `DepDelay` by `Year`?
+
+<details>
+    <summary>Click here for solution</summary>
+```{python, eval=F}
+myDF.groupby("Year")["DepDelay"].median()
+```
+</details>
+
+### `pivot` {#p-pandas-pivot}
+
+`pivot` is a powerful method from the `pandas` library used to reshape data. `pivot` takes 3 main arguments: `index`, `columns`, and `values`. `index` is the column of the dataframe that you would like to become your new index. `columns` is the column of your dataframe where you would like each unique value to be mapped to a column. `values` is the column of your dataframe for which you'd like the values to be. For example, what if we wanted to reshape our sample of flights data to have the departure delay displayed by day of week, by year, where there is one column for each day of the week, and each index is a year?
+
+```{python, eval=T}
+import pandas as pd
+
+myDF = pd.read_csv("./flights_sample.csv")
+myDF.head()
+```
+
+```{python, eval=T}
+myDF.pivot(index='Year', columns='DayOfWeek', values='DepDelay')
+```
+
+Alternatively, you could swap the columns and indexes.
+
+```{python, eval=T}
+myDF.pivot(index='DayOfWeek', columns='Year', values='DepDelay')
+```
+
+Like before, you can always use `reset_index()` to bring the index back in as a column.
+
+```{python, eval=T}
+myDF.pivot(index='DayOfWeek', columns='Year', values='DepDelay').reset_index()
+```
 
 ## Jupyter notebooks {#p-jupyter-notebooks}
 
@@ -2873,6 +2963,111 @@ plt.close()
 
 #### boxplot {#p-matplotlib-boxplot}
 
+`boxplot` is a function that creates a boxplot. Boxplots and side-by-side boxplots are very good for understanding fundamental information about your data, like the quartiles, upper and lower bounds, potential outliers, etc. 
+
+First, we need to import `matplotlib`, and get our dataset.
+
+```{python, eval=T}
+import matplotlib.pyplot as plt
+from rdatasets import data
+
+myDF = data("trees")
+myDF.head()
+```
+
+Next, let's say a tree is tall if it is above 75, and short otherwise. We can use the `pandas` method `cut` to create a new column called `Size`.
+
+```{python, eval=T}
+import pandas as pd
+
+myDF['Size'] = pd.cut(myDF['Height'], bins = [0, 76, 100], labels = ['short', 'tall'])
+myDF.head()
+```
+
+Okay, great! Let's take a look at the girth of the two groups of trees.
+
+```{python, eval=T}
+import matplotlib.pyplot as plt
+
+plt.boxplot(myDF['Girth'])
+plt.show()
+```
+
+Uh oh, that looks like a boxplot for all of the trees girth. If we look at the [official documentation](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.boxplot.html), we can see that `boxplot` makes a plot for each column of `x` or each vector in sequence `x` where `x` is our first argument (the data). Let's get our data into the correct format first. 
+
+```{python, eval=T}
+import matplotlib.pyplot as plt
+
+tmp = myDF.pivot(columns="Size", values="Girth")
+plt.boxplot([tmp['short'], tmp['tall']])
+plt.show()
+plt.close()
+```
+
+Well, that didn't work. It looks like the NA's in each column are preventing `matplotlib` from working. Let's remove the NA's.
+
+```{python, eval=T}
+import matplotlib.pyplot as plt
+
+tmp = myDF.pivot(columns="Size", values="Girth")
+plt.boxplot([tmp['short'].dropna(), tmp['tall'].dropna()])
+plt.show()
+plt.close()
+```
+
+Okay, great! Now, let's add some proper labels.
+
+```{python, eval=T}
+import matplotlib.pyplot as plt
+
+tmp = myDF.pivot(columns="Size", values="Girth")
+plt.boxplot([tmp['short'].dropna(), tmp['tall'].dropna()])
+plt.title("Tree girth")
+plt.xticks([1,2], ['short', 'tall'])
+plt.ylabel("Girth in inches")
+plt.show()
+plt.close()
+```
+
+Let's add some color.
+
+```{python, eval=T}
+import matplotlib.pyplot as plt
+
+tmp = myDF.pivot(columns="Size", values="Girth")
+boxes = plt.boxplot([tmp['short'].dropna(), tmp['tall'].dropna()], patch_artist=True)
+plt.title("Tree girth")
+plt.xticks([1,2], ['short', 'tall'])
+plt.ylabel("Girth in inches")
+for box in boxes['boxes']:
+    box.set(facecolor='#90ee90')
+plt.show()
+plt.close()
+```
+
+Better, but that sure isn't too intuitive. Here is an eclectic color scheme to highlight how to change other components.
+
+```{python, eval=T}
+import matplotlib.pyplot as plt
+
+tmp = myDF.pivot(columns="Size", values="Girth")
+boxes = plt.boxplot([tmp['short'].dropna(), tmp['tall'].dropna()], patch_artist=True)
+plt.title("Tree girth")
+plt.xticks([1,2], ['short', 'tall'])
+plt.ylabel("Girth in inches")
+
+plt.setp(boxes["boxes"], color="red")
+for box in boxes['boxes']:
+    box.set(facecolor='#90ee90')
+plt.setp(boxes['whiskers'], color="pink")
+plt.setp(boxes['fliers'], color="blue") # outliers not present in this graph
+plt.setp(boxes['medians'], color="purple")
+plt.setp(boxes['caps'], color="grey")
+
+plt.show()
+plt.close()
+```
+
 #### piechart {#p-matplotlib-piechart}
 
 #### dotchart {#p-matplotlib-dotchart}
@@ -2983,7 +3178,7 @@ A decent introduction to pyplot.
 
 **[Official usage guide](https://matplotlib.org/tutorials/introductory/usage.html#sphx-glr-tutorials-introductory-usage-py)**
 
-A detailed explaination of the anatomy of a figure, terminology used with `matplotlib`, etc. Probably more detail than most people would want.
+A detailed explanation of the anatomy of a figure, terminology used with `matplotlib`, etc. Probably more detail than most people would want.
 
 
 ### `plotly` {#p-plotly}

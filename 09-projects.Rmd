@@ -1357,6 +1357,10 @@ The following questions will use the dataset found in Scholar:
 
 **Note:** Take a look at the size of each of the files. If you are interested in experimenting, try using `pandas` `read_json` function to read the `yelp_academic_dataset_user.json` file in the json folder `/class/datamine/data/yelp/data/json/yelp_academic_dataset_user.json`. Even with the large amount of memory available to you, this should fail. In order to make it work you would need to use the `chunksize` option to read the data in bit by bit. Now consider that the `reviews.parquet` file is .3gb _larger_ than the `yelp_academic_dataset_user.json` file, but can be read in with no problem. That is seriously impressive!
 
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_lbvcdjyw)
+
+[Click here for another video](https://mediaspace.itap.purdue.edu/id/1_h13rpztv)
+
 **Relevant topics:** [read_parquet](#p-pandas-read_parquet)
 
 ```{block, type="bbox"}
@@ -1367,7 +1371,7 @@ The following questions will use the dataset found in Scholar:
 - The name of each dataset and a brief summary of each dataset. No more than 1-2 sentences about each dataset.
 ```
 
-##### 2. Read the `businesses.parquet` file into a `pandas` DataFrame called `businesses`. Take a look to the `hours` and `attributes` columns. If you look closely, you'll observe that both columns contain a lot more than a single feature. In fact, the `attributes` column contains 39 features and the `hours column contains 7!
+##### 2. Read the `businesses.parquet` file into a `pandas` DataFrame called `businesses`. Take a look to the `hours` and `attributes` columns. If you look closely, you'll observe that both columns contain a lot more than a single feature. In fact, the `attributes` column contains 39 features and the `hours` column contains 7!
 
 ```{python, eval=F}
 len(businesses.loc[:, "attributes"].iloc[0].keys()) # 39
@@ -1395,6 +1399,10 @@ businesses.loc[:, "attributes"].notna()
 type(True) # bool
 type("True") # str
 ```
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_l2b5g5pb)
+
+[Click here for another video](https://mediaspace.itap.purdue.edu/id/1_jcnolv45)
 
 **Relevant topics:** [pandas indexing](#p-pandas-indexing), [functions](#p-writing-functions)
 
@@ -1427,9 +1435,36 @@ files = [x for x in p if x.is_file()]
 print(files)
 ```
 
-**Important note:** Make sure that either `/scratch/scholar/{my_username}` or `/scratch/scholar/{my_username}/` will work as arguments to `output_dir`.
+**Important note:** Make sure that either `/scratch/scholar/{my_username}` or `/scratch/scholar/{my_username}/` will work as arguments to `output_dir`. If you use the `pathlib` library, as shown in the provided function "skeleton" below, both will work automatically!
 
-**Hint:** Check out the code below:
+```{python, eval=F}
+from pathlib import Path
+
+def fix_businesses_data(data_path: str, output_dir: str) -> None:
+    """
+    fix_data accepts a parquet file that contains data in a specific format. 
+    fix_data "explodes" the attributes and hours columns into 39+7=46 new 
+    columns.
+    Args:
+        data_path (str): Full path to a file in the same format as businesses.parquet.
+        output_dir (str): Path to a directory where new_businesses.parquet should be output.
+    """
+    # read in original parquet file
+    businesses = pd.read_parquet(data_path)
+    
+    # unnest the attributes column
+    
+    # unnest the hours column
+    
+    # output new file
+    businesses.to_parquet(str(Path(f"{output_dir}").joinpath("new_businesses.parquet")))
+    
+    return None
+```
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_zf4bl8g4)
+
+**Hint:** Check out the code below, notice how using `pathlib` handles whether or not we have the trailing `/`.
 
 ```{python, eval=F}
 from pathlib import Path
@@ -1442,7 +1477,23 @@ print(Path("/class/datamine/data").joinpath("my_file.txt"))
 
 **Hint:** If we were using R and the `tidyverse` package, this sort of behavior is called "unnesting". You can read more about it [here](https://tidyr.tidyverse.org/reference/nest.html).
 
-**Hint:** [This](https://stackoverflow.com/questions/38231591/splitting-dictionary-list-inside-a-pandas-column-into-separate-columns) stackoverflow post should be _very_ useful!
+**Hint:** [This](https://stackoverflow.com/questions/38231591/splitting-dictionary-list-inside-a-pandas-column-into-separate-columns) stackoverflow post should be _very_ useful! Specifically, run this code and take a look at the output:
+
+```{python, eval=F}
+businesses
+businesses.loc[0:4, "attributes"].apply(pd.Series)
+```
+
+Notice that some rows have json, and others have `None`:
+
+```{python, eval=F}
+businesses.loc[0, "attributes"] # has json
+businesses.loc[2, "attributes"] # has None
+```
+
+This method allows us to handle both cases. If the row has json it converts the values, if it has `None` it just puts each column with a value of `None`.
+
+**Hint:** [Here](https://stackoverflow.com/questions/44723377/pandas-combining-two-dataframes-horizontally) is an example that shows you how to concatenate (combine) dataframes.
 
 **Relevant topics:** [pandas indexing](#p-pandas-indexing), [functions](#p-writing-functions), [concat](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.concat.html), [apply](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.apply.html)
 
@@ -1455,17 +1506,23 @@ print(Path("/class/datamine/data").joinpath("my_file.txt"))
 
 ##### 4. That's a pretty powerful function, and could definitely be useful. What if, instead of working on just our specifically formatted parquet file, we wrote a function that worked for _any_ `pandas` DataFrame? Write a function called `unnest` that accepts a `pandas` DataFrame as an argument (let's call this argument `myDF`), and a list of columns (let's call this argument `columns`), and returns a DataFrame where the provided columns are unnested. 
 
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_0yb372sp)
+
+**Important note:** You may write `unnest` so that the resulting dataframe contains the original dataframe _and_ the unnested columns, or you may return just the unnested columns -- both will be accepted solutions.
+
+
 **Hint:** The following should work:
 
 ```{python, eval=F}
 businesses = pd.read_parquet("/class/datamine/data/yelp/data/parquet/businesses.parquet")
 
 new_businesses_df = unnest(businesses, ["attributes", ])
-new_businesses_df.shape # (209393, 53)
+new_businesses_df.shape # (209393, 39)
 new_businesses_df.head()
 
 new_businesses_df = unnest(businesses, ["attributes", "hours"])
-new_businesses_df.shape # (209393, 59)
+new_businesses_df.shape # (209393, 46)
 new_businesses_df.head()
 ```
 
@@ -1493,9 +1550,11 @@ new_businesses_df = unnest(businesses, ["postal_code",]) # not nested
 ```{python, eval=F}
 businesses = pd.read_parquet("/class/datamine/data/yelp/data/parquet/businesses.parquet")
 results = unnest(businesses, ["doesntexist", "postal_code", "attributes"])
-results.shape # (209393, 59)
+results.shape # (209393, 39)
 results.head()
 ```
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_0e4q4ley)
 
 **Hint:** To see if a variable is a `dict` you could use `type`:
 
@@ -1513,7 +1572,6 @@ type(my_variable)
 - Python code used to solve the problem.
 - Output from running the provided code.
 ```
-
 
 ---
 
@@ -2652,7 +2710,7 @@ scrape_cf_request_id("https://project5-rate-limit.tdm.wiki")
 **Learning objectives:** 
 
 ```{block, type="bbox"}
-- Demostrate the ability to create basic graphs with default settings.
+- Demonstrate the ability to create basic graphs with default settings.
 - Demonstrate the ability to modify axes labels and titles.
 - Demonstrate the ability to customize a plot (color, shape/linetype).
 ```
@@ -2723,6 +2781,123 @@ The following questions will use the dataset found in Scholar:
 
 ---
 
+### Project 7 {#p07-290}
+
+---
+
+**Motivation:** Being able to analyze and create good visualizations is a skill that is invaluable in _many_ fields. It can be pretty fun too! As you probably noticed in the previous project, `matplotlib` can be finicky -- certain types of plots are really easy to create, while others are not. For example, you would think changing the color of a boxplot would be easy to do in `matplotlib`, perhaps we just need to add an option to the function call. As it turns out, this isn't so straightforward (as illustrated at the end of [this section](#p-matplotlib-boxplot)). Occasionally this will happen and that is when packages like `seaborn` or `plotnine` (both are packages built using `matplotlib`) can be good. In this project we will explore this a little bit, and learn about some useful `pandas` functions to help shape your data in a format that any given package requires.
+
+**Context:** In the next project, we will continue to learn about and become comfortable using `matplotlib`, `seaborn`, and `plotnine`.
+
+**Scope:** python, visualizing data
+
+**Learning objectives:** 
+
+```{block, type="bbox"}
+- Demonstrate the ability to create basic graphs with default settings.
+- Demonstrate the ability to modify axes labels and titles.
+- Demonstrate the ability to customize a plot (color, shape/linetype).
+```
+
+Make sure to read about, and use the template found [here](#templates), and the important information about projects submissions [here](#submissions).
+
+#### Dataset
+
+The following questions will use the dataset found in Scholar:
+
+`/class/datamine/data/apple/health/watch_dump.xml`
+
+#### Questions
+
+##### 1. In an earlier project we explored some XML data in the form of an Apple Watch data dump. Most health-related apps give you some sort of graph or set of graphs as an output. Use any package you want to parse the XML data. There are a lot of `Record`s in this dataset. Each `Record` has an attribute called `creationDate`. Create a barplot of the number of `Record`s per day. Make sure your plot is polished, containing proper labels and good colors.
+
+**Hint:** You could start by parsing out the required data into a `pandas` dataframe or series.
+
+**Hint:** The `groupby` method is one of the most useful `pandas` methods. It allows you to quickly perform operations on groups of data. 
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_69sdl8rk)
+
+[Click here for another video](https://mediaspace.itap.purdue.edu/id/1_ho5ej4gy)
+
+**Relevant topics:** [lxml](#p-lxml), [groupby](#p-pandas-groupby), [barplot](#p-matplotlib-barplot)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Python code used to solve the problem.
+- Output from running your code (including the graphic).
+```
+
+##### 2. The plot in question 1 should look bimodal. Let's focus only on the first apparent group of readings. Create a new dataframe containing only the readings for the time period from 9/1/2017 to 5/31/2019. How many `Record`s are there in that time period?
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_wlkijwnv)
+
+**Relevant topics:** [lxml](#p-lxml), [groupby](#p-pandas-groupby), [barplot](#p-matplotlib-barplot)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Python code used to solve the problem.
+- Output from running your code (including the graphic).
+```
+
+##### 3. It is hard to discern weekly patterns (if any) based on the graphics created so far. For the period of time in question 2, create a labeled bar plot for the count of `Record`s by day of the week. What (if any) discernable patterns are there? Make sure to include the labels provided below:
+
+```{python, eval=F}
+labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+```
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_e7d9ve0o)
+
+**Relevant topics:** [lxml](#p-lxml), [groupby](#p-pandas-groupby), [barplot](#p-matplotlib-barplot)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Python code used to solve the problem.
+- Output from running your code (including the graphic).
+```
+
+##### 4. Create a `pandas` dataframe containing the following data from `watch_dump.xml`:
+
+- A column called `bpm` with the `bpm` (beats per minute) of the `InstantaneousBeatsPerMinute`.
+- A column called `time` with the `time` of each individual `bpm` reading in `InstantaneousBeatsPerMinute`.
+- A column called `date` with the date.
+- A column called `dayofweek` with the day of the week.
+
+**Hint:** You may want to use `pd.to_numeric` to convert the `bpm` column to a numeric type.
+
+**Hint:** This is one way to convert the numbers 0-6 to days of the week:
+
+```{python, eval=F}
+myDF['dayofweek'] = myDF['dayofweek'].map({0:"Mon", 1:"Tue", 2:"Wed", 3:"Thu", 4:"Fri", 5: "Sat", 6: "Sun"})
+```
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_h8crbise)
+
+**Relevant topics:** [lxml](#p-lxml), [groupby](#p-pandas-groupby), [barplot](#p-matplotlib-barplot)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Python code used to solve the problem.
+- Output from running your code (including the graphic).
+```
+
+##### 5. Create a heatmap using `seaborn`, where the y-axis shows the day of the week ("Mon" - "Sun"), the x-axis shows the hour, and the values on the interior of the plot are the average `bpm` by hour by day of the week.
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_rl5iu9am)
+
+**Relevant topics:** [lxml](#p-lxml), [groupby](#p-pandas-groupby), [pivot](#p-pandas-pivot)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Python code used to solve the problem.
+- Output from running your code (including the graphic).
+```
+
+---
 
 ## STAT 39000
 
@@ -3903,3 +4078,120 @@ Make sure to read about, and use the template found [here](#templates), and the 
 
 ---
 
+### Project 7 {#p07-390}
+
+---
+
+**Motivation:** Being able to analyze and create good visualizations is a skill that is invaluable in _many_ fields. It can be pretty fun too! As you probably noticed in the previous project, `matplotlib` can be finicky -- certain types of plots are really easy to create, while others are not. For example, you would think changing the color of a boxplot would be easy to do in `matplotlib`, perhaps we just need to add an option to the function call. As it turns out, this isn't so straightforward (as illustrated at the end of [this section](#p-matplotlib-boxplot)). Occasionally this will happen and that is when packages like `seaborn` or `plotnine` (both are packages built using `matplotlib`) can be good. In this project we will explore this a little bit, and learn about some useful `pandas` functions to help shape your data in a format that any given package requires.
+
+**Context:** In the next project, we will continue to learn about and become comfortable using `matplotlib`, `seaborn`, and `plotnine`.
+
+**Scope:** python, visualizing data
+
+**Learning objectives:** 
+
+```{block, type="bbox"}
+- Demonstrate the ability to create basic graphs with default settings.
+- Demonstrate the ability to modify axes labels and titles.
+- Demonstrate the ability to customize a plot (color, shape/linetype).
+```
+
+Make sure to read about, and use the template found [here](#templates), and the important information about projects submissions [here](#submissions).
+
+#### Dataset
+
+The following questions will use the dataset found in Scholar:
+
+`/class/datamine/data/apple/health/watch_dump.xml`
+
+#### Questions
+
+##### 1. In an earlier project we explored some XML data in the form of an Apple Watch data dump. Most health-related apps give you some sort of graph or set of graphs as an output. Use any package you want to parse the XML data. There are a lot of `Record`s in this dataset. Each `Record` has an attribute called `creationDate`. Create a barplot of the number of `Record`s per day. Make sure your plot is polished, containing proper labels and good colors.
+
+**Hint:** You could start by parsing out the required data into a `pandas` dataframe or series.
+
+**Hint:** The `groupby` method is one of the most useful `pandas` methods. It allows you to quickly perform operations on groups of data. 
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_69sdl8rk)
+
+[Click here for another video](https://mediaspace.itap.purdue.edu/id/1_ho5ej4gy)
+
+**Relevant topics:** [lxml](#p-lxml), [groupby](#p-pandas-groupby), [barplot](#p-matplotlib-barplot)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Python code used to solve the problem.
+- Output from running your code (including the graphic).
+```
+
+##### 2. The plot in question 1 should look bimodal. Let's focus only on the first apparent group of readings. Create a new dataframe containing only the readings for the time period from 9/1/2017 to 5/31/2019. How many `Record`s are there in that time period?
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_wlkijwnv)
+
+**Relevant topics:** [lxml](#p-lxml), [groupby](#p-pandas-groupby), [barplot](#p-matplotlib-barplot)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Python code used to solve the problem.
+- Output from running your code (including the graphic).
+```
+
+##### 3. It is hard to discern weekly patterns (if any) based on the graphics created so far. For the period of time in question 2, create a labeled bar plot for the count of `Record`s by day of the week. What (if any) discernable patterns are there? Make sure to include the labels provided below:
+
+```{python, eval=F}
+labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+```
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_e7d9ve0o)
+
+**Relevant topics:** [lxml](#p-lxml), [groupby](#p-pandas-groupby), [barplot](#p-matplotlib-barplot)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Python code used to solve the problem.
+- Output from running your code (including the graphic).
+```
+
+##### 4. Create a `pandas` dataframe containing the following data from `watch_dump.xml`:
+
+- A column called `bpm` with the `bpm` (beats per minute) of the `InstantaneousBeatsPerMinute`.
+- A column called `time` with the `time` of each individual `bpm` reading in `InstantaneousBeatsPerMinute`.
+- A column called `date` with the date.
+- A column called `dayofweek` with the day of the week.
+
+**Hint:** You may want to use `pd.to_numeric` to convert the `bpm` column to a numeric type.
+
+**Hint:** This is one way to convert the numbers 0-6 to days of the week:
+
+```{python, eval=F}
+myDF['dayofweek'] = myDF['dayofweek'].map({0:"Mon", 1:"Tue", 2:"Wed", 3:"Thu", 4:"Fri", 5: "Sat", 6: "Sun"})
+```
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_h8crbise)
+
+**Relevant topics:** [lxml](#p-lxml), [groupby](#p-pandas-groupby), [barplot](#p-matplotlib-barplot)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Python code used to solve the problem.
+- Output from running your code (including the graphic).
+```
+
+##### 5. Create a heatmap using `seaborn`, where the y-axis shows the day of the week ("Mon" - "Sun"), the x-axis shows the hour, and the values on the interior of the plot are the average `bpm` by hour by day of the week.
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_rl5iu9am)
+
+**Relevant topics:** [lxml](#p-lxml), [groupby](#p-pandas-groupby), [pivot](#p-pandas-pivot)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Python code used to solve the problem.
+- Output from running your code (including the graphic).
+```
+
+---
