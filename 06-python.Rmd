@@ -1996,7 +1996,199 @@ myDF.pivot(index='DayOfWeek', columns='Year', values='DepDelay').reset_index()
 
 ## Writing scripts {#p-writing-scripts}
 
+A script is a file containing a sequence of logic to be executed. In Python, this is just a simple `.py` file like `my_script.py`. 
+
+### shebang {#p-shebang}
+
+The first line in a script is typically the shebang. You can read a little bit about this [here](#unix-writing-scripts). 
+
+The shebang dictates which Python interpreter and environment is used when executing the script without the preceding `python` or `python3`. For example, if you were to run:
+
+```{bash, eval=F}
+python ~/my_script.py
+```
+
+`my_script.py` would be executed using the python interpreter located at the result of:
+
+```{bash, eval=F}
+which python
+```
+
+If no preceding `python` or `python3` is provided, the operating system will try to execute the script with various shells (depending on the shell you use), and will fail (because the shells aren't meant to execute Python code).
+
+If you add a shebang to the top of your script, you can remove the preceding `python` or `python3` as the system will use the shebang to determine which interpreter to use. Code like this will work:
+
+```{bash, eval=F}
+$HOME/my_script.py
+```
+
+When it comes to Python, there are two common shebangs:
+
+- `#!/usr/bin/python`
+- `#!/usr/bin/env python`
+
+The first will use the system default Python interpreter located at `/usr/bin/python`. The second, will use whatever Python interpreter is currently what would be executed if you just ran `python`. What does this mean? If you were to activate a custom conda or virtual environment, the `#!/usr/bin/env python` shebang would choose to execute your script using the interpreter and environment that you've activated. 
+
+When you want a script to run with a certain set of Python packages present in a given environment, it may not be convenient for you to run a command like `conda activate my_environment` prior to executing the script. In these situations, you can simply use your shebang to point to the interpreter associated with `my_environment`. For example, the interpreter used with our course environment is located: `/class/datamine/apps/python/f2020-s2021/env/bin/python`. If we wanted our script to run using all of the packages we've installed into our environment, we can simply use this shebang: `#!/class/datamine/apps/python/f2020-s2021/env/bin/python`.
+
+### arguments {#p-arguments}
+
+Arguments are the values passed to the script. For example, in the following command, `-i`, `special word`, and `my_file.txt` are arguments being passed to `grep`.
+
+```{bash, eval=F}
+grep -i 'special word' my_file.txt
+```
+
+Similarly, we can pass arguments to Python scripts:
+
+```{python, eval=F}
+$HOME/my_script.py -i 'okay, sounds good!'
+```
+
+To access and utilize arguments in your Python script, you can use the `sys` package. For example, if you were to run the following script:
+
+```{python, eval=F}
+import sys
+
+def main():
+    print(sys.argv)
+    
+if __name__ == '__main__':
+    main()
+```
+
+Like:
+
+```{python, eval=T}
+$HOME/my_script.py -i 'okay, sounds good!'
+```
+
+The results would be:
+
+````
+['$HOME/my_script.py', '-i', 'okay, sounds good!']
+````
+
+`sys.argv` returns a list of arguments where `sys.argv[0]` is equal to the script name. You could then use `sys.argv` to perform certain operations based on the arguments provided.
+
+Arguments can be _positional_, which means the order in which they are given to a script is critical, and how the script is able to discern what the arguments are. For example, if you were to switch the positions of the _pattern_ and _file_ arguments to `grep`, it would fail:
+
+```{bash, eval=F}
+grep my_file.txt 'my_pattern' # fails
+```
+
+Positional arguments tend to be required, but aren't _required_ to be required.
+
+Arguments can also be _optional_, which means they aren't required. Typically, _optional_ arguments are preceded by at least one `-`. Most of the time optional arguments, or options, can have multiple forms. Short form (for example `-i`), or long form (for example `-i` is the same as `--ignore-case`). Sometimes options can get values. If options don't have values, you can assume that the presence of the flag means `TRUE` and the lack means `FALSE`. When using short form, the value for the option is separated by a space (for example `grep -f my_file.txt`). When using long form, the value for the option is separated by an equals sign (for example `grep --file=my_file.txt`).
+
 ### `argparse` {#p-argparse}
+
+`argparse` is a Python package that helps build consistent CLI's and handles much of the tedious logic involved in making the various arguments passed to your script function properly.
+
+Adding a positional argument is simple:
+
+```{python, eval=F}
+import argparse
+
+def main():
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("echo")
+    args = parser.parse_args()
+    
+if __name__ == '__main__':
+    main()
+```
+
+You can then access the value for that positional argument like: `args.echo`. If your argument has hyphens in it (but not at the beginning of the word):
+
+```{python, eval=F}
+import argparse
+
+def main():
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("echo-value")
+    args = parser.parse_args()
+    
+if __name__ == '__main__':
+    main()
+```
+
+You can access that argument like: `args.echo_value`. The interior hyphens are converted to underscores.
+
+To add useful "help" messages, you can do the following:
+
+```{python, eval=F}
+import argparse
+
+def main():
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("echo", help='repeats the text from echo here')
+    args = parser.parse_args()
+    
+if __name__ == '__main__':
+    main()
+```
+
+The help message can be shown by running the script with the `-h` or `--help` options:
+
+```{python, eval=F}
+$HOME/my_script.py --help
+```
+
+To add optional arguments, you can do the following:
+
+```{python, eval=F}
+import argparse
+
+def main():
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("echo", help='repeats the text from echo here')
+    parser.add_arguments("-l", "--loud", help="makes our text print in caps")
+    args = parser.parse_args()
+    
+if __name__ == '__main__':
+    main()
+```
+
+Then, if you run:
+
+```{python, eval=F}
+$HOME/my_script.py 'text to echo' 
+```
+
+By default, since the option `-l` or `--loud` is not present, nothing happens and the value of `args.loud` is `None`.
+
+If you want the default value for `args.loud` to be `False` instead, you could do the following:
+
+```{python, eval=F}
+import argparse
+
+def main():
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("echo", help='repeats the text from echo here')
+    parser.add_arguments("-l", "--loud", help="makes our text print in caps", action='store_true')
+    args = parser.parse_args()
+    
+if __name__ == '__main__':
+    main()
+```
+
+Then, by default if `-l` or `--loud` is not present, `args.loud` is `False`.
+
+#### Resources
+
+**[Official documentation](https://docs.python.org/3/library/argparse.html)**
+
+The official documentation for the `argparse` library.
+
+**[Official tutorial](https://docs.python.org/3/howto/argparse.html)**
+
+The official tutorial for the `argparse` library.
 
 ## Scraping {#p-scraping}
 
