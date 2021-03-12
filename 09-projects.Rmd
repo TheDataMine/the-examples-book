@@ -1382,6 +1382,56 @@ print(t2.elapsed)
 - Output from running your code.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+import pandas as pd
+from block_timer.timer import Timer
+
+with Timer(title="csv") as csv:
+    myDF = pd.read_csv("/class/datamine/data/stackoverflow/unprocessed/2018.csv")
+
+with Timer(title="parquet") as parquet:
+    myDF = pd.read_parquet("/class/datamine/data/stackoverflow/unprocessed/2018.parquet")
+
+with Timer(title="feather") as feather:
+    myDF = pd.read_feather("/class/datamine/data/stackoverflow/unprocessed/2018.feather")
+    
+print(f'Reading parquet is {csv.elapsed/parquet.elapsed-1.0:.2%} faster than csv.')
+print(f'Reading feather is {csv.elapsed/feather.elapsed-1.0:.2%} faster than csv.')
+```
+
+
+```{python, eval=F, class.source="solution"}
+from block_timer.timer import Timer
+
+myDF = pd.read_csv("/class/datamine/data/stackoverflow/unprocessed/2018.csv")
+
+with Timer(title="csv") as csv:
+    myDF.to_csv("/scratch/scholar/kamstut/2018.csv")
+
+with Timer(title="parquet") as parquet:
+    myDF.to_parquet("/scratch/scholar/kamstut/2018.parquet")
+
+with Timer(title="feather") as feather:
+    myDF.to_feather("/scratch/scholar/kamstut/2018.feather")
+    
+print(f'Writing parquet is {csv.elapsed/parquet.elapsed-1.0:.2%} faster than csv.')
+print(f'Writing feather is {csv.elapsed/feather.elapsed-1.0:.2%} faster than csv.')
+```
+
+
+```{python, eval=F, class.source="solution"}
+from pathlib import Path
+
+csv = Path('/class/datamine/data/stackoverflow/unprocessed/2018.csv').stat().st_size
+parquet = Path('/class/datamine/data/stackoverflow/unprocessed/2018.parquet').stat().st_size
+feather = Path('/class/datamine/data/stackoverflow/unprocessed/2018.feather').stat().st_size
+
+print(f'The parquet file is {csv/parquet:.2%} smaller than csv.')
+print(f'Writing feather is {csv/feather:.2%} smaller than csv.')
+```
+
 ##### 2. A _method_ is just a function associated with an object or class. For example, `mean` is just a method of the `pandas` DataFrame:
 
 ```{python, eval=F}
@@ -1401,6 +1451,16 @@ myDF.mean()
 
 - Python code used to solve the problem.
 - Output from running your code.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+not_students = myDF.loc[myDF.loc[:,"Student"]=="No",:]
+not_student_percent = len(not_students.loc[:, "Respondent"])/len(myDF.loc[:, "Respondent"])
+student_percent = 1-not_student_percent
+print(f"Percent not students: {not_student_percent}")
+print(f"Percent students: {student_percent}")
 ```
 
 ##### 3. In `pandas`, if you were to isolate a single column using indexing, like this:
@@ -1442,6 +1502,24 @@ myDF.loc[myDF.loc[:, "myColumn"].str.strip() == '', :]
 - The number of respondents that replied "No" to `Student`, yet put "Student" as the `DevType`.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+professions = [p.split(";") for p in not_students.loc[:, "DevType"].dropna().tolist()]
+
+# unnest the nested lists
+professions = [p for li in professions for p in li]
+professions = list(set(professions))
+
+print(professions)
+print(len(professions))
+```
+
+```{python, eval=F, class.source="solution"}
+result = myDF.loc[(myDF.loc[:, "Student"]=="No") & (myDF.loc[:, "DevType"].str.contains("Student")),:]
+len(result)
+```
+
 ##### 4. As you can see, while perhaps a bit more strict, indexing in `pandas` is not that much more difficult than indexing in R. While not always necessary, remembering to put ":" to indicate "all columns" or "all rows" makes life easier. In addition, remembering to put parentheses around logical groupings is also a good thing. Practice makes perfect! Randomly select 100 females and 100 males. How many of each sample is in each `Age` category? (_Do not_ use the `sample` method yet, but instead use numeric indexing and `random`)
 
 ```{python}
@@ -1477,6 +1555,30 @@ plt.show()
 - Output from running your code.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+import random
+import matplotlib.pyplot as plt 
+
+
+males = myDF.loc[(myDF.loc[:, "Gender"]=="Male"), :]
+random_indices = [random.randint(0, len(males)) for i in range(0,100)]
+males = males.iloc[random_indices, ]
+print(males.loc[:,"Age"].value_counts())
+
+females = myDF.loc[(myDF.loc[:, "Gender"]=="Female"), :]
+random_indices = [random.randint(0, len(females)) for i in range(0,100)]
+females = females.iloc[random_indices]
+print(females.loc[:,"Age"].value_counts())
+
+males.loc[:,"Age"].value_counts().plot.bar()
+plt.show()
+
+females.loc[:,"Age"].value_counts().plot.bar()
+plt.show()
+```
+
 ##### 5. `pandas` really helps out when it comes to working with data in Python. This is a really cool dataset, use your newfound skills to do a mini-analysis. Your mini-analysis should include 1 or more graphics, along with some interesting observation you made while exploring the data.
 
 **Relevant topics:** 
@@ -1488,6 +1590,12 @@ plt.show()
 - Output from running your code.
 - A graphic.
 - 1-2 sentences explaining your interesting observation and graphic.
+```
+
+##### Solution
+
+```{block, type="solution"}
+Could be anything.
 ```
 
 ---
@@ -1632,6 +1740,35 @@ The following questions will use the dataset found in Scholar:
 - The name of each dataset and a brief summary of each dataset. No more than 1-2 sentences about each dataset.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+import pandas as pd
+
+photos = pd.read_parquet("/class/datamine/data/yelp/data/parquet/photos.parquet")
+businesses = pd.read_parquet("/class/datamine/data/yelp/data/parquet/businesses.parquet")
+checkins = pd.read_parquet("/class/datamine/data/yelp/data/parquet/checkins.parquet")
+tips = pd.read_parquet("/class/datamine/data/yelp/data/parquet/tips.parquet")
+users = pd.read_parquet("/class/datamine/data/yelp/data/parquet/users.parquet")
+reviews = pd.read_parquet("/class/datamine/data/yelp/data/parquet/reviews.parquet")
+
+photos.head()
+businesses.head()
+checkins.head()
+tips.head()
+users.head()
+reviews.head()
+```
+
+```{block, type="solution"}
+- photos contains photo_id of a photo in the photos folder, a business id, caption and label.
+- businesses contains business id with a bunch of info about the business like location and attributes.
+- checkins contains a business id and datetime
+- tips contains user id, business id, text, datetime, and compliment count
+- users contains userid, name, a list of friends user ids, and information abou their yelp usage
+- reviews contains a review id, user id, business id, datetime, text of the review and some other basic info.
+```
+
 ##### 2. Read the `businesses.parquet` file into a `pandas` DataFrame called `businesses`. Take a look to the `hours` and `attributes` columns. If you look closely, you'll observe that both columns contain a lot more than a single feature. In fact, the `attributes` column contains 39 features and the `hours` column contains 7!
 
 ```{python, eval=F}
@@ -1672,6 +1809,29 @@ type("True") # str
 
 - Python code used to solve the problem.
 - Output from running the provided "test" code.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+def has_attributes(business_id: str) -> bool:
+    """
+    has_attributes takes a business id and returns
+    True if the business has attributes and False otherwise.
+
+    Args:
+        business_id (str): Yelp business id.
+
+    Returns:
+        bool: Whether or not a business has attributes.
+    """
+    return ~businesses.loc[businesses.loc[:, "business_id"]==business_id,"attributes"].isna().values[0]
+
+
+print(has_attributes('f9NumwFMBDn751xgFiRbNA'))
+print(has_attributes('XNoUzKckATkOD1hP6vghZg'))
+print(has_attributes('Yzvjg0SayhoZgCljUJRF9Q'))
+print(has_attributes('7uYJJpwORUbCirC1mz8n9Q'))
 ```
 
 ##### 3. Take a look at the `attributes` of the first business:
@@ -1765,6 +1925,36 @@ This method allows us to handle both cases. If the row has json it converts the 
 - Output from running your code.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+from pathlib import Path
+
+def fix_businesses_data(data_path: str, output_dir: str) -> None:
+    """
+    fix_data accepts a parquet file that contains data in a specific format. 
+    fix_data "explodes" the attributes and hours columns into 39+7 new 
+    columns.
+
+    Args:
+        data_path (str): Full path to a file in the same format as businesses.parquet.
+        output_dir (str): Path to a directory where new_businesses.parquet should be output.
+    """
+    # read in original parquet file
+    businesses = pd.read_parquet(data_path)
+    
+    # unnest the attributes
+    businesses = pd.concat([businesses.drop(columns=["attributes"]), businesses.loc[:, "attributes"].apply(pd.Series)], axis=1)
+    
+    # unnest the hours
+    businesses = pd.concat([businesses.drop(columns=["hours"]), businesses.loc[:, "hours"].apply(pd.Series)], axis=1)
+    
+    # output new file
+    businesses.to_parquet(str(Path(f"{output_dir}").joinpath("new_businesses.parquet")))
+    
+    return None
+```
+
 ##### 4. That's a pretty powerful function, and could definitely be useful. What if, instead of working on just our specifically formatted parquet file, we wrote a function that worked for _any_ `pandas` DataFrame? Write a function called `unnest` that accepts a `pandas` DataFrame as an argument (let's call this argument `myDF`), and a list of columns (let's call this argument `columns`), and returns a DataFrame where the provided columns are unnested. 
 
 
@@ -1795,6 +1985,29 @@ new_businesses_df.head()
 
 - Python code used to solve the problem.
 - Output from running the provided code.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+from typing import List
+
+def unnest(myDF: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
+    """
+    Given a pandas DataFrame, and a list of column names,
+    unnest unnests the columns with the provided column names.
+
+    Args:
+        myDF (pandas.core.frame.DataFrame): A pandas DataFrame with 1 or more columns that need to be unnested.
+        columns (List[str]): A list containing names of columns to be unnested.
+
+    Returns:
+        pandas.core.frame.DataFrame: The resulting pandas DataFrame with unnested columns.
+    """
+    for column in columns:
+        myDF = pd.concat([myDF.drop(columns=[column]), myDF.loc[:, column].apply(pd.Series)], axis=1)
+        
+    return myDF
 ```
 
 ##### 5. Try out the code below. If a provided column isn't already nested, the column name is ruined and the data is changed. If the column doesn't already exist, a KeyError is thrown. Modify our function from question (4) to skip unnesting if the column doesn't exist. In addition, modify the function from question (4) to skip the column if the column isn't nested. Let's consider a column nested if the value of the column is a `dict`, and not nested otherwise.
@@ -1832,6 +2045,31 @@ type(my_variable)
 
 - Python code used to solve the problem.
 - Output from running the provided code.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+from typing import List
+
+def unnest(myDF: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
+    """
+    Given a pandas DataFrame, and a list of column names,
+    unnest unnests the columns with the provided column names.
+
+    Args:
+        myDF (pandas.core.frame.DataFrame): A pandas DataFrame with 1 or more columns that need to be unnested.
+        columns (List[str]): A list containing names of columns to be unnested.
+
+    Returns:
+        pandas.core.frame.DataFrame: The resulting pandas DataFrame with unnested columns.
+    """
+    for column in columns:
+        if column in myDF.columns and type(myDF.loc[:, column].iloc[0])==type(dict()):
+            myDF = pd.concat([myDF.drop(columns=[column]), myDF.loc[:, column].apply(pd.Series)], axis=1)
+        else:
+            continue
+    return myDF
 ```
 
 ---
