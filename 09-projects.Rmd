@@ -580,6 +580,15 @@ head(myDF) # where myDF is a data.frame
 - The `head` of the dataset.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+import pandas as pd
+
+myDF = pd.read_csv("/class/datamine/data/craigslist/vehicles.csv")
+myDF.head()
+```
+
 ##### 2. Dictionaries, often referred to as dicts, are really powerful. There are two primary ways to "get" information from a dict. One is to use the `get` method, the other is to use square brackets and strings. Test out the following to understand the differences between the two:
 
 ```{python, eval=F}
@@ -633,6 +642,36 @@ print(my_dict[2014]) # 31703
 - `my_dict` printed.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+years = myDF['year'].dropna().to_list()
+
+unique_years = list(set(years))
+
+my_dict = {}
+for year in unique_years:
+    my_dict[year] = 0
+
+for year in years:
+    my_dict[year] += 1
+    
+print(my_dict)
+```
+
+OR
+
+```{python, eval=F, class.source="solution"}
+from collections import defaultdict
+
+years = myDF['year'].dropna().to_list()
+my_dict = defaultdict(int)
+for year in years:
+    my_dict[year] += 1
+
+print(my_dict)
+```
+
 ##### 3. After completing question (2) you can easily access the number of vehicles from a given year. For example, to get the number of vehicles on craigslist from 1912, just run:
 
 ```{python, eval=F}
@@ -662,7 +701,7 @@ plt.close()
 
 [Click here for video](https://mediaspace.itap.purdue.edu/id/1_mn3a3kss)
 
-**Relevant topics:** [dicts](#p-dicts), [matplotlib](#p-matplotlib), [barplot]{#p-matplotlib-barplot}
+**Relevant topics:** [dicts](#p-dicts), [matplotlib](#p-matplotlib), [barplot](#p-matplotlib-barplot)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
@@ -670,6 +709,18 @@ plt.close()
 - Python code used to solve the problem.
 - The resulting plot.
 - A sentence giving an example of a "key" and associated "value" from `my_dict` (e.g., a sentence explaining the 1912 example above).
+```
+
+##### Solution
+
+```{block, type="solution"}
+In `my_dict` a key is 1912, and the associated value is 5.
+```
+
+```{python, eval=F, class.source="solution"}
+import matplotlib.pyplot as plt
+
+plt.bar(my_dict.keys(), my_dict.values())
 ```
 
 ##### 4. In the hint in question (2), we used a `set` to quickly get a list of unique years in a list. Some other common uses of a `set` are when you want to get a list of values that are in one list but not another, or get a list of values that are present in both lists. Examine the following code. You'll notice that we are looping over many values. Replace the code for each of the three examples below with code that uses *no* loops whatsoever.
@@ -718,6 +769,22 @@ print(in_both_lists) # [1,2,12]
 
 - Python code used to solve the problem.
 - The output from running the code.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+listA = [1, 2, 3, 4, 5, 6, 12, 12]
+listB = [2, 1, 7, 7, 7, 2, 8, 9, 10, 11, 12, 13]
+
+onlyA = list(set(listA) - set(listB))
+print(onlyA)
+
+onlyB = list(set(listB) - set(listA))
+print(onlyB)
+
+in_both_lists = list(set.intersection(set(listA), set(listB)))
+print(in_both_lists)
 ```
 
 ##### 5. The value of a dictionary does not have to be a single value (like we've shown so far). It can be _anything_. Observe that there is latitude and longitude data for each row in our DataFrame (`lat` and `long`, respectively). Wouldn't it be useful to be able to quickly "get" pairs of latitude and longitude data for a given state? 
@@ -785,6 +852,40 @@ plt.savefig('q5.jpg')
 - Graphic file (`q5.jpg`) produced for the given state.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+geoDict = dict()
+
+for val in states_list:
+    geoDict[val[0]] = []
+    
+for val in states_list:
+    geoDict[val[0]].append((val[1],val[2]))
+    
+geoDict.get("in")[0:2]
+len(geoDict.get("in"))
+```
+
+```{python, eval=F, class.source="solution"}
+from shapely.geometry import Point
+import geopandas as gpd
+from geopandas import GeoDataFrame
+
+usa = gpd.read_file('/class/datamine/data/craigslist/cb_2018_us_state_20m.shp')
+usa.crs = {'init': 'epsg:4269'}
+
+pts = [Point(y,x) for x, y in geoDict.get("tx")]
+gdf = gpd.GeoDataFrame(geometry=pts, crs = 4269)
+fig, gax = plt.subplots(1, figsize=(10,10))
+base = usa[usa['NAME'].isin(['Hawaii', 'Alaska', 'Puerto Rico']) == False].plot(ax=gax, color='white', edgecolor='black')
+gdf.plot(ax=base, color='darkred', marker="*", markersize=10)
+plt.show()
+
+# to save to jpg:
+plt.savefig('q5.jpg')
+```
+
 ##### 6. Use your new skills to extract some sort of information from our dataset and create a graphic. This can be as simple or complicated as you are comfortable with!
 
 **Relevant topics:** [dicts](#p-dicts), [lists and tuples](#p-lists-and-tuples)
@@ -794,6 +895,12 @@ plt.savefig('q5.jpg')
 
 - Python code used to solve the problem.
 - The graphic produced using the code.
+```
+
+##### Solution
+
+```{block, type="solution"}
+Could be anything.
 ```
 
 ---
@@ -845,6 +952,23 @@ The following questions will use the dataset found in Scholar:
 - Output from running your code.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+import pandas as pd
+
+myDF = pd.read_csv("/class/datamine/data/craigslist/vehicles.csv")
+
+geoDict = dict()
+for my_index, my_row in myDF.iterrows():
+    geoDict[my_row["state"]] = []
+
+for my_index, my_row in myDF.iterrows():
+    geoDict[my_row["state"]].append((my_row["lat"], my_row["long"]))
+    
+geoDict.get("in")[0:2]
+len(geoDict.get("in"))
+```
 
 ##### 2. Wow! The solution to question (1) was _slow_. In general, you'll want to avoid looping over large DataFrames. [Here](https://stackoverflow.com/questions/16476924/how-to-iterate-over-rows-in-a-dataframe-in-pandas/55557758#55557758) is a pretty good explanation of why, as well as a good system on what to try when computing something. In this case, we could have used indexing to get latitude and longitude values for each state, and would have no need to build this dict.
 
@@ -890,6 +1014,16 @@ There are several ways to solve this question.  You can use whatever method is e
 - Output from running your code.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+for key, value in geoDict.items():
+    print(f'{key}:')
+    for idx, triplet in enumerate(value):
+        if (idx % 5000 == 0):
+            print(f'Lat: {triplet[0]:.2f}, Long: {triplet[1]:.2f}')
+```
+
 ##### 3. We are curious about how the year of the car (`year`) effects the price (`price`). In R, we could get the median price by year easily, using `tapply`:
 
 ```{r, eval=F}
@@ -933,6 +1067,37 @@ my_list = list(myDF.loc[:, ["year", "price",]].dropna().to_records(index=False))
 - The barplot.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+from collections import defaultdict
+import matplotlib.pyplot as plt
+
+my_list = list(myDF.loc[:, ["year", "price",]].dropna().to_records(index=False))
+
+my_dict = defaultdict(list)
+for (year, price) in my_list:
+    my_dict[year].append(float(price))
+
+my_years, my_prices = [],[]
+for year, prices in sorted(my_dict.items()):
+    if len(prices) % 2 == 0:
+        lower_mid = int(len(prices)/2 - 1)
+        upper_mid = int(len(prices)/2)
+        prices_sorted = sorted(prices)
+        median_price = (prices_sorted[lower_mid] + prices_sorted[upper_mid]) / 2
+        
+    else:
+        median_price = sorted(prices)[int(len(prices)/2)]
+        
+    print(f'{year}: {median_price}')
+    my_years.append(year)
+    my_prices.append(median_price)
+    
+plt.bar(my_years, my_prices)
+plt.show()
+```
+
 ##### 4. Now calculate the mean `price` by `year`(still not using pandas code), and create a barplot with the `price` on the y-axis and `year` on the x-axis. Whoa! Something is odd here. Explain what is happening. Modify your code to use an if statement to "weed out" the likely erroneous value. Re-plot your values.
 
 [Click here for video (same as in Question 3)](https://mediaspace.itap.purdue.edu/id/1_li98uz29)
@@ -951,6 +1116,45 @@ my_list = list(myDF.loc[:, ["year", "price",]].dropna().to_records(index=False))
 - Python code used to solve the problem.
 - Output from running your code.
 - The barplot.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+from collections import defaultdict
+
+my_dict = defaultdict(list)
+for (year, price) in my_list:
+    my_dict[year].append(price)
+
+my_years, my_prices = [],[]
+for year, prices in sorted(my_dict.items()):
+    print(f'{year}: {sum(prices)/len(prices)}')
+    my_years.append(year)
+    my_prices.append(sum(prices)/len(prices))
+    
+plt.bar(my_years, my_prices)
+plt.show()
+```
+
+```{python, eval=F, class.source="solution"}
+from collections import defaultdict
+
+my_dict = defaultdict(list)
+for (year, price) in my_list:
+    if price > 1_000_000:
+        continue
+    my_dict[year].append(price)
+
+my_years, my_prices = [],[]
+for year, prices in sorted(my_dict.items()):
+    avg_price = sum(prices)/len(prices)
+    print(f'{year}: {avg_price}')
+    my_years.append(year)
+    my_prices.append(avg_price)
+    
+plt.bar(my_years, my_prices)
+plt.show()
 ```
 
 ##### 5. List comprehensions are a neat feature of Python that allows for a more concise syntax for smaller loops. While at first they may seem difficult and more confusing, eventually they grow on you. For example, say you wanted to capitalize every `state` in a list full of states:
@@ -992,6 +1196,22 @@ my_list = list(myDF.loc[:, ["manufacturer", "year", "price",]].dropna().to_recor
 
 - Python code used to solve the problem.
 - Output from running your code.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+my_list = list(myDF.loc[:, ["state", "price",]].dropna().to_records(index=False))
+my_list = [price for (state,price) in my_list if state == "in"]
+print(sum(my_list)/len(my_list))
+
+my_list = list(myDF.loc[:, ["state", "price",]].dropna().to_records(index=False))
+my_list = [price for (state,price) in my_list if state in ('in', 'il', 'mi')]
+print(sum(my_list)/len(my_list))
+
+my_list = list(myDF.loc[:, ["manufacturer", "year", "price",]].dropna().to_records(index=False))
+my_list = [p for (m, y, p) in my_list if m=='honda' and y >= 2010]
+print(sum(my_list)/len(my_list))
 ```
 
 ##### 6. Let's use a package called `spacy` to try and parse phone numbers out of the `description` column. First, simply loop through and print the text and the label. What is the label of the majority of the phone numbers you can see?
@@ -1048,6 +1268,47 @@ for entity in doc.ents:
 - 1-2 sentences explaining what your filter does.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+import spacy
+
+my_list = list(myDF.loc[:, ["description",]].dropna().to_records(index=False))
+my_list = [m[0] for m in my_list]
+
+# load the pre-built spacy model
+nlp = spacy.load("en_core_web_lg")
+
+for doc in my_list[:10]:
+    d = nlp(doc)
+    for entity in d.ents:
+        print(entity.text.encode('ascii', errors='ignore'), entity.label_)
+
+for doc in my_list[:10]:
+    d = nlp(doc)
+    for entity in d.ents:
+        if entity.label_ == "CARDINAL":
+            print(entity.text.encode('ascii', errors='ignore'), entity.label_)
+
+for doc in my_list[:10]:
+    d = nlp(doc)
+    for entity in d.ents:
+        if entity.label_ == "CARDINAL" and len(entity.text) in [7, 8, 10, 11, 12, 14]:
+            print(entity.text.encode('ascii', errors='ignore'), entity.label_)
+
+for doc in my_list[:10]:
+    d = nlp(doc)
+    for entity in d.ents:
+        if entity.label_ == "CARDINAL" and len(entity.text) in [7, 8, 10, 11, 12, 14]:
+            print(entity.text.encode('ascii', errors='ignore'), entity.label_)
+            
+import re
+pattern = '\(?([0-9]{3})?\)?[-.]?([0-9]{3})[-.]?([0-9]{4})'
+for doc in my_list[:10]:
+    if matches := re.finditer(pattern, doc):
+        for match in matches:
+            print(match.group())
+```
 
 ---
 
@@ -3071,14 +3332,14 @@ Make sure to read about, and use the template found [here](#templates), and the 
 
 #### Questions
 
-##### 1. Often times the deliverable part of a project isn’t custom built packages or modules, but a script. A script is a .py file with python code written inside to perform action(s). Python scripts are incredibly easy to run, for example, if you had a python script called `myscript.py`, you could run it by opening a terminal and typing:
+##### 1. Often times the deliverable part of a project isn’t custom built packages or modules, but a script. A script is a .py file with python code written inside to perform action(s). Python scripts are incredibly easy to run, for example, if you had a python script called `question01.py`, you could run it by opening a terminal and typing:
 
 ```{bash, eval=F}
-python3 /path/to/myscript.py
+python3 /path/to/question01.py
 ```
 
 ##### The python interpreter then looks for the scripts entrypoint, and starts executing. You should read [this](https://realpython.com/python-main-function/) article about the main function and python scripts. In addition, read [this](https://realpython.com/run-python-scripts/#using-the-script-filename) section, paying special attention to the shebang. 
-##### Create a Python script called `my_script.py` in your `$HOME` directory. Use the second shebang from the article: `#!/usr/bin/env python`. When run, `my_script.py` should use the `sys` package to print the location of the interpreter being used to run the script. For example, if we started a Python interpreter in RStudio using the following code:
+##### Create a Python script called `question01.py` in your `$HOME` directory. Use the second shebang from the article: `#!/usr/bin/env python3`. When run, `question01.py` should use the `sys` package to print the location of the interpreter being used to run the script. For example, if we started a Python interpreter in RStudio using the following code:
 
 ```{r, eval=F}
 datamine_py()
@@ -3098,24 +3359,26 @@ print(sys.executable)
 
 ```{bash, eval=F}
 # this command gives execute permissions to your script -- this only needs to be run once
-chmod +x $HOME/my_script.py
+chmod +x $HOME/question01.py
 
 # execute your script 
-$HOME/my_script.py
+$HOME/question01.py
 ```
+
+**Important note:** You can run bash code using a bash code chunk just like you would an R or Python code chunk. Simply replace "python" with "bash" in the code chunk options.
 
 **Relevant topics:** [shebang](#p-shebang)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
 
-- The entire `my_script.py` script's contents in a Python code chunk with chunk option "eval=F".
+- The entire `question01.py` script's contents in a Python code chunk with chunk option "eval=F".
 - Output from running your code copy and pasted as text.
 ```
 
 ##### 2. Was your output in question (1) expected? Why or why not?
 
-##### When we restarted the R session, our `datamine_py`'s effects were reversed, and the default Python interpreter is no longer our default when running `python`. It is very common to have a multitude of Python environments available to use. But, when we are running a Python script it is _not_ convenient to have to run various commands (in our case, the single `datamine_py` command) in order to get our script to run the way we want it to run. In addition, if our script used a set of packages that were not installed outside of our course environment, the script would fail.
+##### When we restarted the R session, our `datamine_py`'s effects were reversed, and the default Python interpreter is no longer our default when running `python3`. It is very common to have a multitude of Python environments available to use. But, when we are running a Python script it is _not_ convenient to have to run various commands (in our case, the single `datamine_py` command) in order to get our script to run the way we want it to run. In addition, if our script used a set of packages that were not installed outside of our course environment, the script would fail.
 
 ##### In this project, since our focus is more on how to write scripts and make them work as expected, we will have some fun and experiment with some pre-trained state of the art machine learning models. 
 
@@ -3135,11 +3398,13 @@ print(get_sentiment(model, 'This is really great!'))
 print(get_sentiment(model, 'Oh no! Thats horrible!'))
 ```
 
-##### Include `get_sentiment` (including the import statement) in your `my_script.py` script. Note that you do not have to _use_ `get_sentiment` anywhere, just include it for now. Go to the terminal in RStudio and execute your script. What happens?
+##### Include `get_sentiment` (including the import statement) in a new script, `question02.py` script. Note that you do not have to _use_ `get_sentiment` anywhere, just include it for now. Go to the terminal in RStudio and execute your script. What happens?
 
-##### Remember, since our current shebang is `#!/usr/bin/env python`, if our script uses one or more packages that are not installed in the current environment environment, the script will fail. This is what is happening. The `transformers` package that we use is not installed in the current environment. We do, however, have an environment that _does_ have it installed, and it is located on Scholar at: `/class/datamine/apps/python/pytorch2021/env/bin/python`. Update the script's shebang and try to run it again. Does it work now?
+##### Remember, since our current shebang is `#!/usr/bin/env python3`, if our script uses one or more packages that are not installed in the current environment environment, the script will fail. This is what is happening. The `transformers` package that we use is not installed in the current environment. We do, however, have an environment that _does_ have it installed, and it is located on Scholar at: `/class/datamine/apps/python/pytorch2021/env/bin/python`. Update the script's shebang and try to run it again. Does it work now?
 
-**Explanation:** Depending on the state of your current environment, the original shebang, `#!/usr/bin/env python` will use the same Python interpreter and environment that is currently set to `python` (run `which python` to see). If you haven't run `datamine_py`, this will be something like: `/apps/spack/scholar/fall20/apps/anaconda/2020.11-py38-gcc-4.8.5-djkvkvk/bin/python`, if you _have_ run `datamine_py`, this will be: `/class/datamine/apps/python/f2020-s2021/env/bin/python`. _Both_ environments lack the `transformers` package. Our other environment whose interpreter lives here: `/class/datamine/apps/python/pytorch2021/env/bin/python` _does_ have this package. The shebang is then critically important for any scripts that want to utilize packages from a specific environment.
+**Explanation:** Depending on the state of your current environment, the original shebang, `#!/usr/bin/env python3` will use the same Python interpreter and environment that is currently set to `python3` (run `which python3` to see). If you haven't run `datamine_py`, this will be something like: `/apps/spack/scholar/fall20/apps/anaconda/2020.11-py38-gcc-4.8.5-djkvkvk/bin/python` or `/usr/bin/python`, if you _have_ run `datamine_py`, this will be: `/class/datamine/apps/python/f2020-s2021/env/bin/python`. _Both_ environments lack the `transformers` package. Our other environment whose interpreter lives here: `/class/datamine/apps/python/pytorch2021/env/bin/python` _does_ have this package. The shebang is then critically important for any scripts that want to utilize packages from a specific environment.
+
+**Important note:** You can run bash code using a bash code chunk just like you would an R or Python code chunk. Simply replace "python" with "bash" in the code chunk options.
 
 **Relevant topics:** [writing scripts](#p-writing-scripts)
 
@@ -3151,10 +3416,10 @@ print(get_sentiment(model, 'Oh no! Thats horrible!'))
 - The entirety of the updated (working) script's content in a Python code chunk with chunk option "eval=F".
 ```
 
-##### 3. Okay, great. We now understand that if we want to use packages from a specific environment, we need to modify our shebang accordingly. As it currently stands, our script is pretty useless. Modify the script to accept a single argument. This argument should be a sentence. Your script should then print the sentence, and whether or not the sentence is "POSITIVE" or "NEGATIVE". Use `sys.argv` to accomplish this. Make sure the script functions in the following way:
+##### 3. Okay, great. We now understand that if we want to use packages from a specific environment, we need to modify our shebang accordingly. As it currently stands, our script is pretty useless. Modify the script, in a new script called `question03.py` to accept a single argument. This argument should be a sentence. Your script should then print the sentence, and whether or not the sentence is "POSITIVE" or "NEGATIVE". Use `sys.argv` to accomplish this. Make sure the script functions in the following way:
 
 ```{bash, eval=F}
-$HOME/my_script.py This is a happy sentence, yay!
+$HOME/question03.py This is a happy sentence, yay!
 ```
 
 ````
@@ -3162,7 +3427,7 @@ Too many arguments.
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!'
+$HOME/question03.py 'This is a happy sentence, yay!'
 ```
 
 ````
@@ -3171,11 +3436,11 @@ POSITIVE
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py
+$HOME/question03.py
 ```
 
 ````
-./my_script.py requires at least 1 argument, "sentence".
+./question03.py requires at least 1 argument, "sentence".
 ````
 
 **Hint:** One really useful way to exit the script and print a message is like this:
@@ -3185,6 +3450,8 @@ import sys
 
 sys.exit(f"{__file__} requires at least 1 argument, 'sentence'")
 ```
+
+**Important note:** You can run bash code using a bash code chunk just like you would an R or Python code chunk. Simply replace "python" with "bash" in the code chunk options.
 
 **Relevant topics:** [writing scripts](#p-writing-scripts)
 
@@ -3203,10 +3470,10 @@ grep -i 'ok' some_file.txt
 
 ##### However, often times you have 2 ways you can use an option -- either with the short form (for example `-i`), or long form (for example `-i` is the same as `--ignore-case`). Sometimes options can get values. If options don't have values, you can assume that the presence of the flag means `TRUE` and the lack means `FALSE`. When using short form, the value for the option is separated by a space (for example `grep -f my_file.txt`). When using long form, the value for the option is separated by an equals sign (for example `grep --file=my_file.txt`).
 
-##### Modify your script to include an option called `score`. When active (`myscript.py --score` or `myscript.py -s`), the script should return both the sentiment, "POSITIVE" or "NEGATIVE" and the probability of being accurate. Make sure that you modify your checks from question 3 to continue to work whenever we use `--score` or `-s`. Some examples below:
+##### Modify your script (as a new `question04.py`) to include an option called `score`. When active (`question04.py --score` or `question04.py -s`), the script should return both the sentiment, "POSITIVE" or "NEGATIVE" and the probability of being accurate. Make sure that you modify your checks from question 3 to continue to work whenever we use `--score` or `-s`. Some examples below:
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!'
+$HOME/question04.py 'This is a happy sentence, yay!'
 ```
 
 ````
@@ -3215,7 +3482,7 @@ POSITIVE
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py --score 'This is a happy sentence, yay!'
+$HOME/question04.py --score 'This is a happy sentence, yay!'
 ```
 
 ````
@@ -3224,7 +3491,7 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py -s 'This is a happy sentence, yay!'
+$HOME/question04.py -s 'This is a happy sentence, yay!'
 ```
 
 ````
@@ -3233,7 +3500,7 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' -s
+$HOME/question04.py 'This is a happy sentence, yay!' -s
 ```
 
 ````
@@ -3242,7 +3509,7 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' --score
+$HOME/question04.py 'This is a happy sentence, yay!' --score
 ```
 
 ````
@@ -3251,7 +3518,7 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' --value
+$HOME/question04.py 'This is a happy sentence, yay!' --value
 ```
 
 ````
@@ -3259,7 +3526,7 @@ Unknown option(s): ['--value']
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' --value --score
+$HOME/question04.py 'This is a happy sentence, yay!' --value --score
 ```
 
 ````
@@ -3267,28 +3534,30 @@ Too many arguments.
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py
+$HOME/question04.py
 ```
 
 ````
-my_script.py requires at least 1 argument, "sentence"
+question04.py requires at least 1 argument, "sentence"
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py --score
+$HOME/question04.py --score
 ```
 
 ````
-./my_script.py requires at least 1 argument, "sentence". No sentence provided.
+./question04.py requires at least 1 argument, "sentence". No sentence provided.
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is one sentence' 'This is another'
+$HOME/question04.py 'This is one sentence' 'This is another'
 ```
 
 ````
-./my_script.py requires only 1 sentence, but 2 were provided.
+./question04.py requires only 1 sentence, but 2 were provided.
 ````
+
+**Important note:** You can run bash code using a bash code chunk just like you would an R or Python code chunk. Simply replace "python" with "bash" in the code chunk options.
 
 **Hint:** Experiment with the provided function. You will find the probability of being accurate is already returned by the model.
 
@@ -3301,10 +3570,10 @@ $HOME/my_script.py 'This is one sentence' 'This is another'
 - Output from running your script with the given examples.
 ```
 
-##### 5. Wow, that is an extensive amount of logic for for a single option. Luckily, Python has the `argparse` package to help you build CLI's and handle situations like this. You can find the documentation for argparse [here](https://docs.python.org/3/library/argparse.html) and a nice little tutorial [here](https://docs.python.org/3/howto/argparse.html). Update your script using `argparse` instead of custom logic. Specifically, add 1 positional argument called "sentence", and 1 optional argument "--score" or "-s". You should handle the following scenarios:
+##### 5. Wow, that is an extensive amount of logic for for a single option. Luckily, Python has the `argparse` package to help you build CLI's and handle situations like this. You can find the documentation for argparse [here](https://docs.python.org/3/library/argparse.html) and a nice little tutorial [here](https://docs.python.org/3/howto/argparse.html). Update your script (as a new `question05.py`) using `argparse` instead of custom logic. Specifically, add 1 positional argument called "sentence", and 1 optional argument "--score" or "-s". You should handle the following scenarios:
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!'
+$HOME/question05.py 'This is a happy sentence, yay!'
 ```
 
 ````
@@ -3313,7 +3582,7 @@ POSITIVE
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py --score 'This is a happy sentence, yay!'
+$HOME/question05.py --score 'This is a happy sentence, yay!'
 ```
 
 ````
@@ -3322,7 +3591,7 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py -s 'This is a happy sentence, yay!'
+$HOME/question05.py -s 'This is a happy sentence, yay!'
 ```
 
 ````
@@ -3331,7 +3600,7 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' -s
+$HOME/question05.py 'This is a happy sentence, yay!' -s
 ```
 
 ````
@@ -3340,7 +3609,7 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' --score
+$HOME/question05.py 'This is a happy sentence, yay!' --score
 ```
 
 ````
@@ -3349,29 +3618,29 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' --value
+$HOME/question05.py 'This is a happy sentence, yay!' --value
 ```
 
 ````
-usage: my_script.py [-h] [-s] sentence
-my_script.py: error: unrecognized arguments: --value
+usage: question05.py [-h] [-s] sentence
+question05.py: error: unrecognized arguments: --value
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' --value --score
+$HOME/question05.py 'This is a happy sentence, yay!' --value --score
 ```
 
 ````
-usage: my_script.py [-h] [-s] sentence
-my_script.py: error: unrecognized arguments: --value
+usage: question05.py [-h] [-s] sentence
+question05.py: error: unrecognized arguments: --value
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py
+$HOME/question05.py
 ```
 
 ````
-usage: my_script.py [-h] [-s] sentence
+usage: question05.py [-h] [-s] sentence
 
 positional arguments:
   sentence
@@ -3382,21 +3651,21 @@ optional arguments:
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py --score
+$HOME/question05.py --score
 ```
 
 ````
-usage: my_script.py [-h] [-s] sentence
-my_script.py: error: too few arguments
+usage: question05.py [-h] [-s] sentence
+question05.py: error: too few arguments
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is one sentence' 'This is another'
+$HOME/question05.py 'This is one sentence' 'This is another'
 ```
 
 ````
-usage: my_script.py [-h] [-s] sentence
-my_script.py: error: unrecognized arguments: This is another
+usage: question05.py [-h] [-s] sentence
+question05.py: error: unrecognized arguments: This is another
 ````
 
 **Hint:** A good way to print the help information if no arguments are provided is:
@@ -3406,6 +3675,8 @@ if len(sys.argv) == 1:
     parser.print_help()
     parser.exit()
 ```
+
+**Important note:** You can run bash code using a bash code chunk just like you would an R or Python code chunk. Simply replace "python" with "bash" in the code chunk options.
 
 **Relevant topics:** [writing scripts](#p-writing-scripts), [argparse](#p-argparse)
 
@@ -4715,7 +4986,7 @@ myDF['dayofweek'] = myDF['dayofweek'].map({0:"Mon", 1:"Tue", 2:"Wed", 3:"Thu", 4
 
 ---
 
-### Project 8 {#p08-390}
+### Project 8 {#p08-290}
 
 ---
 
@@ -4735,14 +5006,14 @@ Make sure to read about, and use the template found [here](#templates), and the 
 
 #### Questions
 
-##### 1. Often times the deliverable part of a project isn’t custom built packages or modules, but a script. A script is a .py file with python code written inside to perform action(s). Python scripts are incredibly easy to run, for example, if you had a python script called `myscript.py`, you could run it by opening a terminal and typing:
+##### 1. Often times the deliverable part of a project isn’t custom built packages or modules, but a script. A script is a .py file with python code written inside to perform action(s). Python scripts are incredibly easy to run, for example, if you had a python script called `question01.py`, you could run it by opening a terminal and typing:
 
 ```{bash, eval=F}
-python3 /path/to/myscript.py
+python3 /path/to/question01.py
 ```
 
 ##### The python interpreter then looks for the scripts entrypoint, and starts executing. You should read [this](https://realpython.com/python-main-function/) article about the main function and python scripts. In addition, read [this](https://realpython.com/run-python-scripts/#using-the-script-filename) section, paying special attention to the shebang. 
-##### Create a Python script called `my_script.py` in your `$HOME` directory. Use the second shebang from the article: `#!/usr/bin/env python`. When run, `my_script.py` should use the `sys` package to print the location of the interpreter being used to run the script. For example, if we started a Python interpreter in RStudio using the following code:
+##### Create a Python script called `question01.py` in your `$HOME` directory. Use the second shebang from the article: `#!/usr/bin/env python3`. When run, `question01.py` should use the `sys` package to print the location of the interpreter being used to run the script. For example, if we started a Python interpreter in RStudio using the following code:
 
 ```{r, eval=F}
 datamine_py()
@@ -4762,24 +5033,26 @@ print(sys.executable)
 
 ```{bash, eval=F}
 # this command gives execute permissions to your script -- this only needs to be run once
-chmod +x $HOME/my_script.py
+chmod +x $HOME/question01.py
 
 # execute your script 
-$HOME/my_script.py
+$HOME/question01.py
 ```
+
+**Important note:** You can run bash code using a bash code chunk just like you would an R or Python code chunk. Simply replace "python" with "bash" in the code chunk options.
 
 **Relevant topics:** [shebang](#p-shebang)
 
 ```{block, type="bbox"}
 **Item(s) to submit:**
 
-- The entire `my_script.py` script's contents in a Python code chunk with chunk option "eval=F".
+- The entire `question01.py` script's contents in a Python code chunk with chunk option "eval=F".
 - Output from running your code copy and pasted as text.
 ```
 
 ##### 2. Was your output in question (1) expected? Why or why not?
 
-##### When we restarted the R session, our `datamine_py`'s effects were reversed, and the default Python interpreter is no longer our default when running `python`. It is very common to have a multitude of Python environments available to use. But, when we are running a Python script it is _not_ convenient to have to run various commands (in our case, the single `datamine_py` command) in order to get our script to run the way we want it to run. In addition, if our script used a set of packages that were not installed outside of our course environment, the script would fail.
+##### When we restarted the R session, our `datamine_py`'s effects were reversed, and the default Python interpreter is no longer our default when running `python3`. It is very common to have a multitude of Python environments available to use. But, when we are running a Python script it is _not_ convenient to have to run various commands (in our case, the single `datamine_py` command) in order to get our script to run the way we want it to run. In addition, if our script used a set of packages that were not installed outside of our course environment, the script would fail.
 
 ##### In this project, since our focus is more on how to write scripts and make them work as expected, we will have some fun and experiment with some pre-trained state of the art machine learning models. 
 
@@ -4799,11 +5072,13 @@ print(get_sentiment(model, 'This is really great!'))
 print(get_sentiment(model, 'Oh no! Thats horrible!'))
 ```
 
-##### Include `get_sentiment` (including the import statement) in your `my_script.py` script. Note that you do not have to _use_ `get_sentiment` anywhere, just include it for now. Go to the terminal in RStudio and execute your script. What happens?
+##### Include `get_sentiment` (including the import statement) in a new script, `question02.py` script. Note that you do not have to _use_ `get_sentiment` anywhere, just include it for now. Go to the terminal in RStudio and execute your script. What happens?
 
-##### Remember, since our current shebang is `#!/usr/bin/env python`, if our script uses one or more packages that are not installed in the current environment environment, the script will fail. This is what is happening. The `transformers` package that we use is not installed in the current environment. We do, however, have an environment that _does_ have it installed, and it is located on Scholar at: `/class/datamine/apps/python/pytorch2021/env/bin/python`. Update the script's shebang and try to run it again. Does it work now?
+##### Remember, since our current shebang is `#!/usr/bin/env python3`, if our script uses one or more packages that are not installed in the current environment environment, the script will fail. This is what is happening. The `transformers` package that we use is not installed in the current environment. We do, however, have an environment that _does_ have it installed, and it is located on Scholar at: `/class/datamine/apps/python/pytorch2021/env/bin/python`. Update the script's shebang and try to run it again. Does it work now?
 
-**Explanation:** Depending on the state of your current environment, the original shebang, `#!/usr/bin/env python` will use the same Python interpreter and environment that is currently set to `python` (run `which python` to see). If you haven't run `datamine_py`, this will be something like: `/apps/spack/scholar/fall20/apps/anaconda/2020.11-py38-gcc-4.8.5-djkvkvk/bin/python`, if you _have_ run `datamine_py`, this will be: `/class/datamine/apps/python/f2020-s2021/env/bin/python`. _Both_ environments lack the `transformers` package. Our other environment whose interpreter lives here: `/class/datamine/apps/python/pytorch2021/env/bin/python` _does_ have this package. The shebang is then critically important for any scripts that want to utilize packages from a specific environment.
+**Explanation:** Depending on the state of your current environment, the original shebang, `#!/usr/bin/env python3` will use the same Python interpreter and environment that is currently set to `python3` (run `which python3` to see). If you haven't run `datamine_py`, this will be something like: `/apps/spack/scholar/fall20/apps/anaconda/2020.11-py38-gcc-4.8.5-djkvkvk/bin/python` or `/usr/bin/python`, if you _have_ run `datamine_py`, this will be: `/class/datamine/apps/python/f2020-s2021/env/bin/python`. _Both_ environments lack the `transformers` package. Our other environment whose interpreter lives here: `/class/datamine/apps/python/pytorch2021/env/bin/python` _does_ have this package. The shebang is then critically important for any scripts that want to utilize packages from a specific environment.
+
+**Important note:** You can run bash code using a bash code chunk just like you would an R or Python code chunk. Simply replace "python" with "bash" in the code chunk options.
 
 **Relevant topics:** [writing scripts](#p-writing-scripts)
 
@@ -4815,10 +5090,10 @@ print(get_sentiment(model, 'Oh no! Thats horrible!'))
 - The entirety of the updated (working) script's content in a Python code chunk with chunk option "eval=F".
 ```
 
-##### 3. Okay, great. We now understand that if we want to use packages from a specific environment, we need to modify our shebang accordingly. As it currently stands, our script is pretty useless. Modify the script to accept a single argument. This argument should be a sentence. Your script should then print the sentence, and whether or not the sentence is "POSITIVE" or "NEGATIVE". Use `sys.argv` to accomplish this. Make sure the script functions in the following way:
+##### 3. Okay, great. We now understand that if we want to use packages from a specific environment, we need to modify our shebang accordingly. As it currently stands, our script is pretty useless. Modify the script, in a new script called `question03.py` to accept a single argument. This argument should be a sentence. Your script should then print the sentence, and whether or not the sentence is "POSITIVE" or "NEGATIVE". Use `sys.argv` to accomplish this. Make sure the script functions in the following way:
 
 ```{bash, eval=F}
-$HOME/my_script.py This is a happy sentence, yay!
+$HOME/question03.py This is a happy sentence, yay!
 ```
 
 ````
@@ -4826,7 +5101,7 @@ Too many arguments.
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!'
+$HOME/question03.py 'This is a happy sentence, yay!'
 ```
 
 ````
@@ -4835,11 +5110,11 @@ POSITIVE
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py
+$HOME/question03.py
 ```
 
 ````
-./my_script.py requires at least 1 argument, "sentence".
+./question03.py requires at least 1 argument, "sentence".
 ````
 
 **Hint:** One really useful way to exit the script and print a message is like this:
@@ -4849,6 +5124,8 @@ import sys
 
 sys.exit(f"{__file__} requires at least 1 argument, 'sentence'")
 ```
+
+**Important note:** You can run bash code using a bash code chunk just like you would an R or Python code chunk. Simply replace "python" with "bash" in the code chunk options.
 
 **Relevant topics:** [writing scripts](#p-writing-scripts)
 
@@ -4867,10 +5144,10 @@ grep -i 'ok' some_file.txt
 
 ##### However, often times you have 2 ways you can use an option -- either with the short form (for example `-i`), or long form (for example `-i` is the same as `--ignore-case`). Sometimes options can get values. If options don't have values, you can assume that the presence of the flag means `TRUE` and the lack means `FALSE`. When using short form, the value for the option is separated by a space (for example `grep -f my_file.txt`). When using long form, the value for the option is separated by an equals sign (for example `grep --file=my_file.txt`).
 
-##### Modify your script to include an option called `score`. When active (`myscript.py --score` or `myscript.py -s`), the script should return both the sentiment, "POSITIVE" or "NEGATIVE" and the probability of being accurate. Make sure that you modify your checks from question 3 to continue to work whenever we use `--score` or `-s`. Some examples below:
+##### Modify your script (as a new `question04.py`) to include an option called `score`. When active (`question04.py --score` or `question04.py -s`), the script should return both the sentiment, "POSITIVE" or "NEGATIVE" and the probability of being accurate. Make sure that you modify your checks from question 3 to continue to work whenever we use `--score` or `-s`. Some examples below:
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!'
+$HOME/question04.py 'This is a happy sentence, yay!'
 ```
 
 ````
@@ -4879,7 +5156,7 @@ POSITIVE
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py --score 'This is a happy sentence, yay!'
+$HOME/question04.py --score 'This is a happy sentence, yay!'
 ```
 
 ````
@@ -4888,7 +5165,7 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py -s 'This is a happy sentence, yay!'
+$HOME/question04.py -s 'This is a happy sentence, yay!'
 ```
 
 ````
@@ -4897,7 +5174,7 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' -s
+$HOME/question04.py 'This is a happy sentence, yay!' -s
 ```
 
 ````
@@ -4906,7 +5183,7 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' --score
+$HOME/question04.py 'This is a happy sentence, yay!' --score
 ```
 
 ````
@@ -4915,7 +5192,7 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' --value
+$HOME/question04.py 'This is a happy sentence, yay!' --value
 ```
 
 ````
@@ -4923,7 +5200,7 @@ Unknown option(s): ['--value']
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' --value --score
+$HOME/question04.py 'This is a happy sentence, yay!' --value --score
 ```
 
 ````
@@ -4931,28 +5208,30 @@ Too many arguments.
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py
+$HOME/question04.py
 ```
 
 ````
-my_script.py requires at least 1 argument, "sentence"
+question04.py requires at least 1 argument, "sentence"
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py --score
+$HOME/question04.py --score
 ```
 
 ````
-./my_script.py requires at least 1 argument, "sentence". No sentence provided.
+./question04.py requires at least 1 argument, "sentence". No sentence provided.
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is one sentence' 'This is another'
+$HOME/question04.py 'This is one sentence' 'This is another'
 ```
 
 ````
-./my_script.py requires only 1 sentence, but 2 were provided.
+./question04.py requires only 1 sentence, but 2 were provided.
 ````
+
+**Important note:** You can run bash code using a bash code chunk just like you would an R or Python code chunk. Simply replace "python" with "bash" in the code chunk options.
 
 **Hint:** Experiment with the provided function. You will find the probability of being accurate is already returned by the model.
 
@@ -4965,10 +5244,10 @@ $HOME/my_script.py 'This is one sentence' 'This is another'
 - Output from running your script with the given examples.
 ```
 
-##### 5. Wow, that is an extensive amount of logic for for a single option. Luckily, Python has the `argparse` package to help you build CLI's and handle situations like this. You can find the documentation for argparse [here](https://docs.python.org/3/library/argparse.html) and a nice little tutorial [here](https://docs.python.org/3/howto/argparse.html). Update your script using `argparse` instead of custom logic. Specifically, add 1 positional argument called "sentence", and 1 optional argument "--score" or "-s". You should handle the following scenarios:
+##### 5. Wow, that is an extensive amount of logic for for a single option. Luckily, Python has the `argparse` package to help you build CLI's and handle situations like this. You can find the documentation for argparse [here](https://docs.python.org/3/library/argparse.html) and a nice little tutorial [here](https://docs.python.org/3/howto/argparse.html). Update your script (as a new `question05.py`) using `argparse` instead of custom logic. Specifically, add 1 positional argument called "sentence", and 1 optional argument "--score" or "-s". You should handle the following scenarios:
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!'
+$HOME/question05.py 'This is a happy sentence, yay!'
 ```
 
 ````
@@ -4977,7 +5256,7 @@ POSITIVE
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py --score 'This is a happy sentence, yay!'
+$HOME/question05.py --score 'This is a happy sentence, yay!'
 ```
 
 ````
@@ -4986,7 +5265,7 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py -s 'This is a happy sentence, yay!'
+$HOME/question05.py -s 'This is a happy sentence, yay!'
 ```
 
 ````
@@ -4995,7 +5274,7 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' -s
+$HOME/question05.py 'This is a happy sentence, yay!' -s
 ```
 
 ````
@@ -5004,7 +5283,7 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' --score
+$HOME/question05.py 'This is a happy sentence, yay!' --score
 ```
 
 ````
@@ -5013,29 +5292,29 @@ POSITIVE: 0.999848484992981
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' --value
+$HOME/question05.py 'This is a happy sentence, yay!' --value
 ```
 
 ````
-usage: my_script.py [-h] [-s] sentence
-my_script.py: error: unrecognized arguments: --value
+usage: question05.py [-h] [-s] sentence
+question05.py: error: unrecognized arguments: --value
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is a happy sentence, yay!' --value --score
+$HOME/question05.py 'This is a happy sentence, yay!' --value --score
 ```
 
 ````
-usage: my_script.py [-h] [-s] sentence
-my_script.py: error: unrecognized arguments: --value
+usage: question05.py [-h] [-s] sentence
+question05.py: error: unrecognized arguments: --value
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py
+$HOME/question05.py
 ```
 
 ````
-usage: my_script.py [-h] [-s] sentence
+usage: question05.py [-h] [-s] sentence
 
 positional arguments:
   sentence
@@ -5046,21 +5325,21 @@ optional arguments:
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py --score
+$HOME/question05.py --score
 ```
 
 ````
-usage: my_script.py [-h] [-s] sentence
-my_script.py: error: too few arguments
+usage: question05.py [-h] [-s] sentence
+question05.py: error: too few arguments
 ````
 
 ```{bash, eval=F}
-$HOME/my_script.py 'This is one sentence' 'This is another'
+$HOME/question05.py 'This is one sentence' 'This is another'
 ```
 
 ````
-usage: my_script.py [-h] [-s] sentence
-my_script.py: error: unrecognized arguments: This is another
+usage: question05.py [-h] [-s] sentence
+question05.py: error: unrecognized arguments: This is another
 ````
 
 **Hint:** A good way to print the help information if no arguments are provided is:
@@ -5070,6 +5349,8 @@ if len(sys.argv) == 1:
     parser.print_help()
     parser.exit()
 ```
+
+**Important note:** You can run bash code using a bash code chunk just like you would an R or Python code chunk. Simply replace "python" with "bash" in the code chunk options.
 
 **Relevant topics:** [writing scripts](#p-writing-scripts), [argparse](#p-argparse)
 
