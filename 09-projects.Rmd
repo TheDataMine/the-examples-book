@@ -1742,33 +1742,6 @@ The following questions will use the dataset found in Scholar:
 
 ##### Solution
 
-```{python, eval=F, class.source="solution"}
-import pandas as pd
-
-photos = pd.read_parquet("/class/datamine/data/yelp/data/parquet/photos.parquet")
-businesses = pd.read_parquet("/class/datamine/data/yelp/data/parquet/businesses.parquet")
-checkins = pd.read_parquet("/class/datamine/data/yelp/data/parquet/checkins.parquet")
-tips = pd.read_parquet("/class/datamine/data/yelp/data/parquet/tips.parquet")
-users = pd.read_parquet("/class/datamine/data/yelp/data/parquet/users.parquet")
-reviews = pd.read_parquet("/class/datamine/data/yelp/data/parquet/reviews.parquet")
-
-photos.head()
-businesses.head()
-checkins.head()
-tips.head()
-users.head()
-reviews.head()
-```
-
-```{block, type="solution"}
-- photos contains photo_id of a photo in the photos folder, a business id, caption and label.
-- businesses contains business id with a bunch of info about the business like location and attributes.
-- checkins contains a business id and datetime
-- tips contains user id, business id, text, datetime, and compliment count
-- users contains userid, name, a list of friends user ids, and information abou their yelp usage
-- reviews contains a review id, user id, business id, datetime, text of the review and some other basic info.
-```
-
 ##### 2. Read the `businesses.parquet` file into a `pandas` DataFrame called `businesses`. Take a look to the `hours` and `attributes` columns. If you look closely, you'll observe that both columns contain a lot more than a single feature. In fact, the `attributes` column contains 39 features and the `hours` column contains 7!
 
 ```{python, eval=F}
@@ -1809,29 +1782,6 @@ type("True") # str
 
 - Python code used to solve the problem.
 - Output from running the provided "test" code.
-```
-
-##### Solution
-
-```{python, eval=F, class.source="solution"}
-def has_attributes(business_id: str) -> bool:
-    """
-    has_attributes takes a business id and returns
-    True if the business has attributes and False otherwise.
-
-    Args:
-        business_id (str): Yelp business id.
-
-    Returns:
-        bool: Whether or not a business has attributes.
-    """
-    return ~businesses.loc[businesses.loc[:, "business_id"]==business_id,"attributes"].isna().values[0]
-
-
-print(has_attributes('f9NumwFMBDn751xgFiRbNA'))
-print(has_attributes('XNoUzKckATkOD1hP6vghZg'))
-print(has_attributes('Yzvjg0SayhoZgCljUJRF9Q'))
-print(has_attributes('7uYJJpwORUbCirC1mz8n9Q'))
 ```
 
 ##### 3. Take a look at the `attributes` of the first business:
@@ -1925,35 +1875,6 @@ This method allows us to handle both cases. If the row has json it converts the 
 - Output from running your code.
 ```
 
-##### Solution
-
-```{python, eval=F, class.source="solution"}
-from pathlib import Path
-
-def fix_businesses_data(data_path: str, output_dir: str) -> None:
-    """
-    fix_data accepts a parquet file that contains data in a specific format. 
-    fix_data "explodes" the attributes and hours columns into 39+7 new 
-    columns.
-
-    Args:
-        data_path (str): Full path to a file in the same format as businesses.parquet.
-        output_dir (str): Path to a directory where new_businesses.parquet should be output.
-    """
-    # read in original parquet file
-    businesses = pd.read_parquet(data_path)
-    
-    # unnest the attributes
-    businesses = pd.concat([businesses.drop(columns=["attributes"]), businesses.loc[:, "attributes"].apply(pd.Series)], axis=1)
-    
-    # unnest the hours
-    businesses = pd.concat([businesses.drop(columns=["hours"]), businesses.loc[:, "hours"].apply(pd.Series)], axis=1)
-    
-    # output new file
-    businesses.to_parquet(str(Path(f"{output_dir}").joinpath("new_businesses.parquet")))
-    
-    return None
-```
 
 ##### 4. That's a pretty powerful function, and could definitely be useful. What if, instead of working on just our specifically formatted parquet file, we wrote a function that worked for _any_ `pandas` DataFrame? Write a function called `unnest` that accepts a `pandas` DataFrame as an argument (let's call this argument `myDF`), and a list of columns (let's call this argument `columns`), and returns a DataFrame where the provided columns are unnested. 
 
@@ -1987,28 +1908,6 @@ new_businesses_df.head()
 - Output from running the provided code.
 ```
 
-##### Solution
-
-```{python, eval=F, class.source="solution"}
-from typing import List
-
-def unnest(myDF: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
-    """
-    Given a pandas DataFrame, and a list of column names,
-    unnest unnests the columns with the provided column names.
-
-    Args:
-        myDF (pandas.core.frame.DataFrame): A pandas DataFrame with 1 or more columns that need to be unnested.
-        columns (List[str]): A list containing names of columns to be unnested.
-
-    Returns:
-        pandas.core.frame.DataFrame: The resulting pandas DataFrame with unnested columns.
-    """
-    for column in columns:
-        myDF = pd.concat([myDF.drop(columns=[column]), myDF.loc[:, column].apply(pd.Series)], axis=1)
-        
-    return myDF
-```
 
 ##### 5. Try out the code below. If a provided column isn't already nested, the column name is ruined and the data is changed. If the column doesn't already exist, a KeyError is thrown. Modify our function from question (4) to skip unnesting if the column doesn't exist. In addition, modify the function from question (4) to skip the column if the column isn't nested. Let's consider a column nested if the value of the column is a `dict`, and not nested otherwise.
 
@@ -2047,30 +1946,6 @@ type(my_variable)
 - Output from running the provided code.
 ```
 
-##### Solution
-
-```{python, eval=F, class.source="solution"}
-from typing import List
-
-def unnest(myDF: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
-    """
-    Given a pandas DataFrame, and a list of column names,
-    unnest unnests the columns with the provided column names.
-
-    Args:
-        myDF (pandas.core.frame.DataFrame): A pandas DataFrame with 1 or more columns that need to be unnested.
-        columns (List[str]): A list containing names of columns to be unnested.
-
-    Returns:
-        pandas.core.frame.DataFrame: The resulting pandas DataFrame with unnested columns.
-    """
-    for column in columns:
-        if column in myDF.columns and type(myDF.loc[:, column].iloc[0])==type(dict()):
-            myDF = pd.concat([myDF.drop(columns=[column]), myDF.loc[:, column].apply(pd.Series)], axis=1)
-        else:
-            continue
-    return myDF
-```
 
 ---
 
@@ -3843,35 +3718,6 @@ The following questions will use the dataset found in Scholar:
 - Output from running your code (including the graphic).
 ```
 
-##### Solution
-
-```{python, eval=F, class.source="solution"}
-from lxml import etree
-import pandas as pd
-
-tree = etree.parse("/class/datamine/data/apple/health/watch_dump.xml")
-
-records = tree.xpath("//Record")
-records = [r.attrib.get("creationDate") for r in records]
-records = pd.Series(records)
-records = pd.to_datetime(records)
-records = records.reset_index()
-records.rename(columns={0: 'datetime'}, inplace=True)
-records['date'] = records['datetime'].dt.date
-records = records.set_index("index")
-
-records_by_day = records.groupby("date").count()
-records_by_day = records_by_day.reset_index()
-records_by_day.rename(columns={'datetime': 'count'}, inplace=True)
-
-import matplotlib.pyplot as plt
-
-plt.bar(records_by_day['date'], records_by_day['count'])
-plt.locator_params(axis='x', nbins=10)
-plt.xticks(rotation='vertical')
-plt.subplots_adjust(bottom=0.35)
-plt.show()
-```
 
 ##### 2. The plot in question 1 should look bimodal. Let's focus only on the first apparent group of readings. Create a new dataframe containing only the readings for the time period from 9/1/2017 to 5/31/2019. How many `Record`s are there in that time period?
 
@@ -3884,24 +3730,6 @@ plt.show()
 
 - Python code used to solve the problem.
 - Output from running your code.
-```
-
-##### Solution
-
-```{block, type="solution"}
-869819 records in the time period
-```
-
-```{python, eval=F, class.source="solution"}
-import datetime
-records_by_day['date'] = pd.to_datetime(records_by_day['date'])
-records_by_day = records_by_day.loc[(records_by_day['date'].dt.date <= datetime.date(2019, 5, 31)) & (records_by_day['date'].dt.date >= datetime.date(2017, 9, 1)), :]
-
-plt.bar(records_by_day['date'], records_by_day['count'])
-plt.locator_params(axis='x', nbins=10)
-plt.xticks(rotation='vertical')
-plt.subplots_adjust(bottom=0.35)
-plt.show()
 ```
 
 ##### 3. It is hard to discern weekly patterns (if any) based on the graphics created so far. For the period of time in question 2, create a labeled bar plot for the count of `Record`s by day of the week. What (if any) discernable patterns are there? Make sure to include the labels provided below:
@@ -3919,24 +3747,6 @@ labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 - Python code used to solve the problem.
 - Output from running your code (including the graphic).
-```
-
-##### Solution
-
-```{python, eval=F, class.source="solution"}
-tmp = records.loc[(records['datetime'].dt.date <= datetime.date(2019, 5, 31)) & (records['datetime'].dt.date >= datetime.date(2017, 9, 1)), :]
-tmp['dayofweek'] = tmp['datetime'].dt.dayofweek
-
-records_by_dow = tmp.groupby("dayofweek").count()
-records_by_dow.rename(columns = {'datetime': 'count'}, inplace=True)
-records_by_dow = records_by_dow.reset_index()
-
-labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-plt.bar(records_by_dow['dayofweek'], records_by_dow['count'], tick_label=labels)
-plt.locator_params(axis='x', nbins=10)
-plt.xticks(rotation='vertical')
-plt.subplots_adjust(bottom=0.35)
-plt.show()
 ```
 
 ##### 4. Create a `pandas` dataframe containing the following data from `watch_dump.xml`:
@@ -3965,22 +3775,6 @@ myDF['dayofweek'] = myDF['dayofweek'].map({0:"Mon", 1:"Tue", 2:"Wed", 3:"Thu", 4
 - Output from running your code.
 ```
 
-##### Solution
-
-```{python, eval=F, class.source="solution"}
-records = tree.xpath("//Record")
-
-myDF = pd.DataFrame(columns=['bpm', 'time', 'date'])
-for r in records:
-    if r.attrib.get("type") == "HKQuantityTypeIdentifierHeartRateVariabilitySDNN":
-        date = r.attrib.get("creationDate")
-        for e in r.xpath(".//InstantaneousBeatsPerMinute"):
-            myDF = myDF.append({'bpm': e.attrib.get("bpm"), 'date': date, 'time': e.attrib.get("time")}, ignore_index=True)
-
-myDF['date'] = pd.to_datetime(myDF['date']).dt.date
-myDF['dayofweek'] = pd.to_datetime(myDF['date']).dt.dayofweek
-myDF['dayofweek'] = myDF['dayofweek'].map({0:"Mon", 1:"Tue", 2:"Wed", 3:"Thu", 4:"Fri", 5: "Sat", 6: "Sun"})
-```
 
 ##### 5. Create a heatmap using `seaborn`, where the y-axis shows the day of the week ("Mon" - "Sun"), the x-axis shows the hour, and the values on the interior of the plot are the average `bpm` by hour by day of the week.
 
@@ -3995,24 +3789,6 @@ myDF['dayofweek'] = myDF['dayofweek'].map({0:"Mon", 1:"Tue", 2:"Wed", 3:"Thu", 4
 - Output from running your code (including the graphic).
 ```
 
-##### Solution
-
-```{python, eval=F, class.source="solution"}
-times = pd.to_datetime(myDF.time)
-myDF['bpm'] = pd.to_numeric(myDF['bpm'])
-to_pivot = myDF.groupby(["dayofweek", times.dt.hour]).mean().reset_index()
-to_plot = to_pivot.pivot(index="dayofweek", columns="time", values="bpm")
-```
-
-```{python, eval=F, class.source="solution"}
-import seaborn as sns
-
-colors = ['#00d4ff', '#0095da', '#0062b6', '#003891', '#001a6d', '#000748', '#020024']
-labels = [datetime.datetime.strptime(str(t), "%H").strftime("%H:%M") for t in to_plot.columns]
-sns.heatmap(to_plot, cmap=colors, xticklabels=labels)
-plt.show()
-plt.close()
-```
 
 ---
 
@@ -6024,36 +5800,6 @@ The following questions will use the dataset found in Scholar:
 - Output from running your code (including the graphic).
 ```
 
-##### Solution
-
-```{python, eval=F, class.source="solution"}
-from lxml import etree
-import pandas as pd
-
-tree = etree.parse("/class/datamine/data/apple/health/watch_dump.xml")
-
-records = tree.xpath("//Record")
-records = [r.attrib.get("creationDate") for r in records]
-records = pd.Series(records)
-records = pd.to_datetime(records)
-records = records.reset_index()
-records.rename(columns={0: 'datetime'}, inplace=True)
-records['date'] = records['datetime'].dt.date
-records = records.set_index("index")
-
-records_by_day = records.groupby("date").count()
-records_by_day = records_by_day.reset_index()
-records_by_day.rename(columns={'datetime': 'count'}, inplace=True)
-
-import matplotlib.pyplot as plt
-
-plt.bar(records_by_day['date'], records_by_day['count'])
-plt.locator_params(axis='x', nbins=10)
-plt.xticks(rotation='vertical')
-plt.subplots_adjust(bottom=0.35)
-plt.show()
-```
-
 ##### 2. The plot in question 1 should look bimodal. Let's focus only on the first apparent group of readings. Create a new dataframe containing only the readings for the time period from 9/1/2017 to 5/31/2019. How many `Record`s are there in that time period?
 
 [Click here for video](https://mediaspace.itap.purdue.edu/id/1_wlkijwnv)
@@ -6067,23 +5813,6 @@ plt.show()
 - Output from running your code.
 ```
 
-##### Solution
-
-```{block, type="solution"}
-869819 records in the time period
-```
-
-```{python, eval=F, class.source="solution"}
-import datetime
-records_by_day['date'] = pd.to_datetime(records_by_day['date'])
-records_by_day = records_by_day.loc[(records_by_day['date'].dt.date <= datetime.date(2019, 5, 31)) & (records_by_day['date'].dt.date >= datetime.date(2017, 9, 1)), :]
-
-plt.bar(records_by_day['date'], records_by_day['count'])
-plt.locator_params(axis='x', nbins=10)
-plt.xticks(rotation='vertical')
-plt.subplots_adjust(bottom=0.35)
-plt.show()
-```
 
 ##### 3. It is hard to discern weekly patterns (if any) based on the graphics created so far. For the period of time in question 2, create a labeled bar plot for the count of `Record`s by day of the week. What (if any) discernable patterns are there? Make sure to include the labels provided below:
 
@@ -6100,24 +5829,6 @@ labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 - Python code used to solve the problem.
 - Output from running your code (including the graphic).
-```
-
-##### Solution
-
-```{python, eval=F, class.source="solution"}
-tmp = records.loc[(records['datetime'].dt.date <= datetime.date(2019, 5, 31)) & (records['datetime'].dt.date >= datetime.date(2017, 9, 1)), :]
-tmp['dayofweek'] = tmp['datetime'].dt.dayofweek
-
-records_by_dow = tmp.groupby("dayofweek").count()
-records_by_dow.rename(columns = {'datetime': 'count'}, inplace=True)
-records_by_dow = records_by_dow.reset_index()
-
-labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-plt.bar(records_by_dow['dayofweek'], records_by_dow['count'], tick_label=labels)
-plt.locator_params(axis='x', nbins=10)
-plt.xticks(rotation='vertical')
-plt.subplots_adjust(bottom=0.35)
-plt.show()
 ```
 
 ##### 4. Create a `pandas` dataframe containing the following data from `watch_dump.xml`:
@@ -6146,23 +5857,6 @@ myDF['dayofweek'] = myDF['dayofweek'].map({0:"Mon", 1:"Tue", 2:"Wed", 3:"Thu", 4
 - Output from running your code.
 ```
 
-##### Solution
-
-```{python, eval=F, class.source="solution"}
-records = tree.xpath("//Record")
-
-myDF = pd.DataFrame(columns=['bpm', 'time', 'date'])
-for r in records:
-    if r.attrib.get("type") == "HKQuantityTypeIdentifierHeartRateVariabilitySDNN":
-        date = r.attrib.get("creationDate")
-        for e in r.xpath(".//InstantaneousBeatsPerMinute"):
-            myDF = myDF.append({'bpm': e.attrib.get("bpm"), 'date': date, 'time': e.attrib.get("time")}, ignore_index=True)
-
-myDF['date'] = pd.to_datetime(myDF['date']).dt.date
-myDF['dayofweek'] = pd.to_datetime(myDF['date']).dt.dayofweek
-myDF['dayofweek'] = myDF['dayofweek'].map({0:"Mon", 1:"Tue", 2:"Wed", 3:"Thu", 4:"Fri", 5: "Sat", 6: "Sun"})
-```
-
 ##### 5. Create a heatmap using `seaborn`, where the y-axis shows the day of the week ("Mon" - "Sun"), the x-axis shows the hour, and the values on the interior of the plot are the average `bpm` by hour by day of the week.
 
 [Click here for video](https://mediaspace.itap.purdue.edu/id/1_rl5iu9am)
@@ -6176,24 +5870,6 @@ myDF['dayofweek'] = myDF['dayofweek'].map({0:"Mon", 1:"Tue", 2:"Wed", 3:"Thu", 4
 - Output from running your code (including the graphic).
 ```
 
-##### Solution
-
-```{python, eval=F, class.source="solution"}
-times = pd.to_datetime(myDF.time)
-myDF['bpm'] = pd.to_numeric(myDF['bpm'])
-to_pivot = myDF.groupby(["dayofweek", times.dt.hour]).mean().reset_index()
-to_plot = to_pivot.pivot(index="dayofweek", columns="time", values="bpm")
-```
-
-```{python, eval=F, class.source="solution"}
-import seaborn as sns
-
-colors = ['#00d4ff', '#0095da', '#0062b6', '#003891', '#001a6d', '#000748', '#020024']
-labels = [datetime.datetime.strptime(str(t), "%H").strftime("%H:%M") for t in to_plot.columns]
-sns.heatmap(to_plot, cmap=colors, xticklabels=labels)
-plt.show()
-plt.close()
-```
 
 ---
 
