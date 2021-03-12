@@ -2811,6 +2811,41 @@ That video is already relevant for Question 2 too.
 - Output from running your code.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.firefox.options import Options
+from selenium.common.exceptions import NoSuchElementException
+
+import time
+```
+
+```{python, eval=F, class.source="solution"}
+firefox_options = Options()
+firefox_options.add_argument("window-size=1920,1080")
+firefox_options.add_argument("--headless") # Headless mode means no GUI
+firefox_options.add_argument("start-maximized")
+firefox_options.add_argument("disable-infobars")
+firefox_options.add_argument("--disable-extensions")
+firefox_options.add_argument("--no-sandbox")
+firefox_options.add_argument("--disable-dev-shm-usage")
+firefox_options.binary_location = '/class/datamine/apps/firefox/firefox'
+```
+
+```{python, eval=F, class.source="solution"}
+driver = webdriver.Firefox(options=firefox_options, executable_path='/class/datamine/apps/geckodriver')
+url = 'https://www.trulia.com'
+driver.get(url)
+
+search_input = driver.find_element_by_id("banner-search")
+search_input.send_keys("West Lafayette, IN")
+search_input.send_keys(Keys.RETURN)
+time.sleep(3)
+print(driver.current_url)
+```
+
 ##### 2. Use your code from question (1) to test out the following queries:
 
 - West Lafayette, IN (City, State)
@@ -2828,6 +2863,20 @@ That video is already relevant for Question 2 too.
 
 - Python code used to solve the problem.
 - Output from running your code.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+driver = webdriver.Firefox(options=firefox_options, executable_path='/class/datamine/apps/geckodriver')
+url = 'https://www.trulia.com'
+driver.get(url)
+
+search_input = driver.find_element_by_xpath("//input[@id='banner-search']")
+search_input.send_keys("West Lafayette, IN")
+search_input.send_keys(Keys.RETURN)
+time.sleep(3)
+print(driver.current_url)
 ```
 
 ##### 3. Let's call the page after a city/state or zipcode search a "sales page". For example:
@@ -2896,6 +2945,32 @@ scroll(driver, myheight*4/4)
 - Output from running your code.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+driver = webdriver.Firefox(options=firefox_options, executable_path='/Users/kamstut/Downloads/geckodriver')
+url = 'https://www.trulia.com/IN/West_Lafayette/47906/'
+driver.get(url)
+
+# Needed to get the window size set right and scroll in headless mode
+height = driver.execute_script('return document.body.scrollHeight')
+driver.set_window_size(1080,height+100)
+
+def scroll(driver, scroll_point):  
+    driver.execute_script(f'window.scrollTo(0, {scroll_point});')
+    time.sleep(5) 
+    
+scroll(driver, height/4)
+scroll(driver, height/4*2)
+scroll(driver, height/4*3)
+scroll(driver, height)
+
+elements = driver.find_elements_by_xpath("//picture/img")
+print(len(elements))
+for e in elements:
+    print(e.get_attribute("src"))
+```
+
 ##### 4. Write a function called `avg_house_cost` that accepts a zip code as an argument, and returns the average cost of the first page of homes. Now, to make this a more meaningful statistic, filter for "3+" beds and _then_ find the average. Test `avg_house_cost` out on the zip code `47906` and print the average costs.
 
 **Important note:** Use `selenium` to "click" on the "3+ beds" filter.
@@ -2925,6 +3000,50 @@ int(re.sub("[^0-9]", "", "removenon45454_numbers$"))
 - Output from running your code.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+from selenium.webdriver.support.ui import WebDriverWait
+import re
+
+def avg_house_cost(zip: str) -> float:
+    firefox_options = Options()
+    firefox_options.add_argument("window-size=1920,1080")
+    # firefox_options.add_argument("--headless") # Headless mode means no GUI
+    firefox_options.add_argument("start-maximized")
+    firefox_options.add_argument("disable-infobars")
+    firefox_options.add_argument("--disable-extensions")
+    firefox_options.add_argument("--no-sandbox")
+    firefox_options.add_argument("--disable-dev-shm-usage")
+    firefox_options.binary_location = '/Applications/Firefox.app/Contents/MacOS/firefox'
+    
+    driver = webdriver.Firefox(options=firefox_options, executable_path='/Users/kamstut/Downloads/geckodriver')
+    url = 'https://www.trulia.com/'
+    driver.get(url)
+    
+    search_input = driver.find_element_by_id("banner-search")
+    search_input.send_keys(zip)
+    search_input.send_keys(Keys.RETURN)
+    time.sleep(10)
+    
+    allbed_button = driver.find_element_by_xpath("//button[@data-testid='srp-xl-bedrooms-filter-button']/ancestor::li")
+    allbed_button.click()
+    time.sleep(2)
+    
+    bed_button = driver.find_element_by_xpath("//button[contains(text(), '3+')]")
+    bed_button.click()
+    time.sleep(3)
+    
+    price_elements = driver.find_elements_by_xpath("(//div[@data-testid='search-result-list-container'])[1]//div[@data-testid='property-price']")
+    prices = [int(re.sub("[^0-9]", "", e.text)) for e in price_elements]
+    
+    driver.quit()
+    
+    return sum(prices)/len(prices)
+    
+avg_house_cost('47906')
+```
+
 ##### 5. Get creative. Either add an interesting feature to your function from (4), or use `matplotlib` to generate some sort of accompanying graphic with your output. Make sure to explain what your additions do.
 
 **Relevant topics:** [selenium](#p-selenium), [xml](#xml), [loops](#p-for-loops) 
@@ -2934,6 +3053,12 @@ int(re.sub("[^0-9]", "", "removenon45454_numbers$"))
 
 - Python code used to solve the problem.
 - Output from running your code.
+```
+
+##### Solution
+
+```{block, type="solution"}
+Could be anything.
 ```
 
 ---
@@ -2981,6 +3106,35 @@ Make sure to read about, and use the template found [here](#templates), and the 
 - Output from running your code.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.firefox.options import Options
+from selenium.common.exceptions import NoSuchElementException
+
+import time
+```
+
+```{python, eval=F, class.source="solution"}
+driver.get("https://project4.tdm.wiki/")
+
+elements = driver.find_elements_by_xpath("//span[@class='ui-component-card--color-amount']")
+for element in elements:
+    print(element.text)
+
+# click the "wild colors" button
+label = driver.find_element_by_xpath("//label[@for='ui-component-toggle__wild']")
+label.click()
+
+elements = driver.find_elements_by_xpath("//span[@class='ui-component-card--color-amount']")
+for element in elements:
+    print(element.text)
+    
+driver.quit()
+```
+
 ##### 2. Websites are updated frequently. You can imagine a scenario where a change in a website is a sign that there is more data available, or that something of note has happened. This is a fake website designed to help students emulate real changes to a website. Specifically, there is one part of the website that has two possible states (let's say, state `A` and state `B`). Upon refreshing the website, or scraping the website again, there is an $x\%$ chance that the website will be in state `A` and a $1-x\%$ chance the website will be in state `B`.
 
 ##### Describe the two states (the thing (element or set of elements) that changes as you refresh the page), and scrape the website enough to estimate $x$.
@@ -3004,6 +3158,43 @@ Make sure to read about, and use the template found [here](#templates), and the 
 - An estimate for `x`.
 ```
 
+##### Solution
+
+```{block, type="solution"}
+25% in stock 75% out of stock -- anything remotely close give full credit
+```
+
+```{python, eval=F, class.source="solution"}
+# The state of the Chartreuse pants, sold out (A) or in stock (B)
+driver = webdriver.Firefox(options=firefox_options, executable_path='/class/datamine/apps/geckodriver')
+driver.get("https://project4.tdm.wiki/")
+
+# click the "wild colors" button
+label = driver.find_element_by_xpath("//label[@for='ui-component-toggle__wild']")
+label.click()
+
+stateA = driver.page_source
+stateAct = 0
+stateBct = 0
+for i in range(10):
+    driver = webdriver.Firefox(options=firefox_options, executable_path='/class/datamine/apps/geckodriver')
+    driver.get("https://project4.tdm.wiki/")
+
+    # click the "wild colors" button
+    label = driver.find_element_by_xpath("//label[@for='ui-component-toggle__wild']")
+    label.click()
+    
+    if driver.page_source == stateA:
+        stateAct += 1
+    else:
+        stateBct += 1
+
+    driver.quit()
+
+print(f"State A: {stateAct}")
+print(f"State B: {stateBct}")
+```
+
 ##### 3. Dig into the changing "thing" from question (2). What specifically is changing? Use selenium and xpath expressions to scrape and print the content. What are the two possible values for the content? 
 
 [Click here for video (same as above) for Questions 2 and 3](https://mediaspace.itap.purdue.edu/id/1_2zaiodzi)
@@ -3019,6 +3210,23 @@ Make sure to read about, and use the template found [here](#templates), and the 
 
 - Python code used to solve the problem.
 - Output from running your code.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+# The state of the Chartreuse pants, sold out (A) or in stock (B)
+driver = webdriver.Firefox(options=firefox_options, executable_path='/class/datamine/apps/geckodriver')
+driver.get("https://project4.tdm.wiki/")
+
+# click the "wild colors" button
+label = driver.find_element_by_xpath("//label[@for='ui-component-toggle__wild']")
+label.click()
+
+element = driver.find_element_by_xpath("//span[@data-color='Chartreuse']/parent::div/following-sibling::div/span")
+print(element.text)
+
+driver.quit()
 ```
 
 ##### 4. The following code allows you to send an email using Python from your Purdue email account. Replace the username and password with your own information and send a test email to yourself to ensure that it works.
@@ -3089,6 +3297,30 @@ send_purdue_email("kamstut@purdue.edu", "supersecretpassword", "mdw@purdue.edu",
 - Python code used to solve the problem.
 - Output from running your code.
 - Screenshot showing your received the email.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+import smtplib, ssl
+
+port = 587  # For starttls
+smtp_server = "smtp.purdue.edu"
+sender_email = "kamstut@purdue.edu"
+receiver_email = "kamstut@purdue.edu"
+password = "MYPASSWORD"
+message = """\
+Subject: Hi there
+
+This message is sent from Python."""
+
+context = ssl.create_default_context()
+with smtplib.SMTP(smtp_server, port) as server:
+    server.ehlo()  # Can be omitted
+    server.starttls(context=context)
+    server.ehlo()  # Can be omitted
+    server.login(sender_email, password)
+    server.sendmail(sender_email, receiver_email, message)
 ```
 
 ##### 5. The following is the content of a new Python script called `is_in_stock.py`:
@@ -3183,6 +3415,63 @@ chmod 700 $HOME/is_in_stock.py
 - Output from running your code.
 - The content of your cron job in a bash code chunk.
 - The content of your `is_in_stock.py` script.
+```
+
+##### Solution
+
+```{bash, eval=F, class.source="solution"}
+*/5 * * * * /home/kamstut/is_in_stock.py
+```
+
+```{python, eval=F, class.source="solution"}
+#!/usr/bin/env python3
+
+def send_purdue_email(my_purdue_email, my_password, to):
+    import smtplib, ssl
+    
+    port = 587  # For starttls
+    smtp_server = "smtp.purdue.edu"
+    sender_email = my_purdue_email
+    receiver_email = to
+    password = my_password
+    message = """\
+    Subject: Test subject
+    
+    This is the email body."""
+    
+    context = ssl.create_default_context()
+    with smtplib.SMTP(smtp_server, port) as server:
+        server.ehlo()  # Can be omitted
+        server.starttls(context=context)
+        server.ehlo()  # Can be omitted
+        server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, message)
+        
+def main():
+    # scrape element from question 3
+
+    # The state of the Chartreuse pants, sold out (A) or in stock (B)
+    driver = webdriver.Firefox(options=firefox_options, executable_path='/class/datamine/apps/geckodriver')
+    driver.get("https://project4.tdm.wiki/")
+
+    # click the "wild colors" button
+    label = driver.find_element_by_xpath("//label[@for='ui-component-toggle__wild']")
+    label.click()
+
+    element = driver.find_element_by_xpath("//span[@data-color='Chartreuse']/parent::div/following-sibling::div/span")
+    
+    # does the text indicate it is in stock?
+    if element.text == "In stock":
+    
+        # if yes, send email to yourself telling you it is in stock.
+        send_purdue_email("kamstut@purdue.edu", "MYPASSWORD", "kamstut@purdue.edu")
+    
+    # otherwise, gracefully end script using the "pass" Python keyword
+    else:
+        pass
+
+if __name__ == "__main__":
+    main()
 ```
 
 ---
@@ -3284,6 +3573,28 @@ X-Real-Ip: 123.123.123.123
 - The content of the successfully scraped site.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+import requests
+
+response = requests.get("https://project5-headers.tdm.wiki")
+print(response.status_code) # 403
+
+# 403 is an https response code that means the content is forbidden
+
+# based on the HTML it looks like we'd be presented with a CAPTCHA
+print(response.text)
+
+# to fix this, let's change our User-Agent header
+response = requests.get("https://project5-headers.tdm.wiki", headers={"User-Agent": "anything"})
+print(response.text)
+
+# or even better, would be to "fake" a browser
+response = requests.get("https://project5-headers.tdm.wiki", headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.16; rv:86.0) Gecko/20100101 Firefox/86.0"})
+print(response.text)
+```
+
 ##### 2. Open a browser and navigate to: https://project5-rate-limit.tdm.wiki/. While at first glance, it will seem identical to https://project5-headers.tdm.wiki/, it is not. https://project5-rate-limit.tdm.wiki/ is rate limited based on IP address. Depending on when you are completing this project, this may or may not be obvious. If you refresh your browser fast enough, instead of receiving a bunch of information, you will receive text that says "Too Many Requests". 
 
 ##### The following function tries to scrape the `Cf-Request-Id` header which will have a unique value each request:
@@ -3327,6 +3638,49 @@ scrape_cf_request_id("https://project5-rate-limit.tdm.wiki")
 - 10 unique `Cf-Request-Id`s printed.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+import requests
+import lxml.html
+
+# function to scrape the Cf-Request-Id
+def scrape_cf_request_id(url):
+    resp = requests.get(url)
+    tree = lxml.html.fromstring(resp.text)
+    content = tree.xpath("//p")[0].text.split('\n')
+    cfid = [l for l in content if 'Cf-Request-Id' in l][0].split()[1]
+    print(cfid)
+    
+my_list = []
+for i in range(10):
+    my_list.append(scrape_cf_request_id("https://project5-rate-limit.tdm.wiki"))
+```
+
+```{block, type="solution"}
+This will cause an IndexError because the expected content containing the `Cf-Request-Id` is not present, instead "Too Many Requests" is.
+```
+
+```{python, eval=F, class.source="solution"}
+import backoff
+from lxml import etree
+
+@backoff.on_exception(backoff.expo,
+                      IndexError)
+def scrape_cf_request_id(url):
+    resp = requests.get(url, headers={"User-Agent": "something"})
+    tree = lxml.html.fromstring(resp.text)
+    content = tree.xpath("//p")[0].text.split('\n')
+    cfid = [l for l in content if 'Cf-Request-Id' in l][0].split()[1]
+    print(cfid)
+
+my_list = []
+for i in range(10):
+    my_list.append(scrape_cf_request_id("https://project5-rate-limit.tdm.wiki"))
+    
+print(my_list)
+```
+
 ##### 3. You now have a great set of tools to be able to scrape pretty much anything you want from the internet. Now all that is left to do is practice. Find a course appropriate website containing data you would like to scrape. Utilize the tools you've learned about to scrape at least 100 "units" of data. A "unit" is just a representation of what you are scraping. For example, a unit could be a tweet from Twitter, a basketball player's statistics from sportsreference, a product from Amazon, a blog post from your favorite blogger, etc.
 
 ##### The hard requirements are:
@@ -3344,6 +3698,16 @@ scrape_cf_request_id("https://project5-rate-limit.tdm.wiki")
 - The data must be from more than a single web page.
 - 1 or more functions (with docstrings) used to help you scrape/parse data.
 - Clear documentation and explanation of what your scraper scrapes, challenges you encountered (if any) and how you overcame them, and a sample of your data printed out (for example using the `head` of a dataframe containing the data).
+```
+
+##### Solution
+
+```{block, type="solution"}
+- Python code with comments
+- Sample of scraped data (must be from multiple pages)
+- At least 100 "units" of scraped data (for example 1 tweet == 1 unit, 1 product from amazon == 1 unit, etc.)
+- At least 1 helper function with a docstring
+- A paragraph explaining things
 ```
 
 ---
@@ -3479,6 +3843,36 @@ The following questions will use the dataset found in Scholar:
 - Output from running your code (including the graphic).
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+from lxml import etree
+import pandas as pd
+
+tree = etree.parse("/class/datamine/data/apple/health/watch_dump.xml")
+
+records = tree.xpath("//Record")
+records = [r.attrib.get("creationDate") for r in records]
+records = pd.Series(records)
+records = pd.to_datetime(records)
+records = records.reset_index()
+records.rename(columns={0: 'datetime'}, inplace=True)
+records['date'] = records['datetime'].dt.date
+records = records.set_index("index")
+
+records_by_day = records.groupby("date").count()
+records_by_day = records_by_day.reset_index()
+records_by_day.rename(columns={'datetime': 'count'}, inplace=True)
+
+import matplotlib.pyplot as plt
+
+plt.bar(records_by_day['date'], records_by_day['count'])
+plt.locator_params(axis='x', nbins=10)
+plt.xticks(rotation='vertical')
+plt.subplots_adjust(bottom=0.35)
+plt.show()
+```
+
 ##### 2. The plot in question 1 should look bimodal. Let's focus only on the first apparent group of readings. Create a new dataframe containing only the readings for the time period from 9/1/2017 to 5/31/2019. How many `Record`s are there in that time period?
 
 [Click here for video](https://mediaspace.itap.purdue.edu/id/1_wlkijwnv)
@@ -3490,6 +3884,24 @@ The following questions will use the dataset found in Scholar:
 
 - Python code used to solve the problem.
 - Output from running your code.
+```
+
+##### Solution
+
+```{block, type="solution"}
+869819 records in the time period
+```
+
+```{python, eval=F, class.source="solution"}
+import datetime
+records_by_day['date'] = pd.to_datetime(records_by_day['date'])
+records_by_day = records_by_day.loc[(records_by_day['date'].dt.date <= datetime.date(2019, 5, 31)) & (records_by_day['date'].dt.date >= datetime.date(2017, 9, 1)), :]
+
+plt.bar(records_by_day['date'], records_by_day['count'])
+plt.locator_params(axis='x', nbins=10)
+plt.xticks(rotation='vertical')
+plt.subplots_adjust(bottom=0.35)
+plt.show()
 ```
 
 ##### 3. It is hard to discern weekly patterns (if any) based on the graphics created so far. For the period of time in question 2, create a labeled bar plot for the count of `Record`s by day of the week. What (if any) discernable patterns are there? Make sure to include the labels provided below:
@@ -3507,6 +3919,24 @@ labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 - Python code used to solve the problem.
 - Output from running your code (including the graphic).
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+tmp = records.loc[(records['datetime'].dt.date <= datetime.date(2019, 5, 31)) & (records['datetime'].dt.date >= datetime.date(2017, 9, 1)), :]
+tmp['dayofweek'] = tmp['datetime'].dt.dayofweek
+
+records_by_dow = tmp.groupby("dayofweek").count()
+records_by_dow.rename(columns = {'datetime': 'count'}, inplace=True)
+records_by_dow = records_by_dow.reset_index()
+
+labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+plt.bar(records_by_dow['dayofweek'], records_by_dow['count'], tick_label=labels)
+plt.locator_params(axis='x', nbins=10)
+plt.xticks(rotation='vertical')
+plt.subplots_adjust(bottom=0.35)
+plt.show()
 ```
 
 ##### 4. Create a `pandas` dataframe containing the following data from `watch_dump.xml`:
@@ -3535,6 +3965,23 @@ myDF['dayofweek'] = myDF['dayofweek'].map({0:"Mon", 1:"Tue", 2:"Wed", 3:"Thu", 4
 - Output from running your code.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+records = tree.xpath("//Record")
+
+myDF = pd.DataFrame(columns=['bpm', 'time', 'date'])
+for r in records:
+    if r.attrib.get("type") == "HKQuantityTypeIdentifierHeartRateVariabilitySDNN":
+        date = r.attrib.get("creationDate")
+        for e in r.xpath(".//InstantaneousBeatsPerMinute"):
+            myDF = myDF.append({'bpm': e.attrib.get("bpm"), 'date': date, 'time': e.attrib.get("time")}, ignore_index=True)
+
+myDF['date'] = pd.to_datetime(myDF['date']).dt.date
+myDF['dayofweek'] = pd.to_datetime(myDF['date']).dt.dayofweek
+myDF['dayofweek'] = myDF['dayofweek'].map({0:"Mon", 1:"Tue", 2:"Wed", 3:"Thu", 4:"Fri", 5: "Sat", 6: "Sun"})
+```
+
 ##### 5. Create a heatmap using `seaborn`, where the y-axis shows the day of the week ("Mon" - "Sun"), the x-axis shows the hour, and the values on the interior of the plot are the average `bpm` by hour by day of the week.
 
 [Click here for video](https://mediaspace.itap.purdue.edu/id/1_rl5iu9am)
@@ -3546,6 +3993,25 @@ myDF['dayofweek'] = myDF['dayofweek'].map({0:"Mon", 1:"Tue", 2:"Wed", 3:"Thu", 4
 
 - Python code used to solve the problem.
 - Output from running your code (including the graphic).
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+times = pd.to_datetime(myDF.time)
+myDF['bpm'] = pd.to_numeric(myDF['bpm'])
+to_pivot = myDF.groupby(["dayofweek", times.dt.hour]).mean().reset_index()
+to_plot = to_pivot.pivot(index="dayofweek", columns="time", values="bpm")
+```
+
+```{python, eval=F, class.source="solution"}
+import seaborn as sns
+
+colors = ['#00d4ff', '#0095da', '#0062b6', '#003891', '#001a6d', '#000748', '#020024']
+labels = [datetime.datetime.strptime(str(t), "%H").strftime("%H:%M") for t in to_plot.columns]
+sns.heatmap(to_plot, cmap=colors, xticklabels=labels)
+plt.show()
+plt.close()
 ```
 
 ---
@@ -3913,6 +4379,8 @@ if len(sys.argv) == 1:
     parser.print_help()
     parser.exit()
 ```
+
+**Important note:** Include the bash code chunk option `error=T` to enable RMarkdown to knit and output errors.
 
 **Important note:** You can run bash code using a bash code chunk just like you would an R or Python code chunk. Simply replace "python" with "bash" in the code chunk options.
 
@@ -5587,6 +6055,8 @@ if len(sys.argv) == 1:
     parser.print_help()
     parser.exit()
 ```
+
+**Important note:** Include the bash code chunk option `error=T` to enable RMarkdown to knit and output errors.
 
 **Important note:** You can run bash code using a bash code chunk just like you would an R or Python code chunk. Simply replace "python" with "bash" in the code chunk options.
 
