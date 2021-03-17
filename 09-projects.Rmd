@@ -2151,14 +2151,12 @@ reviews = pd.read_parquet("/class/datamine/data/beer/reviews.parquet")
 
 #### Questions
 
-##### 1. Write a function called `prepare_data` that accepts an argument called `myDF` that is a `pandas` DataFrame. In addition, `prepare_data` should accept an argument called `min_num_reviews` that is an integer representing the minimum amount of reviews a user or beer must have to be included in the data. `prepare_data` should then return a `pandas` DataFrames. Make sure to remove all rows from `myDF` where a user or beer_id with less than `min_num_reviews`. In addition, remove all rows where `score` is missing (`isna()`). The following should work:
+##### 1. Write a function called `prepare_data` that accepts an argument called `myDF` that is a `pandas` DataFrame. In addition, `prepare_data` should accept an argument called `min_num_reviews` that is an integer representing the minimum amount of reviews a user or beer must have to be included in the data. `prepare_data` should then return a `pandas` DataFrame. Make sure to remove all rows from `myDF` where a user (username) or beer_id with less than `min_num_reviews`. In addition, remove all rows where `score` is missing (`isna()`). The following should work:
 
 ```{python, eval=F}
 train = prepare_data(reviews, 1000)
 print(train.shape) # (952105, 10)
 ```
-
-**Hint:** Make sure to round up when calculating the number of rows the percentage represents.
 
 **Relevant topics:** [indexing in pandas](#p-pandas-indexing), [isin](https://pandas.pydata.org/docs/reference/api/pandas.Series.isin.html?highlight=isin#pandas.Series.isin), [notna](https://pandas.pydata.org/docs/reference/api/pandas.Series.notna.html?highlight=notna#pandas.Series.notna)
 
@@ -2169,9 +2167,18 @@ print(train.shape) # (952105, 10)
 - Output from running your code.
 ```
 
-##### 2. Run the function in question (1). Use `prepare_data(reviews, 1000)`. The basis of our recommendation system will be to "match" a user to another user will similar taste in beer. Different users will have different means and variances in their scores. If we are going to compare users' scores, we should _standardize_ users' scores. Update the `train` DataFrame with 1 additional column: `standardized_score`. To calculate the `standardized_score`, take each individual score, and subtract off the user's average score and divide that result by the user's score's standard deviation. 
+##### 2. Run the function in question (1). Use `train=prepare_data(reviews, 1000)`. The basis of our recommendation system will be to "match" a user to another user will similar taste in beer. Different users will have different means and variances in their scores. If we are going to compare users' scores, we should _standardize_ users' scores. Update the `train` DataFrame with 1 additional column: `standardized_score`. To calculate the `standardized_score`, take each individual score, and subtract off the user's average score and divide that result by the user's score's standard deviation. 
 
-##### In R, we have the following _very_ handy code:
+##### In R, we have the following code:
+
+```{r, eval=F}
+myDF <- data.frame(a=c(1,2,3,1,2,3), b=c(6,5,4,5,5,5), c=c(9,9,9,8,8,8))
+myMean = tapply(myDF$b + myDF$c, myDF$a, mean)
+myMeanDF = data.frame(a=as.numeric(names(myMean)), mean=myMean)
+myDF = merge(myDF, myMeanDF, by='a')
+```
+
+##### Or you could also use a _very_ handy package called tidyverse in R to do the same thing:
 
 ```{r, eval=F}
 library(tidyverse)
@@ -2179,15 +2186,6 @@ myDF <- data.frame(a=c(1,2,3,1,2,3), b=c(6,5,4,5,5,5), c=c(9,9,9,8,8,8))
 myDF %>%
     group_by(a) %>%
     mutate(d=mean(b+c))
-```
-
-##### Or if you don't live in the tidyverse:
-
-```{r, eval=F}
-myDF <- data.frame(a=c(1,2,3,1,2,3), b=c(6,5,4,5,5,5), c=c(9,9,9,8,8,8))
-myMean = tapply(myDF$b + myDF$c, myDF$a, mean)
-myMeanDF = data.frame(a=as.numeric(names(myMean)), mean=myMean)
-myDF = merge(myDF, myMeanDF, by='a')
 ```
 
 ##### Unfortunately, there isn't a _great_ way to do this in Python:
@@ -2200,7 +2198,7 @@ def summer(data):
 myDF = myDF.groupby(["a"]).apply(summer)
 ```
 
-##### Perform the equivalent operations to `cosine_similarity_matrix` using the same technique shown above. Create a new column `standardized_score`. Calculate the `standardized_score` by taking the score and subtracting the average score, then divide by the standard deviation. As it may take a minute or two to create this new column, feel free to test it on a small sample of the reviews DataFrame:
+##### Create a new column `standardized_score`. Calculate the `standardized_score` by taking the score and subtracting the average score, then divide by the standard deviation. As it may take a minute or two to create this new column, feel free to test it on a small sample of the reviews DataFrame:
 
 ```{python, eval=F}
 import pandas as pd
@@ -2220,7 +2218,7 @@ testDF = pd.read_parquet('/class/datamine/data/beer/reviews_sample.parquet')
 - Output from running your code.
 ```
 
-##### 3. Use the `pivot_table` method from `pandas` to put your `train` data into "wide" format. What this means is that each row in the new DataFrame will be a `username`, and each column will be a `beer_id`. Each cell will contain the `standardized_score` for the given `username` and `beer` combination. Call the resulting DataFrame `score_matrix`.
+##### 3. Use the `pivot_table` method from `pandas` to put your `train` data into "wide" format. What this means is that each row in the new DataFrame will be a `username`, and each column will be a `beer_id`. Each cell will contain the `standardized_score` for the given `username` and `beer` combination. Call the resulting DataFrame `score_matrix`. 
 
 **Relevant topics:** [pivot](#p-pandas-pivot)
 
@@ -2228,7 +2226,7 @@ testDF = pd.read_parquet('/class/datamine/data/beer/reviews_sample.parquet')
 **Item(s) to submit:**
 
 - Python code used to solve the problem.
-- Output from running your code.
+- Output the `head` and `shape` of `score_matrix`.
 ```
 
 ##### 4. The result from question (3) should be a sparse matrix (lots of missing data!). Let's fill in the missing data. For now, let's fill in a beer_id's missing data by filling in every missing value with the average score for the beer.
@@ -2241,7 +2239,7 @@ testDF = pd.read_parquet('/class/datamine/data/beer/reviews_sample.parquet')
 **Item(s) to submit:**
 
 - Python code used to solve the problem.
-- Output from running your code.
+- Output the `head` of `score_matrix`.
 ```
 
 ##### Congratulations! Next week, we will complete our recommendation system!
