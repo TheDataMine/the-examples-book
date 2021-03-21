@@ -1532,6 +1532,72 @@ with open('grades_semi.csv') as my_csv_file:
 ```
 </details>
 
+#### Cleaning and Filtering Data {#p-cleaning-filtering-example}
+
+##### How can we clean a data set and filter it?  In this example, we start with a data set that has the campaign election data for 1980.  The original data set has 308696 rows.  We first clean the data set by removing any rows in which the transaction amount or the state are empty.  Then we filter the data as follows:  We keep only the donations from states that have at least 1000 donations, and donation amounts that occur at least 1000 times in the data set.  At the end, only 264977 rows remain.  We show two different ways to accomplish this:
+
+Here is one potential method.
+
+<details>
+    <summary>Click here for solution</summary>
+```{python, eval=F}
+def prepare_data(myDF, min_num_donations):
+  myDF = myDF.loc[myDF.loc[:, "TRANSACTION_AMT"].notna(), :]
+  myDF = myDF.loc[myDF.loc[:, "STATE"].notna(), :]
+  myDF = myDF.reset_index(drop=True)
+  # get a list of transaction amounts that have at least min_num_donations occurrences
+  goodtransactionamounts = myDF.loc[:, "TRANSACTION_AMT"].value_counts() >= min_num_donations
+  goodtransactionamounts = goodtransactionamounts.loc[goodtransactionamounts].index.values.tolist()
+  # get a list of states that have at least min_num_donations occurrences
+  goodstates = myDF.loc[:, "STATE"].value_counts() >= min_num_donations
+  goodstates = goodstates.loc[goodstates].index.values.tolist()
+  # remove all rows where the transaction or state has less than min_num_donations
+  myDF = myDF.loc[myDF.loc[:, "TRANSACTION_AMT"].isin(goodtransactionamounts) & myDF.loc[:, "STATE"].isin(goodstates), :]
+  return myDF
+
+train = prepare_data(electionDF, 1000)
+print(train.shape) # (264977, 21)
+```
+</details>
+
+Here is another potential method.
+
+<details>
+    <summary>Click here for solution</summary>
+```{python, eval=F}
+def prepare_data(myDF: pd.DataFrame, min_num_donations: int) -> pd.DataFrame:
+  myDF = myDF.loc[myDF.loc[:, "TRANSACTION_AMT"].notna(), :]
+  myDF = myDF.loc[myDF.loc[:, "STATE"].notna(), :]
+  myDF = myDF.reset_index(drop=True)
+  # build a dictionary to get the number of times that a transaction amount occurs
+  # and build a dictionary to get the number of times that a state occurs
+  my_transaction_amt_dict = {}
+  my_state_dict = {}
+  for i in range(0,myDF.shape[0]):
+    my_transaction_amt_dict[myDF['TRANSACTION_AMT'][i]] = 0
+    my_state_dict[myDF['STATE'][i]] = 0
+  for i in range(0,myDF.shape[0]):
+    my_transaction_amt_dict[myDF['TRANSACTION_AMT'][i]] += 1
+    my_state_dict[myDF['STATE'][i]] += 1
+  # get a list of transaction amounts that have at least min_num_donations occurrences
+  goodtransactionamounts = []
+  for myamt in my_transaction_amt_dict.keys():
+    if my_transaction_amt_dict[myamt] >= min_num_donations:
+      goodtransactionamounts.append(myamt)
+  # get a list of states that have at least min_num_donations occurrences
+  goodstates = []
+  for mystate in my_state_dict.keys():
+    if my_state_dict[mystate] >= min_num_donations:
+      goodstates.append(mystate)
+  # remove all rows where the transaction or state has less than min_num_donations
+  myreturnDF = myDF.loc[myDF.loc[:, "TRANSACTION_AMT"].isin(goodtransactionamounts) & myDF.loc[:, "STATE"].isin(goodstates), :]
+  return myreturnDF
+
+train = prepare_data(electionDF, 1000)
+print(train.shape) # (264977, 21)
+```
+</details>
+
 ## `pathlib` {#p-pathlib}
 
 ### `Path` {#p-pathlib-path}
