@@ -2278,6 +2278,135 @@ testDF = pd.read_parquet('/class/datamine/data/beer/reviews_sample.parquet')
 
 ---
 
+### Project 10 {#p10-190}
+
+---
+
+**Motivation:** We've covered a lot of material in a very short amount of time. At this point in time, you have so many powerful tools at your disposal. Last semester in project 14 we used our new skills to build a beer recommendation system. It is pretty generous to call what we built a recommendation system. In the next couple of projects, we will use our Python skills to build a real beer recommendation system!
+
+**Context:** This is the third project in a series of projects designed to learn about the `pandas` and `numpy` packages. In this project we build on to our previous project to finalize our beer recommendation system.
+
+**Scope:** python, numpy, pandas
+
+**Learning objectives:** 
+
+```{block, type="bbox"}
+- Distinguish the differences between numpy, pandas, DataFrames, Series, and ndarrays.
+- Use numpy, scipy, and pandas to solve a variety of data-driven problems.
+- Demonstrate the ability to read and write data of various formats using various packages.
+- View and access data inside DataFrames, Series, and ndarrays.
+```
+
+Make sure to read about, and use the template found [here](#templates), and the important information about projects submissions [here](#submissions).
+
+#### Dataset
+
+The following questions will use the dataset found in Scholar:
+
+`/class/datamine/data/beer`
+
+Load the following datasets up and assume they are always available:
+
+```{python, eval=F}
+beers = pd.read_parquet("/class/datamine/data/beer/beers.parquet")
+breweries = pd.read_parquet("/class/datamine/data/beer/breweries.parquet")
+reviews = pd.read_parquet("/class/datamine/data/beer/reviews.parquet")
+```
+
+#### Questions
+
+##### 1. If you struggled or did not do the previous project, or would like to start fresh, please see the solutions to the previous project (will be posted Saturday morning) and feel free to use them as your own. Cosine similarity is a measure of similarity between two non-zero vectors. It is used in a variety of ways in data science. [Here](https://towardsdatascience.com/understanding-cosine-similarity-and-its-application-fd42f585296a) is a pretty good article that tries to give some intuition into it. `sklearn` provides us with a function that calculates cosine similarity:
+
+```{python, eval=F}
+from sklearn.metrics.pairwise import cosine_similarity
+```
+
+##### Use the `cosine_similarity` function on our `score_matrix`. The result with be a `numpy` array. Use the `fill_diagonal` method from `numpy` to fill the diagonals with 0. Convert the array back to a `pandas` DataFrame. Make sure to manually assign the indexes of the new DataFrame to be equal to `score_matrix.index`. Lastly, manually assign the columns to be `score_matrix.index` as well. The end result should be a matrix with usernames on both the x and y axes. Each value in the cell represents how "close" one user is to another. Normally the values in the diagonals would be 1 because the same user is 100% similar. To prevent this we forced the diagonals to be 0. Name the final result `cosine_similarity_matrix`.
+
+**Relevant topics:** [fill diagonal](https://numpy.org/doc/stable/reference/generated/numpy.fill_diagonal.html)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Python code used to solve the problem.
+- Output from running your code.
+```
+
+##### 2. Write a function called `get_knn` that accepts the `cosine_similarity_matrix`, `username`, and a value, `k`. `get_knn` should return a `pandas` Series containing the `username`s of the `k` most similar users.
+
+**Hint:** This may _sound_ difficult, but it is not. It really only involves sorting some values and grabbing the first `k`.
+
+**Relevant topics:** [writing functions](#p-writing-functions), [sort values](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.sort_values.html), [indexing](#p-pandas-indexing)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Python code used to solve the problem.
+- Output from running your code.
+```
+
+##### 3. Let's test `get_knn` to see if the results make sense. Pick out a user, and the most similar other user. First, get a DataFrame (let's call it `aux`) containing just their reviews. The result should be a DataFrame that looks just like the `reviews` DataFrame, but just contains your users reviews.
+
+##### Next, look at `aux`. Wouldn't it be nice to get a DataFrame where the `beer_id` is the row index, the first column contains the scores for the first user, and the second column contains the scores for the second user. Use the `pivot_table` method to accomplish this, and save the result as `aux`.
+
+##### Lastly, use the `dropna` method to remove all rows where at least one of the users has an `NA` value. Sort the values in `aux` using the `sort_values` method. Take a look at the result and write 1-2 sentences explaining whether or not you think the users rated the beers similarly.
+
+**Hint:** You could also create a scatter plot using the resulting DataFrame. If it is a good match the plot should look like a positive sloping line.
+
+**Relevant topics:** [sort values](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.sort_values.html), [indexing](#p-pandas-indexing), [pivot_table](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.pivot_table.html?highlight=pivot_table#pandas.DataFrame.pivot_table), [isin](https://pandas.pydata.org/docs/reference/api/pandas.Series.isin.html?highlight=isin#pandas.Series.isin)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Python code used to solve the problem.
+- Output from running your code.
+```
+
+##### 4. We are so close, and things are looking good! The next step for our system, is to write a function that finds recommendations for a given user. Write a function called `recommend_beers`, that accepts three arguments: the `train` DataFrame, a `username`, a `cosine_similarity_matrix`, and `k` (how many neighbors to use). `recommend_beers` should return the top 5 recommendations.
+
+##### Calculate the recommendations by:
+
+1. Finding the `k` nearest neighbors. 
+2. Get a DataFrame with all of the reviews from `train` for every neighbor. Let's call this `aux`.
+3. Get a list of all `beer_id`s that the user with `username` has reviewed.
+4. Remove all beers from `aux` that have already been reviewed by the user with `username`.
+5. Group by `beer_id` and calculate the mean `standardized_score`. 
+6. Sort the results in descending order, and return the top 5 `beer_id`s.
+
+##### Test it on the following:
+
+```{python, eval=F}
+recommend_beers(train, "22Blue", cosine_similarity_matrix, 30) # [62397, 61100, 110635, 87246, 145155]
+```
+
+**Relevant topics:** [writing functions](#p-writing-functions), [sort values](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.sort_values.html), [indexing](#p-pandas-indexing), [isin](https://pandas.pydata.org/docs/reference/api/pandas.Series.isin.html?highlight=isin#pandas.Series.isin)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Python code used to solve the problem.
+- Output from running your code.
+```
+
+##### 5. (optional, 0 pts) Improve our recommendation system! Below are some suggestions, don't feel limited by them:
+
+- Instead of returning a list of `beer_id`s, return the beer info from the `beers` dataset.
+- Remove all retired beers.
+- Somehow add a cool plot.
+- Etc.
+
+**Relevant topics:** [writing functions](#p-writing-functions), [sort values](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.sort_values.html), [indexing](#p-pandas-indexing)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+
+- Python code used to solve the problem.
+- Output from running your code.
+```
+
+
+---
+
 ## STAT 29000
 
 ### Topics
