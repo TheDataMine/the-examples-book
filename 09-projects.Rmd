@@ -2191,6 +2191,29 @@ print(train.shape) # (952105, 10)
 - Output from running your code.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+def prepare_data(myDF, min_num_reviews):
+    
+    # remove rows where score is na
+    myDF = myDF.loc[myDF.loc[:, "score"].notna(), :]
+    # get a list of usernames that have at least min_num_reviews
+    usernames = myDF.loc[:, "username"].value_counts() >= min_num_reviews
+    usernames = usernames.loc[usernames].index.values.tolist()
+    # get a list of beer_ids that have at least min_num_reviews
+    beerids = myDF.loc[:, "beer_id"].value_counts() >= min_num_reviews
+    beerids = beerids.loc[beerids].index.values.tolist()
+    # first remove all rows where the username has less than min_num_reviews
+    myDF = myDF.loc[myDF.loc[:, "username"].isin(usernames), :]
+    
+    # remove rows where the beer_id has less than min_num_reviews
+    myDF = myDF.loc[myDF.loc[:, "beer_id"].isin(beerids), :]
+    
+    return myDF
+train = prepare_data(reviews, 1000)
+```
+
 ##### 2. Run the function in question (1). Use `train=prepare_data(reviews, 1000)`. The basis of our recommendation system will be to "match" a user to another user will similar taste in beer. Different users will have different means and variances in their scores. If we are going to compare users' scores, we should _standardize_ users' scores. Update the `train` DataFrame with 1 additional column: `standardized_score`. To calculate the `standardized_score`, take each individual score, and subtract off the user's average score and divide that result by the user's score's standard deviation. 
 
 ##### In R, we have the following code:
@@ -2246,6 +2269,24 @@ testDF = pd.read_parquet('/class/datamine/data/beer/reviews_sample.parquet')
 - Output from running your code.
 ```
 
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+def mutate_std_score(data: pd.DataFrame) -> pd.DataFrame:
+    """
+    mutate_std_score is a function to use in conjunction with 
+    pd.apply and pd.groupby to create a new column that is 
+    the standardized score.
+    Args:
+        data (pd.DataFrame): A pandas DataFrame.
+    Returns:
+        pd.DataFrame: A modified pandas DataFrame.
+    """
+    data['standardized_score'] = (data['score'] - data['score'].mean())/data['score'].std()
+    return data
+train = train.groupby(["username"]).apply(mutate_std_score)
+```
+
 ##### 3. Use the `pivot_table` method from `pandas` to put your `train` data into "wide" format. What this means is that each row in the new DataFrame will be a `username`, and each column will be a `beer_id`. Each cell will contain the `standardized_score` for the given `username` and `beer` combination. Call the resulting DataFrame `score_matrix`. 
 
 [Click here for video](https://mediaspace.itap.purdue.edu/id/1_46s7cp33)
@@ -2257,6 +2298,14 @@ testDF = pd.read_parquet('/class/datamine/data/beer/reviews_sample.parquet')
 
 - Python code used to solve the problem.
 - Output the `head` and `shape` of `score_matrix`.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+score_matrix = pd.pivot_table(train, values='standardized_score', index='username', columns='beer_id')
+print(score_matrix.shape)
+score_matrix.head()
 ```
 
 ##### 4. The result from question (3) should be a sparse matrix (lots of missing data!). Let's fill in the missing data. For now, let's fill in a beer_id's missing data by filling in every missing value with the average score for the beer.
@@ -2272,6 +2321,13 @@ testDF = pd.read_parquet('/class/datamine/data/beer/reviews_sample.parquet')
 
 - Python code used to solve the problem.
 - Output the `head` of `score_matrix`.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+score_matrix = score_matrix.fillna(score_matrix.mean(axis=0))
+score_matrix.head()
 ```
 
 ##### Congratulations! Next week, we will complete our recommendation system!
@@ -2311,6 +2367,58 @@ Load the following datasets up and assume they are always available:
 beers = pd.read_parquet("/class/datamine/data/beer/beers.parquet")
 breweries = pd.read_parquet("/class/datamine/data/beer/breweries.parquet")
 reviews = pd.read_parquet("/class/datamine/data/beer/reviews.parquet")
+```
+
+Previous project code:
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+def prepare_data(myDF, min_num_reviews):
+    
+    # remove rows where score is na
+    myDF = myDF.loc[myDF.loc[:, "score"].notna(), :]
+    # get a list of usernames that have at least min_num_reviews
+    usernames = myDF.loc[:, "username"].value_counts() >= min_num_reviews
+    usernames = usernames.loc[usernames].index.values.tolist()
+    # get a list of beer_ids that have at least min_num_reviews
+    beerids = myDF.loc[:, "beer_id"].value_counts() >= min_num_reviews
+    beerids = beerids.loc[beerids].index.values.tolist()
+    # first remove all rows where the username has less than min_num_reviews
+    myDF = myDF.loc[myDF.loc[:, "username"].isin(usernames), :]
+    
+    # remove rows where the beer_id has less than min_num_reviews
+    myDF = myDF.loc[myDF.loc[:, "beer_id"].isin(beerids), :]
+    
+    return myDF
+train = prepare_data(reviews, 1000)
+```
+
+```{python, eval=F, class.source="solution"}
+def mutate_std_score(data: pd.DataFrame) -> pd.DataFrame:
+    """
+    mutate_std_score is a function to use in conjunction with 
+    pd.apply and pd.groupby to create a new column that is 
+    the standardized score.
+    Args:
+        data (pd.DataFrame): A pandas DataFrame.
+    Returns:
+        pd.DataFrame: A modified pandas DataFrame.
+    """
+    data['standardized_score'] = (data['score'] - data['score'].mean())/data['score'].std()
+    return data
+train = train.groupby(["username"]).apply(mutate_std_score)
+```
+
+```{python, eval=F, class.source="solution"}
+score_matrix = pd.pivot_table(train, values='standardized_score', index='username', columns='beer_id')
+print(score_matrix.shape)
+score_matrix.head()
+```
+
+```{python, eval=F, class.source="solution"}
+score_matrix = score_matrix.fillna(score_matrix.mean(axis=0))
+score_matrix.head()
 ```
 
 #### Questions
