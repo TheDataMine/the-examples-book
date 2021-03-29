@@ -2159,7 +2159,7 @@ professions <span class="op">=</span> <span class="bu">list</span>(<span class="
 <div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> random
 
 <span class="bu">print</span>(<span class="ss">f&quot;A random integer between 1 and 100 is </span><span class="sc">{</span>random<span class="sc">.</span>randint(<span class="dv">1</span>, <span class="dv">101</span>)<span class="sc">}</span><span class="ss">&quot;</span>)</code></pre></div>
-<pre><code>## A random integer between 1 and 100 is 85</code></pre>
+<pre><code>## A random integer between 1 and 100 is 73</code></pre>
 </div>
 <div id="it-would-be-nice-to-visualize-these-results.-pandas-series-have-some-built-in-methods-to-create-plots.-use-this-method-to-generate-a-bar-plot-for-both-females-and-males.-how-do-they-compare" class="section level5">
 <h5>It would be nice to visualize these results. <code>pandas</code> Series have some built in methods to create plots. Use [this] method to generate a bar plot for both females and males. How do they compare?</h5>
@@ -2828,6 +2828,27 @@ Output from running your code.
 </ul>
 </div>
 </div>
+<div id="solution-29" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="kw">def</span> prepare_data(myDF, min_num_reviews):
+    
+    <span class="co"># remove rows where score is na</span>
+    myDF <span class="op">=</span> myDF.loc[myDF.loc[:, <span class="st">&quot;score&quot;</span>].notna(), :]
+    <span class="co"># get a list of usernames that have at least min_num_reviews</span>
+    usernames <span class="op">=</span> myDF.loc[:, <span class="st">&quot;username&quot;</span>].value_counts() <span class="op">&gt;=</span> min_num_reviews
+    usernames <span class="op">=</span> usernames.loc[usernames].index.values.tolist()
+    <span class="co"># get a list of beer_ids that have at least min_num_reviews</span>
+    beerids <span class="op">=</span> myDF.loc[:, <span class="st">&quot;beer_id&quot;</span>].value_counts() <span class="op">&gt;=</span> min_num_reviews
+    beerids <span class="op">=</span> beerids.loc[beerids].index.values.tolist()
+    <span class="co"># first remove all rows where the username has less than min_num_reviews</span>
+    myDF <span class="op">=</span> myDF.loc[myDF.loc[:, <span class="st">&quot;username&quot;</span>].isin(usernames), :]
+    
+    <span class="co"># remove rows where the beer_id has less than min_num_reviews</span>
+    myDF <span class="op">=</span> myDF.loc[myDF.loc[:, <span class="st">&quot;beer_id&quot;</span>].isin(beerids), :]
+    
+    <span class="cf">return</span> myDF
+train <span class="op">=</span> prepare_data(reviews, <span class="dv">1000</span>)</code></pre></div>
+</div>
 <div id="run-the-function-in-question-1.-use-trainprepare_datareviews-1000.-the-basis-of-our-recommendation-system-will-be-to-match-a-user-to-another-user-will-similar-taste-in-beer.-different-users-will-have-different-means-and-variances-in-their-scores.-if-we-are-going-to-compare-users-scores-we-should-standardize-users-scores.-update-the-train-dataframe-with-1-additional-column-standardized_score.-to-calculate-the-standardized_score-take-each-individual-score-and-subtract-off-the-users-average-score-and-divide-that-result-by-the-users-scores-standard-deviation." class="section level5">
 <h5>2. Run the function in question (1). Use <code>train=prepare_data(reviews, 1000)</code>. The basis of our recommendation system will be to &quot;match&quot; a user to another user will similar taste in beer. Different users will have different means and variances in their scores. If we are going to compare users' scores, we should <em>standardize</em> users' scores. Update the <code>train</code> DataFrame with 1 additional column: <code>standardized_score</code>. To calculate the <code>standardized_score</code>, take each individual score, and subtract off the user's average score and divide that result by the user's score's standard deviation.</h5>
 </div>
@@ -2877,6 +2898,22 @@ Output from running your code.
 </ul>
 </div>
 </div>
+<div id="solution-30" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="kw">def</span> mutate_std_score(data: pd.DataFrame) <span class="op">-&gt;</span> pd.DataFrame:
+    <span class="co">&quot;&quot;&quot;</span>
+<span class="co">    mutate_std_score is a function to use in conjunction with </span>
+<span class="co">    pd.apply and pd.groupby to create a new column that is </span>
+<span class="co">    the standardized score.</span>
+<span class="co">    Args:</span>
+<span class="co">        data (pd.DataFrame): A pandas DataFrame.</span>
+<span class="co">    Returns:</span>
+<span class="co">        pd.DataFrame: A modified pandas DataFrame.</span>
+<span class="co">    &quot;&quot;&quot;</span>
+    data[<span class="st">&#39;standardized_score&#39;</span>] <span class="op">=</span> (data[<span class="st">&#39;score&#39;</span>] <span class="op">-</span> data[<span class="st">&#39;score&#39;</span>].mean())<span class="op">/</span>data[<span class="st">&#39;score&#39;</span>].std()
+    <span class="cf">return</span> data
+train <span class="op">=</span> train.groupby([<span class="st">&quot;username&quot;</span>]).<span class="bu">apply</span>(mutate_std_score)</code></pre></div>
+</div>
 <div id="use-the-pivot_table-method-from-pandas-to-put-your-train-data-into-wide-format.-what-this-means-is-that-each-row-in-the-new-dataframe-will-be-a-username-and-each-column-will-be-a-beer_id.-each-cell-will-contain-the-standardized_score-for-the-given-username-and-beer-combination.-call-the-resulting-dataframe-score_matrix." class="section level5">
 <h5>3. Use the <code>pivot_table</code> method from <code>pandas</code> to put your <code>train</code> data into &quot;wide&quot; format. What this means is that each row in the new DataFrame will be a <code>username</code>, and each column will be a <code>beer_id</code>. Each cell will contain the <code>standardized_score</code> for the given <code>username</code> and <code>beer</code> combination. Call the resulting DataFrame <code>score_matrix</code>.</h5>
 <p><a href="https://mediaspace.itap.purdue.edu/id/1_46s7cp33">Click here for video</a></p>
@@ -2894,6 +2931,12 @@ Output the <code>head</code> and <code>shape</code> of <code>score_matrix</code>
 </li>
 </ul>
 </div>
+</div>
+<div id="solution-31" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python">score_matrix <span class="op">=</span> pd.pivot_table(train, values<span class="op">=</span><span class="st">&#39;standardized_score&#39;</span>, index<span class="op">=</span><span class="st">&#39;username&#39;</span>, columns<span class="op">=</span><span class="st">&#39;beer_id&#39;</span>)
+<span class="bu">print</span>(score_matrix.shape)
+score_matrix.head()</code></pre></div>
 </div>
 <div id="the-result-from-question-3-should-be-a-sparse-matrix-lots-of-missing-data.-lets-fill-in-the-missing-data.-for-now-lets-fill-in-a-beer_ids-missing-data-by-filling-in-every-missing-value-with-the-average-score-for-the-beer." class="section level5">
 <h5>4. The result from question (3) should be a sparse matrix (lots of missing data!). Let's fill in the missing data. For now, let's fill in a beer_id's missing data by filling in every missing value with the average score for the beer.</h5>
@@ -2913,6 +2956,11 @@ Output the <code>head</code> of <code>score_matrix</code>.
 </li>
 </ul>
 </div>
+</div>
+<div id="solution-32" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python">score_matrix <span class="op">=</span> score_matrix.fillna(score_matrix.mean(axis<span class="op">=</span><span class="dv">0</span>))
+score_matrix.head()</code></pre></div>
 </div>
 <div id="congratulations-next-week-we-will-complete-our-recommendation-system" class="section level5">
 <h5>Congratulations! Next week, we will complete our recommendation system!</h5>
@@ -2952,6 +3000,46 @@ View and access data inside DataFrames, Series, and ndarrays.
 <div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">beers <span class="op">=</span> pd.read_parquet(<span class="st">&quot;/class/datamine/data/beer/beers.parquet&quot;</span>)
 breweries <span class="op">=</span> pd.read_parquet(<span class="st">&quot;/class/datamine/data/beer/breweries.parquet&quot;</span>)
 reviews <span class="op">=</span> pd.read_parquet(<span class="st">&quot;/class/datamine/data/beer/reviews.parquet&quot;</span>)</code></pre></div>
+<p>Previous project code:</p>
+<div id="solution-33" class="section level5">
+<h5>Solution</h5>
+<div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="kw">def</span> prepare_data(myDF, min_num_reviews):
+    
+    <span class="co"># remove rows where score is na</span>
+    myDF <span class="op">=</span> myDF.loc[myDF.loc[:, <span class="st">&quot;score&quot;</span>].notna(), :]
+    <span class="co"># get a list of usernames that have at least min_num_reviews</span>
+    usernames <span class="op">=</span> myDF.loc[:, <span class="st">&quot;username&quot;</span>].value_counts() <span class="op">&gt;=</span> min_num_reviews
+    usernames <span class="op">=</span> usernames.loc[usernames].index.values.tolist()
+    <span class="co"># get a list of beer_ids that have at least min_num_reviews</span>
+    beerids <span class="op">=</span> myDF.loc[:, <span class="st">&quot;beer_id&quot;</span>].value_counts() <span class="op">&gt;=</span> min_num_reviews
+    beerids <span class="op">=</span> beerids.loc[beerids].index.values.tolist()
+    <span class="co"># first remove all rows where the username has less than min_num_reviews</span>
+    myDF <span class="op">=</span> myDF.loc[myDF.loc[:, <span class="st">&quot;username&quot;</span>].isin(usernames), :]
+    
+    <span class="co"># remove rows where the beer_id has less than min_num_reviews</span>
+    myDF <span class="op">=</span> myDF.loc[myDF.loc[:, <span class="st">&quot;beer_id&quot;</span>].isin(beerids), :]
+    
+    <span class="cf">return</span> myDF
+train <span class="op">=</span> prepare_data(reviews, <span class="dv">1000</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="kw">def</span> mutate_std_score(data: pd.DataFrame) <span class="op">-&gt;</span> pd.DataFrame:
+    <span class="co">&quot;&quot;&quot;</span>
+<span class="co">    mutate_std_score is a function to use in conjunction with </span>
+<span class="co">    pd.apply and pd.groupby to create a new column that is </span>
+<span class="co">    the standardized score.</span>
+<span class="co">    Args:</span>
+<span class="co">        data (pd.DataFrame): A pandas DataFrame.</span>
+<span class="co">    Returns:</span>
+<span class="co">        pd.DataFrame: A modified pandas DataFrame.</span>
+<span class="co">    &quot;&quot;&quot;</span>
+    data[<span class="st">&#39;standardized_score&#39;</span>] <span class="op">=</span> (data[<span class="st">&#39;score&#39;</span>] <span class="op">-</span> data[<span class="st">&#39;score&#39;</span>].mean())<span class="op">/</span>data[<span class="st">&#39;score&#39;</span>].std()
+    <span class="cf">return</span> data
+train <span class="op">=</span> train.groupby([<span class="st">&quot;username&quot;</span>]).<span class="bu">apply</span>(mutate_std_score)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python">score_matrix <span class="op">=</span> pd.pivot_table(train, values<span class="op">=</span><span class="st">&#39;standardized_score&#39;</span>, index<span class="op">=</span><span class="st">&#39;username&#39;</span>, columns<span class="op">=</span><span class="st">&#39;beer_id&#39;</span>)
+<span class="bu">print</span>(score_matrix.shape)
+score_matrix.head()</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python">score_matrix <span class="op">=</span> score_matrix.fillna(score_matrix.mean(axis<span class="op">=</span><span class="dv">0</span>))
+score_matrix.head()</code></pre></div>
+</div>
 </div>
 <div id="questions-9" class="section level4">
 <h4>Questions</h4>
@@ -3258,7 +3346,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-29" class="section level5">
+<div id="solution-34" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">from</span> lxml <span class="im">import</span> etree
 
@@ -3285,7 +3373,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-30" class="section level5">
+<div id="solution-35" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="bu">set</span>([x.tag <span class="cf">for</span> x <span class="kw">in</span> tree.xpath(<span class="st">&quot;/HealthData/*&quot;</span>)])</code></pre></div>
 </div>
@@ -3312,7 +3400,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-31" class="section level5">
+<div id="solution-36" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="bu">print</span>(<span class="bu">set</span>([x.tag <span class="cf">for</span> x <span class="kw">in</span> tree.xpath(<span class="st">&quot;/HealthData/*&quot;</span>)]))
 
@@ -3370,7 +3458,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-32" class="section level5">
+<div id="solution-37" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python">dat <span class="op">=</span> tree.xpath(<span class="st">&quot;/HealthData/ActivitySummary&quot;</span>)
 list_of_dicts <span class="op">=</span> []
@@ -3398,7 +3486,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-33" class="section level5">
+<div id="solution-38" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="co"># could be anything</span></code></pre></div>
 <hr />
@@ -3464,7 +3552,7 @@ Use the lxml package to filter and parse data from a scraped web page.
 </ul>
 </div>
 </div>
-<div id="solution-34" class="section level5">
+<div id="solution-39" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode html solution"><code class="sourceCode html"><span class="kw">&lt;h1</span><span class="ot"> id=</span><span class="st">&quot;link-4686dc8b&quot;</span><span class="ot"> class=</span><span class="st">&quot;css-rsa88z e1h9rw200&quot;</span><span class="ot"> data-test-id=</span><span class="st">&quot;headline&quot;</span><span class="kw">&gt;</span>U.S. Says China’s Repression of Uighurs Is ‘Genocide’<span class="kw">&lt;/h1&gt;</span></code></pre></div>
 <div class="sourceCode"><pre class="sourceCode html solution"><code class="sourceCode html"><span class="kw">&lt;p</span><span class="ot"> id=</span><span class="st">&quot;article-summary&quot;</span><span class="ot"> class=</span><span class="st">&quot;css-w6ymp8 e1wiw3jv0&quot;</span><span class="kw">&gt;</span>The finding by the Trump administration is the strongest denunciation by any government of China’s actions and follows a Biden campaign statement with the same declaration.<span class="kw">&lt;/p&gt;</span></code></pre></div>
@@ -3490,7 +3578,7 @@ Two xpath expressions in an HTML code chunk.
 </ul>
 </div>
 </div>
-<div id="solution-35" class="section level5">
+<div id="solution-40" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode html solution"><code class="sourceCode html">//h1[@data-test-id=&quot;headline&quot;]</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode html solution"><code class="sourceCode html">//p[@id=&quot;article-summary&quot;]</code></pre></div>
@@ -3513,7 +3601,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-36" class="section level5">
+<div id="solution-41" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">import</span> lxml.html
 <span class="im">import</span> requests
@@ -3559,7 +3647,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-37" class="section level5">
+<div id="solution-42" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">from</span> typing <span class="im">import</span> Tuple
 <span class="im">import</span> lxml.html
@@ -3610,7 +3698,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-38" class="section level5">
+<div id="solution-43" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">from</span> typing <span class="im">import</span> Tuple
 <span class="im">import</span> lxml.html
@@ -3749,7 +3837,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-39" class="section level5">
+<div id="solution-44" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">from</span> selenium <span class="im">import</span> webdriver
 <span class="im">from</span> selenium.webdriver.common.keys <span class="im">import</span> Keys
@@ -3804,7 +3892,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-40" class="section level5">
+<div id="solution-45" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python">driver <span class="op">=</span> webdriver.Firefox(options<span class="op">=</span>firefox_options, executable_path<span class="op">=</span><span class="st">&#39;/class/datamine/apps/geckodriver&#39;</span>)
 url <span class="op">=</span> <span class="st">&#39;https://www.trulia.com&#39;</span>
@@ -3877,7 +3965,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-41" class="section level5">
+<div id="solution-46" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python">driver <span class="op">=</span> webdriver.Firefox(options<span class="op">=</span>firefox_options, executable_path<span class="op">=</span><span class="st">&#39;/Users/kamstut/Downloads/geckodriver&#39;</span>)
 url <span class="op">=</span> <span class="st">&#39;https://www.trulia.com/IN/West_Lafayette/47906/&#39;</span>
@@ -3927,7 +4015,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-42" class="section level5">
+<div id="solution-47" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">from</span> selenium.webdriver.support.ui <span class="im">import</span> WebDriverWait
 <span class="im">import</span> re
@@ -3986,7 +4074,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-43" class="section level5">
+<div id="solution-48" class="section level5">
 <h5>Solution</h5>
 <div class="solution">
 <p>
@@ -4049,7 +4137,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-44" class="section level5">
+<div id="solution-49" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">from</span> selenium <span class="im">import</span> webdriver
 <span class="im">from</span> selenium.webdriver.common.keys <span class="im">import</span> Keys
@@ -4103,7 +4191,7 @@ An estimate for <code>x</code>.
 </ul>
 </div>
 </div>
-<div id="solution-45" class="section level5">
+<div id="solution-50" class="section level5">
 <h5>Solution</h5>
 <div class="solution">
 <p>
@@ -4159,7 +4247,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-46" class="section level5">
+<div id="solution-51" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="co"># The state of the Chartreuse pants, sold out (A) or in stock (B)</span>
 driver <span class="op">=</span> webdriver.Firefox(options<span class="op">=</span>firefox_options, executable_path<span class="op">=</span><span class="st">&#39;/class/datamine/apps/geckodriver&#39;</span>)
@@ -4244,7 +4332,7 @@ Screenshot showing your received the email.
 </ul>
 </div>
 </div>
-<div id="solution-47" class="section level5">
+<div id="solution-52" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">import</span> smtplib, ssl
 
@@ -4360,7 +4448,7 @@ The content of your <code>is_in_stock.py</code> script.
 </ul>
 </div>
 </div>
-<div id="solution-48" class="section level5">
+<div id="solution-53" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash solution"><code class="sourceCode bash"><span class="ex">*/5</span> * * * * /home/kamstut/is_in_stock.py</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="co">#!/usr/bin/env python3</span>
@@ -4522,7 +4610,7 @@ The content of the successfully scraped site.
 </ul>
 </div>
 </div>
-<div id="solution-49" class="section level5">
+<div id="solution-54" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">import</span> requests
 
@@ -4592,7 +4680,7 @@ Fixed code that will work regardless of the rate limiting.
 </ul>
 </div>
 </div>
-<div id="solution-50" class="section level5">
+<div id="solution-55" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">import</span> requests
 <span class="im">import</span> lxml.html
@@ -4663,7 +4751,7 @@ Clear documentation and explanation of what your scraper scrapes, challenges you
 </ul>
 </div>
 </div>
-<div id="solution-51" class="section level5">
+<div id="solution-56" class="section level5">
 <h5>Solution</h5>
 <div class="solution">
 <ul>
@@ -5876,7 +5964,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-52" class="section level5">
+<div id="solution-57" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">from</span> lxml <span class="im">import</span> etree
 
@@ -5903,7 +5991,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-53" class="section level5">
+<div id="solution-58" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="bu">set</span>([x.tag <span class="cf">for</span> x <span class="kw">in</span> tree.xpath(<span class="st">&quot;/HealthData/*&quot;</span>)])</code></pre></div>
 </div>
@@ -5930,7 +6018,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-54" class="section level5">
+<div id="solution-59" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="bu">print</span>(<span class="bu">set</span>([x.tag <span class="cf">for</span> x <span class="kw">in</span> tree.xpath(<span class="st">&quot;/HealthData/*&quot;</span>)]))
 
@@ -5988,7 +6076,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-55" class="section level5">
+<div id="solution-60" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python">dat <span class="op">=</span> tree.xpath(<span class="st">&quot;/HealthData/ActivitySummary&quot;</span>)
 list_of_dicts <span class="op">=</span> []
@@ -6016,7 +6104,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-56" class="section level5">
+<div id="solution-61" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="co"># could be anything</span></code></pre></div>
 <hr />
@@ -6082,7 +6170,7 @@ Use the lxml package to filter and parse data from a scraped web page.
 </ul>
 </div>
 </div>
-<div id="solution-57" class="section level5">
+<div id="solution-62" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode html solution"><code class="sourceCode html"><span class="kw">&lt;h1</span><span class="ot"> id=</span><span class="st">&quot;link-4686dc8b&quot;</span><span class="ot"> class=</span><span class="st">&quot;css-rsa88z e1h9rw200&quot;</span><span class="ot"> data-test-id=</span><span class="st">&quot;headline&quot;</span><span class="kw">&gt;</span>U.S. Says China’s Repression of Uighurs Is ‘Genocide’<span class="kw">&lt;/h1&gt;</span></code></pre></div>
 <div class="sourceCode"><pre class="sourceCode html solution"><code class="sourceCode html"><span class="kw">&lt;p</span><span class="ot"> id=</span><span class="st">&quot;article-summary&quot;</span><span class="ot"> class=</span><span class="st">&quot;css-w6ymp8 e1wiw3jv0&quot;</span><span class="kw">&gt;</span>The finding by the Trump administration is the strongest denunciation by any government of China’s actions and follows a Biden campaign statement with the same declaration.<span class="kw">&lt;/p&gt;</span></code></pre></div>
@@ -6108,7 +6196,7 @@ Two xpath expressions in an HTML code chunk.
 </ul>
 </div>
 </div>
-<div id="solution-58" class="section level5">
+<div id="solution-63" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode html solution"><code class="sourceCode html">//h1[@data-test-id=&quot;headline&quot;]</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode html solution"><code class="sourceCode html">//p[@id=&quot;article-summary&quot;]</code></pre></div>
@@ -6131,7 +6219,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-59" class="section level5">
+<div id="solution-64" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">import</span> lxml.html
 <span class="im">import</span> requests
@@ -6177,7 +6265,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-60" class="section level5">
+<div id="solution-65" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">from</span> typing <span class="im">import</span> Tuple
 <span class="im">import</span> lxml.html
@@ -6228,7 +6316,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-61" class="section level5">
+<div id="solution-66" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">from</span> typing <span class="im">import</span> Tuple
 <span class="im">import</span> lxml.html
@@ -6368,7 +6456,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-62" class="section level5">
+<div id="solution-67" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">from</span> selenium <span class="im">import</span> webdriver
 <span class="im">from</span> selenium.webdriver.common.keys <span class="im">import</span> Keys
@@ -6423,7 +6511,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-63" class="section level5">
+<div id="solution-68" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python">driver <span class="op">=</span> webdriver.Firefox(options<span class="op">=</span>firefox_options, executable_path<span class="op">=</span><span class="st">&#39;/class/datamine/apps/geckodriver&#39;</span>)
 url <span class="op">=</span> <span class="st">&#39;https://www.trulia.com&#39;</span>
@@ -6496,7 +6584,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-64" class="section level5">
+<div id="solution-69" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python">driver <span class="op">=</span> webdriver.Firefox(options<span class="op">=</span>firefox_options, executable_path<span class="op">=</span><span class="st">&#39;/Users/kamstut/Downloads/geckodriver&#39;</span>)
 url <span class="op">=</span> <span class="st">&#39;https://www.trulia.com/IN/West_Lafayette/47906/&#39;</span>
@@ -6546,7 +6634,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-65" class="section level5">
+<div id="solution-70" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">from</span> selenium.webdriver.support.ui <span class="im">import</span> WebDriverWait
 <span class="im">import</span> re
@@ -6605,7 +6693,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-66" class="section level5">
+<div id="solution-71" class="section level5">
 <h5>Solution</h5>
 <div class="solution">
 <p>
@@ -6668,7 +6756,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-67" class="section level5">
+<div id="solution-72" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">from</span> selenium <span class="im">import</span> webdriver
 <span class="im">from</span> selenium.webdriver.common.keys <span class="im">import</span> Keys
@@ -6722,7 +6810,7 @@ An estimate for <code>x</code>.
 </ul>
 </div>
 </div>
-<div id="solution-68" class="section level5">
+<div id="solution-73" class="section level5">
 <h5>Solution</h5>
 <div class="solution">
 <p>
@@ -6778,7 +6866,7 @@ Output from running your code.
 </ul>
 </div>
 </div>
-<div id="solution-69" class="section level5">
+<div id="solution-74" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="co"># The state of the Chartreuse pants, sold out (A) or in stock (B)</span>
 driver <span class="op">=</span> webdriver.Firefox(options<span class="op">=</span>firefox_options, executable_path<span class="op">=</span><span class="st">&#39;/class/datamine/apps/geckodriver&#39;</span>)
@@ -6863,7 +6951,7 @@ Screenshot showing your received the email.
 </ul>
 </div>
 </div>
-<div id="solution-70" class="section level5">
+<div id="solution-75" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">import</span> smtplib, ssl
 
@@ -6979,7 +7067,7 @@ The content of your <code>is_in_stock.py</code> script.
 </ul>
 </div>
 </div>
-<div id="solution-71" class="section level5">
+<div id="solution-76" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode bash solution"><code class="sourceCode bash"><span class="ex">*/5</span> * * * * /home/kamstut/is_in_stock.py</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="co">#!/usr/bin/env python3</span>
@@ -7051,7 +7139,7 @@ An explanation of what is happening.
 </ul>
 </div>
 </div>
-<div id="solution-72" class="section level5">
+<div id="solution-77" class="section level5">
 <h5>Solution</h5>
 <div class="solution">
 <p>
@@ -7197,7 +7285,7 @@ The content of the successfully scraped site.
 </ul>
 </div>
 </div>
-<div id="solution-73" class="section level5">
+<div id="solution-78" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">import</span> requests
 
@@ -7267,7 +7355,7 @@ Fixed code that will work regardless of the rate limiting.
 </ul>
 </div>
 </div>
-<div id="solution-74" class="section level5">
+<div id="solution-79" class="section level5">
 <h5>Solution</h5>
 <div class="sourceCode"><pre class="sourceCode python solution"><code class="sourceCode python"><span class="im">import</span> requests
 <span class="im">import</span> lxml.html
@@ -7338,7 +7426,7 @@ Clear documentation and explanation of what your scraper scrapes, challenges you
 </ul>
 </div>
 </div>
-<div id="solution-75" class="section level5">
+<div id="solution-80" class="section level5">
 <h5>Solution</h5>
 <div class="solution">
 <ul>
