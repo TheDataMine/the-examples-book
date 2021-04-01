@@ -694,6 +694,17 @@ my_vec[c("alpha", "charlie")]
 my_list[c("alpha", "charlie")]
 ```
 
+In addition, you can use negative indexing. Negative indexing works differently than in Python where the index starts at the end instead of the beginning. In R, a negative index _removes_ the index from the output. For example:
+
+```{r, eval=T}
+my_vec[-2]
+```
+You can pass multiple values as well:
+
+```{r, eval=T}
+my_vec[-c(2,3)]
+```
+
 #### Examples
 
 ##### How can I get the first 2 values of a vector named `my_vec`?
@@ -3086,7 +3097,7 @@ dotchart(black_hair, main='Eye color for individuals with black hair', xlab='Cou
 
 `plot` is a generic plotting function. It creates scatter plots as well as line plots. The argument `type` allows you to define the type of plot that should be drawn. Most common `type`s are "p" for points (default), "l" for lines, and "b" for both.
 
-#### Scatter plots
+#### Scatter plots {#r-scatterplot}
 
 Below is an example using the built-in `Orange` dataset. 
 
@@ -3116,6 +3127,72 @@ How about coloring the points based on the tree?
 
 ```{r}
 plot(Orange$age, Orange$circumference, xlab='Tree age', ylab='Tree circumference', main='Growth of orange trees', pch=21, bg=Orange$Tree)
+```
+
+To make an equivalent graphic using `ggplot`:
+
+```{r, eval=T}
+ggplot(Orange, aes(x=age, y=circumference)) + 
+    geom_point()
+```
+
+Here, the first argument to `ggplot` is our dataset, `Orange`. The second argument, `aes(x=age, y=circumference)` are our aesthetic mappings. The aesthetic mappings specifies how we map certain variables/columns from our `Orange` dataset to grapic components. In this case, we say the x-axis has the `age` column and the y-axis has the `circumference` column. Then, we _add_ `geom_point`, which is a _layer_ with dots to represent the data!
+
+Like before, our labels can be improved.
+
+```{r, eval=T}
+ggplot(Orange, aes(x=age, y=circumference)) + 
+    geom_point() + 
+    labs(x="Tree age", y="Tree circumference")
+```
+
+Here, we _added_ labels using `labs`. We could also add a title, or even subtitle, using `labs`.
+
+```{r, eval=T}
+ggplot(Orange, aes(x=age, y=circumference)) + 
+    geom_point() + 
+    labs(x="Tree age", y="Tree circumference", title="Growth of orange trees", subtitle="An exciting plot")
+```
+
+If we wanted to change the color of the dots, we could do so using the `color` option in the aesthetics:
+
+```{r, eval=T}
+ggplot(Orange, aes(x=age, y=circumference, color="tomato")) + 
+    geom_point() + 
+    labs(x="Tree age", y="Tree circumference", title="Growth of orange trees", subtitle="An exciting plot")
+```
+
+As you can see, this creates a legend by default. To remove the legend, we can specify an option to `geom_point` to _not_ show a legend.
+
+```{r, eval=T}
+ggplot(Orange, aes(x=age, y=circumference, color="tomato")) + 
+    geom_point(show.legend=F) + 
+    labs(x="Tree age", y="Tree circumference", title="Growth of orange trees", subtitle="An exciting plot")
+```
+
+What if we wanted to color the points based on the tree (in the `Tree` column)?
+
+```{r, eval=T}
+ggplot(Orange, aes(x=age, y=circumference, color=Tree)) + 
+    geom_point() + 
+    labs(x="Tree age", y="Tree circumference", title="Growth of orange trees", subtitle="An exciting plot")
+```
+
+Here, the legend is more important, so we remove the `show.legend=F` option to `geom_point`. Unfortunately, our legend is out of order. The order of the legend is based on the `levels` of the column. For example, here the levels are in the order: 3,1,5,2,4:
+
+```{r, eval=T}
+levels(Orange$Tree)
+```
+
+To modify the order of the legend, simply change the order of the levels:
+
+```{r, eval=T}
+new_orange <- Orange
+new_orange$Tree <- factor(new_orange$Tree, levels = c(1,2,3,4,5))
+
+ggplot(new_orange, aes(x=age, y=circumference, color=Tree)) + 
+    geom_point() + 
+    labs(x="Tree age", y="Tree circumference", title="Growth of orange trees", subtitle="An exciting plot")
 ```
 
 #### Line plots
@@ -3730,6 +3807,16 @@ A page with some code examples and output using usmap. A little bit more in dept
 
 ### `ggplot` {#r-ggplot}
 
+The "gg" in `ggplot` stands for [Grammar of Graphics](https://www.amazon.com/Grammar-Graphics-Statistics-Computing/dp/0387245448/ref=sr_1_fkmr0_1?ie=UTF8&qid=1493924426&sr=8-1-fkmr0&keywords=grammar+of+graphics+ggplot). Essentially, it is a way of thinking about graphics as a collection of components that make up a plot.
+
+`ggplot` additively builds a plot by adding component after component. See the plots in the [plotting section](#r-plotting) to see examples using `ggplot` (following the base R equivalents).
+
+#### Resources {#r-ggplot-resources}
+
+**[Introduction to ggplot](https://uc-r.github.io/ggplot_intro)**
+
+An excellent introduction to `ggplot2` and it's concepts.
+
 ### `ggmap` {#r-ggmap}
 
 `ggmap` is an excellent package that provides a suite of functions that, among other things, allows you to map spatial data on top of static maps.
@@ -3991,6 +4078,240 @@ This is another good resource that introduces RMarkdown. Plenty of helpful pictu
 ## Tidyverse {#r-tidyverse}
 
 ### piping {#r-piping}
+
+Much like the `|` operator in `bash`, the `%>%` operator in R pipes the output from the first expression to the second. For example, instead of:
+
+```{r, eval=T}
+sum(c(1,2,3))
+```
+
+One can use `%>%`:
+
+```{r, eval=T}
+c(1,2,3) %>% sum()
+```
+
+It is extremely common practice in the `tidyverse` to pipe output from one function to another. For example:
+
+```{r, eval=T}
+subset <- iris %>%
+    subset(Sepal.Length > 5) %>%
+    mutate(Sepal.Length.Sq = Sepal.Length^2)
+
+head(subset)
+```
+
+### `select` {#r-select}
+
+`select` is a handy function used to select columns from a data.frame or tibble. For example:
+
+```{r, eval=T}
+iris %>% select(Sepal.Length, Species) %>% head()
+```
+
+That alone is not that impressive, as we could easily do something like:
+
+```{r, eval=T}
+iris[, c("Sepal.Length", "Species")] %>% head()
+```
+
+However, in the same way you can write `1:4` to represent a vector of numbers from 1-4, you can `select` columns from `Sepal.Length` to `Petal.Length` (and everything in between) by using `Sepal.Length:Petal.Length`.
+
+```{r, eval=T}
+iris %>% select(Sepal.Length:Petal.Length) %>% head()
+```
+
+`select` is particularly useful when paired with [selection helpers](#r-selection-helpers), as you can select certain columns based on their names:
+
+```{r, eval=T}
+iris %>% select(contains(
+    "length"
+)) %>%
+    head()
+
+# or case sensitive
+
+iris %>% select(contains(
+    "Length",
+    ignore.case=F
+)) %>%
+    head()
+```
+
+### selection helpers {#r-selection-helpers}
+
+Selection helpers are functions that make selecting variables easier. They are particularly easy to use with [select](#r-select).
+
+`everything` matches all variables. For example:
+
+```{r, eval=T}
+iris %>% select(everything()) %>% head()
+```
+
+It is primarily useful when used in combination with functions like `pivot_longer` and `pivot_wider`.
+
+`last_col` selects the last variable, possibly with an offset. 
+
+```{r, eval=T}
+iris %>% select(last_col()) %>% head()
+```
+
+Or, with an offset:
+
+```{r, eval=T}
+iris %>% select(1:last_col(2)) %>% head()
+```
+
+`contains` selects columns where the columns name _contains_ another string. For example:
+
+```{r, eval=T}
+iris %>% select(contains("sepal")) %>% head()
+```
+
+**Important note:** `contains` is case insensitive by default.
+
+In the same way that `contains` looks for a string within the column names of a data.frame, `starts_with` and `ends_with` select columns where column names either start with one or more values or end with one or more values (respectively). For example, to get the columns starting with "Sepal":
+
+```{r, eval=T}
+iris %>% select(starts_with("sepal")) %>% head()
+```
+
+Or to get columns that end in "width":
+
+```{r, eval=T}
+iris %>% select(ends_with("width")) %>% head()
+```
+
+For more fine grain control, `matches` behaves the same way, but instead of literal string matching, we can feed a regular expression to `matches`. For example, we could get all columns containing one or more ".":
+
+```{r, eval=T}
+iris %>% select(matches("+\\.")) %>% head()
+```
+
+Sometimes, you'll have datasets with columns labeled sequentially, for example:
+
+```{r, eval=T}
+head(billboard)
+```
+
+Here, we have columns labeled `wk1` all the way until `wk76`. Using `num_range` and `select` we can get any number of those specific columns:
+
+```{r, eval=T}
+billboard %>% select(num_range("wk", 70:75)) %>% head()
+```
+
+`all_of` is a selection helper designed to select strictly the columns whose names are inside the provided vector.
+
+```{r, eval=T}
+my_values <- c("Sepal.Length", "Sepal.Width")
+iris %>% select(all_of(my_values)) %>% head()
+```
+
+But, whenever a single value in your vector isn't present, an error is thrown.
+
+```{r, eval=T, error=T}
+my_values <- c("Sepal.Length", "Sepal.Width", "Sepal.Weight")
+iris %>% select(all_of(my_values)) %>% head()
+```
+
+For times you would like to select the values _if they exist_, `any_of` is more useful. It is similar to `all_of`, but doesn't check if a value is missing. 
+
+```{r, eval=T}
+my_values <- c("Sepal.Length", "Sepal.Width", "Sepal.Weight")
+iris %>% select(any_of(my_values)) %>% head()
+```
+
+### `transmute` {#r-transmute}
+
+`transmute` is a useful function that adds new variables and drops all existing ones. If a variable already exists, it overwrites the variable. For example, let's say we wanted to capitalize the values of `Species` in the `iris` dataset:
+
+```{r, eval=T}
+iris %>%
+    transmute(Species = toupper(Species)) %>%
+    head()
+```
+
+Here, the values in the `Species` column are overwritten with the fully capitalized version. All of the other columns are dropped. One way to maintain other columns, would be to include them in the `transmute` call:
+
+```{r, eval=T}
+iris %>%
+    transmute(Species = toupper(Species), Sepal.Length, Sepal.Width) %>%
+    head()
+```
+
+Alternatively, you could use `mutate`, which has the same behavior, but preserves existing variables.
+
+### `mutate` {#r-mutate}
+
+`mutate` is just like `transmute`, but the original data is preserved. For example:
+
+```{r, eval=T}
+iris %>%
+    mutate(Species = toupper(Species)) %>%
+    head()
+```
+
+Here, since `Species` already exists as a column, the column is overwritten by our new capitalized values. If the name of the new column does not already exist, the original `Species` column will remain untouched. For example:
+
+```{r, eval=T}
+iris %>%
+    mutate(Species_Cap = toupper(Species)) %>%
+    head()
+```
+
+`mutate` is extremely useful, and is difficult (and less intuitive) to replicate in `pandas` in Python.
+
+### `case_when` {#r-case_when}
+
+`case_when` is a function that allows you to vectorize multiple `if_else` statements. For example, let's say we want to create a new column in our `iris` dataset called `size`, where the value is `Large` if `Sepal.Length` is greater than 5, and `Not Large` otherwise?
+
+```{r, eval=T}
+new_iris <- iris %>%
+    mutate(size = case_when(
+        Sepal.Length > 5 ~ "Large",
+        Sepal.Length <= 5 ~ "Not Large"
+    ))
+
+head(new_iris)
+```
+
+Here, `mutate` is responsible for creating a new column called `size`, and `case_when` assigns the value `Large` when `Sepal.Length` is greater than 5 and `Not Large` when `Sepal.Length` is less than or equal to `Not Large`. In this case we have exhaustively gone through all of the possible values of our new column, `size`, because for each and every possible value of `Sepal.Length` we have an associated value (`Large` and `Not Large`). In reality, this is not always possible. For example, let's remove the second case:
+
+```{r, eval=T}
+new_iris <- iris %>%
+    mutate(size = case_when(
+        Sepal.Length > 5 ~ "Large"
+    ))
+
+head(new_iris)
+```
+
+As you can see, by default, if no cases match, NA is the resulting value. One common technique to handle "all other cases" is the following:
+
+```{r, eval=T}
+new_iris <- iris %>%
+    mutate(size = case_when(
+        Sepal.Length > 5 ~ "Large",
+        TRUE ~ "Not Large"
+    ))
+
+head(new_iris)
+```
+
+Here, each case is evaluated. If at the end, there was no match, `TRUE` is _always_ a match, and therefore the result will be `Not Large`.
+
+### `between` {#r-between}
+
+`between` is a dead simple function from `dplyr` that is an efficiently implemented shortcut for the following:
+
+```{r, eval=T}
+x <- 5
+
+print(x >= 4 && x <= 10)
+
+# instead you can use between
+between(x, 4, 10)
+```
 
 ### `glimpse` {#r-glimpse}
 
