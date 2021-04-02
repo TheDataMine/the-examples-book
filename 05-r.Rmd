@@ -4390,9 +4390,33 @@ between(x, 4, 10)
 
 ### `arrange` {#r-arrange}
 
-### `mutate` {#r-mutate}
-
 ### `group_by` {#r-group-by}
+
+`group_by` is a function commonly used in conjunction with `mutate`, `transmute`, and `summarize`. It is useful when you want to perform a `tapply`-like operation on a data.frame. For example, let's say you wanted to get the average `Petal.Length` by `Species`. Using `tapply`, you would do something like:
+
+```{r, eval=T}
+tapply(iris$Petal.Length, iris$Species, mean)
+```
+
+While useful, `tapply`'s end result isn't in a format that is conducive to further analysis or wrangling. For example, what if we wanted to calculate and then plot (in `ggplot`) the difference between the mean `Petal.Length` and the mean `Sepal.Length` by `Species`? Using `tapply`, you would have to do something like:
+
+```{r, eval=T}
+diff <- tapply(iris$Petal.Length, iris$Species, mean) - tapply(iris$Sepal.Length, iris$Species, mean)
+myDF <- data.frame(Species = names(diff), diff = unname(diff))
+ggplot(myDF, aes(x=diff, y=Species)) + geom_bar(stat="identity")
+```
+
+Again, a little bit more difficult to read than the following, _and_ if you had more operations to complete, the previous example would make it difficult to do even more. In the following example, however, we can continue to utilize and build on `myDF`:
+
+```{r, eval=T}
+myDF <- iris %>%
+    group_by(Species) %>%
+    mutate(diff=mean(Petal.Length) - mean(Sepal.Length))
+
+myDF %>% ggplot(aes(x=diff, y=Species)) + geom_bar(stat="identity")
+```
+
+### `summarize` {#r-summarize}
 
 ### `str_extract` and `str_extract_all` {#r-str-extract}
 
@@ -4403,7 +4427,6 @@ install.packages("stringr")
 ```
 
 `str_extract` extracts the text which matches the provided regular expression or pattern. Note that this differs from `grep` in a major way. `grep` simply returns the index in which a pattern match was found. `str_extract` returns the actual matching text. Note that `grep` typically returns the entire line where a match was found. `str_extract` returns only the part of the line or text that matches the pattern. 
-
 For example:
 
 ```{r, eval=T}
