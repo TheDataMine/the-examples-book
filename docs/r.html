@@ -301,8 +301,8 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="r.html#r-glimpse"><code>glimpse</code></a></li>
 <li><a href="r.html#r-filter"><code>filter</code></a></li>
 <li><a href="r.html#r-arrange"><code>arrange</code></a></li>
-<li><a href="r.html#r-mutate"><code>mutate</code></a></li>
 <li><a href="r.html#r-group-by"><code>group_by</code></a></li>
+<li><a href="r.html#r-summarize"><code>summarize</code></a></li>
 <li><a href="r.html#r-str-extract"><code>str_extract</code> and <code>str_extract_all</code></a></li>
 <li><a href="r.html#r-lubridate"><code>lubridate</code></a></li>
 <li><a href="r.html#r-strrep"><code>strrep</code></a></li>
@@ -2198,7 +2198,7 @@ df</code></pre></div>
 <span class="kw">str</span>(df)</code></pre></div>
 <pre><code>## &#39;data.frame&#39;:    24 obs. of  3 variables:
 ##  $ times: POSIXct, format: &quot;2020-06-01 06:00:00&quot; &quot;2020-07-01 06:00:00&quot; ...
-##  $ value: int  83 80 21 73 43 49 22 36 68 9 ...
+##  $ value: int  18 2 24 11 25 61 37 8 78 6 ...
 ##  $ year : Factor w/ 3 levels &quot;2020-01-01&quot;,&quot;2021-01-01&quot;,..: 1 1 1 1 1 1 1 2 2 2 ...</code></pre>
 <p></details></p>
 </div>
@@ -2209,7 +2209,7 @@ df</code></pre></div>
 <span class="kw">str</span>(df)</code></pre></div>
 <pre><code>## &#39;data.frame&#39;:    24 obs. of  4 variables:
 ##  $ times  : POSIXct, format: &quot;2020-06-01 06:00:00&quot; &quot;2020-07-01 06:00:00&quot; ...
-##  $ value  : int  83 80 21 73 43 49 22 36 68 9 ...
+##  $ value  : int  18 2 24 11 25 61 37 8 78 6 ...
 ##  $ year   : Factor w/ 3 levels &quot;2020-01-01&quot;,&quot;2021-01-01&quot;,..: 1 1 1 1 1 1 1 2 2 2 ...
 ##  $ quarter: Factor w/ 9 levels &quot;2020-04-01&quot;,&quot;2020-07-01&quot;,..: 1 2 2 2 3 3 3 4 4 4 ...</code></pre>
 <p></details></p>
@@ -2815,7 +2815,7 @@ t_or_f &lt;-<span class="st"> </span><span class="kw">sample</span>(<span class=
   <span class="co"># Otherwise print huh</span>
   <span class="kw">print</span>(<span class="st">&quot;Huh?&quot;</span>)
 }</code></pre></div>
-<pre><code>## [1] &quot;Failure!&quot;</code></pre>
+<pre><code>## [1] &quot;Huh?&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># In this case you need the full expression because</span>
 <span class="co"># &quot;Something else&quot; does not evaluate to TRUE or FALSE</span>
 <span class="co"># which will cause an error as the if and else if </span>
@@ -2830,7 +2830,7 @@ t_or_f &lt;-<span class="st"> </span><span class="kw">sample</span>(<span class=
   <span class="co"># Otherwise print huh</span>
   <span class="kw">print</span>(<span class="st">&quot;Huh?&quot;</span>)
 }</code></pre></div>
-<pre><code>## [1] &quot;Failure!&quot;</code></pre>
+<pre><code>## [1] &quot;Huh?&quot;</code></pre>
 <p></details></p>
 </div>
 </div>
@@ -4574,18 +4574,33 @@ iris <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">sel
 <div id="r-arrange" class="section level3">
 <h3><code>arrange</code></h3>
 </div>
-<div id="r-mutate" class="section level3">
-<h3><code>mutate</code></h3>
-</div>
 <div id="r-group-by" class="section level3">
 <h3><code>group_by</code></h3>
+<p><code>group_by</code> is a function commonly used in conjunction with <code>mutate</code>, <code>transmute</code>, and <code>summarize</code>. It is useful when you want to perform a <code>tapply</code>-like operation on a data.frame. For example, let's say you wanted to get the average <code>Petal.Length</code> by <code>Species</code>. Using <code>tapply</code>, you would do something like:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">tapply</span>(iris<span class="op">$</span>Petal.Length, iris<span class="op">$</span>Species, mean)</code></pre></div>
+<pre><code>##     setosa versicolor  virginica 
+##      1.462      4.260      5.552</code></pre>
+<p>While useful, <code>tapply</code>'s end result isn't in a format that is conducive to further analysis or wrangling. For example, what if we wanted to calculate and then plot (in <code>ggplot</code>) the difference between the mean <code>Petal.Length</code> and the mean <code>Sepal.Length</code> by <code>Species</code>? Using <code>tapply</code>, you would have to do something like:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">diff &lt;-<span class="st"> </span><span class="kw">tapply</span>(iris<span class="op">$</span>Petal.Length, iris<span class="op">$</span>Species, mean) <span class="op">-</span><span class="st"> </span><span class="kw">tapply</span>(iris<span class="op">$</span>Sepal.Length, iris<span class="op">$</span>Species, mean)
+myDF &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">Species =</span> <span class="kw">names</span>(diff), <span class="dt">diff =</span> <span class="kw">unname</span>(diff))
+<span class="kw">ggplot</span>(myDF, <span class="kw">aes</span>(<span class="dt">x=</span>diff, <span class="dt">y=</span>Species)) <span class="op">+</span><span class="st"> </span><span class="kw">geom_bar</span>(<span class="dt">stat=</span><span class="st">&quot;identity&quot;</span>)</code></pre></div>
+<p><img src="the-datamine-examples_files/figure-html/unnamed-chunk-625-1.png" width="672" /></p>
+<p>Again, a little bit more difficult to read than the following, <em>and</em> if you had more operations to complete, the previous example would make it difficult to do even more. In the following example, however, we can continue to utilize and build on <code>myDF</code>:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">myDF &lt;-<span class="st"> </span>iris <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">group_by</span>(Species) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">diff=</span><span class="kw">mean</span>(Petal.Length) <span class="op">-</span><span class="st"> </span><span class="kw">mean</span>(Sepal.Length))
+
+myDF <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x=</span>diff, <span class="dt">y=</span>Species)) <span class="op">+</span><span class="st"> </span><span class="kw">geom_bar</span>(<span class="dt">stat=</span><span class="st">&quot;identity&quot;</span>)</code></pre></div>
+<p><img src="the-datamine-examples_files/figure-html/unnamed-chunk-626-1.png" width="672" /></p>
+</div>
+<div id="r-summarize" class="section level3">
+<h3><code>summarize</code></h3>
 </div>
 <div id="r-str-extract" class="section level3">
 <h3><code>str_extract</code> and <code>str_extract_all</code></h3>
 <p><code>str_extract</code> and <code>str_extract_all</code> are useful functions from the <code>stringr</code> package. You can install the package by running:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="st">&quot;stringr&quot;</span>)</code></pre></div>
-<p><code>str_extract</code> extracts the text which matches the provided regular expression or pattern. Note that this differs from <code>grep</code> in a major way. <code>grep</code> simply returns the index in which a pattern match was found. <code>str_extract</code> returns the actual matching text. Note that <code>grep</code> typically returns the entire line where a match was found. <code>str_extract</code> returns only the part of the line or text that matches the pattern.</p>
-<p>For example:</p>
+<p><code>str_extract</code> extracts the text which matches the provided regular expression or pattern. Note that this differs from <code>grep</code> in a major way. <code>grep</code> simply returns the index in which a pattern match was found. <code>str_extract</code> returns the actual matching text. Note that <code>grep</code> typically returns the entire line where a match was found. <code>str_extract</code> returns only the part of the line or text that matches the pattern. For example:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">text &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;cat&quot;</span>, <span class="st">&quot;mat&quot;</span>, <span class="st">&quot;spat&quot;</span>, <span class="st">&quot;spatula&quot;</span>, <span class="st">&quot;gnat&quot;</span>)
 
 <span class="co"># All 5 &quot;lines&quot; of text were a match.</span>
