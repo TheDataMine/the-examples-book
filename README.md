@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://datamine.purdue.edu"><img width="100%" src="./header.png" alt='Purdue University'></a>
+  <a href="https://datamine.purdue.edu"><img width="100%" src="./banner.png" alt='Purdue University'></a>
 </p>
 
 [![deployed](https://github.com/TheDataMine/the-examples-book/workflows/deployed/badge.svg)](https://thedatamine.github.io/the-examples-book/)
@@ -53,7 +53,32 @@ antora -v
 2.3.4
 ```
 
-### PDF, epub, mobi, etc.
+### Search index
+
+https://the-examples-book.com uses the excellent [stork-search](https://stork-search.net/) for search. Stork builds a search index based on the configuration file [stork.toml](./stork.toml). The index is registered using the javascript package, enabling search.
+
+To install stork-search, follow the instructions [here](https://stork-search.net/docs/install). Confirm stork is installed by running:
+
+```bash
+stork
+```
+
+This project uses GNU make and a [Makefile](./Makefile) to build the project. To build this project, simply run:
+
+```bash
+make build
+```
+
+This will handle building the static website using Antora, as well as building the search index. The resulting website is output to the `build` directory.
+
+To test the search capabilities, run the following:
+
+```bash
+make test-search
+```
+
+Then, proceed to open up a web browser and navigate to: http://127.0.0.1:1612.
+
 
 
 <p align="center">&mdash; # &mdash;</p>
