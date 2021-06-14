@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-18.04
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - uses: jsmrcaga/action-netlify-deploy@master
         with:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
@@ -27,14 +27,24 @@ jobs:
     runs-on: ubuntu-18.04
     steps:      
     - name: Clone TheDataMine/docs-scraper
-      uses: actions/checkout@master
+      uses: actions/checkout@v2
       with: 
         repository: TheDataMine/docs-scraper
+    - name: Install pipenv
+      run: |
+        python3 -m pip install --upgrade pipenv wheel
+    - id: cache-pipenv
+      uses: actions/cache@v1
+      with:
+        path: ~/.local/share/virtualenvs
+        key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
+    - name: Install dependencies
+      if: steps.cache-pipenv.outputs.cache-hit != 'true'
+      run: 
+        pipenv install
     - name: Run docs-scraper
       env:
         MEILISEARCH_HOST_URL: ${{ secrets.MEILISEARCH_HOST_URL }}
         MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
       run: |
-        python3 -m pip install pipenv
-        pipenv install
         pipenv run ./docs_scraper ./the-examples-book.config.json
