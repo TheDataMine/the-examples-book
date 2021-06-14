@@ -8,7 +8,7 @@ on:
 jobs:
   deploy:
     name: 'Deploy'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
 
     steps:
       - uses: actions/checkout@v1
@@ -21,3 +21,19 @@ jobs:
           build_directory: 'build/site'
           install_command: npm i -g @antora/cli @antora/site-generator-default;
           build_command: antora antora-playbook.yml --stacktrace --fetch;
+
+  run-scraper:
+    needs: deploy
+    runs-on: ubuntu-18.04
+    steps:      
+    - name: Run docs-scraper
+      uses: actions/checkout@master
+      with: 
+        repository: TheDataMine/docs-scraper
+      env:
+        HOST_URL: ${{ secrets.MEILISEARCH_HOST_URL }}
+        API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
+        CONFIG_FILE_PATH: ${{ github.workspace }}/the-examples-book.config.json
+      run: |
+        pipenv install
+        pipenv run ./docs-scraper the-examples-book.config.json
