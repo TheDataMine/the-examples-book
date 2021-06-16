@@ -426,7 +426,7 @@ Really, it is.footnote:disclaimer[]
 ====
 We want to keep this site fast. The following are best practices for adding images to this book.
 
-- https://developers.google.com/speed/webp/docs/precompiled[Convert images] from jpg/png/etc. to webp. Use `-q 80`.
+- Reduce the size of images using the instructions <<optimize-images, here>>.
 - Specify _both_ the height and width of each image.
 - Lazy load images by adding `loading="lazy"`.
 - Use block images when possible.
@@ -504,3 +504,59 @@ We use https://www.mathjax.org/[MathJax] to render LaTeX. Our current configurat
 This is an example of an inline equation: $e=mc^2$
 
 We've configured MathJax to _not_ process text in the following tags: `<script>`, `<noscript>`, `<style>`, `<textarea>`, `<pre>`, `<annotation>`, `<annotation-xml>`, and `<code>`.
+
+== Optimize images
+
+We want to keep this book as fast to load as possible. The following are our suggestions to optimize images prior to adding them to this book.
+
+.Resize the image to the width and height that it will be displayed online
+[source, bash]
+----
+magick convert input.png -filter Gaussian -sharpen 0x3 -resize 700x500 output.png
+----
+
+.Reduce the number of colors used to 64
+[source, bash]
+----
+pngquant 64 --skip-if-larger --strip --ext=.png --force output.png
+----
+
+.Use improved compression algorithm
+[source, bash]
+----
+zopflipng -y output.png output.png
+----
+
+.Compress to webp
+[source, bash]
+----
+cwebp -q 30 output.png -o output.webp
+----
+
+You can read more about some of these optimizations in https://about.gitlab.com/blog/2020/01/30/simple-trick-for-smaller-screenshots/[this excellent GitLab blog post].
+
+=== Automator
+
+If you are working on an Apple machine, you can setup Automator to automatically convert all `.png`'s as they are added to the repository.
+
+. Open Automator.app, and select btn:[Folder Action], then click btn:[Choose].
++
+image::figure02.webp[Automator menu, width=792, height=700, loading=lazy, title="Automator menu"]
++
+. At the top of the screen choose folder where your the-examples-book repository lives. Drag and drop **Run Shell Script** from the left-hand menu.
++
+image::figure03.webp[Automator setup, width=792, height=700, loading=lazy, title="Folder action setup"]
++
+. Change **Pass input** to **as arguments**, and add the following script to the code block.
++
+[source, bash]
+----
+include::example$example02.sh[]
+----
++
+. Open finder and navigate to each "images" folders which you'd like automator to watch, and automatically convert and optimize `.png` files. This can be easily done by holding kbd:[Ctrl+Click] on the directory and attaching the workflow to each folder.
+
+[NOTE]
+====
+This is experimental. If you have a better way to do this, please feel free to contribute.
+====
