@@ -62,7 +62,7 @@ name: Deploy to Netlify
 on:
   push:
     branches:
-      - staging
+      - main
 
 jobs:
   deploy:
