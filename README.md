@@ -6,7 +6,7 @@
 
 ---
 
-**Website**: [https://staging.the-examples-book.com](https://staging.the-examples-book.com)
+**Website**: [https://the-examples-book.com](https://the-examples-book.com)
 
 ---
 
@@ -20,7 +20,7 @@ This book is written using [AsciiDoc](https://asciidoc.org/). AsciiDoc is an ope
 
 ### Website
 
-To build [the website](https://staging.the-examples-book.com), we used [Antora](https://antora.org/). To build the website using Antora, you must first download and install [nodejs](https://nodejs.org/en/download/). You can test to make sure nodejs was properly installed by running:
+To build [the website](https://the-examples-book.com), we used [Antora](https://antora.org/). To build the website using Antora, you must first download and install [nodejs](https://nodejs.org/en/download/). You can test to make sure nodejs was properly installed by running:
 
 ```bash
 node --version
