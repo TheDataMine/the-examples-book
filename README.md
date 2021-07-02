@@ -6,13 +6,27 @@
 
 ---
 
-**Website**: [https://the-examples-book.com](https://the-examples-book.com)
+**Website**: [https://the-examples-book.com](https://the-examples-book.com) (`main` branch)
+
+**Old website (being transferred)**: [https://thedatamine.github.io/the-examples-book](https://thedatamine.github.io/the-examples-book) (`master` branch)
 
 ---
 
 # The Examples Book
 
-Supplementary material for solving projects assigned in Purdue University's The Data Mine.
+Supplementary material for solving projects assigned in [The Data Mine](https://datamine.purdue.edu/), Purdue University's integrative data science initiative.
+
+- [The Data Mine website](https://datamine.purdue.edu/)
+- [Introducing The Data Mine at Purdue University](https://www.youtube.com/watch?v=R_kqpIMyhR4)
+- [2021 poster symposium](https://datamine.purdue.edu/symposium/welcome.html)
+- [2020 poster symposium](https://datamine.purdue.edu/symposium/welcome2020.html)
+- [Our team](https://datamine.purdue.edu/about/welcome.html)
+
+## Contributions
+
+Thank you for those that have already contributed. If you have an ignored issue or pull request, please know we _are_ going to get to it and we really appreciate your patience.
+
+[Here](https://the-examples-book.com/book/0.1.0/how-to-contribute) is our guide on how to contribute. Please feel free to start a [discussion](https://github.com/TheDataMine/the-examples-book/discussions) or open up an [issue](https://github.com/TheDataMine/the-examples-book/issues).
 
 ## Build
 
@@ -54,7 +68,7 @@ antora -v
 
 ### Search index
 
-Search is handled by [Meilisearch](https://www.meilisearch.com/). For this repository -- the core book -- the following GitHub Action job automatically builds, deploys, and updates the search index. The is _no_ additional work that must be done when a change is made to this repository. 
+Search is handled by [Meilisearch](https://www.meilisearch.com/). For this repository -- the core book -- the following GitHub Action job automatically builds, deploys, and updates the search index. There is _no_ additional work that must be done when a change is made to this repository. 
 
 ```yaml
 name: Deploy to Netlify
@@ -75,7 +89,7 @@ jobs:
         with:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          NETLIFY_DEPLOY_MESSAGE: ${{ github.event.head_commit.message }}
+          NETLIFY_DEPLOY_MESSAGE: '${{ github.event.head_commit.message }}'
           NETLIFY_DEPLOY_TO_PROD: true
           build_directory: 'build/site'
           install_command: npm i -g @antora/cli @antora/site-generator-default;
@@ -107,6 +121,16 @@ jobs:
         MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
       run: |
         pipenv run ./docs_scraper ./the-examples-book.config.json
+        
+  purge-cf-cache:
+    needs: deploy
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Purge Cloudflare cache
+      uses: jakejarvis/cloudflare-purge-action@master
+      env:
+        CLOUDFLARE_ZONE: ${{ secrets.CLOUDFLARE_ZONE }}
+        CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN }}
 ```
 
 <p align="center">&mdash; # &mdash;</p>
