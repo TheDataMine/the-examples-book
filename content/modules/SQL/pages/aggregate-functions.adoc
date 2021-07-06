@@ -287,4 +287,234 @@ include::example$result35.csv[]
 
 === Examples
 
+==== Using the SQLite chinook database https://www.datadepot.rcac.purdue.edu/datamine/data/chinook/chinook.db[here], find the average length (in seconds) of the tracks with genre `Pop`.
+
+.Solution
+====
+[source, sql]
+----
+SELECT
+	AVG(Milliseconds / 1000.0) AS avg
+FROM
+	tracks
+WHERE
+	genreId = 9;
+----
+
+[%header,format=csv]
+|===
+include::example$result83.csv[]
+|===
+====
+
+
+==== Using the SQLite chinook database https://www.datadepot.rcac.purdue.edu/datamine/data/chinook/chinook.db[here], figure out what the longest track (in seconds) is for the "Bossa Nova" genre.
+
+.Solution
+====
+[source, sql]
+----
+SELECT
+	GenreId
+FROM
+	genres
+WHERE
+	Name = 'Bossa Nova';
+----
+
+[%header,format=csv]
+|===
+include::example$result84.csv[]
+|===
+
+[source, sql]
+----
+SELECT
+	*,
+	MAX(Milliseconds / 1000.0) AS Seconds
+FROM
+	tracks
+WHERE
+	genreId = 11;
+----
+
+[%header,format=csv]
+|===
+include::example$result85.csv[]
+|===
+====
+
+
+==== Using the SQLite chinook database https://www.datadepot.rcac.purdue.edu/datamine/data/chinook/chinook.db[here], get the average price per hour for Bossa Nova music (`genreId` of 11).
+
+.Solution
+====
+[source, sql]
+----
+SELECT
+	AVG(UnitPrice / (Milliseconds / 1000.0 / 3600)) AS 'Price per Hour'
+FROM
+	tracks
+WHERE
+	genreId = 11;
+----
+
+[%header,format=csv]
+|===
+include::example$result86.csv[]
+|===
+====
+
+
+==== Using the SQLite chinook database https://www.datadepot.rcac.purdue.edu/datamine/data/chinook/chinook.db[here], get the average time (in seconds) for tracks by genre.
+
+.Solution
+====
+[source, sql]
+----
+SELECT
+	genreId,
+	AVG(Milliseconds / 1000.0) AS 'Average seconds per track'
+FROM
+	tracks
+GROUP BY
+	genreId;
+----
+
+[%header,format=csv]
+|===
+include::example$result87.csv[]
+|===
+
+You can take this 1 step further by getting the genre names. This requires using an xref:book:SQL:joins.adoc#inner-join[inner join], however.
+
+[source, sql]
+----
+SELECT
+	g.Name,
+	track_time. 'Average seconds per track'
+FROM
+	genres AS g
+	INNER JOIN (
+		SELECT
+			genreId,
+			AVG(Milliseconds / 1000.0) AS 'Average seconds per track'
+		FROM
+			tracks
+		GROUP BY
+			genreId) AS track_time ON g.GenreId = track_time.GenreId
+ORDER BY
+	track_time. 'Average seconds per track' DESC;
+----
+
+[%header,format=csv]
+|===
+include::example$result88.csv[]
+|===
+====
+
+
+==== Using the SQLite chinook database https://www.datadepot.rcac.purdue.edu/datamine/data/chinook/chinook.db[here], figure out what the average price per track is, for each genre.
+
+.Solution
+====
+[source, sql]
+----
+SELECT
+	genreId,
+	AVG(UnitPrice) AS 'Average price per track'
+FROM
+	tracks
+GROUP BY
+	genreId;
+----
+
+[%header,format=csv]
+|===
+include::example$result89.csv[]
+|===
+====
+
+
+==== Using the SQLite chinook database https://www.datadepot.rcac.purdue.edu/datamine/data/chinook/chinook.db[here], what is the average number of tracks per album?
+
+.Solution
+====
+[source, sql]
+----
+SELECT
+	AVG(trackCount)
+FROM (
+	SELECT
+		COUNT(*) AS trackCount
+	FROM
+		tracks
+	GROUP BY
+		albumId) AS track_count;
+----
+
+[%header,format=csv]
+|===
+include::example$result90.csv[]
+|===
+====
+
+
+==== Using the SQLite chinook database https://www.datadepot.rcac.purdue.edu/datamine/data/chinook/chinook.db[here], figure out what the average number of tracks is, per album genre.
+
+.Solution
+====
+[source, sql]
+----
+SELECT
+	genreId,
+	AVG(trackCount)
+FROM (
+	SELECT
+		genreId,
+		COUNT(*) AS trackCount
+	FROM
+		tracks
+	GROUP BY
+		albumId) AS track_count
+GROUP BY
+	genreId;
+----
+
+[%header,format=csv]
+|===
+include::example$result91.csv[]
+|===
+
+Of course, we can add the names of genres in, using xref:book:SQL:joins.adoc[joins].
+
+[source, sql]
+----
+SELECT
+	Name,
+	avg_track_count. 'Average Track Count'
+FROM
+	genres AS g
+	INNER JOIN (
+		SELECT
+			genreId,
+			AVG(trackCount) AS 'Average Track Count'
+		FROM (
+			SELECT
+				genreId,
+				COUNT(*) AS trackCount
+			FROM
+				tracks
+			GROUP BY
+				albumId) AS track_count
+		GROUP BY
+			genreId) AS avg_track_count ON g.GenreId = avg_track_count.genreId;
+----
+
+[%header,format=csv]
+|===
+include::example$result92.csv[]
+|===
+====
+
 === Resources
