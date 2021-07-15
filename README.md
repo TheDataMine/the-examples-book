@@ -14,7 +14,19 @@
 
 # The Examples Book
 
-Supplementary material for solving projects assigned in [The Data Mine](https://datamine.purdue.edu/), Purdue University's integrative data science initiative.
+Supplementary material for solving projects assigned in [The Data Mine](https://datamine.purdue.edu/), Purdue University's integrative data science initiative. The "core" book can be found at [https://the-examples-book.com](https://the-examples-book.com). Complementary materials are available as appendices at the following URLs:
+
+- Geospatial Analytics: https://the-examples-book.com/geo
+- Data Visualization: https://the-examples-book.com/data-viz
+- Natural Language Processing: https://the-examples-book.com/nlp
+- MATLAB: https://the-examples-book.com/matlab
+- Time Series: https://the-examples-book.com/ts
+- Projects Archive: https://the-examples-book.com/projects
+- Corporate Partners Information: https://the-examples-book.com/crp
+- RCAC Resources & Guides: https://the-examples-book.com/rcac
+- Think Summer: https://the-examples-book.com/think-summer
+
+You can learn more about The Data Mine using the following links:
 
 - [The Data Mine website](https://datamine.purdue.edu/)
 - [Introducing The Data Mine at Purdue University](https://www.youtube.com/watch?v=R_kqpIMyhR4)
@@ -22,11 +34,11 @@ Supplementary material for solving projects assigned in [The Data Mine](https://
 - [2020 poster symposium](https://datamine.purdue.edu/symposium/welcome2020.html)
 - [Our team](https://datamine.purdue.edu/about/welcome.html)
 
-## Contributions
+## Contribution
 
 Thank you for those that have already contributed. If you have an ignored issue or pull request, please know we _are_ going to get to it and we really appreciate your patience.
 
-[Here](https://the-examples-book.com/book/0.1.0/how-to-contribute) is our guide on how to contribute. Please feel free to start a [discussion](https://github.com/TheDataMine/the-examples-book/discussions) or open up an [issue](https://github.com/TheDataMine/the-examples-book/issues).
+[Here](https://the-examples-book.com/book/how-to-contribute) is our guide on how to contribute. Please feel free to start a [discussion](https://github.com/TheDataMine/the-examples-book/discussions) or open up an [issue](https://github.com/TheDataMine/the-examples-book/issues).
 
 ## Build
 
