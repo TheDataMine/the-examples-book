@@ -16,6 +16,9 @@
 
 Supplementary material for solving projects assigned in [The Data Mine](https://datamine.purdue.edu/), Purdue University's integrative data science initiative. The "core" book can be found at [https://the-examples-book.com](https://the-examples-book.com). Complementary materials are available as appendices at the following URLs:
 
+- Containerization and Kubernetes Deployment: https://the-examples-book.com/k8s
+- Data Science Book List: https://the-examples-book.com/book-list
+- Prodigy Annotation Tool: https://the-examples-book.com/prodigy
 - Geospatial Analytics: https://the-examples-book.com/geo
 - Data Visualization: https://the-examples-book.com/data-viz
 - Natural Language Processing: https://the-examples-book.com/nlp
