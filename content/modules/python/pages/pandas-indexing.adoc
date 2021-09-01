@@ -1,0 +1,259 @@
+= Pandas Indexing
+
+== Pandas Methods
+Pandas has some very beneficial indexing functions that allow additional logic to be added when working with data in a DataFrame or Series. Two of the most common methods are `iloc` and `loc`. The `loc` method is primarily label based while `iloc` is primarily and integer based indexer. For example, given the following DataFrame: 
+
+[source, python]
+----
+import pandas as pd
+
+myDF = pd.read_csv("./flights_sample.csv")
+myDF.head()
+----
+
+----
+   Year  Month  DayofMonth  ...  NASDelay  SecurityDelay  LateAircraftDelay 
+0  1987     10          14  ...       NaN            NaN                NaN
+1  1990     10          15  ...       NaN            NaN                NaN
+2  1990     10          17  ...       NaN            NaN                NaN
+3  1990     10          18  ...       NaN            NaN                NaN
+4  1991     10          19  ...       NaN            NaN                NaN
+----
+
+The `loc` function allows us to add logic to our indexing. If we wanted to get only the rows where `Year` is 1990 we could try: 
+
+[source, python]
+----
+love_the_90s = myDF.loc[myDF.loc[:, 'Year'] == 1990, :]
+print(love_the_90s)
+----
+
+----
+   Year  Month  DayofMonth  ...  NASDelay  SecurityDelay  LateAircraftDelay
+1  1990     10          15  ...       NaN            NaN                NaN
+2  1990     10          17  ...       NaN            NaN                NaN
+3  1990     10          18  ...       NaN            NaN                NaN
+----
+
+Alternatively, you could write the code below to get the same outcome: 
+
+[source, python]
+----
+love_the_90s = myDF.loc[myDF['Year'] == 1990, :]
+----
+
+----
+   Year  Month  DayofMonth  ...  NASDelay  SecurityDelay  LateAircraftDelay
+1  1990     10          15  ...       NaN            NaN                NaN
+2  1990     10          17  ...       NaN            NaN                NaN
+3  1990     10          18  ...       NaN            NaN                NaN
+----
+
+The `:` simply means "all rows" if it is _before_ the comma, and "all columns" if it is _after_ the comma. In the same way, having `myDF['Year'] == 1990` _before_ the first comma, means to filter rows where `myDF['Year'] == 1990` results in `True`. 
+
+*Note* you could use `iloc` instead of `loc` for any of the previous examples. Both `iloc` and `loc` allow for boolean (logical) based indexing. Since `myDF['Year'] == 1990` or `myDF.loc[:, 'Year'] == 1990` both result in a Series of `True` and `False` values either will work. 
+
+Similarly, we can use either `loc` or `iloc` to isolate a single column or Series: 
+
+[source, python]
+----
+just_the_year = myDF.loc[:, 'Year']
+print(just_the_year)
+----
+
+----
+0    1987
+1    1990
+2    1990
+3    1990
+4    1991
+5    1991
+6    1991
+7    1991
+8    1991
+----
+
+[source, python]
+----
+just_the_year = myDF.iloc[:, 0] #Year is the first column.
+print(just_the_year)
+----
+
+----
+0    1987
+1    1990
+2    1990
+3    1990
+4    1991
+5    1991
+6    1991
+7    1991
+8    1991
+----
+
+The same two techniques can both be used for multiple rows as well: 
+
+[source, python]
+----
+year_month = myDF.loc[:, ('Year', 'Month')]
+print(year_month)
+----
+
+[source, python]
+----
+year_month = myDF.iloc[:, 0:2]
+print(year_month)
+----
+
+----
+   Year  Month
+0  1987     10
+1  1990     10
+2  1990     10
+3  1990     10
+4  1991     10
+5  1991     10
+6  1991     10
+7  1991     10
+8  1991     10
+----
+
+As mentioned above, the first entry in `loc` and `iloc` idicated the rows. If we wanted to isolate specific rows in a DataFrame we could use similar log to the previous example but for the rows entry: 
+
+[source, python]
+----
+i_want_three_rows = myDF.loc[0:2, :]
+print(i_want_three_rows)
+----
+
+----
+   Year  Month  DayofMonth  ...  NASDelay  SecurityDelay  LateAircraftDelay
+0  1987     10          14  ...       NaN            NaN                NaN
+1  1990     10          15  ...       NaN            NaN                NaN
+2  1990     10          17  ...       NaN            NaN                NaN
+----
+
+Using `iloc` looks pretty similar. However it should be noted that because the `iloc` indexing is not inclusive it only returns 2 rows instead of 3.  
+
+[source, python]
+----
+i_want_three_rows = myDF.iloc[0:2, :]
+print(i_want_three_rows)
+----
+
+----
+   Year  Month  DayofMonth  ...  NASDelay  SecurityDelay  LateAircraftDelay
+0  1987     10          14  ...       NaN            NaN                NaN
+1  1990     10          15  ...       NaN            NaN                NaN
+----
+
+Even though the code may look pretty similar the functionality behind `loc` and `iloc` is very different. We can show the difference in behavior if we change the index of the DataFrame: 
+
+[source, python]
+----
+list_1 = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+list_2 = ['Apple', 'Banana', 'Coffee', 'Nothing', 'Oatmeal']
+list_3 = [1, 3, 6, 8, 1]
+
+column_names = ['day_of_the_week', 'breakfast', 'nonsense']
+
+index_values = [1,1,2,2,3]
+
+myDF = pd.DataFrame(zip(list_1, list_2, list_3), columns=column_names, index=index_values)
+print(myDF)
+----
+
+----
+  day_of_the_week breakfast  nonsense
+1          Monday     Apple         1
+1         Tuesday    Banana         3
+2       Wednesday    Coffee         6
+2        Thursday   Nothing         8
+3          Friday   Oatmeal         1
+----
+
+[source, python]
+----
+print(myDF.loc[0:2,:])
+----
+
+----
+  day_of_the_week breakfast  nonsense
+1          Monday     Apple         1
+1         Tuesday    Banana         3
+2       Wednesday    Coffee         6
+2        Thursday   Nothing         8
+----
+
+In this example the `loc` function is saying that it should return any indexes that have values of 0, 1, or 2 `[0:2]`. For the example DataFrame it only returns the rows with 1 or 2 since we don't have any 0 indicies.  
+
+[source, python]
+----
+print(myDF.iloc[0:2,:])
+----
+
+----
+  day_of_the_week breakfast  nonsense
+1          Monday     Apple         1
+1         Tuesday    Banana         3
+----
+
+In comparison the `iloc` will only get the rows in positions 0 and 1. In this case they both happen to have an index of 1. 
+
+You can also index on both rows and columns: 
+
+[source, python]
+----
+rows_and_columns = myDF.iloc[0:2, 0:2]
+print(rows_and_columns)
+----
+
+[source, python]
+----
+rows_and_columns = myDF.loc[0:1, ('day_of_the_week', 'breakfast')]
+print(rows_and_columns)
+----
+
+----
+  day_of_the_week breakfast
+1          Monday     Apple
+1         Tuesday    Banana
+----
+
+The logic that `loc` and `iloc` allow is one of the most impactful features of Pandas indexing. In addition, the logic statements can be chained together. For example, if you wanted to get the rows for `Monday` or that didn't have `Breakfast` you could do the following: 
+
+[source, python]
+----
+monday_or_breakfast = myDF.loc[(myDF.loc[:, "day_of_the_week"]=="Monday") | (myDF.loc[:, "breakfast"]=="Nothing"), :]
+print(monday_or_breakfast)
+----
+
+----
+  day_of_the_week breakfast  nonsense
+1          Monday     Apple         1
+2        Thursday   Nothing         8
+----
+
+*Note:* in this example the parentheses `()` are critical. Withouth the parentheses Python doesn't know how to evaulate the multiple statements and will error. The following will *not* work: 
+
+[source, python]
+----
+monday_or_breakfast = myDF.loc[myDF.loc[:, "day_of_the_week"]=="Monday" | myDF.loc[:, "breakfast"]=="Nothing", :]
+print(monday_or_breakfast)
+----
+
+You can use `&` for the logical AND just as you can use `|` for the logical OR: 
+
+[source, python]
+----
+apple_and_one = myDF.loc[(myDF.loc[:, "breakfast"]=="Apple") & (myDF.loc[:, "nonsense"]==1), :]
+print(apple_and_one)
+----
+
+----
+  day_of_the_week breakfast  nonsense
+1          Monday     Apple         1
+----
+
+== Resources
+If you haven't done it before the https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html[10 minute intro to Pandas] is a great quick introduction. Similarly, the Pandas documentation has a good section on https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html[indexing and selecting data].
