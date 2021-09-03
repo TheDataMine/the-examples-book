@@ -1,0 +1,139 @@
+= Pandas Aggregate Functions
+
+== groupby
+The `groupby` function is both very powerful and very commonly used with DataFrames and Series. 
+
+For a DataFrame, `groupby` groups each unique value in a given column (or set of columns) and allows you to perform operations on those groups. For example, given a sample of the flights data what if you wanted to calculate the average departure delay, `DepDelay`, for each `Year` of data in the `Year` column?
+
+[source, python]
+----
+import pandas as pd
+
+myDF = pd.read_csv("./flights_sample.csv")
+myDF.head()
+----
+
+----
+   Year  Month  DayofMonth  ...  NASDelay  SecurityDelay  LateAircraftDelay
+0  1987     10          14  ...       NaN            NaN                NaN
+1  1990     10          15  ...       NaN            NaN                NaN
+2  1990     10          17  ...       NaN            NaN                NaN
+3  1990     10          18  ...       NaN            NaN                NaN
+4  1991     10          19  ...       NaN            NaN                NaN
+----
+
+Now we can use the `groupby` functionality to get the average for each `Year`: 
+
+[source, python]
+----
+myDF.groupby("Year").mean()
+----
+
+----
+      Month  DayofMonth  DayOfWeek  ...  NASDelay  SecurityDelay  LateAircraftDelay
+Year                                ...                                            
+1987   10.0   14.000000   3.000000  ...       NaN            NaN                NaN
+1990   10.0   16.666667   5.666667  ...       NaN            NaN                NaN
+1991   10.0   21.800000   3.800000  ...       NaN            NaN                NaN
+----
+
+As you can see, the average for each column is now calculated for each of the 3 `Year` values in the dataset: 1987, 1990, and 1991. If you wanted the `DepDelay` column by itself you can isolate it before or after the calculation: 
+
+[source, python]
+----
+# Before
+myDF.groupby("Year")['DepDelay'].mean()
+----
+
+or 
+
+[source, python]
+----
+# After
+myDF.groupby("Year").mean()['DepDelay']
+----
+
+----
+Year
+1987    11
+1990     3
+1991     6
+----
+
+You have the ability to group by multiple variables as well! For example, you could find the mean `DepDelay` for each day of the week for each year: 
+
+[source, python]
+----
+myDF.groupby(["Year", "DayOfWeek"])['DepDelay'].mean()
+----
+
+----
+Year  DayOfWeek
+1987  3            11
+1990  4            -1
+      6            11
+      7            -1
+1991  1            19
+      3            -2
+      4            -2
+      5             1
+      6            14
+----
+
+You may notice that the output of the `groupby` statements results in a Series, not a DataFrame. To move the `Year` and `DayOfWeek` indexes back to be columns of a DataFrame, you can use the `reset_index()` method: 
+
+[source, python]
+----
+myDF.groupby(["Year", "DayOfWeek"])['DepDelay'].mean().reset_index()
+----
+
+----
+   Year  DayOfWeek  DepDelay
+0  1987          3        11
+1  1990          4        -1
+2  1990          6        11
+3  1990          7        -1
+4  1991          1        19
+5  1991          3        -2
+6  1991          4        -2
+7  1991          5         1
+8  1991          6        14
+----
+
+These are only some of the methods that you can utilize while grouping data. Two additional examples are included below: 
+
+*How do I calculate the number of rows for each `Year`?*
+
+[source, python]
+----
+myDF.groupby("Year")["DepDelay"].count()
+----
+
+*How do I calculate the median `DepDelay` by `Year`?*
+
+[source, python]
+----
+myDF.groupby("Year")["DepDelay"].median()
+----
+
+== agg
+Another powerful addition to the Pandas `groupby` method is the `agg` method. The end result of `agg` is similar to the functionality described above. However, it allows for more aggregations to be performed at once: 
+
+[source, python]
+----
+list_1 = ['Wisconsin', 'IU', 'Rutgers', 'Michigan State', 'Ohio State']
+list_2 = ['home', 'away', 'home', 'away', 'home']
+list_3 = [85, 78, 90, 75, 74]
+list_4 = [500, 1000, 430, 4800, 10000]
+
+myDF = pd.DataFrame(zip(list_1, list_2, list_3, list_4), columns=['opponent', 'location', 'temp', 'attendance'])
+
+print(myDF.groupby('location').agg({'temp': 'mean', 'attendance': 'mean'}).reset_index())
+----
+
+----
+  location  temp   attendance
+0     away  76.5  2900.000000
+1     home  83.0  3643.333333
+----
+
