@@ -30,6 +30,156 @@ In this project, we are going to use the most popular Python documentation gener
 
 Last project was more challenging than intended. This project will provide a bit of a reprieve, and _should_ (hopefully) be fun to mess around with.
 
+project_02_module.py
+[source,python]
+----
+"""This module is for project 2 for STAT 39000.
+
+**Serialization:** Serialization is the process of taking a set or subset of data and transforming it into a specific file format that is designed for transmission over a network, storage, or some other specific use-case.
+
+**Deserialization:** Deserialization is the opposite process from serialization where the serialized data is reverted back into its original form.
+
+The following are some common serialization formats:
+
+- JSON
+- Bincode
+- MessagePack
+- YAML
+- TOML
+- Pickle
+- BSON
+- CBOR
+- Parquet
+- XML
+- Protobuf
+
+**JSON:** One of the more wide-spread serialization formats, JSON has the advantages that it is human readable, and has a excellent set of optimized tools written to serialize and deserialize. In addition, it has first-rate support in browsers. A disadvantage is that it is not a fantastic format storage-wise (it takes up lots of space), and parsing large JSON files can use a lot of memory.
+
+**MessagePack:** MessagePack is a non-human-readable file format (binary) that is extremely fast to serialize and deserialize, and is extremely efficient space-wise. It has excellent tooling in many different languages. It is still not the *most* space efficient, or *fastest* to serialize/deserialize, and remains impossible to work with in its serialized form.
+
+Generally, each format is either *human-readable* or *not*. Human readable formats are able to be read by a human when opened up in a text editor, for example. Non human-readable formats are typically in some binary format and will look like random nonsense when opened in a text editor.
+"""
+
+import lxml
+import lxml.etree
+from datetime import datetime, date
+
+
+def my_function(a, b):
+    """
+    >>> my_function(2, 3)
+    6
+    >>> my_function('a', 3)
+    'aaa'
+    >>> my_function(1, 3)
+    4
+    """
+    return a * b
+
+
+def get_records_for_date(tree: lxml.etree._ElementTree, for_date: date) -> list:
+    """
+    Given an `lxml.etree` object and a `datetime.date` object, return a list of records
+    with the startDate equal to `for_date`.
+
+    Args:
+        tree (lxml.etree): The watch_dump.xml file as an `lxml.etree` object.
+        for_date (datetime.date): The date for which returned records should have a startDate equal to.
+
+    Raises:
+        TypeError: If `tree` is not an `lxml.etree` object.
+        TypeError: If `for_date` is not a `datetime.date` object.
+
+    Returns:
+        list: A list of records with the startDate equal to `for_date`.
+    """
+    
+    if not isinstance(tree, lxml.etree._ElementTree):
+        raise TypeError('tree must be an lxml.etree')
+    
+    if not isinstance(for_date, date):
+        raise TypeError('for_date must be a datetime.date')
+    
+    results = []
+    for record in tree.xpath('/HealthData/Record'):
+        if for_date == datetime.strptime(record.attrib.get('startDate'), '%Y-%m-%d %X %z').date():
+            results.append(record)
+            
+    return results
+
+
+def from_msgpack(file: str) -> lxml.etree._Element:
+    """
+    Given the absolute path a msgpack file, return the deserialized `lxml.Element` object.
+
+    Args:
+        file (str): The absolute path of the msgpack file to deserialize.
+
+    Raises:
+        TypeError: If `file` is not a `str`.
+
+    Returns:
+        lxml.Element: The deserialized `lxml.Element` object.
+    """
+    
+    if not isinstance(file, str):
+        raise TypeError('file must be a str')
+    
+    with open(file, 'rb') as f:
+        d = msgpack.load(f)
+    
+    e = etree.Element('Record')
+    for key, value in d.items():
+        e.attrib[key] = str(value)
+        
+    return e
+
+
+def to_msgpack(element: lxml.etree._Element, file: str) -> None:
+    """
+    Given an `lxml.Element` object and a file path, serialize the `lxml.Element` object to
+    a msgpack file at the given file path.
+    
+    Args:
+        element (lxml.Element): The element to serialize.
+        file (str): The absolute path of the msgpack file to and save.
+
+    Raises:
+        TypeError: If `file` is not a `str`.
+        TypeError: If `element` is not an `lxml.Element`.
+
+    Returns:
+        None: None
+    """
+    
+    if not isinstance(file, str):
+        raise TypeError('file must be a str')
+    
+    if not isinstance(element, lxml.etree._Element):
+        raise TypeError('element must be an lxml.Element')
+    
+    # Test if `type`, `sourceVersion`, `unit`, and `value` are present in the element.
+    d = dict(element.attrib)
+    if not d.get('type') or not d.get('sourceVersion') or not d.get('unit') or not d.get('value'):
+        raise ValueError('element must have all of the following keys: type, sourceVersion, unit, and value')
+    
+    # Remove "other" keys from the dict
+    keys_to_remove = []
+    for key in d.keys():
+        if key not in ['type', 'sourceVersion', 'unit', 'value']:
+            keys_to_remove.append(key)
+            
+    for key in keys_to_remove:
+        del d[key]
+    
+    with open(file, 'wb') as f:
+        msgpack.dump(d, f)
+        
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
+----
+
 === Question 1
 
 [IMPORTANT]
