@@ -22,23 +22,127 @@ Make sure to read about, and use the template found xref:templates.adoc[here], a
 
 The following questions will use the following dataset(s):
 
-- `/depot/datamine/data/`
+- `/depot/datamine/data/apple/health/2021/*`
 
 == Questions
 
 === Question 1
 
+XPath expressions, while useful, have a very big limitation: the entire XML document must be read into memory. The is a problem for large XML documents. For example, to parse the `export.xml` file in the Apple Health data, takes nearly 7GB of memory when the file is only 980MB.
 
+.prof.py
+[source,python]
+----
+from memory_profiler import profile
+
+@profile
+def main():
+    import lxml.etree
+
+    tree = lxml.etree.parse("/home/kamstut/apple_health_export/export.xml")
+
+if __name__ == '__main__':
+    main()
+----
+
+[source,bash]
+----
+python -m memory_profiler prof.py
+----
+
+.Output
+----
+Filename: prof.py
+
+Line #    Mem usage    Increment  Occurences   Line Contents
+============================================================
+     3     36.5 MiB     36.5 MiB           1   @profile
+     4                                         def main():
+     5     38.5 MiB      2.0 MiB           1       import lxml.etree
+     6                                         
+     7   6975.3 MiB   6936.8 MiB           1       tree = lxml.etree.parse("/home/kamstut/apple_health_export/export.xml")
+----
+
+This is a _very_ common problem, not just for reading XML files, but for dealing with larger dataset in general. You will not always have an abundance of memory to work with. 
+
+To get around this issue, you will notice we take a _streaming_ approach, where only parts of a file are read into memory at a time, processed, and then freed.
+
+Copy our library from `/depot/datamine/data/apple/health/apple_watch_parser` and import it into your code cell for question 1. Examine the code and test out at least 2 of the methods or functions.
+
+[TIP]
+====
+To copy the library run the following in a new cell.
+
+[source,ipython]
+----
+%%bash
+
+cp -r /depot/datamine/data/apple/health/apple_watch_parser $HOME
+----
+
+To import and use the library, make sure your notebook (let's say `my_notebook.ipynb`) is in the same directory (the `$HOME` directory) as the `apple_watch_parser` directory. Then, you can import and use the library as follows.
+
+[source,python]
+----
+from apple_watch_parser import watch_data
+
+dat = watch_data.WatchData("/depot/datamine/data/apple/health/2021")
+print(dat)
+----
+====
 
 .Items to submit
 ====
-- Code used to solve this problem.
-- Output from running the code.
+- Code used to solve this problem -- code that imports and uses our library and at least 2 of the methods or functions.
+- Output from running the code that uses 2 of the methods.
 ====
 
 === Question 2
 
+As you may have noticed, the code contains fairly thorough docstrings. This is a good thing, and it is a good goal to aim for when writing your own Python functions, classes, modules, etc.
 
+In the previous project, you got a small taste of using `doctest` to test your code using in-comment code. This is a great way to test parts of your code that are simple, straightforward, and don't involve extra data or _fixtures_ in order to test.
+
+Examine the code, and determine which functions and/or methods are good candidates for doctests. Modify the docstrings to include at least 3 doctests each, and run the following to test them out!
+
+Include the following doctest in the `calculate_speed` function. This does _not_ count as 1 of your 3 doctests for this function.
+
+[source,python]
+----
+>>> calculate_speed(5.0, .55, output_distance_unit = 'm')
+Traceback (most recent call last):
+    ...
+ValueError: output_distance_unit must be 'mi' or 'km'
+----
+
+[source,ipython]
+----
+%%bash
+
+python $HOME/apple_watch_parser/watch_data.py -v
+----
+
+[TIP]
+====
+If you need to read in data or type a lot in order to use a function or method, a doctest is probably not the right approach. Hint, hint, try the functions rather than methods.
+====
+
+[TIP]
+====
+There are 2 _functions_ that are good candidates for doctests.
+====
+
+[TIP]
+====
+Don't forget to add the following code to the bottom of `watch_data.py` so doctests will run properly.
+
+[source,python]
+----
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
+----
+====
 
 .Items to submit
 ====
@@ -48,7 +152,18 @@ The following questions will use the following dataset(s):
 
 === Question 3
 
+In question 2, we wrote a doctest for the `calculate_speed` function. Figure out why the doctest fails, and make modifications to the function so it passes the doctest. Do _not_ modify the doctest.
 
+To run the doctest:
+
+[source,ipython]
+----
+%%bash
+
+python $HOME/apple_watch_parser/watch_data.py -v
+----
+
+This is what doctests are for! This helps you easily identify that something fundamental has changed and the code isn't ready for production. You can imagine a scenario where you automatically run all doctests automatically before releasing a new product, and having that system notify you when a test fails -- very cool!
 
 .Items to submit
 ====
@@ -58,7 +173,18 @@ The following questions will use the following dataset(s):
 
 === Question 4
 
+While doctests are good for simple testing, a package like `pytest` is better. For the stand alone functions, write at least 2 tests each using `pytest`. Make sure these tests test _different_ inputs than your doctests did -- its not hard to come up with lots of tests!
 
+[NOTE]
+====
+You may have noticed that we arbitrarily chose to place some functions _outside_ of our `WatchData` class, and others inside. There is no hard and fast rule to determine if a function belongs inside or outside of a class. In general, however, if a function is related to the class, and works with the attributes/data of the class, it should be inside the class. If the function has no relationship to the class, or could be useful using other types of data, it should be outside of the class.
+
+Of course, there are exceptions to this rule, and it is possible to write _static_ methods for a class, which operate independently of the class and its attributes. We chose to write the functions outside of the class, more for demonstration purposes than anything else. They are functions that would most likely not be useful in any other context, but sort of demonstrate the concept and allow us to have good functions to practice writing doctests and `pytest` tests _without_ fixtures.
+====
+
+In the following project, we will continue to learn about `pytest`, including some more advanced features, like fixtures.
+
+**Relevant topics:** xref:book:python:pytest.adoc[pytest]
 
 .Items to submit
 ====
@@ -68,7 +194,33 @@ The following questions will use the following dataset(s):
 
 === Question 5
 
+Explore the data -- there is a lot! Think of a function that could be useful for this module that would live _outside_ of the `WatchData` class. Write the function. Include Google style docstrings, doctests (at least 2), and `pytest` tests (at least 2, _different_ from your doctests). Re-run both your `doctest` tests and `pytest` tests.
 
+[TIP]
+====
+One way to peek around at the data (without having your notebook/kernel crash due to out of memory (OOM) errors) is something like the following:
+
+[source,python]
+----
+from lxml import etree
+
+tree = etree.iterparse("/home/kamstut/apple_health_export/export.xml")
+ct = 0
+for event, element in tree:
+    if element.tag == 'Workout':
+        print(etree.tostring(element))
+        ct += 1
+        if ct > 100:
+            break
+    else:
+        element.clear()
+
+# to extract an element's attributes
+element.attrib # dict-like object
+----
+====
+
+**Relevant topics:** xref:book:python:pytest.adoc[pytest], xref:book:data:html.adoc[html], xref:book:data:xml.adoc[xml]
 
 .Items to submit
 ====
