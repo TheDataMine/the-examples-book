@@ -100,6 +100,30 @@ print(dat)
 ----
 ====
 
+[TIP]
+====
+If you run `help(watch_data.time_difference)`, you will get some nice info about the function including a note "Given two strings in the format matching the format in Apple Watch data: YYYY-MM-DD HH:MM:SS -XXXX". What does this mean? These are date/time format code (see https://strftime.org/[here]). 
+
+Let's say you have a string `2018-05-21 04:35:49 -0500`, and you want to convert it to a datetime object. To do so you would run the following.
+
+[source,python]
+----
+import datetime
+
+my_datetime_string = '2018-05-21 04:35:49 -0500'
+my_datetime = datetime.datetime.strptime(my_datetime_string, '%Y-%m-%d %H:%M:%S %z')
+----
+
+The string '%Y-%m-%d %H:%M:%S %z' are format codes (see https://strftime.org/[here]). In order to convert from a string to a datetime object, you need to use a combination of format codes that _match_ the format of the string. In this case, the string is '2018-05-21 04:35:49 -0500'. The "2018" part matches "%Y" from the format codes. The "05" part matches "%m" from the format codes. The "21" part matches "%d" from the format codes. The "04" part matches "%H" from the format codes. The "35" part matches "%M" from the format codes. The "49" part matches "%S" from the format codes. The " -0500" part matches "%z" from the format codes. If your datetime string follows a different format, you would need to modify the combination of format codes to use so it matches your datetime string.
+
+Then, once you have a datetime object, you can do all sorts of fun things. The most obvious of which is converting the date back into a string, but formatting it exactly how you want. For example, lets say we dont want a string to have all the details '2018-05-21 04:35:49 -0500' has, and instead just want the month, day, and year using forward slashes instead of hyphens.
+
+[source,python]
+----
+my_datetime.strftime('%m/%d/%Y') # '05/21/2018'
+----
+====
+
 .Items to submit
 ====
 - Code used to solve this problem -- code that imports and uses our library and at least 2 of the methods or functions.
@@ -114,7 +138,7 @@ In the previous project, you got a small taste of using `doctest` to test your c
 
 Examine the code, and determine which functions and/or methods are good candidates for doctests. Modify the docstrings to include at least 3 doctests each, and run the following to test them out!
 
-Include the following doctest in the `calculate_speed` function. This does _not_ count as 1 of your 3 doctests for this function.
+Include the following doctest in the `calculate_speed` function. This does _not_ count as 1 of your 3 doctests for this function. It _will_ fail for this question -- that is okay!
 
 [source,python]
 ----
@@ -123,6 +147,11 @@ Traceback (most recent call last):
     ...
 ValueError: output_distance_unit must be 'mi' or 'km'
 ----
+
+[IMPORTANT]
+====
+Make sure to include the expected output of each doctest below each line starting with `>>>`. This means in the code chunk shown above, you should include the "Traceback", "...", and "ValueError" lines as the expected output. Literally just copy and paste that entire code chunk into the `calculate_speed` docstring.
+====
 
 [source,ipython]
 ----
@@ -163,6 +192,21 @@ if __name__ == '__main__':
 
 In question 2, we wrote a doctest for the `calculate_speed` function. Figure out why the doctest fails, and make modifications to the function so it passes the doctest. Do _not_ modify the doctest.
 
+[TIP]
+====
+Remember we want you to change the `calculate_speed` function to pass the doctest -- not change the doctest to make it pass.
+====
+
+[TIP]
+====
+The output of `calculate_speed(5.0, .55, output_distance_unit = 'm')` is `9.09090909090909`, but we _want_ it to be `ValueError: output_distance_unit must be 'mi' or 'km'` because 'm' isn't one of the two valid values, 'mi' or 'km'. Modify the `calculate_speed` function so it raises that error when the `output_distance_unit` parameter is not one of the two valid values.
+====
+
+[TIP]
+====
+Look carefully at the `_convert_distance` helper function -- that is where you will want to make modifications. Your logic within each `distance_unit` if statement should be along the lines of: "Is the `output_distance_unit` parameter 'mi'? If so, convert and/or return this distance. Is it 'km'? If so, convert and/or return this distance. Otherwise, raise an error because `output_distance_unit` should only be 'mi' or 'km'."
+====
+
 To run the doctest:
 
 [source,ipython]
@@ -183,6 +227,11 @@ This is what doctests are for! This helps you easily identify that something fun
 === Question 4
 
 While doctests are good for simple testing, a package like `pytest` is better. For the stand alone functions, write at least 2 tests each using `pytest`. Make sure these tests test _different_ inputs than your doctests did -- its not hard to come up with lots of tests!
+
+[NOTE]
+====
+This could end up being just 2 functions that run a total of 4 tests -- that is okay! As long as each function has at least 2 assert statements.
+====
 
 Start by adding a new file called `test_watch_data.py` to your `$HOME/apple_watch_parser` directory. Then, fill the file with your tests. When ready to test, run the following in a new cell.
 
@@ -215,6 +264,16 @@ In the following project, we will continue to learn about `pytest`, including so
 
 Explore the data -- there is a lot! Think of a function that could be useful for this module that would live _outside_ of the `WatchData` class. Write the function. Include Google style docstrings, doctests (at least 2), and `pytest` tests (at least 2, _different_ from your doctests). Re-run both your `doctest` tests and `pytest` tests.
 
+[NOTE]
+====
+You can simply add this function to your `watch_data.py` module, and run the tests just like you did for the previous questions!
+====
+
+[NOTE]
+====
+Your function doesn't _need_ to be useful for data outside the `WatchData` class (you won't lose credit if it isn't really), but make an attempt! There are more types of elements and data that you can look at too other than just the `Workout` tags in the `export.xml` file. There is GPX data (xml data that can be used to map a workout route) in the `/depot/datamine/data/apple/health/2021/workout-routes/` directory. Lots of options!
+====
+
 [TIP]
 ====
 One way to peek around at the data (without having your notebook/kernel crash due to out of memory (OOM) errors) is something like the following:
@@ -223,7 +282,7 @@ One way to peek around at the data (without having your notebook/kernel crash du
 ----
 from lxml import etree
 
-tree = etree.iterparse("/home/kamstut/apple_health_export/export.xml")
+tree = etree.iterparse("/depot/datamine/data/apple/health/2021/export.xml")
 ct = 0
 for event, element in tree:
     if element.tag == 'Workout':
