@@ -27,9 +27,15 @@ The following questions will use the following dataset(s):
 
 === Question 1
 
-In project (5), we created a new dataset called `sales_by_month.csv` with the number of sales in USD, and volume of liquor sold (in liters) for each month of the year.
+You may have noticed that the "Store Location" column (8th column) contains latitude and longitude coordinates. That is some rich data that could be fun and useful.
 
-You may have noticed that the "Store Location" column contains latitude and longitude coordinates. That is some rich data that could be fun and useful.
+The data will look something like the following:
+
+----
+1013 MAINKEOKUK 52632(40.39978, -91.387531)
+----
+
+What this means is that you can't just parse out the latitude and longitude coordinates and call it a day -- you need to use `awk` functions like `gsub` and `split` to extract the latitude and longitude coordinates.
 
 Use `awk` to print out the latitude and longitude for each line in the original dataset. Output should resemble the following.
 
@@ -38,10 +44,74 @@ lat,lon
 1.23,4.56
 ----
 
+[NOTE]
+====
+Make sure to take care of rows that don't have latitude and longitude coordinates -- just skip them. So if your results look like this, you need to add logic to skip the "empty" rows:
+
+----
+40.39978, -91.387531
+40.739238, -95.02756
+40.624226, -91.373211
+,
+41.985887, -92.579244
+----
+
+To do this, just go ahead and wrap your print in an if statement similar to:
+
+[source,awk]
+----
+if (length(coords[1]) > ) {
+    print coords[1]";"coords[2]
+}
+----
+====
+
 [TIP]
 ====
-split and gsub will be useful `awk` functions to use for this question.
+`split` and `gsub` will be useful `awk` functions to use for this question.
 ====
+
+[TIP]
+====
+If we have a bunch of data formatted like the following:
+
+----
+1013 MAINKEOKUK 52632(40.39978, -91.387531)
+----
+
+If we first used `split` to split on "(", for example like:
+
+[source,awk]
+----
+split($8, coords, "(", seps);
+----
+
+`coords[2]` would be:
+
+----
+40.39978, -91.387531)
+----
+
+Then, you could use `gsub` to remove any ")" characters from `coords[2]` like:
+
+[source,awk]
+----
+gsub(/\)/, "", coords[2]);
+----
+
+`coords[2]` would be:
+
+----
+40.39978, -91.387531
+----
+
+At this point I'm sure you can see how to use `awk` to extract and print the rest!
+====
+
+[IMPORTANT]
+====
+Don't forget any lingering space after the first comma! We don't want that.
+==== 
 
 .Items to submit
 ====
@@ -51,10 +121,35 @@ split and gsub will be useful `awk` functions to use for this question.
 
 === Question 2
 
-Redo question (4) from project (5), but this time add 2 additional columns to the dataset -- `lat` and `lon`.
+Redo question (4) (and reproduce `sales_by_store.csv`) from project (5), but this time add 2 additional columns to the dataset -- `lat` and `lon`. 
 
 - 'lat': latitude
 - 'lon': longitude
+
+Before you panic (this was a tough question), we've provided the solution below as a starting point for you.
+
+[source,ipynb]
+----
+%%bash
+
+awk -F';' 'BEGIN{ print "store_name;month_number;year;sold_usd;volume_sold" }
+    {
+        gsub(/\$/, "", $22); split($2, dates, "/", seps);
+        mysales[$4";"dates[1]";"dates[3]] += $22;
+        myvolumes[$4";"dates[1]";"dates[3]] += $24;
+    }
+    END{ 
+        for (mytriple in mysales) 
+        {
+            print mytriple";"mysales[mytriple]";"myvolumes[mytriple]
+        }
+    }' /depot/datamine/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.csv > sales_by_store.csv
+----
+
+[CAUTION]
+====
+It may take a few minutes to run this script. Grab a coffee, tea, or something else to keep you going.
+====
 
 .Items to submit
 ====
@@ -66,6 +161,58 @@ Redo question (4) from project (5), but this time add 2 additional columns to th
 
 Believe it or not, `awk` even supports geometric calculations like `sin` and `cos`. Write a bash script that, given a pair of latitude and pair of longitude, calculates the distance between the two points.
 
+Okay, so how to get started? To calculate this, we can use https://en.wikipedia.org/wiki/Haversine_formula[the Haversine formula]. The formula is:
+
+$2*r*arcsin(\sqrt{sin^2(\frac{\phi_2 - \phi_1}{2}) + cos(\phi_1)*cos(\phi_2)*sin^2(\frac{\lambda_2 - \lambda_1}{2})})$
+
+Where:
+    
+- $r$ is the radius of the Earth in kilometers, we can use: 6367.4447 kilometers
+- $\phi_1$ and $\phi_2$ are the latitude coordinates of the two points
+- $\lambda_1$ and $\lambda_2$ are the longitude coordinates of the two points
+
+In `awk`, `sin` is `sin`, `cos` is `cos`, and `sqrt` is `sqrt`.
+
+To get the `arcsin` use the following `awk` function:
+
+[source,awk]
+----
+function arcsin(x) { return atan2(x, sqrt(1-x*x)) }
+----
+
+To convert from degrees to radians, use the following `awk` function:
+
+[source,awk]
+----
+function dtor(x) { return x*atan2(0, -1)/180 }
+----
+
+The following is how the script should work (with a real example you can test):
+
+[source,bash]
+----
+./question3.sh 40.39978 -91.387531 40.739238 -95.02756
+----
+
+.Results
+----
+309.57
+----
+
+[TIP]
+====
+To include functions in your `awk` command, do as follows:
+
+[source,bash]
+----
+awk -v lat1=$1 -v lat2=$3 -v lon1=$2 -v lon2=$4 'function arcsin(x) { return atan2(x, sqrt(1-x*x)) }function dtor(x) { return x*atan2(0, -1)/180 }BEGIN{
+    lat1 = dtor(lat1);
+    print lat1;
+    # rest of your code here!
+}'
+----
+====
+
 .Items to submit
 ====
 - Code used to solve this problem.
@@ -74,21 +221,57 @@ Believe it or not, `awk` even supports geometric calculations like `sin` and `co
 
 === Question 4
 
-Adapt your bash script from question (3) to accept _n_ rows from your updated `sales_by_month.csv` dataset.
+Create a new bash script called `question4.sh` that accepts a latitude, longitude, filename, and n.
 
-For each pair of rows, calculate the distance between the two points. Behavior should resemble the following.
+The latitude and longitude are a point that we want to calculate the distance from.
+
+The filename is `sales_by_store.csv` -- our resulting dataset from question 2.
+
+Finally, n is the number of stores from our `sales_by_store.csv` file that we want to calculate the distance from the provided longitude and latitude.
 
 [source, bash]
 ----
-./my_script.sh sales_by_month.csv 3
+./question4.sh 40.39978 -91.387531 sales_by_store.csv 3
 ----
 
+.Output
 ----
-loc1,loc2,distance
-storename1,storename2,5.5
-storename1,storename3,4.5
-storename2,storename2,6.5
+Distance from (40.39978,-91.387531)
+store_name,distance
+The Music Station,253.915
+KUM & GO #4 / LAMONI,213.455
+KUM & GO #4 / LAMONI,213.447
 ----
+
+To get you started, you can use the following "starter" code. Fix the code to work:
+
+[source,bash]
+----
+#!/bin/bash
+
+lat_from=$1
+lon_from=$2
+file=$3
+n=$4
+
+awk -F';' -v n=$n -v lat_from=$lat_from -v lon_from=$lon_from 'function arcsin(x) { return atan2(x, sqrt(1-x*x)) }function dtor(x) { return x*atan2(0, -1)/180 }function distance(lat1, lon1, lat2, lon2) {
+    # question 2 code here <1>
+    return dist;
+}BEGIN {
+    print "Distance from ("lat_from","lon_from")"
+    print "store_name,distance";
+} NR>1 && NR <= n+1 {
+    lat2 = FIXME; <2>
+    lon2 = FIXME; <3>
+    dist = distance(lat_from, lon_from, FIXME, FIXME); <4>
+    print $1","dist
+}' $file
+----
+
+<1> Add your code from question 2 here and make sure your distance is stored in a variable called `dist` (which we return).
+<2> Which value goes here?
+<3> Which value goes here?
+<4> Which values go here?
 
 .Items to submit
 ====
@@ -96,9 +279,9 @@ storename2,storename2,6.5
 - Output from running the code.
 ====
 
-=== Question 5
+=== Question 5 (optional, 0 pts)
 
-Use your choice of Python or R, with our `sales_by_month.csv` to create a beautiful graphic mapping the latitudes and longitudes of the stores. If you want to, get creative and increase the size of the points on the map based on the number of sales. You could create a graphic for each month to see how sales change month-to-month. The options are limitless, get creative!
+Use your choice of Python or R, with our `sales_by_store.csv` to create a beautiful graphic mapping the latitudes and longitudes of the stores. If you want to, get creative and increase the size of the points on the map based on the number of sales. You could create a graphic for each month to see how sales change month-to-month. The options are limitless, get creative!
 
 .Items to submit
 ====
