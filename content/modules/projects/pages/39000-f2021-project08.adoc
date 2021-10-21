@@ -50,7 +50,7 @@ Before we _really_ dig in, it is well worth our time to do some reading. There i
 At no point in time will we claim that the way we are going to design our API is the best way to do it. However, we will try and learn from some of the most successful commercial APIs, mainly, the https://stripe.com/docs/api[Stripe API].
 ====
 
-First thing is first, let's clone our _homage_ to the WHIN API. Run the following in a bash cell.
+First thing is first, let's clone our _homage_ to the WHIN API to prevent confusion, we will refer to this as **our** API. Run the following in a bash cell.
 
 [source,ipython]
 ----
@@ -103,21 +103,25 @@ The command to run the API is as follows.
 
 [source,bash]
 ----
+module use /scratch/brown/kamstut/tdm/opt/modulefiles
+module load poetry/1.1.10
 cd $HOME/f2021-stat39000-project8
 poetry run uvicorn app.main:app --reload
 ----
 
 Now, with that being said, it is not _quite_ so simple. We are running this API on Brown, a community cluster with _lots_ of other users, running _lots_ of other applications. By default, fastapi will run on local port 8000. What this means is that if you were on your personal computer, you could pop open a browser and navigate to `http://localhost:8000/` to see the API. The problem _here_ is you _each_ need to be running your API on your _own_ port -- and it is very likely port 8000 is already in use.
 
-So what are we going to do? Well, one option is to just choose a number between 49152 to 65535, and run your API with _this_ command.
+So what are we going to do? Well, one option is to just choose a number, and run your API with _this_ command.
 
 [source,bash]
 ----
+module use /scratch/brown/kamstut/tdm/opt/modulefiles
+module load poetry/1.1.10
 cd $HOME/f2021-stat39000-project8
 poetry run uvicorn app.main:app --reload --port XXXXX
 ----
 
-Where XXXXX is a number from 49152 to 65535. OR, you can use our bash script to find an available port between those ranges. In a bash cell, run the following code.
+Where XXXXX is a number generated using the command below. In a bash cell, run the following code.
 
 [source,bash]
 ----
@@ -126,7 +130,7 @@ port
 
 .Output
 ----
-21650
+21650 # your number may be different!
 ----
 
 [IMPORTANT]
@@ -138,13 +142,15 @@ Then, given your _available_ port number, run the following from your terminal t
 
 [source,bash]
 ----
+module use /scratch/brown/kamstut/tdm/opt/modulefiles
+module load poetry/1.1.10
 cd $HOME/f2021-stat39000-project8
-poetry run uvicorn app.main:app --reload --port 21650
+poetry run uvicorn app.main:app --reload --port 21650 # if your port was 1111 you'd replace 21650 with 1111
 ----
 
 [IMPORTANT]
 ====
-Replace 21650 with the port number from your `port` command you ran earlier.
+Replace 21650 with the port number from your `port` command you ran earlier. Every time you see 21650 in this project, replace it with **your** port number.
 ====
 
 Once successful, you should see text _similar_ to the following.
@@ -185,7 +191,7 @@ Please send any feedback you may have to kamstut@purdue.edu/mdw@purdue.edu/datam
 
 === Question 2
 
-Great! Now, you have a working _homage_ of the WHIN API running on Brown. Now its time to learn about what the heck an API is. There are a _lot_ of different types of APIs. The most common used today are RESTful APIs (what we will be focusing on, probably the most popular), graphQL APIs, and gRPC APIs.
+Great! Now, you have **our** API running on Brown. Now its time to learn about what the heck an API is. There are a _lot_ of different types of APIs. The most common used today are RESTful APIs (what we will be focusing on, probably the most popular), graphQL APIs, and gRPC APIs.
 
 https://www.redhat.com/architect/apis-soap-rest-graphql-grpc[This] is a decent article highlighting the various types of APIs (feel free to skip the antiquated SOAP). Summarize the 3 mentioned APIs (RESTful, gRPC, and graphQL) in 1-2 sentences, and write at least 1 pro and 1 con of each.
 
@@ -247,7 +253,7 @@ import requests
 response = requests.get('http://localhost:21650/stations/')
 ----
 
-`response` will then contain your -- response!
+`response` will then contain your -- response! If you look over in your terminal tab, you will see that **our** API logged the request we made.
 
 The response will contain a status code. You can see a list of status codes, and what they mean https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[here].
 
@@ -299,12 +305,32 @@ Finally, to the the JSON formatted body of the response, you can use the json me
 
 [source,python]
 ----
-response.json()
+response.json() # the open and closed parenthesis are important. `json()` is a method not an attribute (like `.text`), so the parentheses are important.
 ----
 
 As you _may_ have ascertained, the endpoint, `http://localhost:21650/stations/`, will return a list of station objects -- very cool!
 
-In another tab in your regular browser running on your local machine, navigate to the official WHIN api docs. Follow the directions at the beginning of https://thedatamine.github.io/the-examples-book/projects.html#p09-290[this project] to be able to authenticate with the WHIN API (questions 1 and 2). 
+In another tab in your regular browser running on your local machine, navigate to the https://data.whin.org/data/current-conditions[official WHIN api docs] (you may need to login). Follow the directions at the beginning of https://thedatamine.github.io/the-examples-book/projects.html#p09-290[this project] to be able to authenticate with the WHIN API (questions 1 _and_ 2). 
+
+Next, make sure you followed the instructions in question (2) from https://thedatamine.github.io/the-examples-book/projects.html#p09-290[this project] and that your `.env` file now contains something like:
+
+..env file
+----
+DATABASE_PATH=/depot/datamine/data/whin/whin.db
+MY_BEARER_TOKEN=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjo5LCJkaXsdgw3ret234gBbXN0dXR6IiwiYWNjb3VudF90eXBlIjoiZWR1Y2F0aW9uIn0sImlhdCI6MTYzNDgyMzUyOSwibmJmIjoxNjM0ODIzNTI5LCJleHAiOjE2NjYzNTk1MjksImlzcyI6Imh0dHBzOi8vd2hpbi5vcmcifQ.LASER2vFONRhkdrPtEwca0eGxCtbjJ4Btaurgerg7l27z_Rwqhy1gghdFpscLFkFzfVw7VUdV_hlJ1rzmHi8i75hcLEUL18T76kdY82yb7Q8b_YTB32iQnJDP3uVQP5sQWs5mv8HcEj6W7jNX5HQe-iItzBXVAcMBUmR0SK9Pt2JRmCbuHpM242JJqwBvEMZw1mjNWGs70c595QqyxaUtgrSSmMBbZQeaN21U9EuSEjUKBRgtjl-9t-IhLkLVNo008Vq4v-sA
+----
+
+If you are having a hard time adding another line to your `.env` file, you can also run the following in a bash cell to _append_ the line to your `.env` file. **Make sure you replace the token with _your_ token.**
+
+[source,bash]
+----
+echo "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjo5LCJkaXsdgw3ret234gBbXN0dXR6IiwiYWNjb3VudF90eXBlIjoiZWR1Y2F0aW9uIn0sImlhdCI6MTYzNDgyMzUyOSwibmJmIjoxNjM0ODIzNTI5LCJleHAiOjE2NjYzNTk1MjksImlzcyI6Imh0dHBzOi8vd2hpbi5vcmcifQ.LASER2vFONRhkdrPtEwca0eGxCtbjJ4Btaurgerg7l27z_Rwqhy1gghdFpscLFkFzfVw7VUdV_hlJ1rzmHi8i75hcLEUL18T76kdY82yb7Q8b_YTB32iQnJDP3uVQP5sQWs5mv8HcEj6W7jNX5HQe-iItzBXVAcMBUmR0SK9Pt2JRmCbuHpM242JJqwBvEMZw1mjNWGs70c595QqyxaUtgrSSmMBbZQeaN21U9EuSEjUKBRgtjl-9t-IhLkLVNo008Vq4v-sA" >> $HOME/f2021-stat39000-project08/.env
+----
+
+[IMPORTANT]
+====
+You must replace the "MY_BEARER_TOKEN" with **your** token from https://data.whin.org/account[this page].
+====
 
 When configured, make the following request.
 
@@ -314,18 +340,13 @@ import requests
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(os.getenv("HOME")+"/f2021-stat39000-project8/.env")
 
 my_headers = {"Authorization": f"Bearer {os.getenv('MY_BEARER_TOKEN')}"}
 response = requests.get("https://data.whin.org/api/weather/stations", headers = my_headers)
 ----
 
 You'll find that the responses are very similar -- but of course, ours is just a sample of theirs.
-
-[IMPORTANT]
-====
-You'll need to make sure to replace the bearer
-====
 
 .Items to submit
 ====
@@ -335,13 +356,24 @@ You'll need to make sure to replace the bearer
 
 === Question 4
 
-You've successfully made a _request_ to both the API you are running, and the WHIN API -- very cool!
+You've successfully made a _request_ to both **our** API (which you are running in the terminal tab), and the WHIN API -- very cool!
 
-Check out the documentation for the _homage_ to the WHIN API -- the one made for educational purposes, running in a terminal tab. 
+Read the documentation provided for **our** API in the screenshots in question (3), and make a request with a _query parameter_. A _query parameter_ is a parameter that is added to the URL itself. _Query parameters_ are added to the end of a URL. They start with a "?", have key, value pairs separated by "=", and many can be strung together using "&" to separate them. For example.
 
-Read the documentation provided in the screenshots in question (3), and make a request with a _query parameter_. A _query parameter_ is a parameter that is added to the URL itself. There are a few endpoints that give you optional query parameters -- use the `requests` library and test it out. 
+----
+http://localhost:21650/some_endpoint?queryparam1key=queryparam1value&queryparam2key=queryparam2value
+----
 
-Now, try and replicate the function using the original WHIN API -- were you able to fully replicate it?
+Here, we have 2 query parameters, `queryparam1key` and `queryparam2key`, and their values are `queryparam1value` and `queryparam2value`, respectively.
+
+In **our** API, there are a few endpoints that give you optional query parameters (see the images in question (3)) -- use the `requests` library to test it out and make a request involving at least 1 query parameter with any of the endpoints we provide with **our** API.
+
+Now, try and replicate the request using the original WHIN API -- were you able to fully replicate it? 
+
+[NOTE]
+====
+When we ask "were you able to fully replicate it", all we want to know is if the WHIN API happens to provide the same functionality.
+====
 
 The APIs are pretty different, and provide different functionalities. APIs are not the same, and depending on the purpose of you API, you may build it differently! Very cool!
 
@@ -353,7 +385,9 @@ The APIs are pretty different, and provide different functionalities. APIs are n
 
 === Question 5
 
-Make a new request to the _homage_ to the WHIN API, and use at least 2 query parameters in your request -- do the results make sense based on what you've read on the docs? In websites, a common feature is _pagination_ -- the ability to page through lots of results, one page at a time. Which of the query parameters would be useful for pagination in our API and why?
+Make a new request to **our** API, and use at least 2 query parameters in your request -- do the results make sense based on what you've read on the docs? Why or why not?
+
+In websites, a common feature is _pagination_ -- the ability to page through lots of results, one page at a time. Often times this will look like a "Next" and "Previous" button in a webpage. Which of the query parameters would be useful for pagination in our API and why? 
 
 Finally, make a new request to the original WHIN API. Specifically, try and test out the very cool `current-conditions` endpoint that allows you to zone in on stations near a certain latitude and longitude location. Can you replicate this with our API, or do we not have that capability baked in?
 
