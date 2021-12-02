@@ -21,13 +21,107 @@ Make sure to read about, and use the template found xref:templates.adoc[here], a
 
 The following questions will use the following dataset(s):
 
-- `/depot/datamine/data/`
+- `/depot/datamine/data/flights/subset/2007.csv`
 
 == Questions
 
 === Question 1
 
+First thing is first, create a new Jupyter Notebook called `firstname-lastname-project13.ipynb`. You will put the text of your solutions in this notebook. Next, in Jupyter Lab, open a fresh terminal window. We will be able to run the `sqlite3` command line tool from the terminal window.
 
+Okay, once completed, the first step is schema creation. First, it is important to note. **The goal of this project is to put the data in `/depot/datamine/data/flights/subset/2007.csv` into a sqlite database we will call `firstname-lastname-project13.db`.**
+
+With that in mind, run the following (in your terminal) to get a sample of the data.
+
+[source,bash]
+----
+head /depot/datamine/data/flights/subset/2007.csv
+----
+
+You _should_ receive a result like:
+
+.Output
+----
+Year,Month,DayofMonth,DayOfWeek,DepTime,CRSDepTime,ArrTime,CRSArrTime,UniqueCarrier,FlightNum,TailNum,ActualElapsedTime,CRSElapsedTime,AirTime,ArrDelay,DepDelay,Origin,Dest,Distance,TaxiIn,TaxiOut,Cancelled,CancellationCode,Diverted,CarrierDelay,WeatherDelay,NASDelay,SecurityDelay,LateAircraftDelay
+1988,1,9,6,1348,1331,1458,1435,PI,942,NA,70,64,NA,23,17,SYR,BWI,273,NA,NA,0,NA,0,NA,NA,NA,NA,NA
+1988,1,10,7,1334,1331,1443,1435,PI,942,NA,69,64,NA,8,3,SYR,BWI,273,NA,NA,0,NA,0,NA,NA,NA,NA,NA
+1988,1,11,1,1446,1331,1553,1435,PI,942,NA,67,64,NA,78,75,SYR,BWI,273,NA,NA,0,NA,0,NA,NA,NA,NA,NA
+1988,1,12,2,1334,1331,1438,1435,PI,942,NA,64,64,NA,3,3,SYR,BWI,273,NA,NA,0,NA,0,NA,NA,NA,NA,NA
+1988,1,13,3,1341,1331,1503,1435,PI,942,NA,82,64,NA,28,10,SYR,BWI,273,NA,NA,0,NA,0,NA,NA,NA,NA,NA
+1988,1,14,4,1332,1331,1447,1435,PI,942,NA,75,64,NA,12,1,SYR,BWI,273,NA,NA,0,NA,0,NA,NA,NA,NA,NA
+1988,1,15,5,1331,1331,1434,1435,PI,942,NA,63,64,NA,-1,0,SYR,BWI,273,NA,NA,0,NA,0,NA,NA,NA,NA,NA
+1988,1,16,6,1327,1331,1427,1435,PI,942,NA,60,64,NA,-8,-4,SYR,BWI,273,NA,NA,0,NA,0,NA,NA,NA,NA,NA
+1988,1,17,7,1331,1331,1440,1435,PI,942,NA,69,64,NA,5,0,SYR,BWI,273,NA,NA,0,NA,0,NA,NA,NA,NA,NA
+----
+
+An SQL schema is a set of text or code that defines how the database is structured and how each piece of data is stored. In a lot of ways it is similar to how a data.frame has columns with different types -- just more "set in stone" than the very easily changed data.frame.
+
+Each database handles schemas slightly differently. In sqlite, the database will contain a single schema table that describes all included tables, indexes, triggers, views, etc. Specifically, each entry in the `sqlite_schema` table will contain the type, name, tbl_name, rootpage, and sql for the database object.
+
+[NOTE]
+====
+For sqlite, the "database object" could refer to a table, index, view, or trigger.
+====
+
+This detail is more than is needed for right now. If you are interested in learning more, the sqlite documentation is very good, and the relevant page to read about this is https://www.sqlite.org/schematab.html[here].
+
+For _our_ purposes, when I refer to "schema", what I _really_ mean is the set of commands that will build our tables, indexes, views, and triggers. sqlite makes it particularly easy to open up a sqlite database and get the _exact_ commands to build the database from scratch _without_ the data itself. For example, take a look at our `imdb.db` database by running the following in your terminal.
+
+[source,bash]
+----
+module use /scratch/brown/kamstut/tdm/opt/modulefiles
+module load sqlite/3.36.0
+
+sqlite3 /depot/datamine/data/movies_and_tv/imdb.db
+----
+
+This will open the command line interface (CLI) for sqlite3. It will look similar to:
+
+[source,bash]
+----
+sqlite>
+----
+
+Type `.schema` to see the "schema" for the database.
+
+[NOTE]
+====
+Any command you run in the sqlite CLI that starts with a dot (`.`) is called a "dot command". A dot command is exclusive to sqlite and the same functionality cannot be expected to be available in other SQL tools like Postgresql, MariaDB, or MS SQL. You can list all of the dot commands by typing `.help`.
+====
+
+After running `.schema`, you should see a variety of legitimate SQL commands that will create the structure of your database _without_ the data itself. This is an extremely useful self-documenting tool that is particularly useful.
+
+Okay, great. Now, let's study the sample of our `1988.csv` dataset. Create a markdown list of key:value pairs for each column in the dataset. Each _key_ should be the title of the column, and each _value_ should be the _type_ of data that is stored in that column.
+
+For example:
+
+- Year: INTEGER
+
+Where the _value_ is one of the 5 "affinity types" (INTEGER, TEXT, BLOB, REAL, NUMERIC) in sqlite. See section "3.1.1" https://www.sqlite.org/datatype3.html[here]. 
+
+Okay, you may be asking, "what is the difference between INTEGER, REAL, and NUMERIC?". Great question. In general (for other SQL RDBMSs), there are _approximate_ numeric data types and _exact_ numeric data types. What you are most familiar with is the _approximate_ numeric data types. In R or Python for example, try running the following:
+
+[source,r]
+----
+(3 - 2.9) <= 0.1
+----
+
+.Output
+----
+FALSE
+----
+
+[source,python]
+----
+(3 - 2.9) <= 0.1
+----
+
+.Output
+----
+False
+----
+
+Under the hood, the values are stored as a very close approximation of the real value. This small amount of error is referred to as floating point error. There are some instances where it is _critical_ that values are stored as exact values (for example, in finance). In those cases, you would need to use special data types to handle it. In sqlite, this type is NUMERIC. So, for _our_ example, store text as TEXT, numbers _without_ decimal places as INTEGER, and numbers with decimal places as REAL -- our example dataset doesn't have a need for NUMERIC.
 
 .Items to submit
 ====
@@ -37,7 +131,13 @@ The following questions will use the following dataset(s):
 
 === Question 2
 
+Okay, great! At this point in time you should have a list of key:value pairs with the column name and the data type, for each column. Now, let's put together our `CREATE TABLE` statement that will create our table in the database.
 
+See https://www.sqlitetutorial.net/sqlite-create-table/[here] for some good examples. Realize that the `CREATE TABLE` statement is not so different from any other query in SQL, and although it looks messy and complicated, it is not so bad. Name your table `flights`.
+
+Once you've written your `CREATE TABLE` statement, copy and paste it into the sqlite CLI. Upon success, you should see the statement printed when running the dot command `.schema`. Fantastic! You can also verify that the table exists by running the dot command `.tables`.
+
+Congratulations! To finish things off, please paste the `CREATE TABLE` statement into a markdown cell in your notebook.
 
 .Items to submit
 ====
@@ -47,7 +147,54 @@ The following questions will use the following dataset(s):
 
 === Question 3
 
+The next step in the project is to add the data! Duh, it _is_ a _data_base. 
 
+To insert data into a table _is_ a bit cumbersome. For example, let's say we wanted to add the following row to our `flights` table.
+
+.Data to add
+----
+Year,Month,DayofMonth,DayOfWeek,DepTime,CRSDepTime,ArrTime,CRSArrTime,UniqueCarrier,FlightNum,TailNum,ActualElapsedTime,CRSElapsedTime,AirTime,ArrDelay,DepDelay,Origin,Dest,Distance,TaxiIn,TaxiOut,Cancelled,CancellationCode,Diverted,CarrierDelay,WeatherDelay,NASDelay,SecurityDelay,LateAircraftDelay
+2007,1,1,1,1232,1225,1341,1340,WN,2891,N351,69,75,54,1,7,SMF,ONT,389,4,11,0,,0,0,0,0,0,0
+----
+
+The SQL way would be to run the following query.
+
+[source, sql]
+----
+INSERT INTO flights (Year,Month,DayofMonth,DayOfWeek,DepTime,CRSDepTime,ArrTime,CRSArrTime,UniqueCarrier,FlightNum,TailNum,ActualElapsedTime,CRSElapsedTime,AirTime,ArrDelay,DepDelay,Origin,Dest,Distance,TaxiIn,TaxiOut,Cancelled,CancellationCode,Diverted,CarrierDelay,WeatherDelay,NASDelay,SecurityDelay,LateAircraftDelay) VALUES (2007,1,1,1,1232,1225,1341,1340,WN,2891,N351,69,75,54,1,7,SMF,ONT,389,4,11,0,,0,0,0,0,0,0);
+----
+
+NOT ideal -- especially since we have over 7 million rows to add! You could programmatically generate a `.sql` file with the `INSERT INTO` statement, hook the database up with Python or R and insert the data that way, _or_ you could use the wonderful dot commands sqlite already provides.
+
+You may find https://stackoverflow.com/questions/13587314/sqlite3-import-csv-exclude-skip-header[this post] very helpful. 
+
+[WARNING]
+====
+You want to make sure you _don't_ include the header line twice! If you included the header line twice, you can verify by running the following in the sqlite CLI.
+
+[source,bash]
+----
+.header on
+SELECT * FROM flights LIMIT 2;
+----
+
+The `.header on` dot command will print the header line for every query you run. If you have double entered the header line, it will appear twice. Once for the `.header on` and another time because that is the first row of your dataset.
+====
+
+Connect to your database in your Jupyter notebook and run a query to get the first 5 rows of your table.
+
+[TIP]
+====
+To connect to your database:
+
+[source,ipython]
+----
+%load_ext sql
+%sql sqlite:////home/PURDUEALIAS/flights.db
+----
+
+Assuming `flights.db` is in your home directory, and you change PURDUEALIAS to your alias, for example `mdw` for Dr. Ward or `kamstut` for Kevin.
+====
 
 .Items to submit
 ====
@@ -57,7 +204,84 @@ The following questions will use the following dataset(s):
 
 === Question 4
 
+[IMPORTANT]
+====
+For this question, please run take screenshots of your output from the terminal and add them to your notebook using a markdown cell. To do so, let's say you have an image called `my_image.png` in your $HOME directory. All you need to do is run the following command in a markdown cell:
 
+[source,ipython]
+----
+![](/home/PURDUEALIAS/my_image.png)
+----
+
+Be sure to replace PURDUEALIAS with your alias.
+====
+
+Woohoo! You've successfully created a database and populated it with data from a dataset -- pretty cool! Now, run the following dot command in order to _time_ our queries: `.timer on`. This will print out the time it takes to run each query. For example, try the following:
+
+[source, sql]
+----
+SELECT * FROM flights LIMIT 5;
+----
+
+Cool! Time the following query.
+
+[source, sql]
+----
+SELECT * FROM flights ORDER BY DepTime LIMIT 1000;
+----
+
+.Output
+----
+Run Time: real 1.824 user 0.836007 sys 0.605384
+----
+
+That is pretty quick, but if (for some odd reason) there were going to be a lot of queries that searched on exact departure times, this could be a big waste of time when done at scale. What can we do to improve this? Add and index!
+
+Run the following query.
+
+[source, sql]
+----
+EXPLAIN QUERY PLAN SELECT * FROM flights WHERE DepTime = 1232;
+----
+
+The output will indicate that the "plan" is to simply scan the entire table. This has a runtime of O(n), which means the speed is linear to the number of values in the table. If we had 1 million rows and it takes 1 second. If we get to a billion rows, it will take 16 minutes! An _index_ is a data structure that will let us reduce the runtime to O(log(n)). This means if we had 1 million rows and it takes 1 second, if we had 1 billion rows, it would take only 3 seconds. _Much_ more efficient! So what is the catch here? Space.
+
+Leave the sqlite CLI by running `.quit`. Now, see how much space your `flights.db` file is using.
+
+[source,bash]
+----
+ls -la $HOME/flights.db
+----
+
+.Output
+----
+571M
+----
+
+Okay, _after_ I add an index on the `DepTime` column, the file is now `653M` -- while that isn't a _huge_ difference, it would certainly be significant if we scaled up the size of our database. In this case, another drawback would be the insert time. Inserting new data into the database would force the database to have to _update_ the indexes. This can add a _lot_ of time. These are just tradeoffs to consider when you're working with a database.
+
+In this case, we don't care about the extra bit of space -- create an index on the `DepTime` column. https://medium.com/@JasonWyatt/squeezing-performance-from-sqlite-indexes-indexes-c4e175f3c346[This article] is a nice easy read that covers this in more detail.
+
+Great! Once you've created your index, run the following query.
+
+[source, sql]
+----
+SELECT * FROM flights ORDER BY DepTime LIMIT 1000;
+----
+
+.Output
+----
+Run Time: real 0.263 user 0.014261 sys 0.032923
+----
+
+Wow! That is some _serious_ improvement. What does the "plan" look like?
+
+[source, sql]
+----
+EXPLAIN QUERY PLAN SELECT * FROM flights WHERE DepTime = 1232;
+----
+
+You'll notice the "plan" shows it will utilize the index to speed the query up. Great!
 
 .Items to submit
 ====
@@ -67,7 +291,11 @@ The following questions will use the following dataset(s):
 
 === Question 5
 
+We hope that this project has given you a small glimpse into the "other side" of databases. Now, write a query that uses one or more other columns. Time the query, then, create a _new_ index to speed the query up. Time the query _after_ creating the index. Did it work well?
 
+Document the steps of this problem just like you did for question (4). 
+
+**Optional challenge:** Try to make your query utilize 2 columns and create an index on both columns to see if you can get a speedup.
 
 .Items to submit
 ====
