@@ -141,9 +141,40 @@ unique_ids = list(set(station_ids))
 
 Sets are very useful! I've created a nearly identical copy of our dataset here: `/depot/datamine/data/noaa/2020_sampleB.csv`. The "sampleB" dataset has one key difference -- I've snuck in a fake row of data! There is 1 row in the new dataset that is not in the old -- it can be identified by having a `station_id` that doesn't exist in the original dataset. Print the "intruder" row of data.
 
+[WARNING]
+====
+There are 15000000 rows in the data frame.  So this method will take too long, because it requires 15000000 times 15000001 comparisons to find the intruder:
+
+[source,python]
+----
+import pandas as pd
+
+df_intruder = pd.read_csv('/depot/datamine/data/noaa/2020_sampleB.csv', names=["station_id", "date", "element_code", "value", "mflag", "qflag", "sflag", "obstime"])
+intruder_ids = df_intruder["station_id"].dropna().tolist()
+
+for i in intruder_ids:
+    if i not in station_ids:
+        print(i)
+----
+
+It would eventually work, but it will take way too long to finish.  Same problem will occur here:
+The `in` operator is useful for checking if a value is in a list. It is, however, essentially the same as what we tried above; it will be way too slow.
+
+[source,python]
+----
+for ii in intruder_ids:
+    found = False
+    for i in station_ids:
+        if ii == i:
+            found = True
+    if not found:
+        print(ii)
+----
+====
+
 [TIP]
 ====
-Even if you use our `set` trick from the previous question, you will still have to make (potentially) 39962 squared comparisons to find the intruder. For example:
+We need to use our `set` trick from the question 3, so that we can (instead) make 39962 times 39963 comparisons to find the intruder. For example:
 
 [source,python]
 ----
@@ -159,7 +190,7 @@ for i in unique_intruder_ids:
         print(i)
 ----
 
-The `in` operator is useful for checking if a value is in a list. It is, however, essentially the same as the following.
+We can also do this using the `in` operator, and we will get the same result.
 
 [source,python]
 ----
@@ -180,7 +211,7 @@ Check out https://realpython.com/python-sets/#operating-on-a-set[this] great art
 
 [TIP]
 ====
-Once you find the `station_id` of the intruder -- you will need to use `pandas` indexing to print the row of data. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html[This] documentation should help.
+Now that you found the `station_id` of the intruder -- you will need to use `pandas` indexing to print the entire row of data. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html[This] documentation should help.
 ====
 
 .Items to submit
