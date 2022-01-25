@@ -1,0 +1,411 @@
+= Apply Functions
+
+== 'apply'
+
+== 'lapply'
+
+The 'lapply' is a function that applies a function 'FUN' to each element in a vector or list, and returns a list.
+
+== Examples
+
+=== How do I get the mean value of each vector in our list, 'my_list', in another list?
+
+[source,r]
+----
+lapply(my_list, mean)
+----
+
+[source,r]
+----
+## $pages
+## [1] 3
+## 
+## $words
+## [1] 30
+## 
+## $letters
+## [1] 300
+----
+
+=== How can I find the average of several variables in the flight data, using only 1 line of R, with the 'lapply' function?
+
+https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_djp6bltk?wid=_983291&iframeembed=true&playerId=kaltura_player&entry_id=1_djp6bltk&flashvars%5BstreamerType%5D=auto&flashvars%5BlocalizationCode%5D=en&flashvars%5BleadWithHTML5%5D=true&flashvars%5BsideBarContainer.plugin%5D=true&flashvars%5BsideBarContainer.position%5D=left&flashvars%5BsideBarContainer.clickToClose%5D=true&flashvars%5Bchapters.plugin%5D=true&flashvars%5Bchapters.layout%5D=vertical&flashvars%5Bchapters.thumbnailRotator%5D=false&flashvars%5BstreamSelector.plugin%5D=true&flashvars%5BEmbedPlayer.SpinnerTarget%5D=videoHolder&flashvars%5BdualScreen.plugin%5D=true&flashvars%5BKaltura.addCrossoriginToIframe%5D=true&&wid=1_xgmfh99r[Link to video example]
+
+These are the flights from 2003:
+
+[source,r]
+----
+myDF <- read.csv("/class/datamine/data/flights/subset/2003.csv")
+----
+
+We can break the flights into categories, depending on the 'Distance' of the flight: 
+
+less than 100 miles; from 100 to 200 miles; from 200 to 500 miles; from 500 to 1000 miles; from 1000 to 2000 miles; more than 2000 miles
+
+[source,r]
+----
+my_distance_categories <- cut(myDF$Distance, breaks = c(0,100,200,500,1000,2000,Inf), include.lowest=T)
+----
+
+The numbers of flights in each category are:
+
+[source,r]
+----
+table(my_distance_categories)
+----
+
+Here are the average values of 4 variables, in each of these 6 categories:
+
+[source,r]
+----
+tapply( myDF$DepDelay, my_distance_categories, mean, na.rm=T) # the DepDelay in each category
+tapply( myDF$ArrDelay, my_distance_categories, mean, na.rm=T) # the ArrDelay in each category
+tapply( myDF$TaxiOut, my_distance_categories, mean, na.rm=T) # the time to TaxiOut in each category
+tapply( myDF$TaxiIn, my_distance_categories, mean, na.rm=T) # the time to TaxiIn in each category
+----
+
+OR, MUCH EASIER: We can do all of this with just 1 line of R. 
+
+To make it easier to read, we can make a temporary data frame 'flights_by_distance' with these 4 variables. 
+
+Then we split the data into 6 data frames, according to the 'Distance' of the flights, and we get the average 'DepDelay', 'ArrDelay', 'TaxiOut', and 'TaxiIn', in each of these 6 categories, with only 1 line of R. 
+
+Notice that this agrees exactly with the results of the 4 separate 'tapply' functions, but it only takes us 1 call to the 'lapply' function!!
+
+[source,r]
+----
+flights_by_distance <- split( data.frame(myDF$DepDelay, myDF$ArrDelay, myDF$TaxiOut, myDF$TaxiIn), my_distance_categories )
+lapply( flights_by_distance, colMeans, na.rm=T )
+----
+
+Some closing remarks about this example:
+
+We use 'lapply' on a 'list'. It only takes two arguments, namely, a 'list' and a 'function' to run on each piece of our 'list'. In this case, we are taking an average ('colMeans') of each column in each piece of our 'list'.
+
+The 'flights_by_distance' is a 'list' of 6 data frames You might want to check these out.
+
+[source,r]
+----
+class( flights_by_distance )
+length( flights_by_distance )
+class(flights_by_distance[[1]])
+class(flights_by_distance[[2]])
+class(flights_by_distance[[3]])
+class(flights_by_distance[[4]])
+class(flights_by_distance[[5]])
+class(flights_by_distance[[6]])
+head(flights_by_distance[[1]])
+head(flights_by_distance[[2]])
+head(flights_by_distance[[3]])
+head(flights_by_distance[[4]])
+head(flights_by_distance[[5]])
+head(flights_by_distance[[6]])
+----
+
+You can take the 'colMeans' within each of these data frames, like this:
+
+[source,r]
+----
+colMeans(flights_by_distance[[1]], na.rm=T)
+colMeans(flights_by_distance[[2]], na.rm=T)
+colMeans(flights_by_distance[[3]], na.rm=T)
+colMeans(flights_by_distance[[4]], na.rm=T)
+colMeans(flights_by_distance[[5]], na.rm=T)
+colMeans(flights_by_distance[[6]], na.rm=T)
+----
+
+but this is all accomplished by the 1-line 'lapply' that we did earlier, in a much easier way.
+
+=== How can I find the average of several variables in the fars data, using only 1 line of R, with the 'lapply' function?
+
+https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_djp6bltk?wid=_983291&iframeembed=true&playerId=kaltura_player&entry_id=1_djp6bltk&flashvars%5BstreamerType%5D=auto&flashvars%5BlocalizationCode%5D=en&flashvars%5BleadWithHTML5%5D=true&flashvars%5BsideBarContainer.plugin%5D=true&flashvars%5BsideBarContainer.position%5D=left&flashvars%5BsideBarContainer.clickToClose%5D=true&flashvars%5Bchapters.plugin%5D=true&flashvars%5Bchapters.layout%5D=vertical&flashvars%5Bchapters.thumbnailRotator%5D=false&flashvars%5BstreamSelector.plugin%5D=true&flashvars%5BEmbedPlayer.SpinnerTarget%5D=videoHolder&flashvars%5BdualScreen.plugin%5D=true&flashvars%5BKaltura.addCrossoriginToIframe%5D=true&&wid=1_xgmfh99r[Link to a video example]
+
+This is the fars data set, studied in STAT 19000 Project 6 (only the years 1975 to 1981)
+
+[source,r]
+----
+dat <- read.csv("/class/datamine/data/fars/7581.csv")
+----
+
+We will learn a more efficient way to add the state names but for now, we do this in the same way as Project 6.
+
+[source,r]
+----
+state_names <- read.csv("/class/datamine/data/fars/states.csv")
+v <- state_names$state
+names(v) <- state_names$code
+dat$mystates <- v[as.character(dat$STATE)]
+----
+
+In Project 6, Question 2, we found the average number of 'DRUNK_DR', according to the state:
+
+[source,r]
+----
+tapply( dat$DRUNK_DR, dat$mystates, mean)
+----
+
+We might also want to find the average number fatalities ('FATALS') per accident, according to the state:
+
+and the average number of people ('PERSONS') involved per accident, according to the state:
+
+[source,r]
+----
+tapply( dat$PERSONS, dat$mystates, mean)
+----
+
+OR, MUCH EASIER: We can do all 3 of these calculations with just 1 line of R. 
+
+To make it easier to read, we can make a temporary data frame 'accidents_by_state' with these 3 variables. 
+
+Then we split the data into 51 data frames, according to the state where the accident occurred, and we get the average 'DRUNK_DR', 'FATALS', and 'PERSONS' in each of these 51 categories, with only 1 line of R. 
+
+Notice that this agrees exactly with the results of the 3 separate 'tapply' functions, but it only takes us 1 call to the 'lapply' function!!
+
+[source, r]
+----
+accidents_by_state <- split( data.frame(dat$DRUNK_DR, dat$FATALS, dat$PERSONS), dat$mystates )
+lapply( accidents_by_state, colMeans )
+----
+
+Again, some closing remarks: We use 'lapply' on a list. It only takes two arguments, namely, a 'list' and a 'function' to run on each piece of our 'list'. In this case, we are taking an average ('colMeans') of each column in each piece of our 'list'.
+
+The 'accidents_by_state' is a list of 51 data frames. You might want to check these out.
+
+[source,r]
+----
+class( accidents_by_state )
+length( accidents_by_state )
+class(accidents_by_state[[1]])
+class(accidents_by_state[[2]])
+# etc., etc.
+class(accidents_by_state[[50]])
+class(accidents_by_state[[51]])
+----
+
+[source,r]
+----
+head(accidents_by_state[[1]])
+head(accidents_by_state[[2]])
+# etc., etc.
+head(accidents_by_state[[50]])
+head(accidents_by_state[[51]])
+----
+
+You can also extract the elements of the list according to their names, e.g.,
+
+[source,r]
+----
+head(accidents_by_state$Indiana)
+colMeans(accidents_by_state$Indiana)
+
+head(accidents_by_state$Illinois)
+colMeans(accidents_by_state$Illinois)
+
+head(accidents_by_state$Ohio)
+colMeans(accidents_by_state$Ohio)
+
+head(accidents_by_state$Michigan)
+colMeans(accidents_by_state$Michigan)
+----
+
+but this is all accomplished by the 1-line 'lapply' that we did earlier, in a much easier way.
+
+== 'sapply'
+
+'sapply' is very similar to 'lapply', however, where 'lapply' always returns a list, 'sapply' will simplify the output of applying the function 'FUN' to each element.
+
+If you recall, when accessing an element in a list using single brackets 'my_list[1]', the result will always return a list. If you access an element with double brackets 'my_list[[1]]', R will attempt to simplify the result. This is analogous to 'lapply' and 'sapply'.
+
+== Examples
+
+=== How do I get the mean value of each vector in our list, 'my_list', but rather than the result being a list, put the results in the simplest form?
+
+[source,r]
+----
+sapply(my_list, mean)
+----
+
+[source,r]
+----
+##   pages   words letters 
+##       3      30     300
+----
+
+=== Use the provided function to create a new column in the data.frame 'example_df' named 'transformed'. 'transformed' should contain 'TRUE' if the value in 'pre_transformed' is "t", 'FALSE' if it is "f", and 'NA' otherwise.
+
+[source,r]
+----
+string_to_bool <- function(value) {
+  if (value == "t") {
+    return(TRUE)
+  } else if (value == "f") {
+    return(FALSE)
+  } else {
+    return(NA)
+  }
+}
+
+example_df <- data.frame(pre_transformed=c("f", "f", "t", "f", "something", "t", "else", ""), other=c(1,2,3,4,5,6,7,8))
+example_df
+----
+
+[source,r]
+----
+##   pre_transformed other
+## 1               f     1
+## 2               f     2
+## 3               t     3
+## 4               f     4
+## 5       something     5
+## 6               t     6
+## 7            else     7
+## 8                     8
+----
+
+[source,r]
+----
+example_df$transformed <- sapply(example_df$pre_transformed, string_to_bool)
+example_df
+----
+
+[source,r]
+----
+##   pre_transformed other transformed
+## 1               f     1       FALSE
+## 2               f     2       FALSE
+## 3               t     3        TRUE
+## 4               f     4       FALSE
+## 5       something     5          NA
+## 6               t     6        TRUE
+## 7            else     7          NA
+## 8                     8          NA
+----
+
+== 'tapply'
+
+'tapply' is described in the documentation as a way to "apply a function to each cell of a ragged array, that is to each (non-empty) group of values given by a unique combination of the levels of certain factors." This is not a very useful description.
+
+An alternative way to think about 'tapply', is as a function that allows you to calculate or apply 'function' to 'data1' when 'data1' is grouped by 'data2'.
+
+'tapply(data1, data2, function)'
+
+A concrete example would be getting the mean ('function') grade ('data1') when grade ('data1') is grouped by year ('data2'):
+
+[source,r]
+----
+grades
+----
+
+[source,r]
+----
+##    grade      year  sex
+## 1    100    junior    M
+## 2     99 sophomore    F
+## 3     75 sophomore    M
+## 4     74 sophomore    M
+## 5     44    senior    F
+## 6     69    junior    M
+## 7     88    junior    F
+## 8     99    senior <NA>
+## 9     90  freshman    M
+## 10    92    junior    F
+----
+
+[source,r]
+----
+tapply(grades$grade, grades$year, mean)
+----
+
+[source,r]
+----
+##  freshman    junior    senior sophomore 
+##  90.00000  87.25000  71.50000  82.66667
+----
+
+If your 'function' (in this case mean), requires extra arguments, you can pass those by name to 'tapply'. This is what the '...' argument in 'tapply' is for. For example, if we want our mean function to remove 'NA's prior to calculating a mean we could do the following:
+
+[source,r]
+----
+tapply(grades$grade, grades$year, mean, na.rm=T)
+----
+
+[source,r]
+----
+##  freshman    junior    senior sophomore 
+##  90.00000  87.25000  71.50000  82.66667
+----
+
+== Examples
+
+=== Amazon fine food tapply example
+
+Here is an example using the Amazon fine food reviews:
+
+[source,r]
+----
+myDF <- read.csv("/class/datamine/data/amazon/amazon_fine_food_reviews.csv")
+----
+
+https://www.kaggle.com/snap/amazon-fine-food-reviews[Data Source]
+
+The people who wrote the most reviews are:
+
+[source,r]
+----
+tail(sort(table(myDF$UserId)))
+----
+
+In particular, user A3OXHLG6DIBRW8 wrote the most reviews.
+
+The total number of people who read reviews that were written by A3OXHLG6DIBRW8 is:
+
+[source,r]
+----
+sum(myDF$HelpfulnessDenominator[myDF$UserId == "A3OXHLG6DIBRW8"])
+----
+
+The number of people who found those reviews (written by A3OXHLG6DIBRW8) to be helpful is:
+
+[source,r]
+----
+sum(myDF$HelpfulnessNumerator[myDF$UserId == "A3OXHLG6DIBRW8"])
+----
+
+So, altogether, when people read the reviews written by user A3OXHLG6DIBRW8, these reviews were rated as helpful 0.9795918 of the time.
+
+[source,r]
+----
+sum(myDF$HelpfulnessNumerator[myDF$UserId == "A3OXHLG6DIBRW8"])/sum(myDF$HelpfulnessDenominator[myDF$UserId == "A3OXHLG6DIBRW8"])
+----
+
+Now we can do this again, for all users.
+
+The total number of people who read reviews altogether, grouped by the user who wrote the review, is:
+
+[source,r]
+----
+head( tapply(myDF$HelpfulnessDenominator, myDF$UserId, sum) )
+----
+
+The total number of people who rated reviews as helpful, grouped by the user who wrote the review, is:
+
+[source,r]
+----
+head( tapply(myDF$HelpfulnessNumerator, myDF$UserId, sum) )
+----
+
+The percentages of people who found reviews to be helpful, grouped according to who wrote the review, are:
+
+[source,r]
+----
+head( tapply(myDF$HelpfulnessNumerator, myDF$UserId, sum)/tapply(myDF$HelpfulnessDenominator, myDF$UserId, sum) )
+----
+
+We can double-check our result for user "A3OXHLG6DIBRW8" as follows:
+
+[source,r]
+----
+( tapply(myDF$HelpfulnessNumerator, myDF$UserId, sum)/tapply(myDF$HelpfulnessDenominator, myDF$UserId, sum) )["A3OXHLG6DIBRW8"]
+----
+
+https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_24jmfygn?wid=_983291&iframeembed=true&playerId=kaltura_player&entry_id=1_24jmfygn&flashvars%5BstreamerType%5D=auto&flashvars%5BlocalizationCode%5D=en&flashvars%5BleadWithHTML5%5D=true&flashvars%5BsideBarContainer.plugin%5D=true&flashvars%5BsideBarContainer.position%5D=left&flashvars%5BsideBarContainer.clickToClose%5D=true&flashvars%5Bchapters.plugin%5D=true&flashvars%5Bchapters.layout%5D=vertical&flashvars%5Bchapters.thumbnailRotator%5D=false&flashvars%5BstreamSelector.plugin%5D=true&flashvars%5BEmbedPlayer.SpinnerTarget%5D=videoHolder&flashvars%5BdualScreen.plugin%5D=true&flashvars%5BKaltura.addCrossoriginToIframe%5D=true&&wid=1_dti6orbo[Link to a video example]
