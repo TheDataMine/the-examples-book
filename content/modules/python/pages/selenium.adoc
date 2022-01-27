@@ -1,0 +1,358 @@
+= `selenium`
+
+== Abstract
+
+`selenium` is an extremely powerful browser automation tool with official wrappers in Ruby, Java, Python, C#, and JavaScript. It is a tool that is used extensively in industry and learning its basics can prove very useful.
+
+For most websites, the tool combination of `requests` and `lxml` / `beautifulsoup4` will be more accessible and provide everything needed. Where `selenium` really shines is the ability to interact with the browser before, during, and after scraping and parsing data. Many websites use JavaScript to load various pieces of HTML as the user interacts with the browser. For example, if you browse on https://pinterest.com[Pinterest], you will find that if you scroll rapidly, images will lag upon loading. If you were to scrape these web pages with a tool like `requests`, the only scraped content would be that which was in the original state. In the case of Pinterest, this would mean that the other 20 pictures you wanted to scrape wouldn't be present within the scraped content. 
+
+To get by this limitation, we can use `selenium` to emulate a human browsing the web page. We can make the program "scroll down" before scraping the web page, so the pictures would all be present.
+
+[TIP]
+====
+For an in-depth look at how this happens, read through the last example problem on this page.
+====
+
+Other examples that could change the webpage's state, thus changing what is scraped, include:
+
+* Clicking on filters
+* Using a search bar
+* Hovering over an element
+
+
+Though `selenium` can interact, scrape, and parse through the browser, there are limitations -- selenium requires more setup than other packages. To get started, you must first choose a browser: Firefox, Chrome, or Safari. In addition to your chosen browser, you will need its accompanying web driver:
+
+* Firefox: geckodriver
+* Chrome: ChromeDriver
+* Safari: SafariDriver
+
+For simplicity, we will demonstrate with Firefox and `geckodriver` on Scholar, as we have configurations pre-made for you that are available on Scholar. 
+
+{sp} +
+
+=== Code
+
+Feel free to copy and paste this code in your work.
+
+[source,python]
+----
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+
+firefox_options = Options()
+firefox_options.add_argument("window-size=1920,1080")
+
+# again, headless mode means no GUI
+firefox_options.add_argument("--headless")
+
+firefox_options.add_argument("start-maximized")
+firefox_options.add_argument("disable-infobars")
+firefox_options.add_argument("--disable-extensions")
+firefox_options.add_argument("--no-sandbox")
+firefox_options.add_argument("--disable-dev-shm-usage")
+
+# Set the location of the executable Firefox program on Scholar
+firefox_options.binary_location = '/class/datamine/apps/firefox/firefox'
+
+# Set the location of the executable geckodriver program on Scholar
+driver = webdriver.Firefox(options=firefox_options, executable_path='/class/datamine/apps/geckodriver')
+----
+
+[NOTE]
+====
+If you were to comment out the `--headless` option, Firefox would launch on your computer and you could watch your program execute in real time. For example, if you wrote a program to scrape images off of a website, you'd be able to see the images load and the browser slowly scroll. Pretty cool! #However, you would need to log in via ThinLinc (our previously-used cluster) to do this.#
+====
+
+{sp}+
+
+=== Examples
+
+==== How do I scrape a website using `selenium`?
+
+[source,python]
+.Solution
+----
+driver = webdriver.Firefox(options=firefox_options,
+                           executable_path='/class/datamine/apps/geckodriver')
+driver.get("https://datamine.purdue.edu")
+print(driver.page_source[:500])
+----
+
+{sp}+
+
+==== How do I scrape the office "hero" on https://datamine.purdue.edu/[the Data Mine website] with all of its contents?
+
+[source,python]
+.Solution
+----
+driver = webdriver.Firefox(options=firefox_options,
+                           executable_path='/class/datamine/apps/geckodriver')
+driver.get("https://datamine.purdue.edu")
+my_element = driver.find_element_by_xpath("//section[@class='office__hero']")
+print(my_element.get_attribute("outerHTML"))
+----
+
+{sp}+
+
+==== How about scraping the office "hero" on https://datamine.purdue.edu/[the Data Mine website] _without_ the outermost HTML?
+
+[source,python]
+.Solution
+----
+driver = webdriver.Firefox(options=firefox_options, 
+                           executable_path='/class/datamine/apps/geckodriver')
+driver.get("https://datamine.purdue.edu")
+my_element = driver.find_element_by_xpath("//section[@class='office__hero']")
+print(my_element.get_attribute("innerHTML"))
+----
+
+{sp}+
+
+==== How do I use a search bar like Google with `selenium`? Search for "mdw" at https://purdue.edu/directory[the Purdue Directory] and scrape and print the data.
+
+[source,python]
+.Solution
+----
+from selenium.webdriver.common.keys import Keys
+import time
+
+driver = webdriver.Firefox(options=firefox_options,
+                           executable_path='/class/datamine/apps/geckodriver')
+
+# get the webpage
+driver.get("https://www.purdue.edu/directory")
+
+# isolate the search bar "input" element
+element = driver.find_element_by_xpath("//input[@id='basicSearchInput']")
+
+# use "send_keys" to type in the search bar
+element.send_keys("mdw")
+
+# just like when you use a browser, you either need to push "enter" or click on the search button. This time, we will press enter.
+# Note that this is where we needed the import statement
+element.send_keys(Keys.RETURN)
+
+# We can delay the program to allow the page to load
+time.sleep(5)
+
+# get the table(s)
+elements = driver.find_elements_by_xpath("//table[@class='more']")
+
+# how many tables are there?
+print(len(elements))
+----
+
+Alternatively, we could press the Search button instead of sending enter:
+[source,python]
+----
+# comment out the Keys.RETURN command
+# element.send_keys(Keys.RETURN)
+
+# find the button to execute the search
+button = driver.find_element_by_xpath("//a[@id='glass']")
+
+# click the button
+button.click()
+----
+
+Either way, we get a table that looks like this:
+[source,python]
+----
+<table class="more">
+    <thead>
+        <tr>
+            <th scope="col" colspan="2">mark daniel ward</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <th class="icon-key" scope="row">Alias</th>
+            <td>mdw</td>
+        </tr>
+        <tr>
+            <th class="icon-envelope-alt">Email</th>
+            <td><a href="mailto:mdw@purdue.edu">mdw@purdue.edu</a></td>
+        </tr>
+        <tr>
+            <th class="icon-library" scope="row">Campus</th>
+            <td>west lafayette</td>
+        </tr>
+        <tr>
+            <th class="icon-sitemap">Department</th>
+            <td>statistics</td>
+        </tr>
+        <tr>
+            <th class="icon-briefcase" scope="row">Title</th>
+            <td>professor of statistics</td>
+        </tr>
+    </tbody>
+</table>
+----
+
+This table can then be accessed and parse via the following:
+[source,python]
+----
+# note since we used the plural `find_elements_by_xpath`, elements is a list.
+# If we used the singular `find_element_by_xpath`, we wouldn't need the [0] part because we wouldn't have a list
+elements[0].get_attribute("outerHTML")
+
+# first get the name using .// which searches starting in the current element
+# if we used //, it would search the entire webpage, not just our element
+name = elements[0].find_element_by_xpath(".//thead/tr/th").text
+print(name)
+
+# next, get the alias. The xpath expression first gets the "th" element with class=icon-key. We want the content of the following td element, and since the next "td" element is at the same level of nesting as the "th" element, it is referred to as a "sibling"
+# following-sibling::td finds the "td" sibling immediately following the current "th" element
+alias = elements[0].find_element_by_xpath(".//th[@class='icon-key']/following-sibling::td").text
+print(alias)
+
+# next, get the email. If you don't specify what the attribute is equal to, it will evaluate to true if there is any value, and false otherwise.
+email = elements[0].find_element_by_xpath(".//a[@href]").text
+print(email)
+
+# next, get the campus
+campus = elements[0].find_element_by_xpath(".//th[@class='icon-sitemap']/following-sibling::td").text
+print(campus)
+
+# finally, get the title
+title = elements[0].find_element_by_xpath(".//th[@class='icon-briefcase']/following-sibling::td").text
+print(title)
+----
+
+{sp}+
+
+==== How do I scrape for https://www.shutterstock.com/search/dog+side+view[these Shutterstock images of dogs]?
+
+.Solution
+
+Start by opening your chosen browser and inspecting the HTML. Open the https://www.shutterstock.com/search/dog+side+view[webpage] and right click on an image -- selecting "Inspect Element" will give us what we want. You can see that the `img` tag contains all of the information we want. Specifically, look at the link in the `src` attribute: https://image.shutterstock.com/image-photo/young-labrador-retriever-4-months-260nw-97138889.jpg. We need to write a function to scrape an image given a link like that. In addition, we first need to figure out how to extract these image links from the rest of the page.
+
+It looks like the `class` attribute is a bunch of random numbers and letters with little use. With that being said, it looks like the `data-automation` class could be useful. What if we try to extract all elements where `data-automation` equals `mosaic-grid-cell-image`? Let's find out.
+
+[source,python]
+----
+import requests
+
+response = requests.get('https://www.shutterstock.com/search/dog+side+view')
+print(response.text[:500])
+----
+
+Hmm, the HTML looks like it might be missing what we want. Let's find out for sure using lxml:
+
+[source,python]
+----
+import lxml.html
+
+tree = lxml.html.fromstring(response.text)
+elements = tree.xpath("//img[@data-automation='mosaic-grid-cell-image']")
+print(len(elements))
+----
+
+lxml indicates that we have about 100 elements! We probably received a 406 error -- HTML saw us as an attacker or a robot. We can edit the HTML to get around this (so much for their anti-robot system...):
+
+[source,python]
+----
+my_headers = {'User-Agent': 'Mozilla/5.0'}
+html = requests.get('https://www.shutterstock.com/search/dog+side+view', 
+                    headers=my_headers)
+----
+
+Great! We have access, so let's continue. We want to get the `src` attribute from each element because those links contain the paths to the images we want to scrape:
+
+[source,python]
+----
+for element in elements:
+    print(element.attrib.get("src"))
+----
+
+Unfortunately, something has gone wrong: only the first 20 or so image links have been scraped. What is going on here? This is a classic case of the lazy-loading we mentioned at the top of the page. 
+
+Now imagine if you had typed up all the code we provided, only to find that the inherent loading of the website prohibited you from getting what you wanted. This is the pinnacle of using `selenium`; `requests` doesn't have an easy answer to this, so using the setup included in the "Code" section of this page, we can scrape the website like we want to.
+
+Our strategy here is to load the page, scroll down a bit, pause for loading, scroll a little more, and repeat the process _before_ scraping the content. Here's hoping it fixes the issue -- let's find out.
+
+[CAUTION]
+====
+These settings will work on Scholar. In order to do the same on your own computer you will have to install compatible binaries for Firefox and geckodriver, and modify the paths in the code below accordingly.
+====
+
+{sp}+
+
+[source,python]
+----
+driver.get("https://www.shutterstock.com/search/dog+side+view")
+
+# create a scroll function that emulates scrolling
+import time
+def scroll(driver, scroll_point):  
+    driver.execute_script(f'window.scrollTo(0, {scroll_point});')
+    time.sleep(5) 
+    
+# Needed to get the window size set right
+height = driver.execute_script('return document.body.scrollHeight')
+driver.set_window_size(900,height+100)
+
+# begin scrolling a bit, 1/4 of the page at a time, maybe
+scroll(driver, height/4)
+scroll(driver, height*2/4)
+scroll(driver, height*3/4)
+scroll(driver, height)
+
+# extract the image links
+elements = driver.find_elements_by_xpath("//img[@data-automation='mosaic-grid-cell-image']")
+for element in elements:
+  print(element.get_attribute("src"))
+----
+
+Perfect! This is what we wanted. The next step would be to follow all of those links to scrape the images themselves. Lucky for us, we know how to program and can have Python do that for us as well.
+
+[source,python]
+----
+import os
+from urllib.parse import urlparse
+
+def get_filename_from_url(url: str) -> str:
+    """
+    Given a link to a file, return the filename with extension.
+    Args:
+        url (str): The url of the file.
+    Returns:
+        str: A string with the filename, including the file extension.
+    """
+    return os.path.basename(urlparse(url).path)
+----
+
+[source,python]
+----
+import requests
+from pathlib import Path
+import getpass
+
+def scrape_image(from_url: str, to_dir: str = f'/home/{getpass.getuser()}'):
+    """
+    Given a url to an image, scrape the image and save the image to the provided directory.
+    If no directory is provided, by default, save to the user's home directory.
+    Args:
+        from_url (str): U
+        to_dir (str, optional): [description]. Defaults to f'/home/{getpass.getuser()}'.
+    """
+    resp = requests.get(from_url)
+    
+    # this function is from the previous example
+    filename = get_filename_from_url(from_url)
+    
+    # Make directory if doesn't already exist
+    Path(to_dir).mkdir(parents=True, exist_ok=True)
+    
+    file = open(f'{to_dir}/{filename}', "wb")
+    file.write(resp.content)
+    file.close()
+----
+
+All that's left is to cycle through and scrape each image:
+
+[source,python]
+----
+for element in elements:
+    scrape_image(element.get_attribute("src"))
+----
