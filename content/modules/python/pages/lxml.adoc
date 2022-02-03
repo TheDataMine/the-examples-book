@@ -71,16 +71,164 @@ Most of the time, you'll be working with .xml files that already exist and this 
 
 ==== How do I load a webpage I scraped using `requests` into an `lxml` tree?
 
+.Solution
+[source,python]
+----
+import requests
+import lxml.html
+
+# note that without this header, a website may give you a puzzle to solve
+my_headers = {'User-Agent': 'Mozilla/5.0'}
+
+# scrape the webpage
+response = requests.get("https://www.reddit.com/r/puppies/", headers=my_headers)
+
+# load the webpage into an lxml tree
+tree = lxml.html.fromstring(response.text)
+----
+
+{sp}+
+
 ==== How do I get the name of the root node from my `lxml` tree called `tree`?
+
+.Solution
+[source,python]
+----
+# remember "/" gets the node starting at the root node and "*" is a
+# wildcard that means "anything"
+tree.xpath("/*")[0].tag
+----
+
+----
+'html'
+----
+
+{sp}+
 
 ==== If the root node is named "html", how do I get the name of all nested tags?
 
+.Solution
+[source,python]
+----
+list_of_tags = [x.tag for x in tree.xpath("/html/*")]
+print(list_of_tags)
+
+# remember, this syntax is list comprehension.
+# It is essentially a nice short-hand way of writing a loop in Python.
+----
+
+----
+['head', 'body']
+----
+
+{sp}+
+
 ==== How do I get the attributes of an element?
+
+.Solution
+[source,python]
+----
+import pandas as pd
+
+# as you can see, this prints the attributes in a dict-like object for each div element
+# in the node. 
+for element in tree.xpath("//div"):
+  print(element.attrib)
+----
+
+----
+{}
+{'class': 'abc123 sktoe-sldjkt dkjfg3-dlgsk'}
+{'class': 'glkjr-slkd dkgj-0 dklfgj-00'}
+{}
+{'class': 'ldskfg4'}
+{'data-amount': '12'}
+{}
+{'class': 'abc123 sktoe-sls dkjfg-dlgsk'}
+{'class': 'glkj-slkd dkgj-0 dklfj-00'}
+{}
+{'class': 'ldg4'}
+{'data-amount': '122'}
+----
+
+[NOTE]
+====
+The output looks much like a dictionary. We can turn the attributes of an element into a Pandas DataFrame if that's more conducive to our analysis.
+====
+
+.Solution
+[source,python]
+----
+list_of_dicts = []
+
+# adding `dict` before element.attrib is important here.
+# Failing to add it results in an incorrect DataFrame
+for element in tree.xpath("//div"):
+  list_of_dicts.append(dict(element.attrib))
+
+myDF = pd.DataFrame(list_of_dicts)
+myDF.head(10)
+----
+
+----
+                               class  data-amount
+0                                NaN          NaN
+1   abc123 sktoe-sldjkt dkjfg3-dlgsk          NaN
+2        glkjr-slkd dkgj-0 dklfgj-00          NaN
+3                                NaN          NaN
+4                            ldskfg4          NaN
+5                                NaN           12
+6                                NaN          NaN
+7       abc123 sktoe-sls dkjfg-dlgsk          NaN
+8          glkj-slkd dkgj-0 dklfj-00          NaN
+9                                NaN          NaN
+----
+
+{sp}+
 
 ==== How do I get the div elements with attribute "data-amount"?
 
+.Solution
+[source,python]
+----
+for element in tree.xpath("//div[@data-amount]"):
+  print(element.attrib)
+----
+
+----
+{'data-amount': '12'}
+{'data-amount': '122'}
+----
+
+{sp}+
+
 ==== How do I get the div elements where data-amount is greater than 50?
+
+.Solution
+[source,python]
+----
+for element in tree.xpath("//div[@data-amount > 50]"):
+  print(element.attrib)
+----
+
+----
+{'data-amount': '122'}
+----
+
+{sp}+
 
 ==== How do I get the values of the span tags?
 
+.Solution
+[source,python]
+----
+for element in tree.xpath("//span"):
+  print(element.text)
+----
 
+----
+Love it.
+Love it.
+----
+
+{sp}+
