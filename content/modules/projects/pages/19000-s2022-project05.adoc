@@ -1,0 +1,232 @@
+= STAT 19000: Project 5 -- Spring 2022
+
+**Motivation:** We are now going to interrupt our series of `pandas` and `numpy` projects to learn about a key component to writing programs -- functions! Functions allow us to reuse snippets of code in an efficient way. If you find you are repeating code over and over again, a function may be a good way to reduce the amount of code. In addition, functions are a great way to keep your code organized and readable. 
+
+**Context:** We are pausing our series of projects where `pandas` and `numpy` are the main focus to learn about writing functions in Python.
+
+**Scope:** python, functions, pandas, matplotlib 
+
+.Learning Objectives
+****
+- Comprehend what a function is, and the components of a function in Python.
+- Differentiate between positional and keyword arguments. 
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/depot/datamine/data/whin/190/stations.csv`
+- `/depot/datamine/data/whin/190/observations.csv`
+
+== Questions
+
+[NOTE]
+====
+We are very lucky to have great partners in the Wabash Heartland Innovation Network (WHIN)! They generously provide us with access to their API (https://data.whin.org/[here]) for educational purposes. You’ve most likely either used their API in a previous project, or you’ve worked with a sample of their data to solve some sort of data-driven problem.
+
+In this project, we will be using a slightly modified sample of their rich dataset to learn more about writing functions.
+====
+
+=== Question 1
+
+First thing is first. Read both datasets into variables named `stations` and `obs`. Take a look at the `head` of both dataframes. As you can tell, the `station_id` in the `obs` dataframe appears to correlate with the `id` column in the `stations` dataframe. This is a fairly common occurence when data has been _normalized_ for a database. In our case, we'd prefer to just work with a single dataset, since it is possible.
+
+`pandas` has a `merge` method that can be used to join two dataframes based on a common column. In this case the `id` column from the `stations` dataframe matches the `station_id` column in the `obs` dataframe. https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html[Here] is the documentation for `merge`. 
+
+[TIP]
+====
+Use `left_on` to specify the name of the column in the "left" dataframe. Use `right_on` to specify the name of the column in the "right" dataframe. Make the "left" dataframe be `obs`. Use the value "left" for the `how` argument to specify a left join.
+====
+
+Once merged, take a look at your new dataframe, `dat`. You will notice that the `id` column from the `obs` dataframe is now called `id_x`, and the `id` column from the `stations` dataframe is now called `id_y`. Use the `pandas` `drop` method to remove the `id_y` column. Use the `pandas` `rename` method to rename `id_x` to `id`, and `name` to `station_name`.
+
+Great! Now we have a nice and tidy dataframe to work with for the rest of the project -- _and_ we learned a variety of useful `pandas` methods.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+When looking at our new dataset, you may have noticed the funky-looking `id` column. The following are a few samples of the contents of that column.
+
+.id sample
+----
+obs_1NnyYGMtAHBFDYWOBlsDlqppzVI
+obs_1No0NHuqV4VjOK8p8FguPT02T5B
+obs_1NqnftCklLZHBCHyykvcuc8QvE9
+obs_1NqpV058q10hGNBNvYOBzzwpqOx
+obs_1NqrK3mraUzaj2j7hg6VcB23RjJ
+----
+
+Why not just use a number? Well, this is actually a variation on the clever https://github.com/segmentio/ksuid[ksuid] -- a K-sortable globally unique id. You can read more https://segment.com/blog/a-brief-history-of-the-uuid/[here].
+
+In a nutshell, ksuids are sortable by time (if you sort the ids, it will actually be in order by the time of observation), and they are unique (there is a very miniscule chance that 2 id's will be the same). Pretty cool!
+
+Write a function called `get_datetime` that accepts a ksuid (as a string) and returns the `datetime`.
+
+[TIP]
+====
+You can use the `parse` method to decode a ksuid. 
+
+[source,python]
+----
+from cyksuid import ksuid
+
+mydatetime = ksuid.parse('1NnyYGMtAHBFDYWOBlsDlqppzVI').datetime
+----
+
+Don't forget to remove the "obs_" from the beginning of the ksuid.
+====
+
+The following code should result in the following output.
+
+[source,python]
+----
+for k in ksuids:
+    print(get_datetime(k))
+----
+
+.Output
+----
+2019-07-10 04:00:00
+2019-07-10 04:15:00
+2019-07-11 04:00:00
+2019-07-11 04:15:00
+2019-07-11 04:30:00
+----
+
+Verify that the ordering claim is true, ie, that sorting the ksuids results in observations in temporal order. To do this, use the `sample` method to get 10 random `id` values from the `dat` dataframe. Sort the values. Then, loop through the sorted list of values, and use your `get_datetime` function to print the datetime. Can you confirm that sorting the ksuids in fact sorts the observations by datetime?
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+One of the most interesting pieces of data in the dataset is the `latitude` and `longitude` values. These values are currently given as degrees. While useful, later on, we are going to want a way to convert the degrees to radians. Write a function called `degrees_to_radians` that accepts a latitude or longitude value in degrees, and returns the same value in radians.
+
+The formula to do this is.
+
+$degrees*arctan2(0, -1)/180$
+
+[TIP]
+====
+`numpy` has all of the needed function for this!
+
+[source,python]
+----
+import numpy as np
+
+np.arctan2()
+----
+====
+
+[TIP]
+====
+Make sure to convert your result from a `pandas` Series to a `float`.
+====
+
+Test out your function as follows.
+
+[source,python]
+----
+degrees_to_radians(88.0)
+----
+
+.Output
+----
+1.53588974175501
+----
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4 
+
+Write a function that accepts two `pandas` Series containing a `latitude` and `longitude` value, and returns the distance in Kilometers between the two points. Call the function `get_distance`.
+
+You may be wondering _how_ to do this. The answer is that you can use the https://en.wikipedia.org/wiki/Haversine_formula[Haversine formula]. 
+
+$2*r*arcsin(\sqrt{sin^2(\frac{\phi_2 - \phi_1}{2}) + cos(\phi_1)*cos(\phi_2)*sin^2(\frac{\lambda_2 - \lambda_1}{2})})$
+
+Where:
+    
+- $r$ is the radius of the Earth in kilometers, we can use: 6367.4447 kilometers
+- $\phi_1$ and $\phi_2$ are the latitude coordinates of the two points
+- $\lambda_1$ and $\lambda_2$ are the longitude coordinates of the two points
+
+[TIP]
+====
+In the formula above, the latitude and longitudes need to be converted from degrees to radians. Your function from the previous question will be perfect for this!
+
+You can even put your `degrees_to_radians` function in the `get_distance` function. Any such "nested" function can be called a "helper" function. It is appropriate to create a helper function any time the enclosing function has a need to call the helper function more than once. In this case we have 4 values to convert, so this is perfect!
+
+It is common practice in the Python world to add an underscore as a prefix to helper functions. It is a sign that this function is just for "internal" use and should largly be ignored by the user. Follow this practice and prefix your `degrees_to_radians` function with an underscore.
+====
+
+[TIP]
+====
+`numpy` has all of the needed functions for this!
+
+[source,python]
+----
+import numpy as np
+
+np.arcsin()
+np.cos()
+np.sin()
+----
+====
+
+Test your function on the 2 rows with the following `id` values.
+
+.id sample
+----
+obs_1amnn4xst3O9VOawmUHFiqBVnCK
+obs_1fwlznMZXXS8WBkmyTHRgWnHYYf
+----
+
+.Results
+----
+64.55632679600568
+----
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+Great! Make sure to tuck these solutions away for future use...
+
+In the meantime, let's write one more function. Write a function called `plot_stations`. `plot_stations` should accept a dataset as an argument and produce a plot with the station locations plotted on a map.
+
+To have consistent results, let's use `plotly` to produce the plot. You can see some sample code in https://stackoverflow.com/questions/53233228/plot-latitude-longitude-from-csv-in-python-3-6[this] stackoverflow post. https://plotly.com/python-api-reference/generated/plotly.express.scatter_geo.html[Here] is the documentation for the function.
+
+Before you plot away, be careful! We don't want to plot the same points many times! Make sure you reduce the dataset (inside the function) so we only plot each pair of latitude and longitude values once! Set `hover_name` to "station_id" so that hovering over a point displays the station id. Set `scope` to "usa" to reduce the map to the USA. Be sure to zoom in on the map so you can see the spread within Indiana!
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connect    ion, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:book:projects:submissions.adoc[submission guidelines] before submitting your project.
+====

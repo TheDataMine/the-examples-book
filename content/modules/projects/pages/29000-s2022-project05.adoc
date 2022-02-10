@@ -1,0 +1,206 @@
+= STAT 29000: Project 5 -- Spring 2022
+
+**Motivation:** In this project we will continue to hone your web scraping skills, introduce you to some common "gotchas", and give you the chance to apply what you've learned to something you are interested in.
+
+**Context:** We are in the last project focused on web scraping. We have created a few common scenarios that can be problematic when first learning to scrape data with the goal of showing you some tricks to get around them.
+
+**Scope:** Python, web scraping 
+
+.Learning Objectives
+****
+- Use the requests package to scrape a web page.
+- Use the lxml/selenium package to filter and parse data from a scraped web page.
+- Learn how to step around header-based filtering.
+- Learn how to handle rate limiting. 
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Questions
+
+=== Question 1
+
+We have setup 4 special URLs for you to use: https://static.tdm.wiki, https://ip.tdm.wiki, https://header.tdm.wiki, https://sheader.tdm.wiki. Each website uses different methods to _rate limit_ traffic.
+
+What is rate limiting? Rate limiting is one barrier that is common when scraping data. Rate limits are often introduced when pages are being navigated faster than a human is able. When this happens, it is often a red flag to website hosts that someone is scraping their website content.
+
+Open a browser and navigate to https://sheader.tdm.wiki. You should be presented with some basic information about the request. Great! Everything seems to be working fine. Now, in your Jupyter notebook, import the `requests` package and scrape the webpage. What happens?
+
+You _should_ be presented with HTML that indicates our request was blocked. Very annoying!
+
+https://sheader.tdm.wiki is designed to block all requests where the User-Agent header has "requests" in it. By default, the `requests` package will use the User-Agent header with a value of "python-requests/2.26.0", which has "requests" in it. 
+
+Backing up a little bit, _headers_ are part of your _request_. In general, you can think of headers as some extra data that gives the server or client some context about the request. You can read about headers https://developer.mozilla.org/en-US/docs/Glossary/Request_header[here]. You can find a list of the various headers https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers[here]. 
+
+Each header has a purpose. One common header is called https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent[User-Agent]. A user-agent is something like:
+
+----
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.16; rv:86.0) Gecko/20100101 Firefox/86.0
+----
+
+From the Mozilla link, this header is a string that "lets servers and network peers identify the application, operating system, and browser that is requesting a resource." Basically, if you are browsing the internet with a browser like Firefox or Chrome, the server will know which browser you are using. In the provided example, we are using Firefox 86 from Mozilla, on a Mac running Mac OS 10.16 with an Intel processor.
+
+When making a request using the `requests` package, the following is what the headers look like.
+
+[source,python]
+----
+import requests
+
+response = requests.get("https://sheader.tdm.wiki")
+print(response.request.headers)
+----
+
+.Output
+----
+{'User-Agent': 'python-requests/2.26.0', 'Accept-Encoding': 'gzip, deflate, br', 'Accept': '*/*', 'Connection': 'keep-alive'}
+----
+
+As you can see, the User-Agent header has the word "requests" in it, so it will be blocked.
+
+You can set the headers to be whatever you'd like using the `requests` package. Simply pass a dictionary containing the headers you'd like to use to the `headers` argument of `requests.get`. Modify the headers so you are able to scrape the response. Print the response using the following code.
+
+[source,python]
+----
+my_response = requests.get(...)
+print(my_response.text)
+----
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+Navigate to https://header.tdm.wiki. Refresh the page a few times. Notice how the "Cf-Ray" header is constantly changing? Write a function called `get_ray` that accepts a url as an argument, and scrapes the _value_ of the Cf-Ray header and return the text.
+
+Run the following code.
+
+[source,python]
+----
+for i in range(6):
+    print(get_ray('https://header.tdm.wiki'))
+----
+
+What happens? Pop open the webpage in a browser and refresh 6 times in rapid succession. What do you see?
+
+Now, run the following code again, but use a different header.
+
+[source,python]
+----
+for i in range(6):
+    print(get_ray('https://header.tdm.wiki'), headers={...})
+----
+
+This website is designed to adapt and block requests if they have the same header and make requests too quickly. Create a https://github.com/tamimibrahim17/List-of-user-agents[list] of valid user agents and modify your code to utilize them to get 50 "Cf-Ray" values rapidly (in a loop).
+
+[TIP]
+====
+You may want to modify `get_ray` to accept a `headers` argument.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+Navigate to https://ip.tdm.wiki. This page is designed to allow only 5 requests every minute from a single IP address. Verify that this is the case by rapidly refreshing the page 6 times in a row, then try to load the page on your cell phone (without wifi) immediately after. You will notice that the cell phone loads, but the browser doesn't.
+
+IP blocking is one of the most common ways to block traffic. Websites will monitor web activity and use sophisticated algorithms to block IP addresses that appear to be scraping data. Unfortunately, we cannot simply change our IP address like we can our headers. Instead, you will either need to scrape content at a certain pace, or figure out a way to use different IP addresses. 
+
+The problem with scraping at a certain pace is that the algorithms used can be very clever, even if you randomize periods of time before you scrape the next value. 
+
+The best way to bypass this is to use a different IP address. This can be accomplished by using a proxy server. A proxy server is basically another computer that will pass on your request for you. In so doing, the request is made from behind the proxy servers IP address, not your own.
+
+The following code attempts to scrape some free proxy servers.
+
+[source,python]
+----
+import lxml.html
+
+def get_proxies():
+    url = "https://www.sslproxies.org/"
+    resp = requests.get(url)
+    root = lxml.html.fromstring(resp.text)
+    trs = root.xpath("//tr")
+    proxies_aux = []
+    for e in trs[1:]:
+        ip = e.xpath(".//td")[0].text
+        port = e.xpath(".//td")[1].text
+        proxies_aux.append(f"{ip}:{port}")
+    
+    proxies = []
+    for proxy in proxies_aux[:25]:
+        proxies.append({'http': f'http://{proxy}', 'https': f'http://{proxy}'})
+        
+    return proxies
+----
+
+Play around with the code and test proxy servers out until you find one that works. The following code should help get you started.
+
+[source,python]
+----
+p = get_proxies()
+resp = requests.get("https://ip.tdm.wiki", proxies=p[0], verify=False, headers={'User-Agent': f"{my_user_agents[0]}"}, timeout=15)
+print(resp.text)
+----
+
+A couple of notes:
+
+- `timeout` is set to 15 seconds, because it is likely the proxy will not work if it takes longer than 15 seconds to respond.
+- We set a user-agent header so some proxy servers won't automatically block our requests.
+
+Once you get and print a successful response, you can quit! As you will see, unless you pay for a working set of proxy servers, it is very difficult to combat having your IP blocked.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+Test out https://static.tdm.wiki. This page is designed to only allow x requests per period of time, regardless of the IP address or headers.
+
+Write code that scrapes 50 Cf-Ray values from the page. If you attempt to scrape them too quickly, you will get an error. Specifically, `response.status_code` will be 429 instead of 200.
+
+[source,python]
+----
+resp = requests.get("https://static.tdm.wiki")
+resp.status_code # will be 429 if you scrape too quickly
+----
+
+Different websites have different rules. One way to combat this defensive mechanism is to use exponential backoff. Exponential backoff is a system whereby you scrape a page until you receive some sort of error, then you wait x seconds before scraping again. Each time you receive an error, the wait time increases exponentially.
+
+There is a really cool package that does this for us! Use the https://pypi.org/project/backoff/[backoff] package to accomplish this task.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+For this question you can do either of the following for full credit.
+
+**Option 1:** Figure out how many requests (_r_) per time period (_p_) you can make to https://static.tdm.wiki. Keep in mind that the server will only respond to _r_ requests per time period (_p_) -- this means that fellow students requests will count towards the quota. Figure out _r_ and _p_. Answers do not need to be exact.
+
+**Option 2:** Use your new found scraping skills to scrape data from a website we have not yet scraped, and do _something_ with that data. You could create a graphic, perform some sort of analysis, anything at all. The only request is that you put in a good effort, and scrape at least 100 "units", where a "unit" is simply 1 thing you are scraping. For example, if I was scraping baseball game data, I would need to scrape 100 players heights, or 100 games' scores, etc. Again, we aren't going to try to take points off if things are not exact -- just have fun with it and put in a small effort!
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connect    ion, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:book:projects:submissions.adoc[submission guidelines] before submitting your project.
+====
