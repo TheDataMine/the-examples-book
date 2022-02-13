@@ -40,7 +40,7 @@ Open a terminal and give it a try.
 
 [source,bash]
 ----
-sinteractive -A datamine -n 3 -t 00:05:00 --mem=4000
+sinteractive -A datamine -n 3 -c 1 -t 00:05:00 --mem=4000
 ----
 
 After some output, you should notice that your shell changed. Type `hostname` followed by enter to see that your host has changed from `brown-feXX.rcac.purdue.edu` to `brown-aXXX.rcac.purdue.edu`. You are in a different system! Very cool!
@@ -49,6 +49,7 @@ To find out what the other options are read https://slurm.schedmd.com/salloc.htm
 
 - The `-A datamine` option could have also been written `--account=datamine`. This indicates which account to use when allocating the resources (memory and cpus).  You can also think of this as a "queue" or "the datamine queue". Jobs submitted using this option will use the resources we pay for. Only users with permissions can submit to our queue.
 - The `-n 3` option could have also been written `--ntasks=3`. This indicates how many cpus/tasks we may need for the job. 
+- The `-c 1` option could have also been written `--cpus-per-task=1`. This indicates the number of processors per task.
 - The `-t 00:05:00` option could have also been written `--time=00:05:00`. This indicates how long the job may run for. If the time exceeds the time limit, the job is killed.
 - The `--mem=4000` option indicates how much memory (in MB) we may need for the job. If you want to specify the amount of memory per task, you could use `--mem-per-task`. 
 
@@ -126,14 +127,14 @@ chmod +x get_info.py
 
 .configurations to try
 ----
-srun -A datamine -n 2 -t 00:00:05 --mem=4000 $HOME/get_info.py
-srun -A datamine -n 2 -t 00:00:05 --mem-per-cpu=4000 $HOME/get_info.py
-srun -A datamine -N 1 -n 2 -t 00:00:05 --mem-per-cpu=1000 $HOME/get_info.py
-srun -A datamine -N 2 -n 2 -t 00:00:05 --mem-per-cpu=1000 $HOME/get_info.py
-srun -A datamine -N 2 -n 2 -t 00:00:05 --mem=1000 $HOME/get_info.py
-srun -A datamine -N 2 -n 3 -t 00:00:05 --mem=1000 $HOME/get_info.py
-srun -A datamine -N 2 -n 3 -t 00:00:05 --mem-per-cpu=1000 $HOME/get_info.py
-srun -A datamine -N 2 -n 3 -t 00:00:05 --mem-per-cpu=1000 $HOME/get_info.py > $CLUSTER_SCRATCH/get_info.out
+srun -A datamine -n 2 -c 1 -t 00:00:05 --mem=4000 $HOME/get_info.py
+srun -A datamine -n 2 -c 1 -t 00:00:05 --mem-per-cpu=4000 $HOME/get_info.py
+srun -A datamine -N 1 -n 2 -c 1 -t 00:00:05 --mem-per-cpu=1000 $HOME/get_info.py
+srun -A datamine -N 2 -n 2 -c 1 -t 00:00:05 --mem-per-cpu=1000 $HOME/get_info.py
+srun -A datamine -N 2 -n 2 -c 1 -t 00:00:05 --mem=1000 $HOME/get_info.py
+srun -A datamine -N 2 -n 3 -c 1 -t 00:00:05 --mem=1000 $HOME/get_info.py
+srun -A datamine -N 2 -n 3 -c 1 -t 00:00:05 --mem-per-cpu=1000 $HOME/get_info.py
+srun -A datamine -N 2 -n 3 -c 1 -t 00:00:05 --mem-per-cpu=1000 $HOME/get_info.py > $CLUSTER_SCRATCH/get_info.out
 ----
 
 [NOTE]
@@ -141,7 +142,7 @@ srun -A datamine -N 2 -n 3 -t 00:00:05 --mem-per-cpu=1000 $HOME/get_info.py > $C
 Check out the `get_info.py` script. SLURM uses cgroups to manage resources. Some of the more typical commands used to find the number of cpus and amount of memory don't work accurately when "within" a cgroup. This script figures out which cgroups you are "in" and parses the appropriate files to get your resource limitations.
 ====
 
-Reading the explanation from SLURM's website is not enough to understand, running the configurations will help your understanding. If you have simple, parallel processes, that doesn't need to have any shared state, you can use a  single `srun` per task. Each with `--mem-per-cpu` (so memory availability is more predictable), `-n 1`, followed by `&` (just a reminder that `&` at the end of a bash command puts the process in the background).
+Reading the explanation from SLURM's website is not enough to understand, running the configurations will help your understanding. If you have simple, parallel processes, that doesn't need to have any shared state, you can use a  single `srun` per task. Each with `--mem-per-cpu` (so memory availability is more predictable), `-n 1`, `-c 1`, followed by `&` (just a reminder that `&` at the end of a bash command puts the process in the background).
 
 Reading the information about cgroups may lead you to wonder if the RCAC puts you into a cgroup when you are SSH'd into a frontend. Use our `get_info.py` script, along with other unix commands, to determine if you are in a cgroup. If you are in a cgroup, how many cpus and memory do you have?
 
@@ -176,6 +177,7 @@ The following is a solid template for a job script.
 #SBATCH --mail-type=END,FAIL          # Mail events (NONE, BEGIN, END, FAIL, ALL)
 #SBATCH --mail-user=me@purdue.edu     # Where to send mail	
 #SBATCH --ntasks=1                    # Number of tasks (total)
+#SBATCH --cpus-per-task=1             # Number of processors per task
 #SBATCH -o /dev/null                  # Output to dev null
 #SBATCH -e /dev/null                  # Error to dev null
 
