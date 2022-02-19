@@ -4,6 +4,8 @@
 
 While functions are more emphasized in object-oriented languages, the fundamental idea of functions is packing several actions into one unit that you yourself define, which is something that applies to all programming languages. When we're dealing with longer and more complicated projects, writing Python functions is crucial for making the code readable.
 
+{sp}+
+
 === Function Signature & Annotations
 
 Understanding the syntax and dialogue surrounding a function is an important step for both reading instructions about functions and communicating what your function does. Consider the following code: 
@@ -191,4 +193,207 @@ Pay mind to the asterisk before the tuple parameter. Without it, tuple unpacking
 
 {sp}+
 
-Now that we have `\*args` established, we can discuss `**kwargs` for 
+Now that we have `\*args` established, we can discuss `\**kwargs` for dictionary packing and unpacking. The "kw" in `**kwargs` represents keyword, which takes the form `x="something"`. We'll explain keyword arguments in a bit. Take a look at this example: 
+
+[source,python]
+----
+def print_arguments(**kwargs):
+    for key, value in kwargs.items():
+        print(f'key: {key}, value: {value}')
+
+print_arguments(arg1="pretty", arg2="princess")
+print_arguments(arg1="pretty", arg2="pretty", arg3="princess")
+----
+
+----
+key: arg1, value: pretty
+key: arg2, value: princess
+
+key: arg1, value: pretty
+key: arg2, value: pretty
+key: arg3, value: princess
+----
+
+For `**kwargs`, unpacking comes in the form of a dictionary instead of a tuple. Here's an example: 
+
+[source,python]
+----
+def wild_animals(lions, tigers, bears):
+    print(f'lions: {lions}')
+    print(f'tigers: {tigers}')
+    print(f'bears: {bears}')
+    print('oh my!')
+
+my_dict_to_unpack = {"lions":["bernice", "sandra", "arnold"], 
+                    "tigers":["janice"], 
+                    "bears":('paul', 'jim', 'dwight')}
+wild_animals(**my_dict_to_unpack)
+----
+
+----
+## lions: ['bernice', 'sandra', 'arnold']
+## tigers: ['janice']
+## bears: ('paul', 'jim', 'dwight')
+## oh my!
+----
+
+{sp}+
+
+=== Arguments
+
+When calling a function, arguments are not all the same. In Python, there are *positional* and *keyword* arguments. For example:
+
+[source,python]
+----
+def add_x_multiply_by_y(value: int, x: int, y: int) -> int:
+    return (value+x)*y
+
+add_x_multiply_by_y(2, 3, 4)
+----
+
+----
+20
+----
+
+Here, 2, 3, and 4 are positional arguments. The order in which the arguments are passed (their positions) determine to which parameter the argument belongs. If we were to rearrange the order in which we passed our values, it would change the result:
+
+[source,python]
+----
+add_x_multiply_by_y(2, 4, 3)
+----
+
+----
+18
+----
+
+Keyword arguments can be used to specify _where_ the values are assigned, so you can control the variable values regardless of the order in which they come. We'll use the function from before: 
+
+[source,python]
+----
+add_x_multiply_by_y(2, y=4, x=3)
+----
+
+----
+20
+----
+
+Keywords allow for the output to match that of the first example even though the order is different. Unfortunately, this aspect of functions is not all-powerful -- positional arguments *must* come before keyword arguments. Otherwise, you get an error with output that resembles `Error: positional argument follows keyword argument (<string>, line X)`
+
+{sp}+
+
+==== Default Values & Exclusive Positional/Keyword Assignment
+
+Arguments in Python can have default values, just like many other languages. This functionality is useful for situations where you don't always use all of the available arguments -- just assign the optional arguments to `null` or `0`. We'll edit the function from before: 
+
+[source,python]
+----
+def add_x_multiply_by_y(value: int, x: int, y: int = 5) -> int:
+    return (value+x)*y
+
+add_x_multiply_by_y(1, 2)
+----
+
+----
+15
+----
+
+1 and 2 are positional arguments for `value` and `x`, while `y` is set to 5 when not included in the function call.
+
+There's a catch when considering default values -- when writing the function, default values must occupy the last spot(s) in the signature, otherwise the function will not run. The following example generates the error `non-default argument follows default argument (<string>, line X)`: 
+
+[source,python]
+----
+def add_x_multiply_by_y(value: int = 0, x: int, y: int) -> int:
+    return (value+x)*y
+
+add_x_multiply_by_y(x=1, y=3)
+----
+
+By default, you can pass arguments as either positional or keyword arguments. With that being said, if you want to, you can create arguments that are _only_ positional or _only_ keyword; to guarantee only keyword use tuple packing before a keyword argument in the following manner:
+
+[source,python]
+----
+def sum_then_multiply_by_x(*args, x) -> int:
+    return sum(args)*x
+
+sum_then_multiply_by_x(1,2,3,4, x=5)
+----
+
+----
+50
+----
+
+The logic here is pretty straightforward -- if you don't include a keyword, the compiler will assume that every value is part of `*args` and the function won't run.
+
+We demonstrate with the next function that the converse does not apply: 
+
+[source,python]
+----
+def sum_then_multiply_by_x(x, *args) -> int:
+    return sum(args)*x
+
+sum_then_multiply_by_x(1,2,3,4,5)
+----
+
+----
+14
+----
+
+Positional arguments dictate that the first parameter will be assigned to the first available variable, then the rest will be applied to `*args`. If this is the case, how do we assert that some arguments be positional only? We use `/`: 
+
+[source,python]
+----
+def sum_then_multiply_by_x(one, two, /, three, x) -> int:
+    return sum([one, two, three])*x
+
+print(sum_then_multiply_by_x(1,2,3,4)) # all positional, will work
+print(sum_then_multiply_by_x(1,2,three=3,x=5)) # two keyword, two positional, will work
+print(sum_then_multiply_by_x(1,two=2,three=3,x=6)) # a positional only argument was passed as a keyword argument, error
+----
+
+----
+24
+30
+`sum_then_multiply_by_x() got some positional-only arguments passed as keyword arguments: 'two'`
+----
+
+While many of the topics we discussed in this section are optional, we hope you walk away with a better understanding of how function arguments work and why some errors may appear when your code looks fine.
+
+{sp}+
+
+=== Docstrings
+
+Docstrings are the multi-line strings immediately following the function declaration that provide documentation for the function. You can put any information you'd like in a docstring, but conventionally, it describes what the function does in a style that's consistent between docstrings. If the function contains any arguments or return values, you should describe what they are and their purposes are.
+
+We'll put `word_count` from the top of the page here for convenience.
+
+[source,python]
+----
+def word_count(sentence: str) -> int:
+    """
+    word_count is a function that accepts a sentence as an argument,
+    and returns the number of words in the sentence.
+
+    Args:
+        sentence (str): The sentence for which we are counting the words.
+
+    Returns:
+        int: The number of words in the sentence
+    """
+    result = len(sentence.split())
+    return result
+    
+test_sentence = "this is a sentence that has eight words."
+word_count(test_sentence)
+----
+
+If you're using a function written by someone else and want to access the docstring, you can use `print` or `help` as follows: 
+
+[source,python]
+----
+print(word_count.__doc__)
+----
+
+----
+
+----
