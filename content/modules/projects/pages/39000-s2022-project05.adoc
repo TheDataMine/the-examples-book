@@ -335,11 +335,74 @@ Using sets will help find the duplicate image. One set can store new hashes that
 https://stackoverflow.com/questions/9835762/how-do-i-find-the-duplicates-in-a-list-and-create-another-list-with-them[This] stackoverflow post shares some ideas to manage this. 
 ====
 
+.Solution
+====
+.myjob.sh
+[source,bash]
+----
+#!/bin/bash
+#SBATCH --account=datamine              # Queue
+#SBATCH --job-name=kevinsjob          # Job name
+#SBATCH --mail-type=END,FAIL          # Mail events (NONE, BEGIN, END, FAIL, ALL)
+#SBATCH --mail-user=kamstut@purdue.edu     # Where to send mail	
+#SBATCH --time=00:30:00
+#SBATCH --ntasks=10                   # Number of tasks (total)
+#SBATCH -o /dev/null                  # Output to dev null
+#SBATCH -e /dev/null                  # Error to dev null
+
+arr=(/depot/datamine/data/coco/unlabeled2017/*)
+
+for((i=0; i < ${#arr[@]}; i+=12500))
+do 
+    part=( "${arr[@]:i:12500}" )
+    srun -A datamine --exclusive -n 1 --mem-per-cpu=200 $HOME/hash1.py hash --output $CLUSTER_SCRATCH/p4output/ ${part[*]} &
+done
+
+wait
+----
+
+[source,bash]
+----
+sbatch myjob.sh
+----
+
+[source, python]
+----
+from pathlib import Path
+
+def get_duplicate(path):
+    path = Path(path)
+    files = path.glob("*.jpg")
+    uniques = set()
+    duplicates = set()
+    for file in files:
+        with open(file, 'r') as f:
+            hsh = f.readlines()[0].strip()
+            if hsh in uniques:
+                duplicates.add(file)
+                return(file)
+            else:
+                uniques.add(hsh)
+
+file = get_duplicate("/scratch/brown/kamstut/p4output/")
+
+from IPython.display import Image
+Image(filename=f"/depot/datamine/data/coco/unlabeled2017/{file.name}")
+----
+
+.Output
+----
+<Picture of Dr. Ward>
+----
+====
+
 .Items to submit
 ====
 - Code used to solve this problem.
 - Output from running the code.
 ====
+
+
 
 [WARNING]
 ====
