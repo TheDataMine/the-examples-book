@@ -7,3 +7,6 @@ clean:
 
 build: clean
 	antora $(ANTORA_PLAYBOOK) $(ANTORA_OPTIONS)
+
+run: build
+	http-server build/site -c-1
