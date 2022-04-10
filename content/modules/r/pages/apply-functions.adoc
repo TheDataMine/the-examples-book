@@ -176,7 +176,7 @@ tapply(grades$grade, grades$year, mean, na.rm=T)
 
 === Examples
 
-==== How can I find the average of several variables in the `flight` dataset using 1 line of code and `lapply`?
+==== How can I find the average of several variables in the `flight` dataset using 1 line of `lapply` code?
 
 We can store the data for 2003 flights as follows:
 
@@ -209,6 +209,50 @@ However, we can condense this to one line using `lapply` according to the prompt
 flights_by_distance <- split( data.frame(myDF$DepDelay, myDF$ArrDelay, myDF$TaxiOut, myDF$TaxiIn), my_distance_categories )
 lapply( flights_by_distance, colMeans, na.rm=T )
 ----
+
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_djp6bltk?wid=_983291"></iframe>
+++++
+
+{sp}+
+
+==== How can I find the average of variables `DRUNK_DR`, `FATALS`, and `PERSONS` in the `fars` dataset using 1 line of `lapply` code?
+
+This is a question that was asked in previous STAT19000 classes when the `apply` functions are introduced. We'll start by reading in the dataset and adding state names.
+
+[NOTE]
+====
+There are more efficient ways to add the names, but this code mirrors the solution to the previous implementation of this question, which we'll follow from here on out.
+====
+
+[source,R]
+----
+dat <- read.csv("/class/datamine/data/fars/7581.csv")
+state_names <- read.csv("/class/datamine/data/fars/states.csv")
+v <- state_names$state
+names(v) <- state_names$code
+dat$mystates <- v[as.character(dat$STATE)]
+----
+
+If we wanted to get the averages for the 3 variables in question, we can use `tapply` independently:
+
+[source,R]
+----
+tapply(dat$DRUNK_DR, dat$mystates, mean)
+tapply(dat$FATALS, dat$mystates, mean)
+tapply(dat$PERSONS, dat$mystates, mean)
+----
+
+*However, there is an easier way* that also fits the requirements of the prompt. We'll create the data.frame `accidents_by_state` with only these 3 variables for readability: 
+
+[source,R]
+----
+accidents_by_state <- split( data.frame(dat$DRUNK_DR, dat$FATALS, dat$PERSONS), dat$mystates )
+lapply( accidents_by_state, colMeans )
+----
+
+The `split` function creates 51 different data.frames based on the values in `mystates`, where `lapply` then uses `colMeans` as its function to get the averages for our 3 variables. Awesome!
 
 {sp}+
 
@@ -249,6 +293,8 @@ example_df
 8                     8          NA
 ----
 
+{sp}+
+
 ==== Here we have not a question, but a demonstration. We use `tapply` in various ways on the Amazon Fine Food Reviews dataset.
 
 The goal of our demonstration is to show the most consistently helpful users in this dataset. This is calculated using the `HelpfulnessNumerator` and `HelpfulnessDenominator` fields in the dataset. As an example, we find the user that wrote the most reviews. 
@@ -259,4 +305,20 @@ myDF <- read.csv("/class/datamine/data/amazon/amazon_fine_food_reviews.csv")
 tail(sort(table(myDF$UserId)))
 ----
 
-The user in question is A3OXHLG6DIBRW8, which will be further referred to as A3O. The code below provides two summations: the `HelpfulnessDenominator` sum is the total number of people who _read_ A3O's reviews, while the `HelpfulnessNumerator` is the number of people who found their reviews _helpful_.
+The user in question is A3OXHLG6DIBRW8, which will be further referred to as A3O. The code below provides two summations: the `HelpfulnessDenominator` sum is the total number of people who _read_ A3O's reviews, while the `HelpfulnessNumerator` is the number of people who found their reviews _helpful_. We can call the `sum` functions on both, then taking the quotient to get A3O's Helpfulness proportion.
+
+[source,R]
+----
+sum(myDF$HelpfulnessNumerator[myDF$UserId == "A3OXHLG6DIBRW8"])/sum(myDF$HelpfulnessDenominator[myDF$UserId == "A3OXHLG6DIBRW8"])
+----
+
+Instead of grabbing each user individually, we can use `tapply` to calculate these proportions for all users.
+
+[source,R]
+----
+tapply(myDF$HelpfulnessNumerator, myDF$UserId, sum)/tapply(myDF$HelpfulnessDenominator, myDF$UserId, sum)
+----
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_24jmfygn?wid=_983291"></iframe>
+++++
