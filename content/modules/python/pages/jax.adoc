@@ -88,4 +88,24 @@ Consider a simple deep learning task of identifying a lowercase letter from an i
 
 `vmap` is a function that provides "auto-vectorization" for whatever batch you have. Batches are essentially variably-sized samples of your population of training data used in one iteration, after which the model is updated. Imagine the simple solution of looping through every image in your batch, resulting in a vector with the activation values of the image. This vector is then multiplied by the model matrix, resulting in a different matrix. This process works, but it is incredibly slow, as a different intermediate matrix is created with each iteration.
 
-By using `vmap`, loops are pushed to the most primitive level possible. This speeds up compilation time as iterating over simple elements is quicker than the same with complex elements.
+By using `vmap`, loops are pushed to the most primitive level possible. This speeds up compilation time as iterating over simple elements is quicker than the same with complex elements. For our purposes, this means that the activation vectors are compiled as an activation matrix -- as Google puts it, "at every layer, we're doing matrix-matrix multiplication rather than matrix-vector multiplication."
+
+The code for this has a unique format. Pay close attention to the following implementation:
+
+[source,python]
+----
+from jax import vmap
+predictions = vmap(partial(predict, params))(input_batch)
+# or, alternatively
+predictions = vmap(predict, in_axes=(None, 0))(params, input_batch)
+----
+
+`vmap` wraps the `predict` function in parentheses, _then_ takes the parameters and/or input batch wrapped in another set of parentheses.
+
+{sp}+
+
+=== Autodifferentiation
+
+If you recall the XLA-Autograd duo that composed JAX, autodifferentiation comes from Autograd and shares its API. JAX uses `grad` for calculating gradients, which allows for differentiation to any order.
+
+We'll recontextualize why this matters for machine learning. The goal of any good model is to reduce the error present -- we obviously want the model to be _good_ at predicting things, otherwise there's no point. The gradient of a function, in this case the error, will indicate the _direction to move_ to minimize the function. In other words, in any-dimensional space, the gradient will tell us which weights in the model need adjusting.
