@@ -1,0 +1,200 @@
+= Think Summer: Project 5 -- 2021
+
+== Submission
+
+[IMPORTANT]
+This project is not graded, you do not need to submit anything today.
+
+**Motivation:** SQL is an incredibly powerful tool that allows you to process and filter massive amounts of data -- amounts of data where tools like spreadsheets start to fail. You can perform SQL queries directly within the R environment, and doing so allows you to quickly perform ad-hoc analyses.
+
+**Context:** This project is specially designed for Purdue University's Think Summer program, in conjunction with Purdue University's integrative data science initiative, https://datamine.purdue.edu/[The Data Mine].
+
+**Scope:** SQL, SQL in R
+
+.Learning Objectives
+****
+- Demonstrate the ability to interact with popular database management systems within R.
+- Solve data-driven problems using a combination of SQL and R.
+- Use basic SQL commands: select, order by, limit, desc, asc, count, where, from.
+- Perform grouping and aggregate data using group by and the following functions: count, max, sum, avg, like, having.
+****
+
+== Dataset
+
+The following questions will use the `imdb` database found in Scholar, our computing cluster.
+
+This database has 6 tables, namely:
+
+`akas`, `crew`, `episodes`, `people`, `ratings`, and `titles`.
+
+You have a variety of options to connect with, and run queries on our database:
+
+. Run SQL queries directly within a Jupyter Lab cell.
+. Connect to and run queries from within R in a Jupyter Lab cell.
+. From a terminal in Scholar.
+
+For consistency and simplicity, we will only cover how to do (1) and (2).
+
+First, for both (1) and (2) you must launch a new Jupyter Lab instance. To do so, please follow the instructions below.
+
+. Open a browser and navigate to https://gateway.scholar.rcac.purdue.edu, and login using your Purdue Career Account credentials. You should be presented with a screen similar to figure (1).
++
+image::figure01.webp[OnDemand, width=792, height=500, loading=lazy, title="OnDemand"]
++
+. Click on "My Interactive Sessions", and you should be presented with a screen similar to figure (2).
++
+image::figure02.webp[Your interactive Scholar sessions, width=792, height=500, loading=lazy, title="Your interactive Scholar sessions"]
++
+. Click on Jupyter Lab in the left-hand menu. You should be presented with a screen similar to figure (3). Select the following settings:
++
+* Queue: scholar (Max 4.0 hours)
+* Number of hours: 2.5
+* Processor cores requested: 1
+* Memory requested (in Mb): 5120
++
+image::figure03.webp[Jupyter Lab settings, width=792, height=500, loading=lazy, title="Jupyter Lab settings"]
++
+. When satisfied, click btn:[Launch], and wait for a minute. In a few moments, you should be presented with a screen similar to figure (4).
++
+image::figure04.webp[Jupyter Lab ready to connect, width=792, height=500, loading=lazy, title="Jupyter Lab ready to connect"]
++
+. When you are ready, click btn:[Connect to Jupyter]. A new browser tab will launch and you will be presented with a screen similar to figure (5).
++
+image::figure05.webp[Kernel menu, width=792, height=500, loading=lazy, title="Kernel menu"]
++
+. Under the "Notebook" menu, please select the btn:[f2021-s2022] (look for the big "F"). Finally, you will be presented with a screen similar to figure (6). 
++
+image::figure06.webp[Ready Jupyter Lab notebook, width=792, height=500, loading=lazy, title="Ready-to-use Jupyter Lab notebook"]
++
+You now have a running Jupyter Lab notebook ready for you to use. This Jupyter Lab instance is running on the https://scholar.rcac.purdue.edu[Scholar cluster] in the basement of the MATH building. By using OnDemand, you've essentially carved out a small portion of the compute power to use. Congratulations! Now please follow along below depending on whether you'd like to do <<option-1,option (1)>> or <<option-2,option (2)>>.
+
+[#option-1]
+To run queries directly in a Jupyter Lab cell (1), please do the following.
+
+. In the first cell, run the following code. This code loads an extension that allows you to directly run SQL queries in a cell as long as that cell has `%%sql` at the top of the cell.
++
+[source, txt]
+----
+%load_ext sql
+%sql sqlite:////class/datamine/data/movies_and_tv/imdb.db
+----
++ 
+. After running that cell (for example, using kbd:[Ctrl+Enter]), you can directly run future queries in each cell by starting the cell with `%%sql` in the first line. For example.
++
+[source, sql]
+----
+%%sql
+
+SELECT * FROM titles LIMIT 5;
+----
++
+While this method has its advantages, there are some advantages to having interop between R and SQL -- for example, you could quickly create cool graphics using data in the database and R. 
+
+[#option-2]
+To run queries from within R (2), please do the following.
+
+. In the first cell, run the following code. This code loads an extension that allows you to directly run R code in a cell as long as that cell has `%%R` at the top of the cell.
++
+[source,txt]
+----
+%load_ext rpy2.ipython
+----
++
+. After running that cell (for example, using kbd:[Ctrl+Enter]), you can directly run R code in any cell that starts with `%%R` in the first line. For example.
++
+[source,r]
+----
+%%R
+
+my_vec <- c(1,2,3)
+my_vec
+----
++
+Now, because we are able to run R code, we can connect to the database, make queries, and build plots, all in a single cell. For example.
++
+[source,r]
+----
+%%R
+
+library(RSQLite)
+library(ggplot2)
+
+conn <- dbConnect(RSQLite::SQLite(), "/class/datamine/data/movies_and_tv/imdb.db")
+myDF <- dbGetQuery(conn, "SELECT * FROM titles LIMIT 5;")
+
+ggplot(myDF) +
+    geom_point(aes(x=primary_title, y=runtime_minutes)) +
+    labs(x = 'Title', y= 'Minutes') 
+----
++
+image::figure07.webp[R output, width=480, height=480, loading=lazy, title="R output"]
+
+[IMPORTANT]
+It is perfectly acceptable to mix and match SQL cells and R cells in your project.
+
+== Questions
+
+=== Question 1
+
+What is the `primary_title` of a TV Series, movie, short, etc. (any `type` in the `titles` table), that has been most widely distributed. Of course, we don't _really_ have the information we need to answer this question, however, let's consider the most widely distributed piece of film to be the `title_id` that appears most in the `akas` table.
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries], xref:book:SQL:joins.adoc[joins], xref:book:SQL:aggregate-functions.adoc[aggregate functions]
+
+.Items to submit
+====
+- SQL used to solve the problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+What is the average rating of movies (specifically, when `titles` table `type` is `movie`), with at least 10,000 `votes` (from the `ratings` table) by year in which they premiered? Use SQL in combination with R to answer this question and create a graphic that illustrates the ratings. Do you notice any trends? If so, what?
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries], xref:book:SQL:joins.adoc[joins], xref:book:SQL:aggregate-functions.adoc[aggregate functions]
+
+.Items to submit
+====
+- R code used to solve the problem.
+- Output from running the code (including the graphic).
+- 1-2 sentences explain what, if any, trends you see.
+====
+
+=== Question 3
+
+Get the name and number of appearances (count of `person_id` from the `crew` table) of the top 15 people from the `people` table with the most number of appearances.
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries], xref:book:SQL:joins.adoc[joins], xref:book:SQL:aggregate-functions.adoc[aggregate functions]
+
+.Items to submit
+====
+- SQL used to solve the problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+Wow! Those are some pretty large numbers! What if we asked the same question, but limited appearances to only items with at least 10000 votes? Write an SQL query, and compare the results. How did results shift? Are there any apparent themes in the results? 
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries], xref:book:SQL:joins.adoc[joins], xref:book:SQL:aggregate-functions.adoc[aggregate functions]
+
+.Items to submit
+====
+- SQL used to solve the problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+You've had a long time working with this database! Now it is time for you to come up with a question to ask yourself (about the database), answer the question using a combination of SQL and/or R. Using your results, create the most interested and tricked out graphic you can come up with! The base R plotting functions and a library called `ggplot` are the best tools for the job (at least in R).
+
+Too easy? Create multiple graphics on the same page (maybe for a different TV series or genre), and theme everything to look like a nice, finished product. 
+
+Still too easy? Create a function in R that, given a `title_id`, queries the database and generates a customized graphic based on the movie or tv series provided. You could go as far as scraping an image from imdb.com and using it as a backsplash for your image. Get creative and make your masterpiece.
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries], xref:book:SQL:joins.adoc[joins], xref:book:SQL:aggregate-functions.adoc[aggregate functions]
+
+.Items to submit
+====
+- SQL used to solve the problem.
+- Output from running the code.
+====
