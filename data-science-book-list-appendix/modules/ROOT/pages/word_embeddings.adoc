@@ -1,0 +1,127 @@
+= Word Embeddings
+
+All machine learning fundamentally relies on math, particularly linear algebra and calculus, and math requires numbers, not strings of text.  Therefore, as mentioned above, to work with text data it is necessary to represent words and sentences as numbers.  Let’s think about how we might do this.
+
+== What Requirements Must Embeddings Satisfy?
+Our initial thought to create encodings might be to arbitrarily assign every word in the dictionary to an index or to use one-hot encoding.  Why might this not be ideal? These approach does not capture the relationship between words.  Intuitively, “sofa” has a meaning closer to that of “couch” than of “book”, but randomly assigning each word to a number does not capture this, and, similarly one-hot encoding creates orthogonal vectors that cannot be used to compute similarity.  We would like to be able to capture these relationships because it will computationally aid the model in being able to interpret text and make inferences based on meaning.
+
+Additionally, most languages have homonyms, words that have multiple meanings despite being spelled the same.  Consider the following sentences:
+
+_I deposited my paycheck in the bank._
+
+_West Lafayette is situated along the bank of the Wabash._
+
+From context, we as humans can tell that the first sentence is referring to a bank as a place to store money whereas the second sentence is referring to a riverbank.  How would we capture these multiple meanings with the fixed embeddings discussed above? If, for example a machine translation model were to interpret a word with the incorrect meaning it could lead to an incorrect translation.
+
+== What are Word Embeddings?
+Now that we have thought about the requirements an encoding must satisfy, how might we actually go about this?  Instead of assigning words to arbitrary indices, the key idea of word embeddings is to encode words using vectors.  This allows us to use vector math to do analyses.  Conceptually, this is based on the idea that words with similar meaning will have more similar vectors than words that are very different.  Mathematically, the angle between vectors representing similar words should be close to zero.  This can be measured through cosine similarity, and since the cosine of an angle of zero is 1, the closer to 1 a cosine similarity is, the more similar the vectors are.
+
+== Creating Word Embeddings
+=== Context-Free Embeddings
+The benefit of vectors, as stated above, is that they can be used to capture relationships.  Our question now is how you capture those relationships in the first place.  Just like how you learned new vocabulary as a child, models for creating word embeddings use context clues to build a representation for the meaning of a word.  Words that have similar meanings will tend to have similar contexts, and should end up with similar embeddings.
+
+To create word embeddings you must first have a large text corpus.  In a nutshell, the vectors for each word in a predefined vocabulary are randomly initialized at first then updated via backpropagation based on the contexts in which they occur in the corpus.  For each word in the corpus, the surrounding n words before and after the target word represent the context.  The probability of the target and context words appearing next to each other is calculated using the dot product of the respective word vectors, and then the vector of the target word is updated accordingly.  Word2Vec and GloVe models are examples of this approach and create static embeddings.
+
+For more information about Word2Vec and GloVe: https://machinelearninginterview.com/topics/natural-language-processing/what-is-the-difference-between-word2vec-and-glove/
+
+For more information, this article provides an excellent intuitive description of how Word2Vec works: https://jalammar.github.io/illustrated-word2vec/
+
+However, the downside of these approaches is that because embeddings are static, they struggle to represent words that have multiple contexts within the same corpus.  While Word2Vec is easy to implement/use with minimal code, many advances have been made in NLP since the approach was initially published in 2013.  Word2Vec and GloVe are presented in this book as context for newer embedding techniques, but because there are much more advanced techniques available now, it is not recommended to rely on this approach for anything other than basic analysis/experimentation.
+
+=== Embedding Analysis Example
+While there are many different ways to create embeddings, similar analyses can be done with any embedding, regardless of how it was created.  A few tasks you can do with embeddings are:
+
+* Vector analysis and word associations
+** Discovery of closely related words
+** Discovery of failure modes in a product
+*** e.g.: (“dead” – “battery”) + “wiring” = [“pinched”]
+* Sentiment/polarity analysis and text classification
+** Sorting reviews as positive, negative, or neutral (polarity analysis) and by positive/negative the review is (sentiment analysis)
+** Sorting warranty claims by issue to identify areas requiring attention
+
+==== Example 1: Vector Analysis
+In this example we will do a basic exploration of what word embeddings look like and some basic analysis.
+
+Load pre-trained GloVe embeddings from the gensim library.
+```
+import gensim.downloader as gensim
+model = gensim.load('glove-wiki-gigaword-100')
+```
+
+Find the most similar word to a given word
+
+```
+model.most_similar("house")
+```
+
+Output:
+----
+[('office', 0.7581615447998047),
+('senate', 0.7204986810684204),
+('room', 0.7149738669395447),
+('houses', 0.6888046264648438),
+('capitol', 0.6851760149002075),
+('building', 0.684728741645813),
+('home', 0.672031044960022),
+('clinton', 0.6707026958465576),
+('congressional', 0.669257640838623),
+('mansion', 0.665092408657074)]
+----
+
+Find the most similar word to a given word.  Note that the similarity is much lower for unrelated words than for similar words
+
+----
+word1 = "apartment"
+word2 = "dorm"
+word3 = "cloud"
+print("Model similarity for %s and %s: %f" % (word1, word2, model.similarity(word1, word2)))
+print("Model similarity for %s and %s: %f" % (word1, word3, model.similarity(word1, word3)))
+----
+Output:
+----
+Model similarity for apartment and dorm: 0.561143
+Model similarity for apartment and cloud: 0.174803
+----
+
+The gensim library also allows you to easily do basic word analogies. Here, this syntax below is representing king - man + woman. In other words, man : king as woman : ?.
+
+
+----
+model.most_similar(negative=['man'],positive=["king",'woman'])
+----
+Output:
+```
+[('queen', 0.7698540687561035),
+ ('monarch', 0.6843381524085999),
+ ('throne', 0.6755736470222473),
+ ('daughter', 0.6594556570053101),
+ ('princess', 0.6520534157752991),
+ ('prince', 0.6517034769058228),
+ ('elizabeth', 0.6464517712593079),
+ ('mother', 0.631171703338623),
+ ('emperor', 0.6106470823287964),
+ ('wife', 0.6098655462265015)]
+```
+
+It is also important to realize that embeddings for the same word will differ slightly based on training, dimensionality, etc. This in turn can have some effect on analysis, but relationships will generally hold up.
+
+This also reinforces that it is important to consider the domain of the initial training data when deciding what pre-trained model to use
+
+----
+## Load two different GloVe models
+model_twitter_100 = gensim.load('glove-twitter-100')
+model_gigaword_100 = gensim.load('glove-wiki-gigaword-100')
+
+## Look at similarity with different models
+word1 = "apartment"
+word2 = "dorm"
+print("Model similarity for %s and %s when trained on Twitter dataset: %f" % (word1, word2, model_twitter_100.similarity(word1, word2)))
+print("Model similarity for %s and %s when trained on Google dataset: %f" % (word1, word2, model_gigaword_100.similarity(word1, word2)))
+----
+Out:
+
+----
+Model similarity for apartment and dorm when trained on Twitter dataset: 0.657621
+Model similarity for apartment and dorm when trained on Google dataset: 0.561143
+----
+
