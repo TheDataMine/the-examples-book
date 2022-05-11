@@ -1,0 +1,249 @@
+= Think Summer: Project 1 -- 2021
+
+== Submission
+
+Students need to submit the following 2 files **by 10:00PM EST** through Gradescope inside Brightspace.
+
+. A compiled PDF.
+. A `.asciidoc` file.
+
+To create these files, the first step is to run every cell in the notebook. To do this click menu:Run[Run All Cells]. Next, to create the PDF, click on menu:File[Export Notebook As...> PDF]. Last, to create the `.asciidoc` file, click on menu:File[Export Notebook As... > Asciidoc].
+
+[IMPORTANT]
+When you export the `.asciidoc` file, it may download a `.zip` file. Make sure to extract and submit **only** the `.asciidoc` file contained therein. You are subject to lose credit if you submit the `.zip` file instead of the `.asciidoc` file.
+
+== Project
+
+**Motivation:** SQL is an incredibly powerful tool that allows you to process and filter massive amounts of data -- amounts of data where tools like spreadsheets start to fail. You can perform SQL queries directly within the R environment, and doing so allows you to quickly perform ad-hoc analyses.
+
+**Context:** This project is specially designed for Purdue University's Think Summer program, in conjunction with Purdue University's integrative data science initiative, https://datamine.purdue.edu/[The Data Mine].
+
+**Scope:** SQL, SQL in R
+
+.Learning Objectives
+****
+- Demonstrate the ability to interact with popular database management systems within R.
+- Solve data-driven problems using a combination of SQL and R.
+- Use basic SQL commands: select, order by, limit, desc, asc, count, where, from.
+- Perform grouping and aggregate data using group by and the following functions: count, max, sum, avg, like, having.
+****
+
+== Dataset
+
+The following questions will use the `imdb` database found in Scholar, our computing cluster.
+
+This database has 6 tables, namely:
+
+`akas`, `crew`, `episodes`, `people`, `ratings`, and `titles`.
+
+You have a variety of options to connect with, and run queries on our database:
+
+. Run SQL queries directly within a Jupyter Lab cell.
+. Connect to and run queries from within R in a Jupyter Lab cell.
+. From a terminal in Scholar.
+
+For consistency and simplicity, we will only cover how to do (1) and (2).
+
+First, for both (1) and (2) you must launch a new Jupyter Lab instance. To do so, please follow the instructions below.
+
+. Open a browser and navigate to https://gateway.scholar.rcac.purdue.edu, and login using your Purdue Career Account credentials. You should be presented with a screen similar to figure (1).
++
+image::figure01.webp[OnDemand, width=792, height=500, loading=lazy, title="OnDemand"]
++
+. Click on "My Interactive Sessions", and you should be presented with a screen similar to figure (2).
++
+image::figure02.webp[Your interactive Scholar sessions, width=792, height=500, loading=lazy, title="Your interactive Scholar sessions"]
++
+. Click on Jupyter Lab in the left-hand menu. You should be presented with a screen similar to figure (3). Select the following settings:
++
+* Queue: scholar (Max 4.0 hours)
+* Number of hours: 2.5
+* Processor cores requested: 1
+* Memory requested (in Mb): 5120
++
+image::figure03.webp[Jupyter Lab settings, width=792, height=500, loading=lazy, title="Jupyter Lab settings"]
++
+. When satisfied, click btn:[Launch], and wait for a minute. In a few moments, you should be presented with a screen similar to figure (4).
++
+image::figure04.webp[Jupyter Lab ready to connect, width=792, height=500, loading=lazy, title="Jupyter Lab ready to connect"]
++
+. When you are ready, click btn:[Connect to Jupyter]. A new browser tab will launch and you will be presented with a screen similar to figure (5).
++
+image::figure05.webp[Kernel menu, width=792, height=500, loading=lazy, title="Kernel menu"]
++
+. Under the "Notebook" menu, please select the btn:[f2021-s2022] (look for the big "F"). Finally, you will be presented with a screen similar to figure (6). 
++
+image::figure06.webp[Ready Jupyter Lab notebook, width=792, height=500, loading=lazy, title="Ready-to-use Jupyter Lab notebook"]
++
+You now have a running Jupyter Lab notebook ready for you to use. This Jupyter Lab instance is running on the https://scholar.rcac.purdue.edu[Scholar cluster] in the basement of the MATH building. By using OnDemand, you've essentially carved out a small portion of the compute power to use. Congratulations! Now please follow along below depending on whether you'd like to do <<option-1,option (1)>> or <<option-2,option (2)>>.
+
+[#option-1]
+To run queries directly in a Jupyter Lab cell (1), please do the following.
+
+. In the first cell, run the following code. This code loads an extension that allows you to directly run SQL queries in a cell as long as that cell has `%%sql` at the top of the cell.
++
+[source, txt]
+----
+%load_ext sql
+%sql sqlite:////class/datamine/data/movies_and_tv/imdb.db
+----
++ 
+. After running that cell (for example, using kbd:[Ctrl+Enter]), you can directly run future queries in each cell by starting the cell with `%%sql` in the first line. For example.
++
+[source, sql]
+----
+%%sql
+
+SELECT * FROM titles LIMIT 5;
+----
++
+While this method has its advantages, there are some advantages to having interop between R and SQL -- for example, you could quickly create cool graphics using data in the database and R. 
+
+[#option-2]
+To run queries from within R (2), please do the following.
+
+. In the first cell, run the following code. This code loads an extension that allows you to directly run R code in a cell as long as that cell has `%%R` at the top of the cell.
++
+[source,txt]
+----
+%load_ext rpy2.ipython
+----
++
+. After running that cell (for example, using kbd:[Ctrl+Enter]), you can directly run R code in any cell that starts with `%%R` in the first line. For example.
++
+[source,r]
+----
+%%R
+
+my_vec <- c(1,2,3)
+my_vec
+----
++
+Now, because we are able to run R code, we can connect to the database, make queries, and build plots, all in a single cell. For example.
++
+[source,r]
+----
+%%R
+
+library(RSQLite)
+library(ggplot2)
+
+conn <- dbConnect(RSQLite::SQLite(), "/class/datamine/data/movies_and_tv/imdb.db")
+myDF <- dbGetQuery(conn, "SELECT * FROM titles LIMIT 5;")
+
+ggplot(myDF) +
+    geom_point(aes(x=primary_title, y=runtime_minutes)) +
+    labs(x = 'Title', y= 'Minutes') 
+----
++
+image::figure07.webp[R output, width=480, height=480, loading=lazy, title="R output"]
+
+[IMPORTANT]
+It is perfectly acceptable to mix and match SQL cells and R cells in your project.
+
+== Questions
+
+=== Question 1
+
+Read some information on SQL xref:book:SQL:introduction.adoc[here]. Explore the 6 tables in the database, and state 1 interesting fact that you find about at least one of the tables.
+
+[TIP]
+====
+Normally, when using SQLite, the easiest way to display the tables in the database is by running `.table` or `.tables`. This is SQLite-specific behavior and therefore cannot be used in our Jupyter Lab environment. To show the tables using an R cell, run the following.
+
+[source,r]
+----
+dbListTables(conn)
+----
+
+To list the tables using a SQL cell, run the following.
+
+[source, sql]
+----
+SELECT
+    name
+FROM
+    sqlite_master
+WHERE
+    TYPE IN('table', 'view')
+    AND name NOT LIKE 'sqlite_%'
+ORDER BY
+    1;
+----
+====
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries]
+
+.Items to submit
+====
+- Code used to explore the database. _(1 pt)_
+- A sentence describing at least 1 interesting fact about at least one of the tables. _(1 pt)_
+====
+
+=== Question 2
+
+Find and print the `title_id`, `rating`, and number of votes (`votes`) for all movies that received **at least** 2 million votes. In a second query (and new cell), use the information you found in the previous query to identify the `primary_title` of these movies. 
+
+[TIP]
+Use the `ratings` table for the first query, and the `titles` table for the second.
+
+[TIP]
+**At least** _includes_ a movie having exactly 2,000,000 votes.
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries]
+
+.Items to submit
+====
+- SQL queries used to solve this problem. _(2 pts)_
+- Output from running the SQL query. _(1 pt)_
+====
+
+=== Question 3
+
+Find the `primary_title` of every _movie_ that is over 2 hours long or that premiered after 1990. Order the result from newest premier year to oldest, and limit the output to 15 movies. Make sure `premiered` and `runtime_minutes` are not `NULL`.
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries], https://stackoverflow.com/questions/45231487/order-of-operation-for-and-and-or-in-sql-server-queries[order of operations]
+
+[CAUTION]
+====
+Make sure the `type` column is "movie".
+====
+
+[TIP]
+Be careful! Order of operations is important here.
+
+.Items to submit
+====
+- SQL query used to solve this problem. _(3 pts)_
+- Explain in 1-2 sentences why order of operations is important here. _(1 pt)_
+- Output from running the SQL query. _(1 pt)_
+====
+
+[WARNING]
+====
+The following are challenge questions and are worth 0 points. If you get done early give them a try!
+====
+
+=== Question 4
+
+What movie has the longest primary title? Answer this question using just SQL.
+
+**Relevant topics:** https://www.w3resource.com/sqlite/core-functions-length.php[SQLite length]
+
+.Items to submit
+====
+- SQL query used to solve this problem.
+- Output from running this query.
+====
+
+=== Question 5
+
+`LIKE` is a very powerful tool. You can read about SQLite's version of `LIKE` https://www.w3resource.com/sqlite/core-functions-like.php[here]. Use `LIKE` and/or R to get a count of how many movies (type='movie') that starts with each letter of the alphabet. Can you think of another way to do this? If so, show us, and explain what you did!
+
+**Relevant topics:** https://www.w3resource.com/sqlite/core-functions-like.php[SQLite LIKE]
+
+.Items to submit
+====
+- Code used to solve this problem.
+- 1-2 sentences explaining what your code does and why you like your method of solving the problem.
+====
