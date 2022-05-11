@@ -1,31 +1,27 @@
-name: Deploy to Netlify
-
-on:
+on: 
   push:
     branches:
       - main
 
 jobs:
-  deploy:
-    name: 'Deploy'
-    runs-on: ubuntu-18.04
-
+  build:
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
-      - uses: jsmrcaga/action-netlify-deploy@master
-        with:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          NETLIFY_DEPLOY_MESSAGE: '${{ github.event.head_commit.message }}'
-          NETLIFY_DEPLOY_TO_PROD: true
-          build_directory: 'build/site'
-          install_command: npm i --no-fund --no-audit --silent @antora/cli @antora/site-generator;
-          build_command: npx --no-install antora --fetch antora-playbook;
-          node_version: 'v17.1.0'
+    - uses: actions/checkout@v2
+    - name: Wait for CF Pages
+      id: cf-pages
+      uses: WalshyDev/cf-pages-await@v1
+      with:
+        accountEmail: ${{ secrets.CLOUDFLARE_ACCOUNT_EMAIL }}
+        apiKey: ${{ secrets.CLOUDFLARE_GLOBAL_API_KEY  }}
+        accountId: 'c07da5a4aa8d50689311ae57df77e3a6'
+        project: 'the-examples-book'
+        # Add this if you want GitHub Deployments (see below)
+        githubToken: ${{ secrets.GITHUB_TOKEN }}
 
   run-scraper:
-    needs: deploy
-    runs-on: ubuntu-18.04
+    needs: build
+    runs-on: ubuntu-20.04
     steps:      
     - name: Clone TheDataMine/docs-scraper
       uses: actions/checkout@v2
@@ -51,8 +47,8 @@ jobs:
         pipenv run ./docs_scraper ./the-examples-book.config.json
         
   purge-cf-cache:
-    needs: deploy
-    runs-on: ubuntu-18.04
+    needs: build
+    runs-on: ubuntu-20.04
     steps:
     - name: Purge Cloudflare cache
       uses: jakejarvis/cloudflare-purge-action@master
