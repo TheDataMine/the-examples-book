@@ -1,0 +1,323 @@
+= Apply Functions
+
+== Abstract
+
+In R, we might encounter situations where we need to iterate over several (or all) of the elements in a data frame. With languages like Python or Java, for-loops and while-loops are indispensable when dealing with iteration, but in R, we have the *apply functions*, which offer a faster, more concise way of _applying_ a function to a data set.
+
+[NOTE]
+====
+There's a great https://ademos.people.uic.edu/Chapter4.html[online encyclopedia on R] that inspired and informed many examples for this page. Check them out!
+====
+
+{sp}+
+
+=== `apply`
+
+The basic apply function takes an array/matrix, a `MARGIN` parameter for the desired dimension, and the function you want to apply.
+
+Our test matrix will be 5x5, where the numbers 1-25 will populate each column sequentially:
+
+[source,R]
+----
+cubed5 <- matrix(c(1:5, 6:10, 11:15, 16:20, 21:25), nrow = 5, ncol = 5)
+cubed5
+----
+
+----
+     [,1] [,2] [,3] [,4] [,5]
+[1,]    1    6   11   16   21
+[2,]    2    7   12   17   22
+[3,]    3    8   13   18   23
+[4,]    4    9   14   19   24
+[5,]    5   10   15   20   25
+----
+
+* insert examples for `apply` here
+
+Ultimately, that's all there is to `apply`. One important note is that `apply` will *not* work for vectors -- we discuss vector `apply` functions in a moment.
+
+[source,R]
+----
+squares <- c(1, 4, 9, 16, 25)
+apply(squares, 1, function(x) x ^ 0.5)
+----
+
+----
+`Error in apply(squares, 1, function(x) x^0.5) :
+  dim(X) must have a positive length`
+----
+
+{sp}+
+
+=== `lapply & sapply`
+
+`lapply` applies a function to each element of a list, then returns a list that's been altered by the function. Since there is only one dimension in a list, the `MARGIN` parameter does not apply. Let's use `sum` on the `squares` vector from before:
+
+[source,R]
+----
+lapply(squares, sum)
+----
+
+----
+[[1]]
+[1] 1
+
+[[2]]
+[1] 4
+
+[[3]]
+[1] 9
+
+[[4]]
+[1] 16
+
+[[5]]
+[1] 25
+----
+
+This is obviously not what we wanted -- the problem here is that vectors and lists are not the same thing and `lapply` treats every element in the vector like its own list. Casting `squares` to a list will fix the issue:
+
+[source,R]
+----
+lapply(list(squares), sum)
+----
+
+----
+[[1]]
+[1] 55
+----
+
+`sapply` will function identically to `lapply` unless the output can be simplified, in which case `sapply` executes that simplification. The following occurs when we run `sapply` in place of `lapply` on our `squares` vector.
+
+
+[source,R]
+----
+sapply(squares, sum)
+----
+
+----
+[1]  1  4  9 16 25
+----
+
+Unless you explicitly need a list, `sapply` can often be the more advantageous function because of its output simplification.
+
+{sp}+
+
+==== How do I get the mean values of the list `pamphlets` with attributes `pages`, `words`, and `letters`?
+
+[source, R]
+----
+lapply(my_list, mean)
+----
+
+----
+$pages
+[1] 3
+
+$words
+[1] 30
+
+$letters
+[1] 300
+----
+
+{sp}+
+
+=== `tapply`
+
+The https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/tapply[documentation definition] for `tapply` is a bit more specific than the others, where the arguments are now `(X, INDEX, FUN)`, with `X` being an object where the `split` function applies, `INDEX` is a factor by which `X` is grouped, and `FUN` is function as before.
+
+To simplify this definition, we can say `tapply` applies `FUN` to `X` when `X` is grouped by `INDEX`. Consider the following: we have a `grades` data.frame that contains information for grade, year, and sex for several students. We can use `tapply` to get the average grade by year in a simple way.
+
+[source,R]
+----
+grades
+----
+
+----
+   grade      year  sex
+1    100    junior    M
+2     99 sophomore    F
+3     75 sophomore    M
+4     74 sophomore    M
+5     44    senior    F
+6     69    junior    M
+7     88    junior    F
+8     99    senior <NA>
+9     90  freshman    M
+10    92    junior    F
+----
+
+The solution begins below.
+
+[source,R]
+----
+tapply(grades$grade, grades$year, mean)
+----
+
+----
+ freshman    junior    senior sophomore 
+ 90.00000  87.25000  71.50000  82.66667
+----
+
+We can use the optional arguments here to remove any rows that contain missing data.
+
+[source,R]
+----
+tapply(grades$grade, grades$year, mean, na.rm=T)
+----
+
+----
+##  freshman    junior    senior sophomore 
+##  90.00000  87.25000  44.00000  82.66667
+----
+
+{sp}+
+
+=== Examples
+
+==== How can I find the average of several variables in the `flight` dataset using 1 line of `lapply` code?
+
+We can store the data for 2003 flights as follows:
+
+[source,R]
+----
+myDF <- read.csv("/depot/datamine/data/flights/subset/2003.csv")
+----
+
+We can categorize the flight distances in groups of <100 miles, 100-200 miles, 200-500 miles, 500-1000 miles, 1000-2000 miles, and 2000+ miles using the `cut` function, then tabulating it
+
+[source,R]
+----
+my_distance_categories <- cut(myDF$Distance, breaks = c(0,100,200,500,1000,2000,Inf), include.lowest=T)
+----
+
+We can get the averages of all applicable flights for 4 variables, broken down by the distance categories we just defined.
+
+[source,R]
+----
+tapply(myDF$DepDelay, my_distance_categories, mean, na.rm=T)  # the DepDelay in each category
+tapply(myDF$ArrDelay, my_distance_categories, mean, na.rm=T)  # the ArrDelay in each category
+tapply(myDF$TaxiOut, my_distance_categories, mean, na.rm=T)  # the time to TaxiOut in each category
+tapply(myDF$TaxiIn, my_distance_categories, mean, na.rm=T)  # the time to TaxiIn in each category
+----
+
+However, we can condense this to one line using `lapply` according to the prompt. To make it easier to read, we can make a temporary data frame `flights_by_distance` with these 4 variables. Then we split the data into 6 data.frames using the distance categories, yielding averages for `DepDelay`, `ArrDelay`, `TaxiOut`, and `TaxiIn`. This will agree exactly with the results of the 4 separate `tapply` functions, but it only takes us 1 call to `lapply`!
+
+[source,R]
+----
+flights_by_distance <- split( data.frame(myDF$DepDelay, myDF$ArrDelay, myDF$TaxiOut, myDF$TaxiIn), my_distance_categories )
+lapply( flights_by_distance, colMeans, na.rm=T )
+----
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_djp6bltk?wid=_983291"></iframe>
+++++
+
+{sp}+
+
+==== How can I find the average of variables `DRUNK_DR`, `FATALS`, and `PERSONS` in the `fars` dataset using 1 line of `lapply` code?
+
+This is a question that was asked in previous STAT19000 classes when the `apply` functions are introduced. We'll start by reading in the dataset and adding state names.
+
+[NOTE]
+====
+There are more efficient ways to add the names, but this code mirrors the solution to the previous implementation of this question, which we'll follow from here on out.
+====
+
+[source,R]
+----
+dat <- read.csv("/depot/datamine/data/fars/7581.csv")
+state_names <- read.csv("/depot/datamine/data/fars/states.csv")
+v <- state_names$state
+names(v) <- state_names$code
+dat$mystates <- v[as.character(dat$STATE)]
+----
+
+If we wanted to get the averages for the 3 variables in question, we can use `tapply` independently:
+
+[source,R]
+----
+tapply(dat$DRUNK_DR, dat$mystates, mean)
+tapply(dat$FATALS, dat$mystates, mean)
+tapply(dat$PERSONS, dat$mystates, mean)
+----
+
+*However, there is an easier way* that also fits the requirements of the prompt. We'll create the data.frame `accidents_by_state` with only these 3 variables for readability: 
+
+[source,R]
+----
+accidents_by_state <- split( data.frame(dat$DRUNK_DR, dat$FATALS, dat$PERSONS), dat$mystates )
+lapply( accidents_by_state, colMeans )
+----
+
+The `split` function creates 51 different data.frames based on the values in `mystates`, where `lapply` then uses `colMeans` as its function to get the averages for our 3 variables. Awesome!
+
+{sp}+
+
+==== Use the provided code to create a new column `transformed` in the data.frame `example_df`. `transformed` should contain `TRUE` if the value in column `pre_transformed` is "t", `FALSE` if it is "f", and `NA` otherwise.
+
+[source,R]
+----
+string_to_bool <- function(value) {
+  if (value == "t") {
+    return(TRUE)
+  } else if (value == "f") {
+    return(FALSE)
+  } else {
+    return(NA)
+  }
+}
+
+example_df <- data.frame(pre_transformed=c("f", "f", "t", "f", "something", "t", "else", ""), other=c(1,2,3,4,5,6,7,8))
+----
+
+The solution begins below.
+
+[source,R]
+----
+example_df$transformed <- sapply(example_df$pre_transformed, string_to_bool)
+example_df
+----
+
+----
+  pre_transformed other transformed
+1               f     1       FALSE
+2               f     2       FALSE
+3               t     3        TRUE
+4               f     4       FALSE
+5       something     5          NA
+6               t     6        TRUE
+7            else     7          NA
+8                     8          NA
+----
+
+{sp}+
+
+==== Here we have not a question, but a demonstration. We use `tapply` in various ways on the Amazon Fine Food Reviews dataset.
+
+The goal of our demonstration is to show the most consistently helpful users in this dataset. This is calculated using the `HelpfulnessNumerator` and `HelpfulnessDenominator` fields in the dataset. As an example, we find the user that wrote the most reviews. 
+
+[source,R]
+----
+myDF <- read.csv("/depot/datamine/data/amazon/amazon_fine_food_reviews.csv")
+tail(sort(table(myDF$UserId)))
+----
+
+The user in question is A3OXHLG6DIBRW8, which will be further referred to as A3O. The code below provides two summations: the `HelpfulnessDenominator` sum is the total number of people who _read_ A3O's reviews, while the `HelpfulnessNumerator` is the number of people who found their reviews _helpful_. We can call the `sum` functions on both, then taking the quotient to get A3O's Helpfulness proportion.
+
+[source,R]
+----
+sum(myDF$HelpfulnessNumerator[myDF$UserId == "A3OXHLG6DIBRW8"])/sum(myDF$HelpfulnessDenominator[myDF$UserId == "A3OXHLG6DIBRW8"])
+----
+
+Instead of grabbing each user individually, we can use `tapply` to calculate these proportions for all users.
+
+[source,R]
+----
+tapply(myDF$HelpfulnessNumerator, myDF$UserId, sum)/tapply(myDF$HelpfulnessDenominator, myDF$UserId, sum)
+----
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_24jmfygn?wid=_983291"></iframe>
+++++

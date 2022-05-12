@@ -1,0 +1,441 @@
+= Genetic Algorithms
+
+Genetic algorithms are an optimization method based on the idea of natural selection. They can be applied to a variety of research areas and are a fascinating intersection of biology and computational research. 
+
+This overview only scratches the surface of how genetic algorithms can be used, and you are encouraged to play with the code to create your own use cases.
+
+Much of the code base for the example was adapated from a great https://machinelearningmastery.com/simple-genetic-algorithm-from-scratch-in-python/[article] by Jason Brownlee on the topic. It's definitely worth a read! 
+
+== Algorithm Structure
+
+The genetic algorithm at a high level is fairly straightforward. You have a population of potential "parent objects" that are evaluated based on an objective function (goal). The top few "parents" are selected and create "children objects". The children objects also have a chance to have minor mutations that can change their value. 
+
+This process continues until their the objective function (goal) stops improving or you hit a limit on the number of iterations that you want to run. We'll see this in the code examples below. First we'll start by breaking each piece of the model out for understanding and then show a use case with the full function. 
+
+== Objective Function
+
+The most important part of the genetic algorithm is the `objective function`. This is the evaluation metric for the algorithm and helps the code optimize for the overall goal. 
+
+In our example we are going to play around with optimizing for the https://en.wikipedia.org/wiki/Knapsack_problem[knapsack problem]. 
+
+In this example we have a knapsack with a limited amount of carrying capacity. Each item that we can place in the knapsack has an associated value (thing we want to maximize) and an associated weight (our penalty value for the problem). 
+
+Using this information we can write our initial objective function. 
+
+[source, python]
+----
+def objective(x, profit, weight, weight_limit):
+    total_profit = np.sum(np.array(x) * np.array(profit))
+    total_penalty = np.abs(np.sum(np.array(x) * np.array(weight)) - weight_limit) * 1000
+    return total_profit - total_penalty
+----
+
+[NOTE]
+====
+The `total_penalty` calculation above has an arbitrary 1000 tacked on to the end. I wonder what happens if we remove it? 
+
+**Hint:** If the penalty isn't strong enough the model will break the rules... bad model.
+====
+
+Once we have an idea of what we want to optimize we can build the structure of the algorithm. 
+
+== Creating the Algorithm
+
+The basic framework of a genetic algorithm is highlighted below. We'll be working through each framework step in the following sections. 
+
+- Generate the population. 
+- Get a baseline for model performance. 
+- Iterate through generations. 
+- For each generation find the best objective score for the current population. 
+- Using those best scores create children objects for the next population. 
+- Occasionally mutate some of the children (not as bad as it sounds).
+- Run it all again!
+
+=== Generating the Population
+
+This is one of the more confusing parts of genetic algorithms. To allow for mutation each value has to be created in bits (lots of 1's and 0's). This allows for subtle mutations when running the algorithm. We want to keep the changes minor in order to keep the same relative search space.
+
+For example, if we start with a bitstring of `[1, 1, 1, 1, 1]` the integer value is 31. If we change one of the bits to `[1, 0, 1, 1, 1]` the new value is 23. Not too far off. However, if we set our mutation rate too high and go to `[0, 0, 0, 0, 1]` the new value is 1. If the model jumps around too much it can make it hard to converge on an answer. 
+
+In the code below the `n_bits` parameter sets the maximum possible value. We only really need to adjust the number of bits if we have lots of different values or large values that we need to content with. Extending the example above, the maximum int value for a 16-bit string `[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]` is 65,535. As long as our values are below that we should be good to go. 
+
+The `bounds` parameter is how we regulate the range of search values for our inputs. In the knapsack example this code is saying that we have 5 potential items to take and we can take anywhere between 0 and 5 of those items.
+
+[source, python]
+----
+bounds = [[0.0, 5.0], [0.0, 5.0], [0.0, 5.0], [0.0, 5.0], [0.0, 5.0]]
+n_bits = 16
+n_pop = 100
+pop = [np.random.randint(0, 2, n_bits*len(bounds)).tolist() for _ in range(n_pop)]
+----
+
+In order to evaluate this population of bit strings (1's and 0's) we need a function to decode the value to an int. 
+
+[source, python]
+----
+def decode(bounds, n_bits, bitstring, type_of_scale='default'):
+    decoded = []
+    largest = 2**n_bits
+    smallest = 0
+    
+    for i in range(len(bounds)):
+        start, end = i * n_bits, (i * n_bits) + n_bits
+        substring = bitstring[start:end]
+        chars = ''.join([str(s) for s in substring])
+        integer = int(chars, 2)
+        
+        if type_of_scale == 'default':
+            value = original_scaling(bounds, largest, i, integer)
+        else:
+            value = updated_scaling(bounds, largest, smallest, i, integer)
+            
+        decoded.append(value)
+    return decoded
+----
+
+In this method the full bit string is passed in and then broken into 5 sets of 16 bit values. These values are then translated into `str` types and then finally into `int` types. This translation gives us our value for the algorithm. For example, `[0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]` turns into 21,835. 
+
+These values are then scaled to ensure that they fit into the range of possible values that we are looking for. In this example 21,835 is changed to 2 after rounding.  
+
+[source, python]
+----
+def original_scaling(bounds, biggest_possible_int, i, num_to_scale):
+    value = bounds[i][0] + (num_to_scale / biggest_possible_int) * (bounds[i][1] - bounds[i][0])
+    return np.round(value,0)
+
+def updated_scaling(bounds, biggest_possible_int, smallest_possible_int, i, num_to_scale):
+    value = (bounds[i][1] - bounds[i][0]) * ((num_to_scale - smallest_possible_int) / (biggest_possible_int - smallest_possible_int)) + bounds[i][0]
+    return np.round(value,0)
+----
+
+In this case either one of the scaling methods above can be used. The first method works well for values of 0 or more (no negative) and the second can accept all values. 
+
+[NOTE]
+====
+For this specific knapsack problem the values are rounded to whole numbers using `np.round()`. This may not be needed for other use cases. 
+====
+
+To get a baseline for our values we can just decode an evaluate the first item in the population. 
+
+[source, python]
+----
+best, best_eval = 0, objective(decode(bounds, n_bits, pop[0]), profit, weight, max_weight)
+----
+
+=== Creating a New Generation
+
+Now that we have our population, a way to understand our values, and a baseline score we can start running through generations for evaluation. 
+
+The first part of the generation loop is pretty easy. We just loop through all of the current population to find the value that's best.
+
+[source, python]
+----
+for gen in range(n_iter):
+        decoded = [decode(bounds, n_bits, p) for p in pop]
+        scores = [objective(d, profit, weight, max_weight) for d in decoded]
+        print("Check for a new best score!")
+        for i in range(n_pop):
+            if scores[i] > best_eval:
+                best, best_eval = pop[i], scores[i]
+                print("New best! {} | {} | {}".format(gen, decoded[i], scores[i]))
+----
+
+This part decodes all of the population bit strings, calculates their scores, and then compares them against all the other values. The best score is noted for future generations. 
+
+[NOTE]
+====
+This is the section of the code where you decide if you are going to maximize or minimize your objective function. Choose the `scores[i] > best_eval` symbol (> or <) depending on if you want to keep greater or lesser scores.
+====
+ 
+
+The second part of the generation loop involves selecting the best parents and creating the next generation. 
+
+Making this sound even more gladiatorial, the technique that we went with for the example uses `tournament` selection. 
+
+[NOTE]
+====
+There are other selection techniques, such as roulette, that can be used depending on the case.
+====
+
+A more verbose example of how the tournament selection works is included below. 
+
+[source, python]
+----
+def selection(pop, scores, k=3):
+    selection_ix = np.random.randint(len(pop))
+    print("Number {} is the champion of the tournament! They have a score of {}.".format(selection_ix, scores[selection_ix]))
+    
+    for ix in np.random.randint(0, len(pop), k-1):
+        print("The challenger is number {}! They have a score of {}.".format(ix, scores[ix]))
+        if scores[ix] < scores[selection_ix]:
+            print("The new champion is number {}!".format(ix))
+            selection_ix = ix
+        else:
+            print("The challenger was vanquished!")
+    return pop[selection_ix]
+----
+
+At a high level the tournament code selects a random "parent" from the current population. It then compares the "parent" to other randomly drawn candidates from the population and the candidate with the highest score wins. It continues this process until a new population of parents is chosen. 
+
+For each set of new parents a "child object" is created that is a `crossover` of the bit values of each parent. 
+
+[source, python]
+----
+# Combine the parents to create child objects.
+def crossover(p1, p2, r_cross):
+    c1, c2 = p1.copy(), p2.copy()
+    if np.random.rand() < r_cross:
+        pt = np.random.randint(1, len(p1)-2)
+        c1 = p1[:pt] + p2[pt:]
+        c2 = p2[:pt] + p1[pt:]
+    return [c1, c2]
+----
+
+Also each child has an occasional mutation. Usually the mutation rate is set to be around 1 bit per child. This helps to keep the values in the range of the high scoring "parent objects". 
+
+[source, python]
+----
+# Code for mutations
+def mutation(bitstring, r_mut):
+    for i in range(len(bitstring)):
+        if np.random.rand() < r_mut:
+            bitstring[i] = 1 - bitstring[i]
+----
+
+Once the children have been generated we have a new population and we start the process all over again! The full generation loop is included below for reference. 
+
+[source, python]
+----
+for gen in range(n_iter):
+        decoded = [decode(bounds, n_bits, p) for p in pop]
+        scores = [objective(d, profit, weight, max_weight) for d in decoded]
+        print("Check for a new best score!")
+        for i in range(n_pop):
+            if scores[i] > best_eval:
+                best, best_eval = pop[i], scores[i]
+                print("New best! {} | {} | {}".format(gen, decoded[i], scores[i]))
+        
+        print("New parents!")
+        selected = [selection(pop, scores) for _ in range(n_pop)]
+        children = []
+        for i in range(0, n_pop, 2):
+            p1, p2 = selected[i], selected[i+1]
+            for c in crossover(p1, p2, r_cross):
+                mutation(c, r_mut)
+                children.append(c)
+        pop = children
+----
+
+We'll put all of this together with the full example below. 
+
+== I am the knapsack!
+
+First we'll define all the methods that we went through one-by-one above. 
+
+[source, python]
+----
+def objective(x, profit, weight, weight_limit):
+    total_profit = np.sum(np.array(x) * np.array(profit))
+    total_penalty = np.abs(np.sum(np.array(x) * np.array(weight)) - weight_limit) * 1000
+    return total_profit - total_penalty
+----
+
+[source, python]
+----
+def original_scaling(bounds, biggest_possible_int, i, num_to_scale):
+    value = bounds[i][0] + (num_to_scale / biggest_possible_int) * (bounds[i][1] - bounds[i][0])
+    return np.round(value,0)
+
+def updated_scaling(bounds, biggest_possible_int, smallest_possible_int, i, num_to_scale):
+    value = (bounds[i][1] - bounds[i][0]) * ((num_to_scale - smallest_possible_int) / (biggest_possible_int - smallest_possible_int)) + bounds[i][0]
+    return np.round(value,0)
+
+def decode(bounds, n_bits, bitstring, type_of_scale='default'):
+    decoded = []
+    largest = 2**n_bits
+    smallest = 0
+    
+    for i in range(len(bounds)):
+        start, end = i * n_bits, (i * n_bits) + n_bits
+        substring = bitstring[start:end]
+        chars = ''.join([str(s) for s in substring])
+        integer = int(chars, 2)
+        
+        if type_of_scale == 'default':
+            value = original_scaling(bounds, largest, i, integer)
+        else:
+            value = updated_scaling(bounds, largest, smallest, i, integer)
+            
+        decoded.append(value)
+    return decoded
+----
+
+[source, python]
+----
+# Run the tournament
+def selection(pop, scores, k=3):
+    selection_ix = np.random.randint(len(pop))
+    
+    for ix in np.random.randint(0, len(pop), k-1):
+        if scores[ix] > scores[selection_ix]:
+            selection_ix = ix
+    return pop[selection_ix]
+
+# Combine the parents to create child objects.
+def crossover(p1, p2, r_cross):
+    c1, c2 = p1.copy(), p2.copy()
+    if np.random.rand() < r_cross:
+        pt = np.random.randint(1, len(p1)-2)
+        c1 = p1[:pt] + p2[pt:]
+        c2 = p2[:pt] + p1[pt:]
+    return [c1, c2]
+
+# Code for mutations
+def mutation(bitstring, r_mut):
+    for i in range(len(bitstring)):
+        if np.random.rand() < r_mut:
+            bitstring[i] = 1 - bitstring[i]
+----
+
+[source, python]
+----
+def run_genetic_algorithm(objective, bounds, n_bits, n_iter, n_pop, r_cross, r_mut, profit, weight, max_weight):
+    print("Generating the population!")
+    pop = [np.random.randint(0, 2, n_bits*len(bounds)).tolist() for _ in range(n_pop)]
+    best, best_eval = 0, objective(decode(bounds, n_bits, pop[0]), profit, weight, max_weight)
+    
+    print("Create the generations!")
+    for gen in range(n_iter):
+        decoded = [decode(bounds, n_bits, p) for p in pop]
+        scores = [objective(d, profit, weight, max_weight) for d in decoded]
+        print("Check for a new best score!")
+        for i in range(n_pop):
+            if scores[i] > best_eval:
+                best, best_eval = pop[i], scores[i]
+                print("New best! {} | {} | {}".format(gen, decoded[i], scores[i]))
+        
+        print("New parents!")
+        selected = [selection(pop, scores) for _ in range(n_pop)]
+        children = []
+        for i in range(0, n_pop, 2):
+            p1, p2 = selected[i], selected[i+1]
+            for c in crossover(p1, p2, r_cross):
+                mutation(c, r_mut)
+                children.append(c)
+        pop = children
+    return [best, best_eval]
+----
+
+Now that we have our framework and objective function defined we can talk through what the code is going to do to solve the knapsack problem. 
+
+=== Knapsack Parameters
+
+Let's say in this case that our knapsack can hold 25 lbs. In planning our trip we have the items below available to us. Each item has a value score, but also a weight that it adds to the knapsack. 
+
+.Camping Items
+|===
+|Item |Value |Weight
+|Stove |25 |8
+|Tent |100 |10
+|Granola Bars |10 | 2
+|Water |30 |9
+|Bronze Statue of Dr. Ward |101 |20
+|===
+
+For each of the items the algorithm will have the option to take between 0 and 5 of the item.
+
+[source, python]
+----
+bounds = [[0.0, 5.0], [0.0, 5.0], [0.0, 5.0], [0.0, 5.0], [0.0, 5.0]]
+item_profit = [25, 100, 10, 30, 101]
+item_weight = [8, 10, 2, 9, 20]
+max_weight = 25
+----
+
+We can then specify that we want to iterate through the optimization 15 times. We can keep 16 bit values since our largest value is 5. We'll randomly choose 100 people in our "population". We want to set `r_cross` to a high probability to allow lots of "children" from the population and `r_mut` to low to keep the mutations in the similar search space. 
+
+[source, python]
+----
+n_iter = 15
+n_bits = 16
+n_pop = 100
+r_cross = 0.9
+r_mut = 1.0 / (float(n_bits) * len(bounds))
+----
+
+Once we have these defined we run the algorithm! It will randomly create a population, find a baseline score, choose parents, keep the best parents, create children from those parents with an occasional mutation, and repeat the whole process 15 times. Simple right?
+
+[source, python]
+----
+best, score = run_genetic_algorithm(objective, bounds, n_bits, n_iter, n_pop, r_cross, r_mut, item_profit, item_weight, max_weight)
+----
+
+----
+Generating the population!
+Create the generations!
+Check for a new best score!
+New best! 0 | [3.0, 2.0, 1.0, 2.0, 1.0] | -58554.0
+New best! 0 | [2.0, 1.0, 0.0, 4.0, 1.0] | -56629.0
+New best! 0 | [2.0, 1.0, 1.0, 2.0, 1.0] | -40679.0
+New best! 0 | [2.0, 0.0, 5.0, 1.0, 0.0] | -9870.0
+New best! 0 | [1.0, 0.0, 1.0, 2.0, 0.0] | -2905.0
+New parents!
+Check for a new best score!
+New parents!
+Check for a new best score!
+New best! 2 | [2.0, 0.0, 0.0, 1.0, 0.0] | 80.0
+New parents!
+Check for a new best score!
+New parents!
+Check for a new best score!
+New parents!
+Check for a new best score!
+New parents!
+Check for a new best score!
+New parents!
+Check for a new best score!
+New parents!
+Check for a new best score!
+New parents!
+Check for a new best score!
+New parents!
+Check for a new best score!
+New parents!
+Check for a new best score!
+New parents!
+Check for a new best score!
+New parents!
+Check for a new best score!
+New parents!
+Check for a new best score!
+New parents!
+----
+
+In the example above we can see that the solution converges pretty quickly. It seems to optimize the score in ~3 iterations and chooses to take 2 stoves and 1 water. 
+
+Whether or not this will actually help you survive is debatable and the odd mixture of items is more likely due to the creator not tuning the values correctly...
+
+However, what's really cool is that we can check the weight of each item. 
+
+[source, python]
+----
+output_array = np.array(decode(bounds, n_bits, best))
+print(output_array)
+----
+
+----
+[2. 0. 0. 1. 0.]
+----
+
+[source, python]
+----
+print("The total weight of the final items is {}".format(np.sum(np.array(item_weight) * output_array)))
+----
+
+----
+The total weight of the final items is 25.0
+----
+
+We can see that the code chose items that still fit within our weight limits! How cool is that?!?
+
+Now it's your turn to play with the code! Change the weights or the knapsack limits and see what happens. If you really want a challenge see if you can adapt the model to a different problem space.

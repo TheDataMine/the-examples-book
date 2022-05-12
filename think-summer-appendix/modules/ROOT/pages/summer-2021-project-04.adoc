@@ -1,0 +1,256 @@
+= Think Summer: Project 4 -- 2021
+
+== Submission
+
+Students need to submit the following 2 files **by 10:00PM EST** through Gradescope inside Brightspace.
+
+. A compiled PDF.
+. A `.asciidoc` file.
+
+To create these files, the first step is to run every cell in the notebook. To do this click menu:Run[Run All Cells]. Next, to create the PDF, click on menu:File[Export Notebook As...> PDF]. Last, to create the `.asciidoc` file, click on menu:File[Export Notebook As... > Asciidoc].
+
+[IMPORTANT]
+When you export the `.asciidoc` file, it may download a `.zip` file. Make sure to extract and submit **only** the `.asciidoc` file contained therein. You are subject to lose credit if you submit the `.zip` file instead of the `.asciidoc` file.
+
+== Project
+
+**Motivation:** SQL is an incredibly powerful tool that allows you to process and filter massive amounts of data -- amounts of data where tools like spreadsheets start to fail. You can perform SQL queries directly within the R environment, and doing so allows you to quickly perform ad-hoc analyses.
+
+**Context:** This project is specially designed for Purdue University's Think Summer program, in conjunction with Purdue University's integrative data science initiative, https://datamine.purdue.edu/[The Data Mine].
+
+**Scope:** SQL, SQL in R
+
+.Learning Objectives
+****
+- Demonstrate the ability to interact with popular database management systems within R.
+- Solve data-driven problems using a combination of SQL and R.
+- Use basic SQL commands: select, order by, limit, desc, asc, count, where, from.
+- Perform grouping and aggregate data using group by and the following functions: count, max, sum, avg, like, having.
+****
+
+== Dataset
+
+The following questions will use the `imdb` database found in Scholar, our computing cluster.
+
+This database has 6 tables, namely:
+
+`akas`, `crew`, `episodes`, `people`, `ratings`, and `titles`.
+
+You have a variety of options to connect with, and run queries on our database:
+
+. Run SQL queries directly within a Jupyter Lab cell.
+. Connect to and run queries from within R in a Jupyter Lab cell.
+. From a terminal in Scholar.
+
+For consistency and simplicity, we will only cover how to do (1) and (2).
+
+First, for both (1) and (2) you must launch a new Jupyter Lab instance. To do so, please follow the instructions below.
+
+. Open a browser and navigate to https://gateway.scholar.rcac.purdue.edu, and login using your Purdue Career Account credentials. You should be presented with a screen similar to figure (1).
++
+image::figure01.webp[OnDemand, width=792, height=500, loading=lazy, title="OnDemand"]
++
+. Click on "My Interactive Sessions", and you should be presented with a screen similar to figure (2).
++
+image::figure02.webp[Your interactive Scholar sessions, width=792, height=500, loading=lazy, title="Your interactive Scholar sessions"]
++
+. Click on Jupyter Lab in the left-hand menu. You should be presented with a screen similar to figure (3). Select the following settings:
++
+* Queue: scholar (Max 4.0 hours)
+* Number of hours: 2.5
+* Processor cores requested: 1
+* Memory requested (in Mb): 5120
++
+image::figure03.webp[Jupyter Lab settings, width=792, height=500, loading=lazy, title="Jupyter Lab settings"]
++
+. When satisfied, click btn:[Launch], and wait for a minute. In a few moments, you should be presented with a screen similar to figure (4).
++
+image::figure04.webp[Jupyter Lab ready to connect, width=792, height=500, loading=lazy, title="Jupyter Lab ready to connect"]
++
+. When you are ready, click btn:[Connect to Jupyter]. A new browser tab will launch and you will be presented with a screen similar to figure (5).
++
+image::figure05.webp[Kernel menu, width=792, height=500, loading=lazy, title="Kernel menu"]
++
+. Under the "Notebook" menu, please select the btn:[f2021-s2022] (look for the big "F"). Finally, you will be presented with a screen similar to figure (6). 
++
+image::figure06.webp[Ready Jupyter Lab notebook, width=792, height=500, loading=lazy, title="Ready-to-use Jupyter Lab notebook"]
++
+You now have a running Jupyter Lab notebook ready for you to use. This Jupyter Lab instance is running on the https://scholar.rcac.purdue.edu[Scholar cluster] in the basement of the MATH building. By using OnDemand, you've essentially carved out a small portion of the compute power to use. Congratulations! Now please follow along below depending on whether you'd like to do <<option-1,option (1)>> or <<option-2,option (2)>>.
+
+[#option-1]
+To run queries directly in a Jupyter Lab cell (1), please do the following.
+
+. In the first cell, run the following code. This code loads an extension that allows you to directly run SQL queries in a cell as long as that cell has `%%sql` at the top of the cell.
++
+[source, txt]
+----
+%load_ext sql
+%sql sqlite:////class/datamine/data/movies_and_tv/imdb.db
+----
++ 
+. After running that cell (for example, using kbd:[Ctrl+Enter]), you can directly run future queries in each cell by starting the cell with `%%sql` in the first line. For example.
++
+[source, sql]
+----
+%%sql
+
+SELECT * FROM titles LIMIT 5;
+----
++
+While this method has its advantages, there are some advantages to having interop between R and SQL -- for example, you could quickly create cool graphics using data in the database and R. 
+
+[#option-2]
+To run queries from within R (2), please do the following.
+
+. In the first cell, run the following code. This code loads an extension that allows you to directly run R code in a cell as long as that cell has `%%R` at the top of the cell.
++
+[source,txt]
+----
+%load_ext rpy2.ipython
+----
++
+. After running that cell (for example, using kbd:[Ctrl+Enter]), you can directly run R code in any cell that starts with `%%R` in the first line. For example.
++
+[source,r]
+----
+%%R
+
+my_vec <- c(1,2,3)
+my_vec
+----
++
+Now, because we are able to run R code, we can connect to the database, make queries, and build plots, all in a single cell. For example.
++
+[source,r]
+----
+%%R
+
+library(RSQLite)
+library(ggplot2)
+
+conn <- dbConnect(RSQLite::SQLite(), "/class/datamine/data/movies_and_tv/imdb.db")
+myDF <- dbGetQuery(conn, "SELECT * FROM titles LIMIT 5;")
+
+ggplot(myDF) +
+    geom_point(aes(x=primary_title, y=runtime_minutes)) +
+    labs(x = 'Title', y= 'Minutes') 
+----
++
+image::figure07.webp[R output, width=480, height=480, loading=lazy, title="R output"]
+
+[IMPORTANT]
+It is perfectly acceptable to mix and match SQL cells and R cells in your project.
+
+== Questions
+
+=== Question 1
+
+Aggregate functions like `COUNT, `AVG`, `SUM`, `MIN`, and `MAX` are very useful. In particular, running queries like the following are great.
+
+[source, sql]
+----
+SELECT COUNT(*) FROM titles WHERE premiered = 2008;
+----
+
+However, in this scenario we want to know how many movies premiered in 2008. How often would we rather just see these numbers for _every_ year, rather than 1 year at a time? This is where aggregate functions really start to have more power.
+
+In the `titles` table, the `premiered` column specifies the year that a movie was premiered. Use `COUNT` to find how many movies premiered in each year in the database, in a single query.
+
+[IMPORTANT]
+Use **only** SQL to answer this question.
+
+[NOTE]
+If you feel like practicing your R skills, try and solve this using R instead of SQL (for 0 points).
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries, xref:book:SQL:aggregate-functions.adoc[aggregate functions]
+
+.Items to submit
+====
+- SQL query used to solve the question. _(1.5 pts)_
+- Output from running the code. _(.5 pts)_
+====
+
+=== Question 2
+
+In <<question-1, question (1)>>, we have an example that starts to demonstrate how those simple aggregate functions are really quite powerful. The results, however, do have some ways that they could be improved. Improve your solution to <<question-1, question (1)>> in the following ways:
+
+. Use xref:book:SQL:aliasing.adoc[aliasing] to rename the results of the `COUNT` function, so that rather than being labeled `COUNT(*)`, the column appears as `movies premiered`. 
+. While it can be interesting to see the number of movies premiering long ago, perhaps we don't need to see all of this information. Edit your query to only include movies from 1970+. 
+
+[IMPORTANT]
+Use **only** SQL to answer this question.
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries, xref:book:SQL:aggregate-functions.adoc[aggregate functions]
+
+.Items to submit
+====
+- SQL query used to solve the question. _(1.5 pts)_
+- Output from running the code. _(.5 pts)_
+====
+
+=== Question 3
+
+Who used `LIMIT` and `ORDER BY` to update your query from <<question-2, question (2)>>? While that is one way to solve that question, the more robust way would be to use the `HAVING` clause. Use `HAVING` to limit the query to only include movies premiering in 1970+. 
+
+**Relevant topics:**
+
+.Items to submit
+====
+- SQL query used to solve the question. _(.5 pts)_
+- Output from running the code. _(.5 pts)_
+====
+
+=== Question 4
+
+Let's try to combine a little bit of everything we've learned so far. In the previous project, you picked a TV series to perform queries on. Use that same TV series (or, if you don't want to choose a TV series, title_id "tt0413573" is a good one to use) for this question.
+
+We want to get the `episode_number`, `season_number`, `primary_title`, `title_id`, and `rating` of every episode of your TV series for _only_ seasons where the average `rating` was at least X, in a single query.
+
+This will be a large query with multiple joins, and sub-queries. For this reason, we will break this down into parts, each worth some points.
+
+==== Part 1
+
+First, write a query that gets the `episode_title_id` and `season_number` for every episode of our TV show.
+
+==== Part 2
+
+Next, use your query from <<part-1, part (1).. as a sub-query, and get the `season_number`'s for the seasons with an average `rating` of at least 8.0. The result should be a single column (`season_number`) with 11 values (if you are using title_id "tt0413573").
+
+[IMPORTANT]
+====
+Remember that a TV show may have an overall rating _and_ individual episode ratings. For example, for Grey's Anatomy, you can get the overall rating by running this query.
+
+[source, sql]
+----
+SELECT rating FROM ratings WHERE title_id = 'tt0413573';
+----
+
+But, we want you to get the average rating, by season.
+====
+
+==== Part 3
+
+Write a query that gets the `episode_number`, `season_number`, `primary_title`, and `title_id` for the TV show with your title_id (for example, "tt0413573"). Make sure to order the results first by `season_number` and then by `episode_number`.
+
+==== Part 4 
+
+At this stage there are only 2 missing components to our query from <<part-3, part (3)>>. First is the fact that _all_ episodes from _all_ seasons are returned. To address this, use logical `AND` and the `IN` operator to limit the returned episodes from your <<part-3, part (3) query>> to only the `season_number`'s returned in your <<part-2, part (2) query>>. 
+
+[TIP]
+====
+This may _sound_ difficult, but it isn't! Start with your <<part-3, part (3) query>>, and tack on `AND <column name> IN (<sub query>)`. Of course, you need to fill in `<column name>` with the correct column name, and `<sub query>` with our <<part-2, part (2) query>>.
+====
+
+==== Part 5
+
+Finally, the last missing component is the individual `rating` for each episode. Simply start with your query from <<part-4, part (4)>>, and perform a join with the `rating` table to get the `rating` for each episode.
+
+In addition, the `rating` isn't available in our query from <<part-3, part (3)>>.
+
+**Relevant topics:**
+
+.Items to submit
+====
+- SQL queries for each of parts 1 - 5. _(.5 pts each)_
+- Output from running queries from each of parts 1 - 5. _(.5 pts each)_
+====
