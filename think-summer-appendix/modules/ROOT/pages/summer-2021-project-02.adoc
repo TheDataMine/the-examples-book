@@ -1,0 +1,282 @@
+= Think Summer: Project 2 -- 2021
+
+== Submission
+
+Students need to submit the following 2 files **by 10:00PM EST** through Gradescope inside Brightspace.
+
+. A compiled PDF.
+. A `.asciidoc` file.
+
+To create these files, the first step is to run every cell in the notebook. To do this click menu:Run[Run All Cells]. Next, to create the PDF, click on menu:File[Export Notebook As...> PDF]. Last, to create the `.asciidoc` file, click on menu:File[Export Notebook As... > Asciidoc].
+
+[IMPORTANT]
+When you export the `.asciidoc` file, it may download a `.zip` file. Make sure to extract and submit **only** the `.asciidoc` file contained therein. You are subject to lose credit if you submit the `.zip` file instead of the `.asciidoc` file.
+
+== Project
+
+**Motivation:** SQL is an incredibly powerful tool that allows you to process and filter massive amounts of data -- amounts of data where tools like spreadsheets start to fail. You can perform SQL queries directly within the R environment, and doing so allows you to quickly perform ad-hoc analyses.
+
+**Context:** This project is specially designed for Purdue University's Think Summer program, in conjunction with Purdue University's integrative data science initiative, https://datamine.purdue.edu/[The Data Mine].
+
+**Scope:** SQL, SQL in R
+
+.Learning Objectives
+****
+- Demonstrate the ability to interact with popular database management systems within R.
+- Solve data-driven problems using a combination of SQL and R.
+- Use basic SQL commands: select, order by, limit, desc, asc, count, where, from.
+- Perform grouping and aggregate data using group by and the following functions: count, max, sum, avg, like, having.
+****
+
+== Dataset
+
+The following questions will use the `imdb` database found in Scholar, our computing cluster.
+
+This database has 6 tables, namely:
+
+`akas`, `crew`, `episodes`, `people`, `ratings`, and `titles`.
+
+You have a variety of options to connect with, and run queries on our database:
+
+. Run SQL queries directly within a Jupyter Lab cell.
+. Connect to and run queries from within R in a Jupyter Lab cell.
+. From a terminal in Scholar.
+
+For consistency and simplicity, we will only cover how to do (1) and (2).
+
+First, for both (1) and (2) you must launch a new Jupyter Lab instance. To do so, please follow the instructions below.
+
+. Open a browser and navigate to https://gateway.scholar.rcac.purdue.edu, and login using your Purdue Career Account credentials. You should be presented with a screen similar to figure (1).
++
+image::figure01.webp[OnDemand, width=792, height=500, loading=lazy, title="OnDemand"]
++
+. Click on "My Interactive Sessions", and you should be presented with a screen similar to figure (2).
++
+image::figure02.webp[Your interactive Scholar sessions, width=792, height=500, loading=lazy, title="Your interactive Scholar sessions"]
++
+. Click on Jupyter Lab in the left-hand menu. You should be presented with a screen similar to figure (3). Select the following settings:
++
+* Queue: scholar (Max 4.0 hours)
+* Number of hours: 2.5
+* Processor cores requested: 1
+* Memory requested (in Mb): 5120
++
+image::figure03.webp[Jupyter Lab settings, width=792, height=500, loading=lazy, title="Jupyter Lab settings"]
++
+. When satisfied, click btn:[Launch], and wait for a minute. In a few moments, you should be presented with a screen similar to figure (4).
++
+image::figure04.webp[Jupyter Lab ready to connect, width=792, height=500, loading=lazy, title="Jupyter Lab ready to connect"]
++
+. When you are ready, click btn:[Connect to Jupyter]. A new browser tab will launch and you will be presented with a screen similar to figure (5).
++
+image::figure05.webp[Kernel menu, width=792, height=500, loading=lazy, title="Kernel menu"]
++
+. Under the "Notebook" menu, please select the btn:[f2021-s2022] (look for the big "F"). Finally, you will be presented with a screen similar to figure (6). 
++
+image::figure06.webp[Ready Jupyter Lab notebook, width=792, height=500, loading=lazy, title="Ready-to-use Jupyter Lab notebook"]
++
+You now have a running Jupyter Lab notebook ready for you to use. This Jupyter Lab instance is running on the https://scholar.rcac.purdue.edu[Scholar cluster] in the basement of the MATH building. By using OnDemand, you've essentially carved out a small portion of the compute power to use. Congratulations! Now please follow along below depending on whether you'd like to do <<option-1,option (1)>> or <<option-2,option (2)>>.
+
+[#option-1]
+To run queries directly in a Jupyter Lab cell (1), please do the following.
+
+. In the first cell, run the following code. This code loads an extension that allows you to directly run SQL queries in a cell as long as that cell has `%%sql` at the top of the cell.
++
+[source, txt]
+----
+%load_ext sql
+%sql sqlite:////class/datamine/data/movies_and_tv/imdb.db
+----
++ 
+. After running that cell (for example, using kbd:[Ctrl+Enter]), you can directly run future queries in each cell by starting the cell with `%%sql` in the first line. For example.
++
+[source, sql]
+----
+%%sql
+
+SELECT * FROM titles LIMIT 5;
+----
++
+While this method has its advantages, there are some advantages to having interop between R and SQL -- for example, you could quickly create cool graphics using data in the database and R. 
+
+[#option-2]
+To run queries from within R (2), please do the following.
+
+. In the first cell, run the following code. This code loads an extension that allows you to directly run R code in a cell as long as that cell has `%%R` at the top of the cell.
++
+[source,txt]
+----
+%load_ext rpy2.ipython
+----
++
+. After running that cell (for example, using kbd:[Ctrl+Enter]), you can directly run R code in any cell that starts with `%%R` in the first line. For example.
++
+[source,r]
+----
+%%R
+
+my_vec <- c(1,2,3)
+my_vec
+----
++
+Now, because we are able to run R code, we can connect to the database, make queries, and build plots, all in a single cell. For example.
++
+[source,r]
+----
+%%R
+
+library(RSQLite)
+library(ggplot2)
+
+conn <- dbConnect(RSQLite::SQLite(), "/class/datamine/data/movies_and_tv/imdb.db")
+myDF <- dbGetQuery(conn, "SELECT * FROM titles LIMIT 5;")
+
+ggplot(myDF) +
+    geom_point(aes(x=primary_title, y=runtime_minutes)) +
+    labs(x = 'Title', y= 'Minutes') 
+----
++
+image::figure07.webp[R output, width=480, height=480, loading=lazy, title="R output"]
+
+[IMPORTANT]
+It is perfectly acceptable to mix and match SQL cells and R cells in your project.
+
+== Questions
+
+=== Question 1
+
+How many actors have lived to be more than 115 years old? Find the names, birth years, and death years for all actors and actresses who lived more than 115 years.
+
+[TIP]
+====
+Simple arithmetic can be done directly in a SQL predicate. For example, you can use the following.
+
+[source, sql]
+----
+WHERE died - born > 115
+----
+====
+
+[TIP]
+====
+Use the `people` table.
+====
+
+[CAUTION]
+====
+Remember **more than** 115 years implies 115 years doesn't qualify but 116 does.
+====
+
+**Relevant topics: **xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries]
+
+.Items to submit
+====
+- SQL query used to solve this problem. _(1 pt)_
+- Output from running the SQL query. _(0.5 pts)_
+====
+
+=== Question 2
+
+Use the `ratings` table to discover how many films have a rating of at least 8 and at least 50000 votes. Limit your output to the first 15 results.
+
+**Relevant topics: **xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries]
+
+.Items to submit
+====
+- SQL query used to solve this problem. _(1 pt)_
+- Output from running the SQL query. _(0.5 pts)_
+====
+
+=== Question 3
+
+In the `titles` table, the `genres` column specifies the genre of each movie. Use `COUNT` to find out how unique genres occur in the database. At this time, don't consider the fact that multiple `genres` could be listed in a single row. Any unique combination/permutation of genres should be considered a unique genre. Use the keyword `COUNT` in combination with `DISTINCT`. 
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries]
+
+.Items to submit
+====
+- SQL query used to solve this problem. _(1 pt)_
+- Output from running the SQL query. _(1 pt)_
+====
+
+=== Question 4
+
+In <<question-2, question 2>>, we asked you to _kind of_ count how many unique genres there are in the database. In this question, we are going to dig in a little bit more, and use a combination of SQL and R to figure out the _actual_ number of unique genres in the database.
+
+First, use a (slightly modified version of) the SQL query from question 3 to pull the data into an R data.frame. The result should be a data.frame with a single column named `genres` of length 2242. You can access the column of a data.frame like so.
+
+[source,r]
+----
+myDF <- dbGetQuery(conn, "<some query>")
+genres <- myDF$genres
+head(genres)
+----
+
+Our list, `genres`, contains strings with comma-separated values, which are the _actual_ genres. If you combine each of the comma-separated string values into one giant comma-separated string, you could then easily split the string into individual values. How many unique genres are there? 
+
+[TIP]
+You can use the following R functions to solve this problem: `paste`, `unlist`, `strsplit`. 
+
+[TIP]
+====
+Here is an example of splitting a string.
+
+[source,r]
+----
+my_string <- "first;second;third"
+result <- unlist(strsplit(my_string, ";"))
+----
+====
+
+[CAUTION]
+====
+Before you answer the question, make sure all of the genres are _actually_ genres and not erroneous data!
+====
+
+**Relevant topics:** https://stackoverflow.com/questions/2098368/concatenate-a-vector-of-strings-character[paste]
+
+.Items to submit
+====
+- All code used to solve this problem. _(3 pts)_
+- A list of the unique genres. _(1 pt)_
+- One sentence explaining _why_ using SQL was valuable in this instance (rather than just using R -- think speed). _(1 pt)_
+====
+
+[WARNING]
+====
+The following are challenge questions and are worth 0 points. If you get done early give them a try!
+====
+
+=== Question 5
+
+In the previous question, we were able to get the number of unique genres. In this question, let's take this one step further. Use the `table` function in R to calculate how many times each genre appears in the database. 
+
+[CAUTION]
+====
+You'll need to modify your query from question 3.
+====
+
+**Relevant topics:** https://thedatamine.github.io/the-examples-book/r.html#r-table[table]
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 6
+
+In the previous question, we got a count of the number of times each genre appeared in the database. Create a dotchart illustrating this data.
+
+[IMPORTANT]
+====
+Make sure to exclude the erroneous data!
+====
+
+**Relevant topics:** http://www.sthda.com/english/wiki/dot-charts-r-base-graphs[dotcharts]
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
