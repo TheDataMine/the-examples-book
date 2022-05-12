@@ -1,0 +1,182 @@
+---
+title: "Example 1 Extended"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+We first load the RMariaDB.  The installation line is commented out, because we assume that you have already installed this package while watching the analogous video.
+
+```{r}
+# install.packages("RMariaDB")
+library(RMariaDB)
+```
+
+Now we make a connection to the elections database on Scholar.
+
+```{r}
+connection<-dbConnect(RMariaDB::MariaDB(),
+                      host="scholar-db.rcac.purdue.edu",
+                      db="elections",
+                      user="elections_user",
+                      password="Dataelect!98")
+```
+
+We query the campaign contributions made by people who work at Purdue University.
+
+```{r}
+myDF <- dbGetQuery(connection, "SELECT * FROM elections WHERE employer='PURDUE UNIVERSITY'")
+```
+
+Here are the first six of these donations.
+
+```{r}
+head(myDF)
+```
+
+Now we display the number of rows and columns in the result.
+The number of rows is the number of donations made by people who work at Purdue University.
+The number of columns is the number of variables that we have in this dataset.
+
+```{r}
+dim(myDF)
+```
+
+Finally, we extract the cities where people made the donations.
+We tabulate the results, and then sort this table.
+Among the donations made by employees of Purdue University,
+this shows the cities in which the donations were most frequently made.
+
+```{r}
+sort(table(myDF$city))
+```
+
+Here are some more examples from the elections database:
+
+Most of the Purdue employees (who are making donations) are from the State of Indiana.
+
+```{r}
+sort(table(myDF$state))
+```
+
+Here is a visualization of the number of donations made by Purdue University employees, grouped according to State.
+We are only showing the 6 most popular States, by this measure.
+
+```{r}
+dotchart(tail(sort(table(myDF$state))))
+```
+
+Note: A warning appears, letting us know that R will treat the data is numeric.
+
+Making one simple change, namely, switching state to name, we can see who has made the largest number of donations.
+Note: This is not the largest monetary amount of donations!
+Instead, this is the greatest number of times that donations were made.
+
+```{r}
+tail(sort(table(myDF$name)))
+```
+
+As before, we can plot this data.
+
+```{r}
+dotchart(tail(sort(table(myDF$name))))
+```
+
+With this plot in mind, we see why we put the names on the y-axis and the number of donations on the x-axis.
+(If the names were on the x-axis, we would not have been able to squeeze all of the names in!)
+
+In the questions above, note that we made 1 SQL query (namely, to get the data from people who work at Purdue),
+and we stored this data in a data frame called myDF.  Then we did some analysis based on this data frame.
+
+Now we make another query.  This time, we lookup  all of the donations across all of the years.
+We sum the amounts of the donations, grouping the amounts of the donations, according to the state where the donor lives.
+
+```{r}
+myDF <- dbGetQuery(connection, "SELECT SUM(transaction_amt), state FROM elections GROUP BY state")
+myDF
+```
+
+In our first SQL query, we retrieved all of the information about all of the variables that met our criteria.
+The fact that we wanted all variables in the first query is signified by the "*".  In general, when we see a "*" in data science, it means that we want all such items or results.
+
+In this second SQL query, however, we only extract two variables, namely, the sum of the transaction amouns, and the states.
+We also group the results from the SQL query according to the state where the donor lives.
+
+Notice that the results have 285 rows and 2 columns.
+
+```{r}
+head(myDF)
+dim(myDF)
+```
+
+The first column is the sum of the transactions from the state, and the second column is the state.
+There are many erroneous states.
+
+If we save the sum of transaction amounts as v and give each element of v the name of that state
+
+```{r}
+v <- myDF$`SUM(transaction_amt)`
+names(v) <- myDF$state
+```
+
+then we are ready to sort the data, as we did before.
+
+```{r}
+sort(v)
+```
+
+and this looks reasonable.  The greatest monetary donations, altogether, came from California, New York, Texas, etc.
+
+We can plot this data.  The y-axis shows the states, and the x-axis shows the total amount of donations, given in dollars.
+
+```{r}
+dotchart(tail(sort(v)))
+```
+
+If you want to just see (for instance) the first 10 rows of a database table and all of the variables, you can limit the results.
+
+```{r}
+myDF <- dbGetQuery(connection, "SELECT * FROM elections LIMIT 10")
+myDF
+```
+
+Warning:  Please note that you probably do NOT want to try this:  If we removed the LIMIT 10, then we would pull all of the data from the entire database table, and that would take a very long time! That is not recommended.
+
+We can also check the employers, to compute the monetary amount were made by the employees from each company.
+
+Warning: "Here be dragons!" The new query might take (say) 15 or 20 minutes to run.
+
+```{r}
+myDF <- dbGetQuery(connection, "SELECT SUM(transaction_amt), employer FROM elections GROUP BY employer")
+```
+
+There are 4.4 million employwers listed in the database:
+
+```{r}
+dim(myDF)
+```
+
+Again, we save the sum of transaction amounts as v and give each element of v the name of that employer
+
+```{r}
+v <- myDF$`SUM(transaction_amt)`
+names(v) <- myDF$employer
+```
+
+then we are ready to sort the data, as we did before.  There are too many results to see the whole list, so we look at the tail of the sorted results.
+
+```{r}
+tail(sort(v))
+```
+
+and this looks reasonable.  The greatest monetary donations, altogether, were either listed without an employer, or retired, or self-employed, or not employed, or N/A, or from Bloomberg Inc.
+
+If we want to see a few more results, we can specify how many results we want to see in the tail command.
+
+```{r}
+tail(sort(v), n=30)
+```
+
+Notice that there are lots of missing data values, and data for which the employer was not listed.
+This is common with real world data, and it is something to get used to, when working on data analysis.
+

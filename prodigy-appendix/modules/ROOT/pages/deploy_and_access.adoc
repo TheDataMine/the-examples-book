@@ -1,0 +1,239 @@
+= Prodigy Annotation Tool
+
+== Requesting Access for Your Team
+
+Prodigy is inherently best used for single-annotator and single-machine deployments. In other words, you install Prodigy locally to use it, alone, on annotating your data. The issue arises when you have one corpus of data to annotate, and >1 annotator. If each team member deploys their own instance of Prodigy, it requires more licenses, handling dependencies and installation many times, and distrubuting and allocating work becomes a nightmare to avoid duplicate data.
+
+Prodigy has attempted to address the multi-annotator concern with Prodigy Teams. Explosion AI (the makers of spaCy and Prodigy) describe this platform as the following:
+
+____
+Most annotation projects need to start with relatively few annotators, to make sure the annotation scheme and onboarding process allows high inter-annotator consistency. Once you have your annotation process running smoothly, there are a few options for scaling up your project for more annotators. One option we recommend is to divide up the annotation work so that each annotator only needs to deal with a small part of the annotation scheme. For instance, if you’re working with many labels, you would start a number of different Prodigy services, each specifying a different label, and each advertising to a different URL. Prodigy can be easily run under automation, for instance within a Kubernetes cluster, to make this approach more manageable. If you do want to have multiple annotators working on one feed, Prodigy has support for that as well via named multi-user sessions. You can create annotator-specific queues using query parameters, or use the query parameters to distinguish the work of different annotators so you can run inter-annotator consistency checks.
+____
+
+However, the product is not yet available outside of beta testing. Therefore, we found a scalable workaround for us to use in the meantime! That solution will be explained in detail in the following sections.
+
+*In short, to gain access to Prodigy, you must contact the Data Mine (datamine@purdue.edu). When contacting please include the following details to help ensure you have the right solution:*
+
+* Your name
+* Brief description of your project (< 250 words)
+* Data description:
+  ** What kind of data
+  ** Size of dataset
+  ** Data governance and privacy/security concerns
+* How many annotators will need access and their Purdue email aliases (e.g., mine is `gould29`)
+* The CLI command to run for your prodigy session _OR_ the recipe you'd like to use, and any other parameters for it (e.g., NER on a base English SpaCy model to label for x, y, z)
+
+This information will help me (Justin) determine how you can best leverage Prodigy.
+
+== How does Purdue's Multi-annotator Solution Work?
+
+The workaround developed at Purdue University leverages Docker and Kubernetes on the https://www.rcac.purdue.edu/compute/geddes[Geddes] research cluster. Below is a high-level breakdown of the annotation infrastructure and NLP ecosystem at Purdue:
+
+* Base NLP Docker Image (`geddes-registry.rcac.purdue.edu/tdm/tdm/nlp:latest`)
+ ** This image, on the Harbor Registry, runs Python 3.6.9 and includes standard NLP Python packages, such as Tensorflow, PyTorch, NLTK, SpaCy, Stanford CoreNLP, Prodigy, and more. It also includes Jupyter Lab for NLP development and integration with GitHub via CLI.
+ ** The Data Mine has its own project on the repository, called `tdm`. It is public, and you can access the base NLP image on the https://geddes-registry.rcac.purdue.edu/harbor/sign-in?redirect_url=%2Fharbor%2Fprojects[Harbor Registry].
+
+* TDM Namespace on Kubernetes
+ ** If you don't know what Kubernetes is, please visit my https://the-examples-book.com/k8s/introduction[example in The Examples Book], and/or follow along my https://github.com/TheDataMine/geddes-kubernetes-deployment[example on GitHub], where you walk through deploying a Python web app and REST endpoints.
+ ** This namespace allows The Data Mine to allocate resources, memory, and storage to running applications on the Geddes K8s cluster. We access this through the web interface on https://beta.geddes.rcac.purdue.edu/c/local/storage/persistent-volumes[Rancher].
+ ** In short, each annotating team will share a K8s deployment of Prodigy (deployed and managed by Justin Gould, under the `tdm` namespace) and have its own SQLite database to store their annotated data.
+ ** You will receive an endpoint to your Prodigy deployment to access. Your data will be loaded and ready to annotate, and set up in a way in which no annotator will annotate the same data. Prodigy natively handles the distribution of unannotated data to active users on the instance.
+
+== Base NLP Docker Image
+
+Specifically, the packages included are:
+```
+absl-py==0.13.0
+aiofiles==0.7.0
+anyio==3.3.0
+argon2-cffi==20.1.0
+asn1crypto==0.24.0
+astunparse==1.6.3
+async-generator==1.10
+attrs==21.2.0
+Babel==2.9.1
+backcall==0.2.0
+bleach==4.0.0
+blis==0.7.4
+cached-property==1.5.2
+cachetools==4.2.2
+catalogue==2.0.5
+certifi==2021.5.30
+cffi==1.14.6
+charset-normalizer==2.0.4
+clang==5.0
+click==7.1.2
+contextvars==2.4
+corenlp-protobuf==3.8.0
+cryptography==2.1.4
+cymem==2.0.5
+dataclasses==0.8
+decorator==5.0.9
+defusedxml==0.7.1
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.1.0/en_core_web_sm-3.1.0.tar.gz
+entrypoints==0.3
+fastapi==0.68.0
+flatbuffers==1.12
+gast==0.4.0
+gensim==4.0.1
+google-auth==1.34.0
+google-auth-oauthlib==0.4.5
+google-pasta==0.2.0
+grpcio==1.39.0
+h11==0.12.0
+h5py==3.1.0
+idna==3.2
+immutables==0.16
+importlib-metadata==4.6.3
+ipykernel==5.5.5
+ipython==7.16.1
+ipython-genutils==0.2.0
+jedi==0.18.0
+Jinja2==3.0.1
+joblib==1.0.1
+json5==0.9.6
+jsonschema==3.2.0
+jupyter-client==6.1.12
+jupyter-core==4.7.1
+jupyter-server==1.10.2
+jupyterlab==3.1.7
+jupyterlab-pygments==0.1.2
+jupyterlab-server==2.7.0
+keras==2.6.0
+Keras-Preprocessing==1.1.2
+keyring==10.6.0
+keyrings.alt==3.0
+Markdown==3.3.4
+MarkupSafe==2.0.1
+mistune==0.8.4
+murmurhash==1.0.5
+nbclassic==0.3.1
+nbclient==0.5.4
+nbconvert==6.0.7
+nbformat==5.1.3
+nest-asyncio==1.5.1
+nltk==3.6.2
+notebook==6.4.3
+numpy==1.19.5
+oauthlib==3.1.1
+opt-einsum==3.3.0
+packaging==21.0
+pandas==1.1.5
+pandocfilters==1.4.3
+parso==0.8.2
+pathy==0.6.0
+peewee==3.14.4
+pexpect==4.8.0
+pickleshare==0.7.5
+plac==1.1.3
+preshed==3.0.5
+prodigy @ file:///workspace/prodigy-1.11.0-cp36-cp36m-linux_x86_64.whl
+prometheus-client==0.11.0
+prompt-toolkit==3.0.19
+protobuf==3.17.3
+ptyprocess==0.7.0
+pyasn1==0.4.8
+pyasn1-modules==0.2.8
+pycorenlp==0.3.0
+pycparser==2.20
+pycrypto==2.6.1
+pydantic==1.8.2
+Pygments==2.10.0
+PyGObject==3.26.1
+PyJWT==2.1.0
+pyparsing==2.4.7
+pyrsistent==0.18.0
+python-apt==1.6.5+ubuntu0.6
+python-dateutil==2.8.2
+pytz==2021.1
+pyxdg==0.25
+pyzmq==22.2.1
+regex==2021.8.3
+requests==2.26.0
+requests-oauthlib==1.3.0
+requests-unixsocket==0.2.0
+rsa==4.7.2
+scipy==1.5.4
+SecretStorage==2.3.1
+Send2Trash==1.8.0
+six==1.15.0
+smart-open==5.1.0
+sniffio==1.2.0
+spacy==3.1.1
+spacy-legacy==3.0.8
+srsly==2.4.1
+stanford-corenlp==3.9.2
+starlette==0.14.2
+tensorboard==2.6.0
+tensorboard-data-server==0.6.1
+tensorboard-plugin-wit==1.8.0
+tensorflow==2.6.0
+tensorflow-estimator==2.6.0
+tensorflow-hub==0.12.0
+termcolor==1.1.0
+terminado==0.11.0
+testpath==0.5.0
+thinc==8.0.8
+toolz==0.11.1
+tornado==6.1
+tqdm==4.62.1
+traitlets==4.3.3
+typer==0.3.2
+typing-extensions==3.7.4.3
+urllib3==1.26.6
+uvicorn==0.13.4
+uvloop==0.14.0
+wasabi==0.8.2
+wcwidth==0.2.5
+webencodings==0.5.1
+websocket-client==1.2.1
+Werkzeug==2.0.1
+wrapt==1.12.1
+zipp==3.5.0
+```
+
+To pull and use this image, use the following command:
+```console
+docker pull geddes-registry.rcac.purdue.edu/tdm/tdm/nlp@sha256:e018359afee1f9fb56b2924d27980483981680b38a64c69472c5f4838c0c6edc
+```
+
+This Docker image essentially sets the stage for NLP work at Purdue. It includes almost anything you need to get started. Users are more than welcome (and encouraged!) to use this as a starting point and reference it in your own project-specific Docker images. As it stands, this Docker image is configured to support Prodigy 1.11, as of August 2021.
+
+== Kubernetes Deployment
+
+As stated, each requesting team will have their own deployment of Prodigy. These will live under the Data Mine namespace on Rancher. Furthermore, each team will have their own SQLite database, to ensure security of data.
+
+.A few important changes to note on how I deploy these instances of Prodigy:
+. I reference the NLP base Docker image in my workflow on Kubernetes
+. Under `ENVIRONMENT VARIABLES`, I make the following changes:
+ * `PRODIGY_HOME=/workspace/.prodigy`
+  ** This sets the home location of Prodigy to The Data Mine's namespace's storage volume (i.e., this is where you can find the standard config file and SQLite databases; access is restricted to Data Mine staff only)
+ * `PRODIGY_ALLOWED_SESSIONS=alias,alias,alias,...`
+  ** Define comma-separated string names of multi-user session names that are allowed in the app. I will set this to the Purdue aliases. Only THESE individuals are permitted to access the annotator tool.
+  ** *NOTE: You must add `?session=YOUR_PURDUE_ALIAS` to the end of the provided endpoint. Failure to do so will result in an error and no access to data.*
+   *** For example, `http://172.21.160.164:9000/` becomes `http://172.21.160.164:9000?session=ALIAS`
+ * `PRODIGY_CONFIG_OVERRIDES= {"feed_overlap" : false,"port" : 9000, "host" : "0.0.0.0", "db_settings": {"sqlite": {"name": "team_name.db","path": "/workspace/.prodigy"}}}`
+  ** JSON object with overrides to apply to config. I use this to specify a new database for each team. By default, there is one SQLite database (`prodigy.db`). However, we want each team to have its own database; therefore, we must dynamically change the configuration file for each team, requiring an override.
+  ** Let's break down this config override...
+   *** `feed_overlap` as `false`: The `feed_overlap` setting in your prodigy.json or recipe config lets you configure how examples should be sent out across multiple sessions. If true, each example in the dataset will be sent out once for each session, so you’ll end up with overlapping annotations (e.g. one per example per annotator). Setting `feed_overlap` to false will send out each example in the data once to whoever is available. As a result, your data will have each example labelled only once in total.
+    **** TL;DR: Prevents duplicate annotation data
+   *** `port` AS `9000`: Changes the default port from `8080` to `9000`.
+   *** `host` AS `"0.0.0.0`: Prodigy sets the host as `localhost` by default. The default is normally the IP address assigned to the "loopback" or local-only interface. However, because we are deploying our instance to Kubernetes for orchestration, we need an agnostic IP address. In short, `0.0.0.0` means means "listen on every available network interface." This is required for deployment.
+   *** `"db_settings": {"sqlite": {"name": "team_name.db","path": "/workspace/.prodigy"}}`
+    **** In short, we want a new database for each team. I specify the path to where the database either exists or SHOULD exist (if does not currently). The name of the database will become the name of the team requesting the space. Should the database exist, it will simply point to it and connect users. If it does not exist, upon deployment of the K8s pod, it will be created.
+
+The way the multi-annotator approach here works is that a dataset will be saved in the SQLite database with `-ALIAS` after the name of the dataset specified in the launch command (handled by Justin). For example, let's imagine annotators kamstut, gould29, and srodenb are collaborating on an NER project for Purdue. I would use a command like below as the deployment command to launch the Prodigy instance on Geddes:
+
+```console
+prodigy ner.manual purdue_ner_dataset blank:en /workspace/data/tdm/TEAM_DATA.jsonl --label PERSON,ORG,PROD,LOC
+```
+
+Where the dataset name is `purdue_ner_dataset`, the data to annotate are `/workspace/data/tdm/TEAM_DATA.jsonl` for the following labels: `PERSON,ORG,PROD,LOC`.
+
+This means that in our database, if all 3 annotators annotate data, we will have datasets that look like:
+
+* `purdue_ner_dataset-kamstut`
+* `purdue_ner_dataset-srodenb`
+* `purdue_ner_dataset-gould29`
+
+I have a https://github.com/TheDataMine/annotations-infrastructure[script available on GitHub] to comine multiple annotators' datasets into one, so you can leverage all the work with pre-built training recipes and commands.
