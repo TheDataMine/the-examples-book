@@ -1,0 +1,472 @@
+= STAT 29000: Project 1 -- Spring 2022
+
+**Motivation:** Extensible Markup Language or XML is a very important file format for storing structured data. Even though formats like JSON, and csv tend to be more prevalent, many, many legacy systems still use XML, and it remains an appropriate format for storing complex data. In fact, JSON and csv are quickly becoming less relevant as new formats and serialization methods like parquet and protobufs are becoming more common.
+
+**Context:** This is the first project in a series of 5 projects focused on web scraping in Python, with a focus on XML.
+
+**Scope:** Python, XML
+
+.Learning Objectives
+****
+- Review and summarize the differences between XML and HTML/CSV.
+- Match XML terms to sections of XML demonstrating a working knowledge of the format.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/depot/datamine/data/otc/hawaii.xml`
+
+== Questions
+
+=== Question 1
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_58zu0sgf?wid=_983291"></iframe>
+++++
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_he4ilmed?wid=_983291"></iframe>
+++++
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_r58jqr10?wid=_983291"></iframe>
+++++
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_4r4gf35y?wid=_983291"></iframe>
+++++
+
+[WARNING]
+====
+Please review our updated xref:book:projects:submissions.adoc[submission guidelines] before submitting your project.
+====
+
+[TIP]
+====
+For this project, you may find the questions and solutions of an old project found https://thedatamine.github.io/the-examples-book/projects.html#p01-290[here] useful.
+====
+
+[TIP]
+====
+You should read through the small xref:book:data:xml.adoc[XML section] of the book.
+====
+
+[TIP]
+====
+You should read through the https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html[10 minute Pandas tutorial].
+====
+
+One of the challenges of XML is that it can be hard to get a feel for how the data is structured -- especially in a large XML file. A good first step is to find the name of the root node. Use the `lxml` package to find and print the name of the root node.
+
+Interesting! If you took a look at the previous project, you _probably_ weren't expecting the extra `{urn:hl7-org:v3}` part in the root node name. This is because the previous project's dataset didn't have a namespace! Namespaces in XML are a way to prevent issues where a document may have multiple sets of node names that are identical but have different meanings. The namespaces allow them to exist in the same space without conflict. 
+
+Practically what does this mean? It makes XML parsing ever-so-slightly more annoying to perform. Instead of being able to enter XPath expressions and return elements, we have to define a namespace as well. This will be made more clear later.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+.Solution
+====
+[source, python]
+----
+from lxml import etree
+
+hawaii = etree.parse("/depot/datamine/data/otc/hawaii.xml")
+hawaii.xpath("/*")[0].tag
+----
+
+----
+'{urn:hl7-org:v3}document'
+----
+====
+
+=== Question 2
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_db2wox4o?wid=_983291"></iframe>
+++++
+
+XML can be nested -- there can be elements that contain other elements that contain other elements. In the previous question, we identified the root node AND the namespace. Just like in the previous Spring 290 project 1 (linked in the "tip" in question 1), we would like you to find the names of the next "tier" of elements.
+
+This will not be a copy/paste of the previous solution. Why? Because of the namespace!
+
+First, try to use the same method from question (2) from https://thedatamine.github.io/the-examples-book/projects.html#p01-290[this project] to find the next tier of names. What happens?
+
+[source,python]
+----
+hawaii.xpath("/document") # won't work
+hawaii.xpath("{urn:hl7-org:v3}document") # still won't work with the namespace there
+----
+
+How do we fix this? We must define our namespace, and reference it in our XPath expression. For example, the following will work.
+
+[source,python]
+----
+hawaii.xpath("/ns:document", namespaces={'ns': 'urn:hl7-org:v3'})
+----
+
+Here, we are passing a dict to the namespaces argument. The key is whatever we want to call the namespace, and the value is the namespace itself. For example, the following would work too.
+
+[source,python]
+----
+hawaii.xpath("/happy:document", namespaces={'happy': 'urn:hl7-org:v3'})
+----
+
+So, unfortunately, _every_ time we want to use an XPath expression, we have to prepend `namespace:` before the name of the element we are looking for. This is a pain, and unfortunately we cannot just define it once and move on.
+
+Okay, given this new information, please find the next "tier" of elements.
+
+[TIP]
+====
+There should be 8.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+.Solution
+====
+[source, python]
+----
+[x.tag for x in hawaii.xpath("/ns:document/*", namespaces={'ns': 'urn:hl7-org:v3'})]
+----
+
+----
+['{urn:hl7-org:v3}id',
+ '{urn:hl7-org:v3}code',
+ '{urn:hl7-org:v3}title',
+ '{urn:hl7-org:v3}effectiveTime',
+ '{urn:hl7-org:v3}setId',
+ '{urn:hl7-org:v3}versionNumber',
+ '{urn:hl7-org:v3}author',
+ '{urn:hl7-org:v3}component']
+----
+====
+
+=== Question 3
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_171wm2ab?wid=_983291"></iframe>
+++++
+
+Okay, lucky for you, this XML file is not so big! Use your UNIX skills you refined last semester to print the content of the XML file. You can print the entirety in a `bash` cell if you wish.
+
+You will be able to see that it contains information about a drug of some sort. 
+
+Knowing now that there are `ingredient` elements in the XML file. Write Python code, and an XPath expression to get a list of all of the `ingredient` elements. Print the list of elements.
+
+[NOTE]
+====
+When we say "print the list of elements", we mean to print the list of elements. For example, the first element would be:
+
+----
+<ingredient classCode="IACT">
+    <ingredientSubstance>
+        <code code="O7TSZ97GEP" codeSystem="2.16.840.1.113883.4.9"/>
+        <name>DIBASIC CALCIUM PHOSPHATE DIHYDRATE</name>
+    </ingredientSubstance>
+</ingredient>
+----
+====
+
+To print an `Element` object, see the following.
+
+[source,python]
+----
+print(etree.tostring(my_element, pretty_print=True).decode('utf-8'))
+----
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+.Solution
+====
+[source, python]
+----
+ingredients = hawaii.xpath("//ns:ingredient", namespaces={'ns': 'urn:hl7-org:v3'})
+for i in ingredients:
+    print(etree.tostring(i, pretty_print=True).decode('utf-8'))
+----
+
+----
+<ingredient xmlns="urn:hl7-org:v3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" classCode="IACT">
+                                 <ingredientSubstance>
+                                    <code code="O7TSZ97GEP" codeSystem="2.16.840.1.113883.4.9"/>
+                                    <name>DIBASIC CALCIUM PHOSPHATE DIHYDRATE</name>
+                                 </ingredientSubstance>
+                              </ingredient>
+...
+----
+====
+
+=== Question 4
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_paiohwnc?wid=_983291"></iframe>
+++++
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_1ed7nl42?wid=_983291"></iframe>
+++++
+
+At this point in time you may be wondering how to actually access the bits and pieces of data in the XML file.
+
+There is data between tags.
+
+[source,xml]
+----
+<name>DIBASIC CALCIUM PHOSPHATE DIHYDRATE</name>
+----
+
+To access such data from the "name" `Element` (which we will call `my_element` below) you would do the following.
+
+[source,python]
+----
+my_element.text # DIABASIC CALCIUM PHOSPHATE DIHYDRATE
+----
+
+There is also data tucked away in a tag's attributes. 
+
+[source,xml]
+----
+<code code="O7TSZ97GEP" codeSystem="2.16.840.1.113883.4.9"/>
+----
+
+To access such data from the "name" `Element` (which we will call `my_element` below) you would do the following.
+
+[source,python]
+----
+my_element.attrib['code'] # O7TSZ97GEP
+my_element.attrib['codeSystem'] # 2.16.840.1.113883.4.9
+----
+
+The aspect of XML that we are interested in learning about are XPath expressions. XPath expressions are a clear and effective way to extract elements from an XML document (or HTML document -- think extracting data from a webpage!). 
+
+In the previous question you used an XPath expression to find all of the `ingredient` elements, regardless where they were or how they were nested in the document. Let's practice more.
+
+If you look at the XML document, you will see that there are a lot of `code` attributes. Use `lxml` and XPath expressions to first extract all elements with a `code` attribute. Print all of the values of the `code` attributes.
+
+Repeat the process, but modify your XPath expression so that it only keeps elements that have a `code` attribute that starts with a capital "C". Print all of the values of the `code` attributes.
+
+[TIP]
+====
+You can use the `.attrib` attribute to access the attributes of an `Element`. It is a dict-like object, so you can access the attributes similarly to how you would access the values in a dictionary.
+====
+
+[TIP]
+====
+https://stackoverflow.com/questions/6895023/how-to-select-xml-element-based-on-its-attribute-value-start-with-heading-in-x/6895629[This] link may help you when figuring out how to select the elements where the `code` attribute must start with "C".
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+.Solution
+====
+[source, python]
+----
+elements_with_codes = hawaii.xpath("//ns:*[@code]", namespaces={'ns':'urn:hl7-org:v3'})
+
+for element in elements_with_codes:
+    print(element.attrib['code'])
+----
+
+----
+34390-5
+48780-1
+72135-029
+C47916
+72135-029-02
+C43197
+C53292
+active
+42555-060
+C42907
+O7TSZ97GEP
+059QF0KO0R
+506T60A25R
+368GB5141J
+K679OBS311
+O352864B8Z
+SB8ZUX40TY
+C810JCZ56Q
+Q80VPU408O
+42555-060-94
+C42794
+SPLCMBPRDTP
+C112160
+C73603
+USA
+C53292
+active
+SPLFLAVOR
+C73404
+SPLCOLOR
+C48325
+C38197
+70680-308
+C29167
+W2ZU1RY8B0
+7G1J5DA97F
+4OXD9M35X2
+8LGU7VM393
+R0ZB2556P8
+SOI2LOH54Z
+13S1S8SF37
+70680-308-00
+C43199
+SPLCMBPRDTP
+C112160
+C73604
+USA
+C53292
+active
+C38304
+C73604
+USA
+C53292
+active
+42229-5
+55106-9
+55105-1
+34067-9
+34071-1
+50565-1
+34068-7
+51727-6
+53413-1
+42229-5
+55106-9
+55105-1
+34067-9
+34071-1
+50570-1
+50566-9
+50567-7
+50565-1
+34068-7
+51727-6
+42229-5
+51945-4
+51945-4
+51945-4
+----
+
+[source,python]
+----
+elements_with_codes = hawaii.xpath("//ns:*[starts-with(@code, 'C')]", namespaces={'ns':'urn:hl7-org:v3'})
+
+for element in elements_with_codes:
+    print(element.attrib['code'])
+----
+
+----
+C47916
+C43197
+C53292
+C42907
+C810JCZ56Q
+C42794
+C112160
+C73603
+C53292
+C73404
+C48325
+C38197
+C29167
+C43199
+C112160
+C73604
+C53292
+C38304
+C73604
+C53292
+----
+====
+
+
+
+=== Question 5
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_t85t0ta7?wid=_983291"></iframe>
+++++
+
+The `quantity` element contains a `numerator` and a `denominator` element. Print all of the quantities in the XML file, where a quantity is defined as the value of the `value` attribute of the `numerator` element divided by the value of the `value` attribute of the corresponding `denominator` element. Lastly, print the `unit` (part of the `numerator` element afterwards. 
+
+[TIP]
+====
+The results should read as follows:
+
+----
+1.0 1
+5.0 g
+7.6 mg
+5.0 g
+4.0 g
+230.0 mg
+4.0 g
+----
+====
+
+[TIP]
+====
+You may need to use the `float` function to convert the string values to floats.
+====
+
+[TIP]
+====
+You can use the `xpath` method on an `Element` object. When doing so, if you want to limit the scope of your XPath expression, make sure to start the xpath with ".//ns:" this will start the search from within the element instead of searching the entire document.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+.Solution
+====
+[source, python]
+----
+quantities = hawaii.xpath("//ns:quantity", namespaces={'ns':'urn:hl7-org:v3'})
+
+for q in quantities:
+    num = q.xpath(".//ns:numerator", namespaces={'ns':'urn:hl7-org:v3'})[0]
+    den = q.xpath(".//ns:denominator", namespaces={'ns':'urn:hl7-org:v3'})[0]
+    print(f'{float(num.attrib["value"])/float(den.attrib["value"])} {num.attrib["unit"]}')
+----
+
+----
+1.0 1
+5.0 g
+7.6 mg
+5.0 g
+4.0 g
+230.0 mg
+4.0 g
+----
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connect    ion, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:book:projects:submissions.adoc[submission guidelines] before submitting your project.
+====
