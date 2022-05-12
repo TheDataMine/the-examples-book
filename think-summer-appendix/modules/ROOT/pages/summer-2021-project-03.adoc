@@ -1,0 +1,268 @@
+= Think Summer: Project 3 -- 2021
+
+== Submission
+
+Students need to submit the following 2 files **by 10:00P through Gradescope inside Brightspace.
+
+. A compiled PDF.
+. A `.asciidoc` file.
+
+To create these files, the first step is to run every cell in the notebook. To do this click menu:Run[Run All Cells]. Next, to create the PDF, click on menu:File[Export Notebook As...> PDF]. Last, to create the `.asciidoc` file, click on menu:File[Export Notebook As... > Asciidoc]. 
+
+[IMPORTANT]
+When you export the `.asciidoc` file, it may download a `.zip` file. Make sure to extract and submit **only** the `.asciidoc` file contained therein. You are subject to lose credit if you submit the `.zip` file instead of the `.asciidoc` file.
+
+== Project
+
+**Motivation:** SQL is an incredibly powerful tool that allows you to process and filter massive amounts of data -- amounts of data where tools like spreadsheets start to fail. You can perform SQL queries directly within the R environment, and doing so allows you to quickly perform ad-hoc analyses.
+
+**Context:** This project is specially designed for Purdue University's Think Summer program, in conjunction with Purdue University's integrative data science initiative, https://datamine.purdue.edu/[The Data Mine].
+
+**Scope:** SQL, SQL in R
+
+.Learning Objectives
+****
+- Demonstrate the ability to interact with popular database management systems within R.
+- Solve data-driven problems using a combination of SQL and R.
+- Use basic SQL commands: select, order by, limit, desc, asc, count, where, from.
+- Perform grouping and aggregate data using group by and the following functions: count, max, sum, avg, like, having.
+****
+
+== Dataset
+
+The following questions will use the `imdb` database found in Scholar, our computing cluster.
+
+This database has 6 tables, namely:
+
+`akas`, `crew`, `episodes`, `people`, `ratings`, and `titles`.
+
+You have a variety of options to connect with, and run queries on our database:
+
+. Run SQL queries directly within a Jupyter Lab cell.
+. Connect to and run queries from within R in a Jupyter Lab cell.
+. From a terminal in Scholar.
+
+For consistency and simplicity, we will only cover how to do (1) and (2).
+
+First, for both (1) and (2) you must launch a new Jupyter Lab instance. To do so, please follow the instructions below.
+
+. Open a browser and navigate to https://gateway.scholar.rcac.purdue.edu, and login using your Purdue Career Account credentials. You should be presented with a screen similar to figure (1).
++
+image::figure01.webp[OnDemand, width=792, height=500, loading=lazy, title="OnDemand"]
++
+. Click on "My Interactive Sessions", and you should be presented with a screen similar to figure (2).
++
+image::figure02.webp[Your interactive Scholar sessions, width=792, height=500, loading=lazy, title="Your interactive Scholar sessions"]
++
+. Click on Jupyter Lab in the left-hand menu. You should be presented with a screen similar to figure (3). Select the following settings:
++
+* Queue: scholar (Max 4.0 hours)
+* Number of hours: 2.5
+* Processor cores requested: 1
+* Memory requested (in Mb): 5120
++
+image::figure03.webp[Jupyter Lab settings, width=792, height=500, loading=lazy, title="Jupyter Lab settings"]
++
+. When satisfied, click btn:[Launch], and wait for a minute. In a few moments, you should be presented with a screen similar to figure (4).
++
+image::figure04.webp[Jupyter Lab ready to connect, width=792, height=500, loading=lazy, title="Jupyter Lab ready to connect"]
++
+. When you are ready, click btn:[Connect to Jupyter]. A new browser tab will launch and you will be presented with a screen similar to figure (5).
++
+image::figure05.webp[Kernel menu, width=792, height=500, loading=lazy, title="Kernel menu"]
++
+. Under the "Notebook" menu, please select the btn:[f2021-s2022] (look for the big "F"). Finally, you will be presented with a screen similar to figure (6). 
++
+image::figure06.webp[Ready Jupyter Lab notebook, width=792, height=500, loading=lazy, title="Ready-to-use Jupyter Lab notebook"]
++
+You now have a running Jupyter Lab notebook ready for you to use. This Jupyter Lab instance is running on the https://scholar.rcac.purdue.edu[Scholar cluster] in the basement of the MATH building. By using OnDemand, you've essentially carved out a small portion of the compute power to use. Congratulations! Now please follow along below depending on whether you'd like to do <<option-1,option (1)>> or <<option-2,option (2)>>.
+
+[#option-1]
+To run queries directly in a Jupyter Lab cell (1), please do the following.
+
+. In the first cell, run the following code. This code loads an extension that allows you to directly run SQL queries in a cell as long as that cell has `%%sql` at the top of the cell.
++
+[source, txt]
+----
+%load_ext sql
+%sql sqlite:////class/datamine/data/movies_and_tv/imdb.db
+----
++ 
+. After running that cell (for example, using kbd:[Ctrl+Enter]), you can directly run future queries in each cell by starting the cell with `%%sql` in the first line. For example.
++
+[source, sql]
+----
+%%sql
+
+SELECT * FROM titles LIMIT 5;
+----
++
+While this method has its advantages, there are some advantages to having interop between R and SQL -- for example, you could quickly create cool graphics using data in the database and R. 
+
+[#option-2]
+To run queries from within R (2), please do the following.
+
+. In the first cell, run the following code. This code loads an extension that allows you to directly run R code in a cell as long as that cell has `%%R` at the top of the cell.
++
+[source,txt]
+----
+%load_ext rpy2.ipython
+----
++
+. After running that cell (for example, using kbd:[Ctrl+Enter]), you can directly run R code in any cell that starts with `%%R` in the first line. For example.
++
+[source,r]
+----
+%%R
+
+my_vec <- c(1,2,3)
+my_vec
+----
++
+Now, because we are able to run R code, we can connect to the database, make queries, and build plots, all in a single cell. For example.
++
+[source,r]
+----
+%%R
+
+library(RSQLite)
+library(ggplot2)
+
+conn <- dbConnect(RSQLite::SQLite(), "/class/datamine/data/movies_and_tv/imdb.db")
+myDF <- dbGetQuery(conn, "SELECT * FROM titles LIMIT 5;")
+
+ggplot(myDF) +
+    geom_point(aes(x=primary_title, y=runtime_minutes)) +
+    labs(x = 'Title', y= 'Minutes') 
+----
++
+image::figure07.webp[R output, width=480, height=480, loading=lazy, title="R output"]
+
+[IMPORTANT]
+It is perfectly acceptable to mix and match SQL cells and R cells in your project.
+
+== Questions
+
+=== Question 1
+
+In this project, instead of connecting to our SQLite database, instead, let's connect to the _same_ database (the same imdb data), but using a different RDBMS (relational database management system), MariaDB. It is easy to make this change, and you only need to modify a single line of code. Just change the following from this 
+
+[source,txt]
+----
+%sql sqlite:////class/datamine/data/movies_and_tv/imdb.db
+----
+
+to this
+
+[source,txt]
+----
+%sql mariadb+pymysql://imdb_user:movie$Rkool@scholar-db.rcac.purdue.edu/imdb 
+----
+
+Other than that single change, you most likely won't notice a single change! When making a decision about what RDBMS to use, you should never limit yourself to what you are familiar with as it may be relatively easy to use something new!
+
+A primary key is a field in a table which uniquely identifies a row in the table. Primary keys must be unique values. This is enforced at the database level. 
+
+A foreign key is a field whose value matches a primary key in a different table. A table can have 0-1 primary key, but it can have 0+ foreign keys. 
+
+Examine the titles table. Do you think there are any primary keys? How about foreign keys? Now examine the `episodes` table. Based on observation and the column names, do you think there are any primary keys? How about foreign keys?
+
+[NOTE]
+====
+Answer this solution in a _markdown_ cell. Write the text in a code cell, in the menu, click menu:[Code > Markdown]. The appearance of the text in your cell may change. Run the cell, and the text should render neatly.
+====
+
+**Relevant topics:** https://www.geeksforgeeks.org/difference-between-primary-key-and-foreign-key/[primary and foreign keys]
+
+.Items to submit
+====
+- List any primary or foreign keys in the `titles` table. _(.5 pt)_
+- List any primary or foreign keys in the `episodes` table. _(.5 pt)_
+- Any code you used to answer this question.
+====
+
+=== Question 2
+
+If you paste a `title_id` to the end of the following url, it will pull up the page for the title. For example, https://www.imdb.com/title/tt0413573 leads to the page for the TV series Grey's Anatomy. Write a SQL query to confirm that the `title_id` "tt0413573" does indeed belong to Grey's Anatomy. Then browse https://imdb.com and find your favorite TV show. Get the `title_id` from the url of your favorite TV show, and run the following query to confirm that the TV show is in our database.
+
+[source, sql]
+----
+SELECT * FROM titles WHERE title_id='<title id here>';
+----
+
+[IMPORTANT]
+Make sure to replace "<title id here>" with the `title_id` of your favorite show. If your show does not appear, or has only a single season, pick another show until you find one we have in our database (that has multiple seasons).
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries]
+
+.Items to submit
+====
+- SQL query used to confirm that `title_id` "tt0413573" does indeed belong to Grey's Anatomy. _(.5 pts)_
+- The output of the query. _(.5 pt)_
+- The `title_id` of your favorite TV show. _(.5 pts)_
+- SQL query used to confirm the `title_id` for your favorite TV show. _(.5 pts)_
+====
+
+=== Question 3
+
+The `episode_title_id` column in the `episodes` table references titles of individual episodes of a TV series. The `show_title_id` references the titles of the show itself. With that in mind, write a query that gets a list of all of the `episodes_title_id`'s (found in the `episodes` table), with the associated `primary_title` (found in the `titles` table) for each episode of Grey's Anatomy.
+
+[TIP]
+https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_uhg3atol&flashvars%5BstreamerType%5D=auto&flashvars%5BlocalizationCode%5D=en&flashvars%5BleadWithHTML5%5D=true&flashvars%5BsideBarContainer.plugin%5D=true&flashvars%5BsideBarContainer.position%5D=left&flashvars%5BsideBarContainer.clickToClose%5D=true&flashvars%5Bchapters.plugin%5D=true&flashvars%5Bchapters.layout%5D=vertical&flashvars%5Bchapters.thumbnailRotator%5D=false&flashvars%5BstreamSelector.plugin%5D=true&flashvars%5BEmbedPlayer.SpinnerTarget%5D=videoHolder&flashvars%5BdualScreen.plugin%5D=true&flashvars%5BKaltura.addCrossoriginToIframe%5D=true&&wid=1_wmo98brv[This video] demonstrates how to extract titles of episodes in the `imdb` database.
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries], xref:book:SQL:joins.adoc[joins]
+
+.Items to submit
+====
+- SQL query used to answer the question. _(3 pts)_
+- Output from running the SQL query. _(2 pts)_
+====
+
+=== Question 4
+
+Joins are a critical concept to understand. They appear everywhere where relational data is found. In R, the `merge` function performs the same operations as joins. In python's `pandas` package the `merge` method for the `DataFrame` object performs the same operations. Take some time to read xref:book:SQL:joins.adoc[this section]. 
+
+In xref:think-summer:summer-2021-project-02.adoc#question-2[question 2] from the previous project, we asked you to use the `ratings` table to discover how many films have a rating of at least 8 and at least 50000 votes. You may have noticed, while you can easily do that, the end result is not human understandable. We see that there are films with those features but we don't know what film `title_id` "tt0010323" is for. This is a great example where a simple join can answer this question for us.
+
+Write a query that prints the `primary_title`, `rating`, and `votes` for all films with a rating of at least 8 and at least 50000 votes. Like in the previous version of this question, limit your output to 15 results.
+
+Assume our left table is `ratings` and our right table is `titles`. What would _conceptually_ change if instead of using an `INNER JOIN` we used a `LEFT JOIN`? Does it make a difference in this case? Why or why not?
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries], xref:book:SQL:joins.adoc[joins]
+
+.Items to submit
+====
+- SQL query used to answer the question. _(1 pts)_
+- Output from running the SQL query. 
+- 1-2 sentences explaining what the conceptual change would be if you used a `LEFT JOIN` instead of an `INNER JOIN`. _(.5 pts)_
+- A statement whether or not `LEFT JOIN` vs `INNER JOIN` makes a difference in this specific case or not, and why. _(.5 pts)_
+====
+
+[WARNING]
+====
+The following are challenge questions and are worth 0 points. If you get done early give them a try!
+====
+
+=== Question 5
+
+We want to write a query that returns the title and rating of the highest rated episode of your favorite TV show, which you chose in <<question-2, question 2>>. In order to do so, we will break the task into two parts in (5) and (6). First, write a query that returns a list of _just_ `episode_title_ids` (found in the `episodes` table), with the associated `primary_title` (found in the `titles` table) for each episode.
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries], xref:book:SQL:joins.adoc[joins]
+
+.Items to submit
+====
+- SQL query used to answer the question.
+- Output from running the SQL query. 
+==== 
+
+=== Question 6
+
+Write a query that adds the rating to the end of each episode. To do so, use the query you wrote in (5) as a subquery. Which episode has the highest rating? Is it also your favorite episode?
+
+**Relevant topics:** xref:book:SQL:introduction.adoc[SQL], xref:book:SQL:queries.adoc[queries], xref:book:SQL:joins.adoc[joins]
+
+.Items to submit
+====
+- SQL query used to answer the question.
+- Output from running the SQL query. 
+====
