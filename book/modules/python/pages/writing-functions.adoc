@@ -1,0 +1,485 @@
+= Writing Functions
+
+== Introduction
+
+The core of functions is packing several actions into one defined unit. When we're dealing with longer, complicated projects, writing Python functions is crucial for reasonable length and readability.
+
+{sp}+
+
+=== Function Signature & Annotations
+
+Understanding the syntax and dialogue surrounding a function is an important step for both reading instructions about functions and communicating what your function does. Consider the following code: 
+
+[source,python]
+----
+def word_count(sentence: str) -> int:
+    """
+    word_count is a function that accepts a sentence as an argument,
+    and returns the number of words in the sentence.
+
+    Args:
+        sentence (str): The sentence for which we are counting the words.
+
+    Returns:
+        int: The number of words in the sentence
+    """
+    result = len(sentence.split())
+    return result
+    
+test_sentence = "this is a sentence that has eight words."
+word_count(test_sentence)
+----
+
+----
+8
+----
+
+There are a few things we need to define and clarify: 
+
+* *Function name*: The name of the function immediately follows the `def` keyword. This function is called `word_count` and we will refer to functions by name in most cases.
+* *Parameters*: This is another term for the function's input, of which there are 0+. There is one parameter in this function, called `sentence`.
+** In Python, you can include the data type after the parameter name. Above, this is `: str` to specify that `sentence` is a string. We recommend you specify because the methods you apply to the parameter might not work if the parameter is a different data type.
+** *Output*: This is another optional part of a function where you can specify what the function returns. In the example, this is represented by `int`. Functions can have 0 or more outputs.
+
+All of the above qualities define the *signature* of the function, and as you read, many of them are optional. We could write `word_count` in the following way and it would be the exact same: 
+
+[source,python]
+----
+def word_count(sentence):
+    """
+    word_count is a function that accepts a sentence as an argument,
+    and returns the number of words in the sentence.
+
+    Args:
+        sentence (str): The sentence for which we are counting the words.
+
+    Returns:
+        int: The number of words in the sentence
+    """
+    result = len(sentence.split())
+    return result
+    
+test_sentence = "this is a sentence that has eight words."
+word_count(test_sentence)
+----
+
+----
+8
+----
+
+The umbrella term *function annotations* includes all the optional parts of a function's signature. Though optional, it's recommended to include them in larger projects for clarity and to make your code look more "professional."
+
+{sp}+
+
+=== Helper Functions
+
+Functions can have helper functions nested within them, with the goal of reducing complexity or increasing clarity. For example, let's say we wanted our function to strip all punctuation before counting the words:
+
+[source,python]
+----
+import string
+
+def word_count(sentence: str) -> int:
+    """
+    word_count is a function that accepts a sentence as an argument,
+    and returns the number of words in the sentence.
+
+    Args:
+        sentence (str): The sentence for which we are counting the words.
+
+    Returns:
+        int: The number of words in the sentence
+    """
+    
+    def _strip_punctuation(sentence: str):
+        """
+        helper function to strip punctuation.
+        """
+        return sentence.translate(str.maketrans('', '', string.punctuation))
+    
+    sentence_no_punc = _strip_punctuation(sentence)
+    result = len(sentence_no_punc.split())
+    return result
+    
+test_sentence = "this is a sentence - it has eight words."
+word_count(test_sentence)
+----
+
+----
+8
+----
+
+Here, our helper function is named `_strip_punctuation`. If you try to call helper functions outside of `word_count`, you will get an error, as it is defined within the *scope* of `word_count` and is not available outside that scope. In this example, `word_count` is the "caller" while `_strip_punctuation` is the "callee."
+
+[TIP]
+====
+You can use your own syntax to clarify helper functions. Here, we use a preceding "_" to hint that the function is just for internal use.
+====
+
+{sp}+
+
+In Python, functions can be passed to other functions as arguments. If a function accepts another function as an argument _or_ returns function(s), we refer to them as *higher-order functions*. Some examples of higher-order functions in Python are `map`, `filter`, and `reduce`. If a function is used as an argument in another function, we refer to it as a *callback* function.
+
+{sp}+
+
+=== Packing & Unpacking
+
+Say we have a function that returns a list of strings depending on how many matches are found within a paragraph. The output of this function would be `n` matching strings. If we wanted to apply a higher-order function, how many parameters do we code for higher-order function? The answer is `n`, but `n` will change depending on the callback function's input. We address this with `\*args` and `**kwargs`, two ways of accounting for variably-long parameters.
+
+The formal way of saying `*args` is _argument tuple packing_. Here's a few demonstrations: 
+
+[source,python]
+----
+def sum_then_multiply_by_x(x = 0, *args):
+    print(args)
+    return sum(args) * x
+
+print(sum_then_multiply_by_x(2, 1, 2, 3))
+----
+
+----
+(1, 2, 3)
+12
+----
+
+[source,python]
+----
+print(sum_then_multiply_by_x(2, 1, 2, 3, 4))
+----
+
+----
+(1, 2, 3, 4)
+20
+----
+
+[source,python]
+----
+print(sum_then_multiply_by_x(2, 1, 2, 3, 4, 5))
+----
+
+----
+(1, 2, 3, 4, 5)
+30
+----
+
+Here, every argument passed after the `x` argument is _packed_ into a tuple called `*args`. As you can see, you can pass any number of arguments and the function won't break. Awesome!
+
+We've covered packing, so what about unpacking? Can we unpack an `n`-sized tuple into a function with `n` arguments? As a matter of fact, that's exactly how it works. Take the following example: 
+
+[source,python]
+----
+def print_boo_YAH(boo, yah):
+    print(f'{boo}{yah.upper()}')
+    
+# normally we would call this function like so:
+print_boo_YAH("first", "second")
+----
+
+----
+firstSECOND
+----
+[source,python]
+----
+# but we can also call this function in this way: 
+words = ("boo", "yah")
+print_boo_YAH(*words)
+----
+
+----
+booYAH
+----
+
+Pay mind to the asterisk before the tuple parameter. Without it, tuple unpacking will not work.
+
+{sp}+
+
+Now that we have `\*args` established, we can discuss `\**kwargs` for dictionary packing and unpacking. The "kw" in `**kwargs` represents keyword, which takes the form `x="something"`. We'll explain keyword arguments in a bit. Take a look at this example: 
+
+[source,python]
+----
+def print_arguments(**kwargs):
+    for key, value in kwargs.items():
+        print(f'key: {key}, value: {value}')
+
+print_arguments(arg1="pretty", arg2="princess")
+print_arguments(arg1="pretty", arg2="pretty", arg3="princess")
+----
+
+----
+key: arg1, value: pretty
+key: arg2, value: princess
+
+key: arg1, value: pretty
+key: arg2, value: pretty
+key: arg3, value: princess
+----
+
+For `**kwargs`, unpacking comes in the form of a dictionary instead of a tuple. Here's an example: 
+
+[source,python]
+----
+def wild_animals(lions, tigers, bears):
+    print(f'lions: {lions}')
+    print(f'tigers: {tigers}')
+    print(f'bears: {bears}')
+    print('oh my!')
+
+my_dict_to_unpack = {"lions":["bernice", "sandra", "arnold"], 
+                    "tigers":["janice"], 
+                    "bears":('paul', 'jim', 'dwight')}
+wild_animals(**my_dict_to_unpack)
+----
+
+----
+## lions: ['bernice', 'sandra', 'arnold']
+## tigers: ['janice']
+## bears: ('paul', 'jim', 'dwight')
+## oh my!
+----
+
+{sp}+
+
+=== Arguments
+
+When calling a function, arguments are not all the same. In Python, there are *positional* and *keyword* arguments. For example:
+
+[source,python]
+----
+def add_x_multiply_by_y(value: int, x: int, y: int) -> int:
+    return (value+x)*y
+
+add_x_multiply_by_y(2, 3, 4)
+----
+
+----
+20
+----
+
+Here, 2, 3, and 4 are positional arguments. The order in which the arguments are passed (their positions) determine to which parameter the argument belongs. If we were to rearrange the order in which we passed our values, it would change the result:
+
+[source,python]
+----
+add_x_multiply_by_y(2, 4, 3)
+----
+
+----
+18
+----
+
+Keyword arguments can be used to specify _where_ the values are assigned, so you can control the variable values regardless of the order in which they come. We'll use the function from before: 
+
+[source,python]
+----
+add_x_multiply_by_y(2, y=4, x=3)
+----
+
+----
+20
+----
+
+Keywords allow for the output to match that of the first example even though the order is different. Unfortunately, this aspect of functions is not all-powerful -- positional arguments *must* come before keyword arguments. Otherwise, you get an error with output that resembles `Error: positional argument follows keyword argument (<string>, line X)`
+
+{sp}+
+
+==== Default Values & Exclusive Positional/Keyword Assignment
+
+Arguments in Python can have default values, just like many other languages. This functionality is useful for situations where you don't always use all of the available arguments -- just assign the optional arguments to `null` or `0`. We'll edit the function from before: 
+
+[source,python]
+----
+def add_x_multiply_by_y(value: int, x: int, y: int = 5) -> int:
+    return (value+x)*y
+
+add_x_multiply_by_y(1, 2)
+----
+
+----
+15
+----
+
+1 and 2 are positional arguments for `value` and `x`, while `y` is set to 5 when not included in the function call.
+
+There's a catch when considering default values -- when writing the function, default values must occupy the last spot(s) in the signature, otherwise the function will not run. The following example generates the error `non-default argument follows default argument (<string>, line X)`: 
+
+[source,python]
+----
+def add_x_multiply_by_y(value: int = 0, x: int, y: int) -> int:
+    return (value+x)*y
+
+add_x_multiply_by_y(x=1, y=3)
+----
+
+By default, you can pass arguments as either positional or keyword arguments. With that being said, if you want to, you can create arguments that are _only_ positional or _only_ keyword; to guarantee only keyword use tuple packing before a keyword argument in the following manner:
+
+[source,python]
+----
+def sum_then_multiply_by_x(*args, x) -> int:
+    return sum(args)*x
+
+sum_then_multiply_by_x(1,2,3,4, x=5)
+----
+
+----
+50
+----
+
+The logic here is pretty straightforward -- if you don't include a keyword, the compiler will assume that every value is part of `*args` and the function won't run.
+
+We demonstrate with the next function that the converse does not apply: 
+
+[source,python]
+----
+def sum_then_multiply_by_x(x, *args) -> int:
+    return sum(args)*x
+
+sum_then_multiply_by_x(1,2,3,4,5)
+----
+
+----
+14
+----
+
+Positional arguments dictate that the first parameter will be assigned to the first available variable, then the rest will be applied to `*args`. If this is the case, how do we assert that some arguments be positional only? We use `/`: 
+
+[source,python]
+----
+def sum_then_multiply_by_x(one, two, /, three, x) -> int:
+    return sum([one, two, three])*x
+
+print(sum_then_multiply_by_x(1,2,3,4)) # all positional, will work
+print(sum_then_multiply_by_x(1,2,three=3,x=5)) # two keyword, two positional, will work
+print(sum_then_multiply_by_x(1,two=2,three=3,x=6)) # a positional only argument was passed as a keyword argument, error
+----
+
+----
+24
+30
+`sum_then_multiply_by_x() got some positional-only arguments passed as keyword arguments: 'two'`
+----
+
+While many of the topics we discussed in this section are optional, we hope you walk away with a better understanding of how function arguments work and why some errors may appear when your code looks fine.
+
+{sp}+
+
+=== Docstrings
+
+Docstrings are multi-line strings immediately following the function declaration that provide documentation. Conventionally, they describe what the function does in a style that is consistent between docstrings. If the function contains any arguments or return values, their purposes are defined and described.
+
+We'll put `word_count` from the top of the page here for convenience.
+
+[source,python]
+----
+def word_count(sentence: str) -> int:
+    """
+    word_count is a function that accepts a sentence as an argument,
+    and returns the number of words in the sentence.
+
+    Args:
+        sentence (str): The sentence for which we are counting the words.
+
+    Returns:
+        int: The number of words in the sentence
+    """
+    result = len(sentence.split())
+    return result
+    
+test_sentence = "this is a sentence that has eight words."
+word_count(test_sentence)
+----
+
+If you're using a function written by someone else and want to access the docstring, you can use `print` or `help` as follows: 
+
+[source,python]
+----
+print(word_count.__doc__)
+----
+
+----
+word_count is a function that accepts a sentence as an argument,
+and returns the number of words in the sentence.
+ 
+     Args:
+         sentence (str): The sentence for which we are counting the words.
+ 
+     Returns:
+         int: The number of words in the sentence
+----
+
+[source,python]
+----
+help(word_count)
+----
+
+----
+Help on function word_count in module __main__:
+ 
+word_count(sentence: str) -> int
+    word_count is a function that accepts a sentence as an argument,
+    and returns the number of words in the sentence.
+    
+    Args:
+       sentence (str): The sentence for which we are counting the words.
+     
+    Returns:
+        int: The number of words in the sentence
+----
+
+Alternatively, if you're coding in an IDE, you might have the ability to hover over the function call and view the docstring.
+
+image::docstring-example.png[docstring-hover, width=792,height=500,loading=lazy,title="Docstring Hovering"]
+
+It's good practice to write docstrings for every function, especially if you work with other programmers and they rely on the functions that you write.
+
+{sp}+
+
+=== Examples
+
+Write a function called get_filename_from_url that, given a url to a file, like https://image.shutterstock.com/image-vector/cute-dogs-line-art-border-260nw-1079902403.jpg returns the filename with the extension.
+
+[source,python]
+----
+import os
+from urllib.parse import urlparse
+
+def get_filename_from_url(url: str) -> str:
+    """
+    Given a link to a file, return the filename with extension.
+
+    Args:
+        url (str): The url of the file.
+
+    Returns:
+        str: A string with the filename, including the file extension.
+    """
+    return os.path.basename(urlparse(url).path)
+----
+
+Write a function that, given a URL to an image, and a full path to a directory, saves the image to the provided directory. By default, have the function save the images to the user's home directory in a unix-like operating system.
+
+[source,python]
+----
+import requests
+from pathlib import Path
+import getpass
+
+def scrape_image(from_url: str, to_dir: str = f'/home/{getpass.getuser()}'):
+    """
+    Given a url to an image, scrape the image and save the image to the provided directory.
+    If no directory is provided, by default, save to the user's home directory.
+
+    Args:
+        from_url (str): U
+        to_dir (str, optional): [description]. Defaults to f'/home/{getpass.getuser()}'.
+    """
+    resp = requests.get(from_url)
+    
+    # this function is from the previous example
+    filename = get_filename_from_url(from_url)
+    
+    # Make directory if doesn't already exist
+    Path(to_dir).mkdir(parents=True, exist_ok=True)
+    
+    file = open(f'{to_dir}/{filename}', "wb")
+    file.write(resp.content)
+    file.close()
+----
