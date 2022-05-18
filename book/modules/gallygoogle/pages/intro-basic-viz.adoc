@@ -34,9 +34,9 @@ amazon_food.head()
 
 
 
-We don't want to read every single review to get a better understanding what people feel about a particular product. It is time consuiming and uneffective. 
+We don't want to read every single review in the `Text` column to get a better understanding what people feel about a particular product. It is time consuiming and inefficient. 
 
-Instead, we can generate a word cloud that maps words with respect to frequency. In other words, bigger a word, more frequent it appears in the dataset.
+Instead, we can generate a tag cloud that maps words where color, size, or font reflect the word's importance. For example, bigger a word, more important the word is. A tag cloud is a good visual representation for textual data.
 
 How many distinct products are there in the dataset?
 
@@ -47,10 +47,12 @@ len(amazon_food['ProductId'].value_counts())
 ----
 
 ----
+Output: 
+
 74258
 ----
 
-We have 74258 products in total, BUT if we run the code to find how many products only have one review, 
+We have 74258 products in total, but if we run the code to find how many products only have one review, 
 
 [source, python]
 ----
@@ -58,11 +60,17 @@ We have 74258 products in total, BUT if we run the code to find how many product
 sum(amazon_food['ProductId'].value_counts()==1)
 ----
 
+----
+Output: 
+
+30408
+----
+
 Note that in https://the-examples-book.com/book/python/variables#bool[bool], `True` has an equivalent value of 1, and `False` has an equivalent value of 0. 
 
-we will see that 30408 of the products only have one review, and word clouds are highly unlikely to be helpful for those single reviewed products. 
+We see that 30408 of the products only have one review, and wordclouds are highly unlikely to be helpful for those single reviewed products. 
 
-Pick a product ID you're interested in and create a subset.
+Pick a product ID with multiple reviews you're interested in and create a subset.
 
 For this example, I'll use `ID = 'B007JFMH8M'`.
 
@@ -72,11 +80,11 @@ For this example, I'll use `ID = 'B007JFMH8M'`.
 my_subset = amazon_food[amazon_food['ProductId']=='B007JFMH8M'].reset_index(drop=True)
 ----
 
-Before we generate a word cloud, data wrangling is required. 
+Before we generate a tag cloud, data wrangling is required. 
 
 Words like "are", "thing", and "that" aren't very helpful and do not contribute to the data story. They are called `stopwords`. We want to remove all stopwords from the Amazon reviews.
 
-We can easily receive a generalized list of stopwords from the library called wordcloud.
+We can easily receive a generalized list of stopwords from the library called `wordcloud`.
 
 [source, python]
 ----
@@ -88,7 +96,8 @@ print(STOPWORDS)
 ----
 Output: 
 
-{'having', 'few', 'further', 'him', 'have', 'i', 'were', 'who', 'why', 'below', "don't", 'or', 'ever', 'themselves', 'whom', 'theirs', "there's", "how's", 'our', ... }
+{'having', 'few', 'further', 'him', 'have', 'i', 'were', 'who', 'why', 'below',
+"don't", 'or', 'ever', 'themselves', 'whom', 'theirs', "there's", "how's", 'our', ... }
 ----
 
 Note that those stopwords consist punctuation, and we cannot depend nor assume that humans who wrote Amazon reviews would write in perfect English grammar. So it's a safer bet to remove all the puntuations in both stopwords and Amazon reviews to keep things consisten and also lowercase the reviews. 
@@ -99,13 +108,36 @@ To remove puntuations from the stopwords, we can run something like this line of
 ----
 import string
 
+# Create a new list variable for stopwords with no punctuation
+words = []
+# for loop to go through every word in STOPWORDS set
+for word in STOPWORDS:
+    # initialize empty string 
+    new_word = ''
+    # for loop to go through every letter in a word
+    for letter in word:
+        # check if letter is not a punctuation
+        if letter not in string.punctuation:
+            # add the letter to new_word
+            new_word += letter
+    # add word with no punctuation to the list
+    words.append(new_word)
+----
+
+The code above consists multiple lines and can be shortened to a line as shown below using a https://the-examples-book.com/book/python/lists#list-comprehensions[list comprehension].
+
+[source, python]
+----
+import string
+# performs the same thing as the code above except it's just a line of code
 words = [''.join(letter for letter in word if letter not in string.punctuation) for word in STOPWORDS if word]
 ----
 
 ----
 Output:
 
-['having', 'few', 'further', 'him', 'have', 'i', 'were', 'who', 'why', 'below', 'dont', 'or', 'ever', 'themselves', 'whom', 'theirs', 'theres', 'hows', 'our', 'ours', ...]
+['having', 'few', 'further', 'him', 'have', 'i', 'were', 'who', 'why', 'below',
+'dont', 'or', 'ever', 'themselves', 'whom', 'theirs', 'theres', 'hows', 'our', 'ours', ...]
 ----
 
 To remove any symbols and any funny-looking characters, we can use regular expression to keep alphanumeric characters only.
@@ -126,9 +158,9 @@ Because the function, `WordCloud`, only accepts https://the-examples-book.com/bo
 text = ' '.join(test['Text'])
 ----
 
-Yay, data cleaning is completed at this point! Now, we can generate a wordcloud map.
+Yay, data cleaning is completed at this point! Now, we can easily make a tag map.
 
-To generate a wordcloud map in Jupyter, we simply can run this block of code.
+To generate a wordcloud map in Jupyter notebook, we simply can run this block of code.
 
 [source, python]
 ----
@@ -139,3 +171,9 @@ plt.tight_layout(pad=0)
 plt.axis("off")
 plt.show()
 ----
+
+
+[WARNING]
+====
+It's so important to recognize the limitations of any visualization. Often, when transforming data into a visual aid, it omits some details and can be misleading. For this case with wordclouds, textual data is hard to work with because humans write in multiple different styles. For example, the two sentences, "do not like chocolate" and "dislike chocolate," have similar meanings. If we run those sentences through our data cleaning process, we'll have something like "like chocolate" and "dislike chocolate" as our results, and now they have two different meanings. If we aren't careful with our textual data, misunderstandings and misleading information can lead more chaos.
+====
