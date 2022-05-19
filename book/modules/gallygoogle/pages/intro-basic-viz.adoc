@@ -142,20 +142,58 @@ Output:
 
 To remove any symbols and any funny-looking characters, we can use regular expression to keep alphanumeric characters only.
 
-https://the-examples-book.com/book/projects/29000-f2021-project03#regular-expressions-irregularly-satisfying-introduction-to-grep-and-regular-expressions[The link] has a good starting section about regular expressions.
+https://docs.python.org/3/howto/regex.html#regex-howto[Python has a good documentation] that gently introduces the usage of regular expression (re).
 
-THIS REQUIRES A BREAKDOWN OF THE WHOLE LINE.
+The `replace` function will search and replace a specific parameter in a string with another specific parameter.
+
+We want to remove all non-alphanumeric characters (anything that is not a letter or number), and we can use the `replace` function to search for all non-alphanumeric characters in `my_subset['Text']` replace them with an empty string. 
+
+Our regular expression is something like `[^A-Za-z ]` where 
+
+* `A-Za-z` relects a set of the whole English alphabet (both uppercase and lowercase)
+** note that there's a space after 'z'
+* `^` represents complement or exclusion
+
+So the whole expression `[^A-Za-z ]` will search for all characters that does NOT check any of those requirements. Other words, the expression will search for any non-letter, non-number, and non-space. 
+
+Since we are using re, we need to add an argument in the `replace` function to let the function know that the input argument is in re form. 
+
+Then multiple loops are created to remove all the stopwords from all of the reviews as shown in the code snippet below. 
 
 [source, python]
 ----
-my_subset['Text'] = my_subset['Text'].replace(r'[^A-Z a-z]', '', regex=True).apply(lambda x: ' '.join([word for word in x.split() if word.lower() not in (words)]))
+# Search for all non-alphanumeric characters and replace them with an empty string
+# regex=True to let the function knows that the input is in re form
+reviews = my_subset['Text'].replace(r'[^A-Za-z ]', '', regex=True)
+
+# for loop to go through every review
+for index in range(0,len(reviews)):
+    # initialize empty string
+    new_string = ''
+    # for loop to go through every word in the string
+    for word in test[index].split():
+        # check if the word is not stopword
+        if word.lower() not in words:
+            # add the word with a space at the end
+            new_string += word.lower() + " "
+    # replace the old value with the new value 
+    # without trailing space at the end
+    reviews[index] = new_string.rstrip()
+----
+
+The code snippet above can be shortened into one line as shown below. 
+
+[source, python]
+----
+# performs the same thing as the code above except it's just a line of code
+reviews = my_subset['Text'].replace(r'[^A-Za-z ]', '', regex=True).apply(lambda x: ' '.join([word.lower() for word in x.split() if word.lower() not in (words)]))
 ----
 
 Because the function, `WordCloud`, only accepts https://the-examples-book.com/book/python/variables#str[`string`] format as argument, we can simply combine the whole `Text` column into a long string.
 
 [source, python]
 ----
-text = ' '.join(test['Text'])
+text = ' '.join(reviews)
 ----
 
 Yay, data cleaning is completed at this point! Now, we can easily make a tag map.
@@ -164,6 +202,11 @@ To generate a wordcloud map in Jupyter notebook, we simply can run this block of
 
 [source, python]
 ----
+# import required libraries
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+
+# Feel free to modify the plot features
 word_cloud = WordCloud(width=3000, height=2000, collocations = False, background_color = 'white').generate(text)
 plt.figure( figsize=(20,10),facecolor='k')
 plt.imshow(word_cloud, interpolation='bilinear')
@@ -172,6 +215,9 @@ plt.axis("off")
 plt.show()
 ----
 
+If you follow the steps exactly, you should get this output as the result. 
+
+image::wordcloud.png[WordCloud Map, width=792, height=500, loading=lazy, title="WordCloud Map for Product ID B007JFMH8M"]
 
 [WARNING]
 ====
