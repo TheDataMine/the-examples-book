@@ -1,0 +1,141 @@
+Data Visualization is a way to bring data to life. It's a form of story-telling. It also is a great way to get a bigger picture of your data, especially big data. 
+
+https://the-examples-book.com/data-viz/_attachments/visual_vocabulary.pdf[The link] leads you to a good infographic to learn more about different types of graphs.
+
+Let's look at the food reviews from Amazon.
+
+
+[source, python]
+----
+# Install the pandas library
+import pandas as pd
+# Read the `amazon_fine_food_reviews` file in pandas
+amazon_food = pd.read_csv("/depot/datamine/data/amazon/amazon_fine_food_reviews.csv")
+# Print the first 5 lines to get some sense of the data
+amazon_food.head()
+----
+
+==== Output
+[cols="1,1,1,1,1,1,1,1,1,1"]
+|===
+|ID|ProductId|UserID|ProfileName|HelpfulnessNumerator|HelpfulnessDenominator|Score|Time|Summary|Text
+
+|1|B001E4KFG0|A3SGXH7AUHU8GW|delmartian|1|1|5|1303862400|Good Quality Dog Food|I have bought several of the Vitality canned d...
+
+|2|B00813GRG4|A1D87F6ZCVE5NK|dll pa|0|0|1|1346976000|Not as Advertised|Product arrived labeled as Jumbo Salted Peanut...
+
+|3|B000LQOCH0|ABXLMWJIXXAIN|Natalia Corres "Natalia Corres"|1|1|4|1219017600|"Delight" says it all|This is a confection that has been around a fe...
+
+|4|B000UA0QIQ|A395BORC6FGVXV|Karl|3|3|2|1307923200|Cough Medicine|If you are looking for the secret ingredient i...
+
+|5|B006K2ZZ7K|A1UQRSCLF8GW1T|Michael D. Bigham "M. Wassir"|0|0|5|1350777600|Great taffy|Great taffy at a great price. There was a wid...
+
+|===
+
+
+
+We don't want to read every single review to get a better understanding what people feel about a particular product. It is time consuiming and uneffective. 
+
+Instead, we can generate a word cloud that maps words with respect to frequency. In other words, bigger a word, more frequent it appears in the dataset.
+
+How many distinct products are there in the dataset?
+
+[source, python]
+----
+# Unique count of products in the dataset
+len(amazon_food['ProductId'].value_counts())
+----
+
+----
+74258
+----
+
+We have 74258 products in total, BUT if we run the code to find how many products only have one review, 
+
+[source, python]
+----
+# Find the number of products that only have one review 
+sum(amazon_food['ProductId'].value_counts()==1)
+----
+
+Note that in https://the-examples-book.com/book/python/variables#bool[bool], `True` has an equivalent value of 1, and `False` has an equivalent value of 0. 
+
+we will see that 30408 of the products only have one review, and word clouds are highly unlikely to be helpful for those single reviewed products. 
+
+Pick a product ID you're interested in and create a subset.
+
+For this example, I'll use `ID = 'B007JFMH8M'`.
+
+[source, python]
+----
+# Extract a smaller subset from the dataset specifically about ProductID B007JFMH8M and reset index
+my_subset = amazon_food[amazon_food['ProductId']=='B007JFMH8M'].reset_index(drop=True)
+----
+
+Before we generate a word cloud, data wrangling is required. 
+
+Words like "are", "thing", and "that" aren't very helpful and do not contribute to the data story. They are called `stopwords`. We want to remove all stopwords from the Amazon reviews.
+
+We can easily receive a generalized list of stopwords from the library called wordcloud.
+
+[source, python]
+----
+from wordcloud import STOPWORDS
+
+print(STOPWORDS)
+----
+
+----
+Output: 
+
+{'having', 'few', 'further', 'him', 'have', 'i', 'were', 'who', 'why', 'below', "don't", 'or', 'ever', 'themselves', 'whom', 'theirs', "there's", "how's", 'our', ... }
+----
+
+Note that those stopwords consist punctuation, and we cannot depend nor assume that humans who wrote Amazon reviews would write in perfect English grammar. So it's a safer bet to remove all the puntuations in both stopwords and Amazon reviews to keep things consisten and also lowercase the reviews. 
+
+To remove puntuations from the stopwords, we can run something like this line of code.
+
+[source, python]
+----
+import string
+
+words = [''.join(letter for letter in word if letter not in string.punctuation) for word in STOPWORDS if word]
+----
+
+----
+Output:
+
+['having', 'few', 'further', 'him', 'have', 'i', 'were', 'who', 'why', 'below', 'dont', 'or', 'ever', 'themselves', 'whom', 'theirs', 'theres', 'hows', 'our', 'ours', ...]
+----
+
+To remove any symbols and any funny-looking characters, we can use regular expression to keep alphanumeric characters only.
+
+https://the-examples-book.com/book/projects/29000-f2021-project03#regular-expressions-irregularly-satisfying-introduction-to-grep-and-regular-expressions[The link] has a good starting section about regular expressions.
+
+THIS REQUIRES A BREAKDOWN OF THE WHOLE LINE.
+
+[source, python]
+----
+test['Text'] = my_subset['Text'].replace(r'[^A-Z a-z]', '', regex=True).apply(lambda x: ' '.join([word for word in x.split() if word.lower() not in (words)]))
+----
+
+Because the function, `WordCloud`, only accepts https://the-examples-book.com/book/python/variables#str[`string`] format as argument, we can simply combine the whole `Text` column into a long string.
+
+[source, python]
+----
+text = ' '.join(test['Text'])
+----
+
+Yay, data cleaning is completed at this point! Now, we can generate a wordcloud map.
+
+To generate a wordcloud map in Jupyter, we simply can run this block of code.
+
+[source, python]
+----
+word_cloud = WordCloud(width=3000, height=2000, collocations = False, background_color = 'white').generate(text)
+plt.figure( figsize=(20,10),facecolor='k')
+plt.imshow(word_cloud, interpolation='bilinear')
+plt.tight_layout(pad=0)
+plt.axis("off")
+plt.show()
+----
