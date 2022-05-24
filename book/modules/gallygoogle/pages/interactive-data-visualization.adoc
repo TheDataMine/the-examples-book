@@ -3,38 +3,41 @@
 == Plotly Express (px)
 
 https://plotly.com/python/plotly-express/[Plotly Express] is module inside of the plotly library.
-It allows the user to make interactive plots, which includes but is not limited to maps, animations, treandlines. You can play with color, themes and it even comes with preloaded data sets if you want to test and play with data. 
+It allows the user to make interactive plots, which includes but is not limited to maps, and animations. You can play with color; themes and it even comes with preloaded data sets if you want to test and play around with data. 
 
 == Bubble Chart Map
 
-Step 1- We must first load in the data and clean it using Pandas 
-We are going to use public data from Austraila that maps out the public toilets across the country and a checklist of the ammenities at each location. 
+We must first load in the data and clean it using Pandas 
+We are going to use public data from Australia that maps out the public toilets across the country and a checklist of the amenities at each location. 
 
 [source,python]
 import pandas as pd
-# Importing our csv into pandas
-ToiletsAU = pd.read_csv("toiletmapexport_220501_074429.csv")
-# Looking at the first 5 rows of our dataframe 
+#importing our csv into pandas
+ToiletsAU = pd.read_csv("depot/datamine/etc/toiletmapexport_220501_074429.csv")
+#looking at the first 5 rows of our data frame 
 ToiletsAU.head()
 
-The function 'head' looks at the first 5 rows of your data, it also allows you to see how many columns are in your dataset. THis is important because we want to see what information is in the dataframe and be able to clean it up. 
-There are two collums that hold 'NAN' values. We want to get rid of those columns as they are not benificial to us. 
+The function 'head' looks at the first 5 rows of your data, it also allows you to see how many columns are in your dataset. This is important because we want to see what information is in the data frame and be able to clean it up. 
+There are two columns that hold 'NAN' values. We want to get rid of those columns as they are not beneficial to us. 
 
 [source, python]
-#Drops the columns that have NaN values from our dataset
+#drops the columns that have NaN values from our dataset
 ToiletsAU.drop(columns=["AddressNote", "ToiletNote"], inplace = True)
 ToiletsAU
 
-Taking a look at this data, it is a good time to try and play around with what you could potentially be looking at, if we wanted to see the % of states that have toilets with parking access and create a bar graph then we can do this:
+Looking at this data, it is a good time to try and play around with what you could potentially be looking at, if we wanted to see the % of states that have toilets with parking access and create a bar graph then we can do this:
 
 [source,python]
 #finding the mean or % of the states in each column
 ToiletsAU.groupby(["State"]).mean()
-# creating a  varaible that shows the % of each state with toilets that have parking
+#creating a  varaible that shows the % of each state with toilets that have parking
 to_plot= ToiletsAU.groupby(["State"]).mean()["Parking"]
 import plotly.express as px
 fig = px.bar(to_plot)
 fig.show()
+
+
+image::bargraph.png[Title, width=792, height=500, loading=lazy, Figure 1. An image of a simple bar graph that x-axis as state names and y-axis as percentage of acessible parking]
 
 I also spent a lot of time just checking out the data, feel free to do the same, here are some scripts that I ran just to get a better idea of the different numbers and what I was going to plot. 
 
@@ -47,6 +50,11 @@ print(sum_accessible_toilets_town)
 #totaling the number of accessible toilets per state
 sum_accessible_toilets_state= ToiletsAU.groupby(["State"]).sum()["Accessible"]
 print(sum_accessible_toilets_state)
+
+[source, python]
+#find the maximum value 
+max_states = sum_accessible_toilets_state.max()
+print(max_states)
 
 [source, python]
 #find total number of toilets
@@ -66,18 +74,22 @@ ToiletsAU.groupby(["State"]).count()
 #regrouping the catagories and then finding the sum of each column
 regroup = ToiletsAU.groupby(["State", "Town"]).sum().reset_index()
 print(regroup)
-#setting up a scatterplot to see what the information looks like 
+#setting up a scatter plot to see what the information looks like 
 fig = px.scatter(regroup, x="State", y="Accessible")
 fig.show()
 
+image::scatterplot.png[Title, width=792, height=500, loading=lazy, Figure 2. An image of a typical scatter plot. The x-axis is the state, the y-axis is if it has accessible toilets]
 
-Next I wanted to take all of the data that I had examined and try out creating a bubble scatter plot to show more infortmation
+Next, I wanted to take all the data that I had examined and try out creating a bubble scatter plot to show more information
+
 [source,python]
 fig = px.scatter(regroup, x="Accessible", y="ParkingAccessible", color="State", size="Shower", size_max=60)
 fig.show()
 
 
-Creating a Bubble Scatter plot allows for more access to information but how great would it be to have an immediate understanding of the information with a a map. in order to do this I needed to group by State and Latitude and Longitude
+image::bubblechart.png[Title, width=792, height=500, loading=lazy, Figure 3. An image of a scatter plot graph with colored dots representing information. The color is the state, the size is the number of accessible showers, the x-axis is if it is accessible and the y-axis is acessible parking]
+
+Creating a bubble scatter plot allows for more access to information; but how great would it be to have an immediate understanding of the information just by looking at a map. In order to do this I will need to group by State and Latitude and Longitude
 
 [source,python]
 regroup = ToiletsAU.groupby(["State", "Latitude", "Longitude"]).sum().reset_index()
@@ -100,7 +112,13 @@ fig.update_layout(
         ))
 fig.show()
 
-How cool is that? Really this is all about taking a look at the data and finding different ways to create interactive graphs and charts to help visualize the story that we are telling. In the end this map shows that where the accessible toilets are, and if they have acessible parking. Take a look at the data, and now fee free play around in Plotly Express on the different ways to visualize data!
+
+image::bubblemap[Title, width=792, height=500, loading=lazy, Figure 4. An outline of the continent of Australia with blue circles that vary in opacity. The darker the circle the more accessible parking, the location of the circle is the actual location of the toilet]
+
+How cool is that? Really this is all about looking at data and finding different ways to create interactive graphs and charts, to help visualize the story that we are telling. In the end this map shows that where the accessible toilets are, and if they have accessible parking. Feel free play around in Plotly Express using different ways to visualize data!
 
 This https://the-examples-book.com/data-science-theory/eda[Exploratoray Data Analysis] page also has some really great information on how to look at your data.  
+
+[WARNING]
+ Plotly Express does allow for color modifications which we did not do in this exercise. If you do not assign color values Plotly Express will automatically assign them. Using the automation, however does not take into consideration what colors may be most effective for those that are blind or low vision.  
 
