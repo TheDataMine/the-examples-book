@@ -27,13 +27,15 @@ Supplementary material for solving projects assigned in [The Data Mine](https://
 - Projects Archive: https://the-examples-book.com/projects
 - Corporate Partners Information: https://the-examples-book.com/crp
 - RCAC Resources & Guides: https://the-examples-book.com/rcac
+- Registration: https://the-examples-book.com/registration
 - Think Summer: https://the-examples-book.com/think-summer
 
 You can learn more about The Data Mine using the following links:
 
 - [The Data Mine website](https://datamine.purdue.edu/)
 - [Introducing The Data Mine at Purdue University](https://www.youtube.com/watch?v=R_kqpIMyhR4)
-- [2021 poster symposium](https://datamine.purdue.edu/symposium/welcome.html)
+- [2022 poster symposium](https://datamine.purdue.edu/symposium/welcome.html)
+- [2021 poster symposium](https://datamine.purdue.edu/symposium/welcome2021.html)
 - [2020 poster symposium](https://datamine.purdue.edu/symposium/welcome2020.html)
 - [Our team](https://datamine.purdue.edu/about/welcome.html)
 
