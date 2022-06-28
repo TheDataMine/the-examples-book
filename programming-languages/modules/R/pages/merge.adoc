@@ -1,0 +1,204 @@
+= `merge`
+
+== Basics
+
+`merge` is a function that can be used to combine data.frames by row or column names. The effects of the function replicate the join operations in SQL. 
+
+{sp}+
+
+=== Video Example 1 -- Merging data.frames with `fars`
+
+https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_bxka9wh8&flashvars%5BstreamerType%5D=auto&flashvars%5BlocalizationCode%5D=en&flashvars%5BleadWithHTML5%5D=true&flashvars%5BsideBarContainer.plugin%5D=true&flashvars%5BsideBarContainer.position%5D=left&flashvars%5BsideBarContainer.clickToClose%5D=true&flashvars%5Bchapters.plugin%5D=true&flashvars%5Bchapters.layout%5D=vertical&flashvars%5Bchapters.thumbnailRotator%5D=false&flashvars%5BstreamSelector.plugin%5D=true&flashvars%5BEmbedPlayer.SpinnerTarget%5D=videoHolder&flashvars%5BdualScreen.plugin%5D=true&flashvars%5BKaltura.addCrossoriginToIframe%5D=true&&wid=1_o2rh94x8[Video Explanation]
+
+[source,R]
+----
+dat <- read.csv("/class/datamine/data/fars/7581.csv")
+state_names <- read.csv("/class/datamine/data/fars/states.csv")
+----
+
+We look at the heads of both data frames.
+
+[source,R]
+----
+head(dat)
+head(state_names)
+----
+
+The `STATE` column of `dat` corresponds to the `code` column of `state_names`. We can merge the two on these columns and call the result `mynewDF`.
+
+[source,R]
+----
+mynewDF <- merge(dat, state_names, by.x="STATE", by.y="code")
+----
+
+The new column `state` (`STATE` contains the code, `state` contains the name) is appended to the merged data.frame and stored as `mynewDF`. We can now calculate fields of interest using enhanced data from `merge`. How about the average count of drunk drivers by state?  
+
+[source,R]
+----
+sort(tapply(mynewDF$DRUNK_DR, mynewDF$state, mean))
+----
+
+{sp}+
+
+=== Video Example 2 -- Merging data.frames with `flights`
+
+https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_he3leb19&flashvars%5BstreamerType%5D=auto&flashvars%5BlocalizationCode%5D=en&flashvars%5BleadWithHTML5%5D=true&flashvars%5BsideBarContainer.plugin%5D=true&flashvars%5BsideBarContainer.position%5D=left&flashvars%5BsideBarContainer.clickToClose%5D=true&flashvars%5Bchapters.plugin%5D=true&flashvars%5Bchapters.layout%5D=vertical&flashvars%5Bchapters.thumbnailRotator%5D=false&flashvars%5BstreamSelector.plugin%5D=true&flashvars%5BEmbedPlayer.SpinnerTarget%5D=videoHolder&flashvars%5BdualScreen.plugin%5D=true&flashvars%5BKaltura.addCrossoriginToIframe%5D=true&&wid=1_1zxh0xw1[Video explanation]
+
+[source,R]
+----
+myDF <- read.csv("/class/datamine/data/flights/subset/1995.csv")
+----
+
+Here we use flight data from 1995. `Origin` and `Dest` are the flight takeoff and landing locations, but we only have the airport codes in terms of information on those airports. Airport information is stored in another data.frame:
+
+[source,R]
+----
+airportsDF <- read.csv("/class/datamine/data/flights/subset/airports.csv")
+----
+
+We see that the alphanumeric codes in `Origin` and `Dest` are contained in `iata` within the airports data.frame.
+
+To display the information about the `Origin` airport, we can use `merge` and link `Origin` in `myDF` with `iata` in `airportsDF`:
+
+[source,R]
+----
+mynewDF <- merge(myDF, airportsDF, by.x="Origin", by.y="iata")
+----
+
+The resulting data frame has the same size as `myDF` _and_ now has extra columns with information about the `Origin` airport. Once again, we can use `tapply` on our enhanced data.frame; how about summing the distances of all flights departing from each state?
+
+[source,R]
+----
+sort(tapply( mynewDF$Distance, mynewDF$state, sum ))
+----
+
+{sp}+
+
+=== `books` and `author` Example
+
+For the following exercises, we use the data.frames `books` and `authors`:
+
+[source,R]
+----
+books
+----
+
+----
+   id                                     title author_id rating
+1   1     Harry Potter and the Sorcerers Stone          1   4.47
+2   2   Harry Potter and the Chamber of Secrets         1   4.43
+3   3  Harry Potter and the Prisoner of Azkaban         1   4.57
+4   4       Harry Potter and the Goblet of Fire         1   4.56
+5   5 Harry Potter and the Order of the Phoenix         1   4.50
+6   6    Harry Potter and the Half Blood Prince         1   4.57
+7   7      Harry Potter and the Deathly Hallows         1   4.62
+8   8                          The Way of Kings         2   4.64
+9   9                            The Book Thief         3   4.37
+10 10                      The Eye of the World         4   4.18
+----
+
+[source,R]
+----
+authors
+----
+
+----
+   id                     name avg_rating
+1   1             J.K. Rowling       4.46
+2   2        Brandon Sanderson       4.39
+3   3             Markus Zusak       4.34
+4   4            Robert Jordan       4.18
+5   5          Agatha Christie       4.00
+6   6                Alex Kava       4.02
+7   7    Nassim Nicholas Taleb       3.99
+8   8              Neil Gaiman       4.13
+9   9            Stieg Larsson       4.16
+10 10 Antoine de Saint-Exupéry       4.30
+----
+
+==== If I merge the data.frames on `author_id` in `books` and `id` in `authors`, how do I ensure only perfect matches (no `NA` entries) are returned?
+
+.Click to see solution
+[%collapsible]
+====
+[source,R]
+----
+# In SQL this is referred to as an INNER JOIN.
+merge(books, authors, by.x="author_id", by.y="id", all=F)
+----
+
+----
+   author_id id                                     title rating
+1          1  1     Harry Potter and the Sorcerers Stone    4.47
+2          1  2   Harry Potter and the Chamber of Secrets   4.43
+3          1  3  Harry Potter and the Prisoner of Azkaban   4.57
+4          1  4       Harry Potter and the Goblet of Fire   4.56
+5          1  5 Harry Potter and the Order of the Phoenix   4.50
+6          1  6    Harry Potter and the Half Blood Prince   4.57
+7          1  7      Harry Potter and the Deathly Hallows   4.62
+8          2  8                          The Way of Kings   4.64
+9          3  9                            The Book Thief   4.37
+10         4 10                      The Eye of the World   4.18
+                name avg_rating
+1       J.K. Rowling       4.46
+2       J.K. Rowling       4.46
+3       J.K. Rowling       4.46
+4       J.K. Rowling       4.46
+5       J.K. Rowling       4.46
+6       J.K. Rowling       4.46
+7       J.K. Rowling       4.46
+8  Brandon Sanderson       4.39
+9       Markus Zusak       4.34
+10     Robert Jordan       4.18
+----
+====
+
+==== If I merge the data.frames on `author_id` in `books` and `id` in `authors`, how do I keep author information even if they have no books in `books`?
+
+.Click to see solution
+[%collapsible]
+====
+[source,R]
+----
+# since `authors` is the second data.frame listed, this is a RIGHT JOIN in SQL. 
+# If `authors` were listed first, it would be a LEFT JOIN and we would only need to swap `x` and `y`.
+merge(books, authors, by.x="author_id", by.y="id", all.y=T)
+----
+
+----
+   author_id id                                     title rating
+1          1  1     Harry Potter and the Sorcerers Stone    4.47
+2          1  2   Harry Potter and the Chamber of Secrets   4.43
+3          1  3  Harry Potter and the Prisoner of Azkaban   4.57
+4          1  4       Harry Potter and the Goblet of Fire   4.56
+5          1  5 Harry Potter and the Order of the Phoenix   4.50
+6          1  6    Harry Potter and the Half Blood Prince   4.57
+7          1  7      Harry Potter and the Deathly Hallows   4.62
+8          2  8                          The Way of Kings   4.64
+9          3  9                            The Book Thief   4.37
+10         4 10                      The Eye of the World   4.18
+11         5 NA                                      <NA>     NA
+12         6 NA                                      <NA>     NA
+13         7 NA                                      <NA>     NA
+14         8 NA                                      <NA>     NA
+15         9 NA                                      <NA>     NA
+16        10 NA                                      <NA>     NA
+                       name avg_rating
+1              J.K. Rowling       4.46
+2              J.K. Rowling       4.46
+3              J.K. Rowling       4.46
+4              J.K. Rowling       4.46
+5              J.K. Rowling       4.46
+6              J.K. Rowling       4.46
+7              J.K. Rowling       4.46
+8         Brandon Sanderson       4.39
+9              Markus Zusak       4.34
+10            Robert Jordan       4.18
+11          Agatha Christie       4.00
+12                Alex Kava       4.02
+13    Nassim Nicholas Taleb       3.99
+14              Neil Gaiman       4.13
+15            Stieg Larsson       4.16
+16 Antoine de Saint-Exupéry       4.30
+----
+====
