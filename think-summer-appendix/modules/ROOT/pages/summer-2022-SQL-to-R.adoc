@@ -1,164 +1,151 @@
 = Think Summer: Notes on how to import SQL results into R -- 2022
 
-== Loading the SQL database
+== Loading the R library for SQL, and loading the database
 
-[source,sql]
+We need to run this at the start.  If something goes wrong with our database queries, we can always come back and run these two lines again.  Ideally, we should only need to run these once per session.
+
+[source,R]
 ----
-%sql sqlite:////anvil/projects/tdm/data/movies_and_tv/imdb.db
-----
-
-
-
-
-== We can revisit Question 2 from Project 1, about the movies that received at least 2 million votes, and finding the titles of those movies.
-
-We will need the `titles` table and the `ratings` table.
-
-[source,sql]
-----
-%%sql
-SELECT * FROM titles LIMIT 5;
+%%R
+library(RSQLite)
+conn <- dbConnect(RSQLite::SQLite(), "/anvil/projects/tdm/data/movies_and_tv/imdb.db")
 ----
 
-[source,sql]
-----
-%%sql
-SELECT * FROM ratings LIMIT 5;
-----
+== Importing data from SQL to R
 
-Now we join these two tables, and restrict the results to those movies with at least 2000000 votes.
+For example, we can import the entire `titles` database from SQL into R:
 
-[source,sql]
+[source,R]
 ----
-%%sql
-SELECT * FROM titles AS t JOIN ratings AS r 
-ON t.title_id = r.title_id WHERE votes > 2000000 LIMIT 5;
+%%R
+myDF <- dbGetQuery(conn, "SELECT * FROM titles;")
 ----
 
-== Who are the actors and actresses in the TV show Friends?
+These are the first few lines of the result:
 
-We will need the `people` table and the `crew` table.
-
-[source,sql]
+[source,R]
 ----
-%%sql
-SELECT * FROM people LIMIT 5;
+%%R
+head(myDF)
 ----
 
-[source,sql]
-----
-%%sql
-SELECT * FROM crew LIMIT 5;
-----
+We can see that we have more than 8 million rows, and 9 columns of data.
 
-Now we join these two tables together.
-
-[source,sql]
+[source,R]
 ----
-%%sql
-SELECT * FROM crew AS c JOIN people AS p ON c.person_id = p.person_id LIMIT 5;
+%%R
+dim(myDF)
 ----
 
-and now we also join with the `titles` table, and we focus on the `title_id` for Friends, which is `tt0108778`.  There are 10 people listed, from the Friends TV show.
+A dataframe in R, by the way, is a lot like an Excel spreadsheet or a SQL table, namely, it has columns of data, with one type of data in each column.  The columns are usually long, in other words, there are usually many rows in the dataframe.
 
-[source,sql]
-----
-%%sql
-SELECT * FROM titles AS t JOIN crew AS c ON t.title_id = c.title_id
-JOIN people AS p ON c.person_id = p.person_id
-WHERE t.title_id = 'tt0108778' LIMIT 50;
-----
+== Getting familiar with the `premiered` years of the titles
 
-and 8 of them are actors or actresses
+Here are the first few entries in the `premiered` column:
 
-[source,sql]
+[source,R]
 ----
-%%sql
-SELECT * FROM titles AS t JOIN crew AS c ON t.title_id = c.title_id
-JOIN people AS p ON c.person_id = p.person_id
-WHERE (t.title_id = 'tt0108778')
-AND ((c.category = 'actress') OR (c.category = 'actor')) LIMIT 50;
+%%R
+head(myDF$premiered)
 ----
 
-== 1. James Caan died last week.  What was his highest rated movie?
+and here are the last few entries in the `premiered` column:
 
-He appeared in The Godfather, which has a rating of 9.2
-
-[source,sql]
+[source,R]
 ----
-%%sql
-SELECT * FROM titles AS t JOIN crew AS c ON t.title_id = c.title_id
- JOIN people AS p ON c.person_id = p.person_id 
- JOIN ratings AS r ON t.title_id = r.title_id
- WHERE (p.name = 'James Caan') AND (t.type = 'movie') ORDER BY r.rating DESC LIMIT 5;
+%%R
+tail(myDF$premiered)
 ----
 
-== 2. How many movies has Emma Watson appeared in?
+We can tabulate how many titles premiered in each year, using the `table` function in R.  In the result, we have a row of years followed by a row of data (which is the number of titles per year).  Then we have another row of years followed by a row of data, etc., etc.  R always displays data from a table in this way, namely, by alternating a row of lables and a row of data.  You can think about how things would look different (and easier) if your screen was really, really wide, and there were only two rows displayed, namely, the lables (which are the years themselves) and the data (which are the counts of the number of titles per year.
 
-She has appeared in a total of 18 movies.
-
-[source,sql]
+[source,R]
 ----
-%%sql
-SELECT COUNT(*) FROM titles AS t JOIN crew AS c ON t.title_id = c.title_id
- JOIN people AS p ON c.person_id = p.person_id 
- WHERE (p.name = 'Emma Watson') AND (t.type = 'movie');
+%%R
+table(myDF$premiered)
 ----
 
-== 3. What was the most popular movie (highest rating) in the year your Mom or Dad or aunt, etc., was born?
+It is easy to wrap that table into a plot, to display how the number of titles has greatly increased from year to year.
 
-The most popular movie that premiered in 1940 was The Great Dictator, with a rating of 8.4
-
-[source,sql]
+[source,R]
 ----
-%%sql
-SELECT * FROM titles AS t JOIN ratings AS r ON t.title_id = r.title_id
- WHERE (t.premiered = 1940) AND (t.type = 'movie') ORDER BY r.rating DESC LIMIT 5;
+%%R
+plot(table(myDF$premiered))
 ----
 
-== 4. How many times has The Awakening been used as a title?
+== How many genres are in the titles table?
 
-The Awakening has been used 131 times as a title
+Here are the first few genres from the genres column:
 
-[source,sql]
+[source,R]
 ----
-%%sql
-SELECT COUNT(*) FROM titles WHERE primary_title = 'The Awakening' LIMIT 5;
-----
-
-== 5. How many episodes of Friends were there?
-
-We start by finding the `title_id` for Friends.
-
-[source,sql]
-----
-%%sql
-SELECT * FROM titles WHERE (primary_title = 'Friends') AND (premiered > 1992) LIMIT 5;
+%%R
+head(myDF$genres)
 ----
 
-Now we find the number of episodes per season
+We use the `head` so that we can keep the output relatively small and manageable.  Now we can remove duplicates:
 
-[source,sql]
+[source,R]
 ----
-%%sql
-SELECT COUNT(*), season_number FROM episodes WHERE show_title_id = 'tt0108778' GROUP BY season_number;
-----
-
-Season 10 differs from what I expected (I was guessing that there would be 18 episodes), so I checked further on this.
-
-[source,sql]
-----
-%%sql
-SELECT * FROM episodes AS e JOIN titles AS t ON e.episode_title_id = t.title_id WHERE show_title_id = 'tt0108778' AND season_number = 10 ORDER BY episode_number;
+%%R
+unique(head(myDF$genres))
 ----
 
-OK so they combined The Last One, which is two episodes, into just one listing.
+and see how many `unique` values there are, in the `head`:
 
-So there are 235 episodes listed, although there were actually 236 episodes in the show altogether!
+[source,R]
+----
+%%R
+length(unique(head(myDF$genres)))
+----
 
-[source,sql]
+Now that this works well, we can remove the `head` restriction, and see that there are 2283 unique genres in the table altogether.  Remember that each genre is actually a tuple of genres, for instance, 
+
+[source,R]
 ----
-%%sql
-SELECT COUNT(*) FROM episodes WHERE show_title_id = 'tt0108778';
+%%R
+length(unique(myDF$genres))
 ----
+
+Now we can focus on separating the genres into their individual genres.  Remember that they are combined, using commas, in the format that we originally have.  Here are the first few genres:
+
+[source,R]
+----
+%%R
+head(myDF$genres)
+----
+
+Now we split them according to the commas in each:
+
+[source,R]
+----
+%%R
+strsplit(head(myDF$genres), ",")
+----
+
+This will be new for many/most of you, but we can `unlist` them in R, so that they are not listed separately anymore, but instead, they are in one big vector.
+
+[source,R]
+----
+%%R
+unlist(strsplit(head(myDF$genres), ","))
+----
+
+and now we can use `unique` to see a list of the genres, removing any duplications:
+
+[source,R]
+----
+%%R
+unique(unlist(strsplit(head(myDF$genres), ",")))
+----
+
+Since this works on the `head`, we can remove the `head` now, and see the 29 such genres.  Notice that the 21st such genre is missing, i.e., it is empty, so we do not know the genres for some of the movies.
+
+[source,R]
+----
+%%R
+unique(unlist(strsplit(myDF$genres, ",")))
+----
+
+
 
