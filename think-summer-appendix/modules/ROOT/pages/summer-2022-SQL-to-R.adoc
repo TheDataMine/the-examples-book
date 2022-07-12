@@ -1,0 +1,164 @@
+= Think Summer: Notes on how to import SQL results into R -- 2022
+
+== Loading the SQL database
+
+[source,sql]
+----
+%sql sqlite:////anvil/projects/tdm/data/movies_and_tv/imdb.db
+----
+
+
+
+
+== We can revisit Question 2 from Project 1, about the movies that received at least 2 million votes, and finding the titles of those movies.
+
+We will need the `titles` table and the `ratings` table.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles LIMIT 5;
+----
+
+[source,sql]
+----
+%%sql
+SELECT * FROM ratings LIMIT 5;
+----
+
+Now we join these two tables, and restrict the results to those movies with at least 2000000 votes.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles AS t JOIN ratings AS r 
+ON t.title_id = r.title_id WHERE votes > 2000000 LIMIT 5;
+----
+
+== Who are the actors and actresses in the TV show Friends?
+
+We will need the `people` table and the `crew` table.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM people LIMIT 5;
+----
+
+[source,sql]
+----
+%%sql
+SELECT * FROM crew LIMIT 5;
+----
+
+Now we join these two tables together.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM crew AS c JOIN people AS p ON c.person_id = p.person_id LIMIT 5;
+----
+
+and now we also join with the `titles` table, and we focus on the `title_id` for Friends, which is `tt0108778`.  There are 10 people listed, from the Friends TV show.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles AS t JOIN crew AS c ON t.title_id = c.title_id
+JOIN people AS p ON c.person_id = p.person_id
+WHERE t.title_id = 'tt0108778' LIMIT 50;
+----
+
+and 8 of them are actors or actresses
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles AS t JOIN crew AS c ON t.title_id = c.title_id
+JOIN people AS p ON c.person_id = p.person_id
+WHERE (t.title_id = 'tt0108778')
+AND ((c.category = 'actress') OR (c.category = 'actor')) LIMIT 50;
+----
+
+== 1. James Caan died last week.  What was his highest rated movie?
+
+He appeared in The Godfather, which has a rating of 9.2
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles AS t JOIN crew AS c ON t.title_id = c.title_id
+ JOIN people AS p ON c.person_id = p.person_id 
+ JOIN ratings AS r ON t.title_id = r.title_id
+ WHERE (p.name = 'James Caan') AND (t.type = 'movie') ORDER BY r.rating DESC LIMIT 5;
+----
+
+== 2. How many movies has Emma Watson appeared in?
+
+She has appeared in a total of 18 movies.
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*) FROM titles AS t JOIN crew AS c ON t.title_id = c.title_id
+ JOIN people AS p ON c.person_id = p.person_id 
+ WHERE (p.name = 'Emma Watson') AND (t.type = 'movie');
+----
+
+== 3. What was the most popular movie (highest rating) in the year your Mom or Dad or aunt, etc., was born?
+
+The most popular movie that premiered in 1940 was The Great Dictator, with a rating of 8.4
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles AS t JOIN ratings AS r ON t.title_id = r.title_id
+ WHERE (t.premiered = 1940) AND (t.type = 'movie') ORDER BY r.rating DESC LIMIT 5;
+----
+
+== 4. How many times has The Awakening been used as a title?
+
+The Awakening has been used 131 times as a title
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*) FROM titles WHERE primary_title = 'The Awakening' LIMIT 5;
+----
+
+== 5. How many episodes of Friends were there?
+
+We start by finding the `title_id` for Friends.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles WHERE (primary_title = 'Friends') AND (premiered > 1992) LIMIT 5;
+----
+
+Now we find the number of episodes per season
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*), season_number FROM episodes WHERE show_title_id = 'tt0108778' GROUP BY season_number;
+----
+
+Season 10 differs from what I expected (I was guessing that there would be 18 episodes), so I checked further on this.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM episodes AS e JOIN titles AS t ON e.episode_title_id = t.title_id WHERE show_title_id = 'tt0108778' AND season_number = 10 ORDER BY episode_number;
+----
+
+OK so they combined The Last One, which is two episodes, into just one listing.
+
+So there are 235 episodes listed, although there were actually 236 episodes in the show altogether!
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*) FROM episodes WHERE show_title_id = 'tt0108778';
+----
+
