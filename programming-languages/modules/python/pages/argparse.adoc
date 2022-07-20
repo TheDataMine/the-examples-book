@@ -16,9 +16,11 @@ We'll begin by showing `argparse` stripped down to its most basic level. The con
 ----
 import argparse
 
+
 def main():
     parser = argparse.ArgumentParser()
     args = parser.parse_args()
+
 
 if __name__ == '__main__':
     main()
@@ -31,7 +33,7 @@ Recall that the structure of `main` and the conditional are features of _scripts
 
 As with any package, the first step is importing `argparse`. Our `parser` variable is an `ArgumentParser` object, on which we add & parse arguments and ask for help. Assigning `parser.parse_args()` to `args` is the final step that checks for errors and converts our argument strings into objects. Declaring that variable is recommended to access the arguments for further use in the script.
 
-If the above code was stored in a file called `test.py` and then executed in the terminal, it wouldn't yield anything. However, we have the `-h`/`--help` flag, we get some basic output:
+If the above code was stored in a file called `test.py` and then executed in the terminal, it wouldn't yield anything. However, we can include the `-h`/`--help` flag to get some basic output:
 
 [source,UNIX]
 ----
@@ -40,23 +42,34 @@ $ python test.py -h
 ----
 usage: test.py [-h]
 
-options:
+optional arguments:
   -h, --help  show this help message and exit
 ----
 
 The help flag is intrinsic to any script and is very useful for deciphering any script you use or write.
 
-Let's make our script more useful by adding some arguments before parsing:
+{sp}+
+
+== Arguments & Options
+
+Let's make our script more useful by adding some *arguments* before parsing:
 
 [source,python]
 ----
 import argparse
-parser = argparse.ArgumentParser()
-parser.add_argument('say', help='outputs the given string')
-parser.add_argument('boom', help='prints the string in uppercase')
-args = parser.parse_args()
-print(args.say)
-print(args.boom.upper())
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('say', help='outputs the given string')
+    parser.add_argument('boom', help='prints the string in uppercase')
+    args = parser.parse_args()
+    print(args.say)
+    print(args.boom.upper())
+
+
+if __name__ == '__main__':
+    main()
 ----
 
 [source,UNIX]
@@ -67,3 +80,146 @@ $ python test.py hey ya
 hey
 YA
 ----
+
+Let's use `--help` again to determine what we're looking at:
+
+[source,UNIX]
+----
+$ python test.py --help
+----
+----
+usage: test.py [-h] say boom
+
+positional arguments:
+  say         outputs the given string
+  boom        prints the string in uppercase
+
+optional arguments:
+  -h, --help  show this help message and exit
+----
+
+Cool! We confirm that `say` and `boom` are positional arguments, meaning that their position is specific and required. Our optional `help` parameter of the `add_argument` method is displayed in the help menu. If we don't include arguments, we get the error message `test.py: error: the following arguments are required:` and the missing arguments are listed.
+
+Our help menu gives us some nice hints regarding the difference between arguments and *options*. As the name suggests, options are optional arguments that can be used to augment or change the function of the script. Option and flags are used interchangeably to describe the same thing. There are *short forms* starting with `-` and *long forms* starting with `--`; both do the same thing, but short forms are abbreviated versions of long forms and can help make commands shorter.
+
+How about we add some arguments to change the function of our script:
+
+[source,python]
+----
+import argparse
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('say', help='outputs the given string')
+    parser.add_argument('boom', help='prints the string in uppercase')
+    parser.add_argument('-sho', '--shout', help='yells both inputs', action='store_true')
+    parser.add_argument('-shu', '--shush', help='quiets both inputs', action='store_true')
+    args = parser.parse_args()
+    if args.shout & args.shush:
+        print('Cancelled out')
+        print(args.say)
+        print(args.boom.upper())
+    elif args.shout:
+        print(args.say.upper())
+        print(args.boom.upper())
+    elif args.shush:
+        print(args.say)
+        print(args.boom)
+    else:
+        print(args.say)
+        print(args.boom.upper())
+
+
+if __name__ == '__main__':
+    main()
+----
+
+[source,UNIX]
+----
+$ python test.py boo yah -sho
+----
+----
+BOO
+YAH
+----
+
+[source,UNIX]
+----
+$ python test.py uh oh -shu
+----
+----
+uh
+oh
+----
+
+[source,UNIX]
+----
+$ python test.py take that -shu -sho
+----
+----
+Cancelled out
+take
+THAT
+----
+
+You might notice that we added `action` as a parameter to `add_argument` for both of our new flags. Setting `action` to "store_true" makes the flag `True` if included and `False` if not. Most flags include this parameter, as excluding it requires additional input, which is unnecessary if the script is changed depending only on the flag's _inclusion_.
+
+{sp}+
+
+=== In-depth Improvements
+
+The information above is enough for general scripts to be written, but there are some specifics that can enhance our programming further.
+
+{sp}+
+
+==== Mutually-Exclusive Groups
+
+Let's start by modifying `test.py`. `--shout` and `--shush` perform opposite functions and, based on how we've written the script, cancel each other out. Including both is unintuitive and muddles our script -- let's utilize the `add_mutually_exclusive_group()` function included in `ArgumentParser()`.
+
+[source,python]
+----
+import argparse
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    changer = parser.add_mutually_exclusive_group()
+    parser.add_argument('say', help='outputs the given string')
+    parser.add_argument('boom', help='prints the string in uppercase')
+    changer.add_argument('-sho', '--shout', help='yells both inputs', action='store_true')
+    changer.add_argument('-shu', '--shush', help='quiets both inputs', action='store_true')
+    args = parser.parse_args()
+    if args.shout:
+        print(args.say.upper())
+        print(args.boom.upper())
+    elif args.shush:
+        print(args.say)
+        print(args.boom)
+    else:
+        print(args.say)
+        print(args.boom.upper())
+
+
+if __name__ == '__main__':
+    main()
+----
+
+[source,UNIX]
+----
+$ python test.py -h
+----
+----
+usage: test.py [-h] [-sho | -shu] say boom
+
+positional arguments:
+  say            outputs the given string
+  boom           prints the string in uppercase
+
+optional arguments:
+  -h, --help     show this help message and exit
+  -sho, --shout  yells both inputs
+  -shu, --shush  quiets both inputs
+----
+
+We see from the help menu under usage that the second flag is `[-sho | -shu]`, indicating that you use one flag or the other. If we include both `--shout` and `--shush` in one command, we get the error message `test.py: error: argument -shu/--shush: not allowed with argument -sho/--shout`
