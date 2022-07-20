@@ -222,4 +222,84 @@ optional arguments:
   -shu, --shush  quiets both inputs
 ----
 
-We see from the help menu under usage that the second flag is `[-sho | -shu]`, indicating that you use one flag or the other. If we include both `--shout` and `--shush` in one command, we get the error message `test.py: error: argument -shu/--shush: not allowed with argument -sho/--shout`
+We see from the help menu under usage that the second flag is `[-sho | -shu]`, indicating that you use one flag or the other. If we include both `--shout` and `--shush` in one command, we get the error message `test.py: error: argument -shu/--shush: not allowed with argument -sho/--shout`.
+
+{sp}+
+
+==== Dealing with integers and `choices`
+
+For the next demonstration, we'll move on from `test.py` and create a new Python script called `numbers.py`. The goal of this script will be to take the sum of 3 integers, then multiply it by some integer indicated by a flag.
+
+[source,python]
+----
+import argparse
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('x', type=int, help='first value')
+    parser.add_argument('y', type=int, help='second value')
+    parser.add_argument('z', type=int, help='third value')
+    parser.add_argument('-f', '--factor', type=int, help='value by which the sum is multiplied', default=1)
+    args = parser.parse_args()
+    print((args.x + args.y + args.z) * args.factor)
+
+
+if __name__ == '__main__':
+    main()
+----
+
+[source,UNIX]
+----
+$ python numbers.py 1 2 3
+----
+----
+6
+----
+
+You might have noticed we added the `type` and `default` parameters of `add_argument`. Without these two, our script would not function as desired:
+
+* For `argparse`, the default value for `type` is string. Leaving out `type=int` would result in string concatenation instead of addition.
+* If a flag is missing, the default is `None`, even if the flag is an integer. Leaving out `default=1` here would result in the error message `TypeError: unsupported operand type(s) for *: 'int' and 'NoneType'`
+
+If we wanted to adopt a "less is more" philosophy for the script and maximize its multiplication at 3, we could use the `choices` parameter as follows:
+
+[source,python]
+----
+import argparse
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('x', type=int, help='first value')
+    parser.add_argument('y', type=int, help='second value')
+    parser.add_argument('z', type=int, help='third value')
+    parser.add_argument('-f', '--factor', type=int, help='value by which the sum is multiplied', 
+                        default=1, choices = [1, 2, 3])
+    args = parser.parse_args()
+    print((args.x + args.y + args.z) * args.factor)
+
+
+if __name__ == '__main__':
+    main()
+----
+
+Now our options are limited to tripling, doubling, or keeping the sum.
+
+[source,UNIX]
+----
+$ python numbers.py 1 2 3 -f 2
+----
+----
+12
+----
+
+[source,UNIX]
+----
+$ python numbers.py 1 2 3 -f 4
+----
+----
+usage: numbers.py [-h] [-f {1,2,3}] x y z
+numbers.py: error: argument -f/--factor: invalid choice: 4 (choose from 1, 2, 3)
+----
+
