@@ -125,3 +125,115 @@ plt.close('all')
 image::day4_img2.png[Focused View of DC Streets, width=792, height=500, loading=lazy, title="Focused View of DC Streets"]
 
 ====
++
+. Now that we have our smaller map we can take a look at our cell phone data. 
++
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+cell_phone_data = gpd.read_file('../data/cell_phone_records.geojson')
+print(cell_phone_data.head())
+----
+
+----
+                     date  id        lat        lon  \
+0 2022-05-02 00:17:14.404   0  38.890393 -77.011107   
+1 2022-05-02 00:27:14.404   0  38.905440 -76.982952   
+2 2022-05-02 00:37:14.404   0  38.901316 -76.991544   
+3 2022-05-02 00:47:14.404   0  38.908996 -77.048789   
+4 2022-05-02 00:57:14.404   0  38.893913 -77.032013   
+
+                     geometry  
+0  POINT (-77.01111 38.89039)  
+1  POINT (-76.98295 38.90544)  
+2  POINT (-76.99154 38.90132)  
+3  POINT (-77.04879 38.90900)  
+4  POINT (-77.03201 38.89391)  
+----
+
+====
++
+This data looks pretty similar to our DC streets data. It has dates and times as well as the ID for the caller. The most important parts are the `lat` and `lon` columns that we can use to map the caller's path. 
++
+. Let's map out our data and see what it looks like!
++
+[%collapsible]
+====
+[source,python]
+----
+n = len(cell_phone_data['id'].unique())
+color = iter(plt.cm.rainbow(np.linspace(0, 1, n)))
+
+fig, ax1 = plt.subplots(1, 1, figsize=(15, 8))
+
+smaller_map.plot(ax = ax1)
+plt.plot(-76.9926056723681, 38.90839920511692, c='orange', marker="*", markersize=30)
+
+for i in range(0, cell_phone_data['id'].max()):
+    person = cell_phone_data.loc[cell_phone_data['id'] == i].sort_values(by='date')
+    plt.plot(person['lon'], person['lat'], c=next(color), linestyle='--')
+
+plt.show()
+plt.close('all')
+----
+
+image::day4_img3.png[Map of DC with Phone Paths, width=792, height=500, loading=lazy, title="Map of DC with Phone Paths"]
+
+====
++
+This is an interesting map, but it's *very* noisy. For our next step lets see if we can limit the map to only calls that went near where our victim was found. 
++
+In this section you'll see references to `crs` with some odd looking numbers and letters after them like `epsg:4326`. These are what are known as coordinate reference systems. 
++
+Their specific detail is beyond the scope of this workshop, but at a high-level they help convert coordinates to address different ways of looking at the earth. 
++
+In our case, we have to convert the CRS' to something that is better for measuring distance in North America. 
++
+. Lets calculate the distance from our victim's location to all of the lat/lon points that we have in the phone record. 
++
+[%collapsible]
+====
+[source,python]
+----
+starting_point = gpd.GeoSeries([Point(-77.03718028811417, 38.88978312185629) for i in range(len(cell_phone_data))], crs='epsg:4326')
+
+cell_phone_data = cell_phone_data.to_crs('EPSG:32633')
+starting_point = starting_point.to_crs('EPSG:32633')
+
+cell_phone_data['distance'] = cell_phone_data.distance(starting_point)
+
+cell_phone_data['distance_miles'] = cell_phone_data['distance'] * 0.000621371
+
+print(cell_phone_data[cell_phone_data['distance_miles'] < 1])
+----
+
+----
+                       date  id        lat        lon  \
+4   2022-05-02 00:57:14.404   0  38.893913 -77.032013   
+10  2022-05-02 01:57:14.404   0  38.881946 -77.035672   
+12  2022-05-02 02:17:14.404   0  38.892572 -77.026673   
+18  2022-05-02 03:17:14.404   0  38.886712 -77.041343   
+22  2022-05-02 03:57:14.404   0  38.885509 -77.046967   
+..                      ...  ..        ...        ...   
+758 2022-05-01 20:30:00.000  25  38.896051 -77.043628   
+762 2022-05-01 21:10:00.000  25  38.889835 -77.040619   
+763 2022-05-01 21:20:00.000  25  38.892248 -77.036607   
+766 2022-05-01 21:50:00.000  25  38.895527 -77.029528   
+767 2022-05-01 22:00:00.000  25  38.892288 -77.033660   
+
+                              geometry     distance  distance_miles  
+4    POINT (-6130636.381 10277516.684)  1016.764717        0.631788  
+10   POINT (-6132711.509 10278137.551)  1395.192331        0.866932  
+12   POINT (-6130913.298 10276796.415)  1526.595396        0.948582  
+18   POINT (-6131829.871 10278869.453)   787.591153        0.489386  
+22   POINT (-6131997.658 10279654.020)  1542.512663        0.958473  
+..                                 ...          ...             ...  
+758  POINT (-6130170.922 10279090.606)  1415.560118        0.879588  
+762  POINT (-6131286.540 10278738.958)   473.128919        0.293989  
+763  POINT (-6130893.552 10278164.074)   441.023789        0.274039  
+766  POINT (-6130371.878 10277159.468)  1459.603516        0.906955  
+767  POINT (-6130909.354 10277758.863)   654.950097        0.406967  
+----
+====
