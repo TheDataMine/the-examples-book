@@ -191,7 +191,7 @@ Their specific detail is beyond the scope of this workshop, but at a high-level 
 +
 In our case, we have to convert the CRS' to something that is better for measuring distance in North America. 
 +
-. Lets calculate the distance from our victim's location to all of the lat/lon points that we have in the phone record. 
+. Lets calculate the distance from our victim's location to all of the lat/lon points that we have in the phone records. 
 +
 [%collapsible]
 ====
@@ -236,4 +236,184 @@ print(cell_phone_data[cell_phone_data['distance_miles'] < 1])
 766  POINT (-6130371.878 10277159.468)  1459.603516        0.906955  
 767  POINT (-6130909.354 10277758.863)   654.950097        0.406967  
 ----
+====
++
+. Now we can use visualizations to see where a good cutoff point may be for "close" to our victim. 
++
+[%collapsible]
+====
+[source,python]
+----
+fix, ax1 = plt.subplots(1, 1, figsize=(8,6))
+
+ax1 = plt.hist(cell_phone_data['distance_miles'], bins=25)
+
+plt.show()
+plt.close('all')
+----
+
+image::day4_img4.png[Histogram of Distance from Point of Interest, width=792, height=500, loading=lazy, title="Histogram of Distance from Point of Interest"]
+
+====
++
+. This helps, but let's look at distances less than 1 mile. 
++
+[%collapsible]
+====
+[source,python]
+----
+fix, ax1 = plt.subplots(1, 1, figsize=(8,6))
+
+ax1 = plt.hist(cell_phone_data.loc[cell_phone_data['distance_miles'] < 1]['distance_miles'], bins=25)
+
+plt.show()
+plt.close('all')
+----
+
+image::day4_img5.png[Histogram of Distance from Point of Interest < 1 Mile, width=792, height=500, loading=lazy, title="Histogram of Distance from Point of Interest < 1 Mile"]
+
+====
++
+Based on the histogram it looks like we could use half a mile as a good cutoff. 
++
+. Using half a mile lets see what our updated map looks like. 
++
+[%collapsible]
+====
+[source,python]
+----
+id_of_interest = cell_phone_data.loc[cell_phone_data['distance_miles'] < 0.5]['id'].unique()
+cell_phone_data['close_point'] = cell_phone_data['id'].isin(id_of_interest)
+cell_phone_data_reduced = cell_phone_data.loc[cell_phone_data['close_point'] == True].reset_index()
+----
+
+[source,python]
+----
+n = len(cell_phone_data_reduced['id'].unique())
+color_1 = iter(plt.cm.rainbow(np.linspace(0, 1, n)))
+
+fig, ax1 = plt.subplots(1, 1, figsize=(15, 8))
+
+smaller_map.plot(ax = ax1)
+plt.plot(-76.9926056723681, 38.90839920511692, c='orange', marker="*", markersize=30)
+
+for i in cell_phone_data_reduced['id'].unique():
+    person = cell_phone_data_reduced.loc[cell_phone_data_reduced['id'] == i].sort_values(by='date')
+    plt.plot(person['lon'], person['lat'], c=next(color_1), linestyle='--')
+
+plt.show()
+plt.close('all')
+----
+
+image::day4_img6.png[DC Street Map with Distance Filtered Call Routes, width=792, height=500, loading=lazy, title="DC Street Map with Distance Filtered Call Routes"]
+
+====
++
+We've reduced the noise some, but it's still pretty hard to read. 
++
+The investigators told us that due to the location the crime had to take place at nigh. We can use the time of the calls to see if we can reduce our data further. 
++
+. We will extract time and then filter to calls that only happened late at night. 
++
+[%collapsible]
+====
+[source,python]
+----
+cell_phone_data_reduced['hour'] = cell_phone_data_reduced['date'].apply(lambda x: x.hour)
+cell_phone_data_reduced['minute'] = cell_phone_data_reduced['date'].apply(lambda x: x.minute)
+cell_phone_data_reduced.head()
+----
+
+----
+   index                    date  id        lat        lon  \
+0      0 2022-05-02 00:17:14.404   0  38.890393 -77.011107   
+1      1 2022-05-02 00:27:14.404   0  38.905440 -76.982952   
+2      2 2022-05-02 00:37:14.404   0  38.901316 -76.991544   
+3      3 2022-05-02 00:47:14.404   0  38.908996 -77.048789   
+4      4 2022-05-02 00:57:14.404   0  38.893913 -77.032013   
+
+                            geometry     distance  distance_miles  \
+0  POINT (-6131415.531 10274679.579)  3588.816997        2.229987   
+1  POINT (-6128984.462 10270666.938)  7951.698847        4.940955   
+2  POINT (-6129644.341 10271886.629)  6597.517065        4.099506   
+3  POINT (-6127856.245 10279670.550)  3739.428950        2.323573   
+4  POINT (-6130636.381 10277516.684)  1016.764717        0.631788   
+
+   close_point  hour  minute  
+0         True     0      17  
+1         True     0      27  
+2         True     0      37  
+3         True     0      47  
+4         True     0      57  
+----
+
+Now that we have `hour` and `minute` extracted lets filter our data to calls between 11 PM and 4 AM and map them.
+
+[source,python]
+----
+cell_phone_data_reduced_night = cell_phone_data_reduced.loc[(cell_phone_data_reduced['hour'] > 23) | (cell_phone_data_reduced['hour'] < 4)]
+
+id_count = cell_phone_data_reduced_night['id'].unique()
+print("We have {} late night IDs".format(len(id_count)))
+----
+
+----
+We have 7 late night IDs
+----
+
+[source,python]
+----
+cell_phone_data['final_id'] = cell_phone_data['id'].isin(id_count)
+final_data = cell_phone_data.loc[cell_phone_data['final_id'] == True].reset_index()
+----
+
+[source,python]
+----
+n = len(final_data['id'].unique())
+color_1 = iter(plt.cm.rainbow(np.linspace(0, 1, n)))
+
+fig, ax1 = plt.subplots(1, 1, figsize=(15, 8))
+
+smaller_map.plot(ax = ax1)
+plt.plot(-76.9926056723681, 38.90839920511692, c='orange', marker="*", markersize=30)
+
+for i in final_data['id'].unique():
+    person = final_data.loc[final_data['id'] == i].sort_values(by='date')
+    plt.plot(person['lon'], person['lat'], c=next(color_1), linestyle='--', label="caller {}".format(i))
+
+plt.legend()
+plt.show()
+plt.close('all')
+----
+
+image::day4_img7.png[DC Street Map with Calls Filtered by Time, width=792, height=500, loading=lazy, title="DC Street Map with Calls Filtered by Time"]
+
+====
++
+Narrowing our data down to 7 suspects is great!
++
+To help the investigators we can also break each of the 7 calls into its own graph.
++
+. Let's create a new vis that has a separate graph for each of the late-night calls.
++
+[%collapsible]
+====
+[source,python]
+----
+ids_to_plot = final_data['id'].unique()
+color_1 = iter(plt.cm.rainbow(np.linspace(0, 1, 7)))
+
+fig, axs = plt.subplots(nrows=3, ncols=3, figsize=(25, 20))
+
+for id, ax in zip(ids_to_plot, axs.ravel()):
+    smaller_map.plot(ax = ax, alpha=0.25)
+    single_caller = final_data.loc[final_data['id'] == id]
+    ax.plot(single_caller['lon'], single_caller['lat'], c=next(color_1), linestyle='--')
+    ax.plot(-76.9926056723681, 38.90839920511692, c='orange', marker="*", markersize=30)
+----
+
+image::day4_img8.png[DC Street Map with Individual Calls - Part 1, width=792, height=500, loading=lazy, title="DC Street Map with Individual Calls - Part 1"]
+
+image::day4_img9.png[DC Street Map with Individual Calls - Part 2, width=792, height=500, loading=lazy, title="DC Street Map with Individual Calls - Part 2"]
+
 ====
