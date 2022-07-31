@@ -8,7 +8,7 @@ THe standard practice for `DataFrames` is xref:pandas-read-write-data.adoc[readi
 
 {sp}+
 
-== First Glance at Data
+== Viewing Data
 
 Since we have another page devoted to reading .csv data, we'll start by creating a simple `DataFrame` for analysis:
 
@@ -27,7 +27,7 @@ The `head` function lets us look at the first n rows of the `DataFrame`, with th
 
 [NOTE]
 ====
-Unlike R's `data.frames`, you don't include a Python `DataFrame` as a parameter to the function, instead using "." to call the function after inputting the `DataFrame`.
+Unlike R's `data.frames`, you don't include a Python `DataFrame` as a parameter to a function, instead using "." to call the function after inputting the `DataFrame`.
 ====
 
 [source,python]
@@ -78,25 +78,20 @@ Index(['count', 'fruit'], dtype='object')
 
 == Manipulating Data
 
-Generally speaking, data manipulation only happens with functions, given the fact that most manipulations require parameters to specify what is being changed or how to change the data.
+Generally speaking, data manipulation happens with functions and not attributes, given the fact that most manipulations require parameters to specify what is being changed or how to change the data.
+
+{sp}+
 
 === `rename()`
 
-What if we read some data and the column names aren't in our desired format, or just plain unhelpful?
+What if we read some data and the column names aren't in our desired format, or just plain unhelpful? Fortunately, we can use `rename()` to replace the names of certain columns, as defined by the `columns` dictionary parameter.
 
 [source,python]
 ----
 fruits = fruits.rename(columns={'fruit': 'groceries'})
 ----
 
-You could also add the `inplace=True` argument to make the change directly to the DataFrame: 
-
-[source,python]
-----
-fruits.rename(columns={'fruit': 'groceries'}, inplace=True)
-----
-
-Either method would result in the `fruit` column being renamed to `groceries` in this example. 
+We can now introduce the important *`inplace=True` argument* to make the change directly to the `DataFrame` instead of creating a new variable: 
 
 [source,python]
 ----
@@ -108,25 +103,46 @@ print(fruits.columns)
 Index(['count', 'groceries'], dtype='object')
 ----
 
-**What if I have a list of dicts and I want to create a DataFrame?**
+[WARNING]
+====
+Keep in mind that `inplace = True` overwrites your `DataFrame` -- if your function is more complicated, it might not be possible to reclaim an earlier version of the `DataFrame` without reloading it completely. xref:https://jman4190.medium.com/explaining-the-inplace-parameter-for-beginners-5de7ffa18d2e[Here's an article] that briefly explains `inplace = True` and when you would want to use it.
+====
 
-In Python it's pretty common that you'll want to convert a different group of data objects into a DataFrame. This allows you to compare the data in a tabular format and leverage the library of Pandas functions. One of the most commons ways to do this is with a list of dicts: 
+{sp}+
+
+=== `DataFrame() Constructor`
+
+It's a common occurrence in `DataFrame` tutorials to use a dictionary to create a `DataFrame`. When this is done, the keys become columns and the values become entries. The top example on the xref:https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#[`pandas DataFrame` documentation] is the following:
+
+[source,python]
+----
+d = {'col1': [1, 2], 'col2': [3, 4]}
+df = pd.DataFrame(data=d)
+print(df)
+----
+----
+   col1  col2
+0     1     3
+1     2     4
+----
+
+Very easy! One benefit is that the constructor is adaptable, able to take many multi-dimensional array objects and convert it to a `DataFrame`. Our chosen example is a list of dictionaries:
 
 [source,python]
 ----
 list_of_dicts = []
 list_of_dicts.append({'columnA': 1, 'columnB': 2})
 list_of_dicts.append({'columnB': 4, 'columnA': 1}) 
+list_of_dicts.append({'columnA': 3, 'columnB': 1, 'columnC': 'hello'})
 
-fruits = pd.DataFrame(list_of_dicts)
-print(fruits.head())
+construction = pd.DataFrame(list_of_dicts)
+print(construction.head())
+----
+----
+   columnA  columnB columnC
+0        1        2     NaN
+1        1        4     NaN
+2        3        1   hello
 ----
 
-----
-   columnA  columnB
-0        1        2
-1        1        4
-----
-
-== Resources
-As always, Pandas has great https://pandas.pydata.org/docs/reference/frame.html[documentation] regarding DataFrames. It's worth a read if you are new to Pandas and working with DataFrames. 
+As you can see, the constructor adapted our data with little difficulty -- instead of throwing errors when the new `columnC` was introduced, it filled the other rows with `NaN`, and it was able to handle the dictionary entries being in different orders.
