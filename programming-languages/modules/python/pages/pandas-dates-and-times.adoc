@@ -4,10 +4,23 @@
 
 Visualization is one of the crucial foundations of practicing data science, and analyzing information on a timeline can be vital to understanding its behavior. However, our understanding and structure of time is difficult to translate into raw computing -- we can recognize that the phrase "8/1/2022" is the day that follows "7/31/2022", but without help, a computer would just see those as two different strings.
 
-To help 
+To help, `pandas` introduced the `to_datetime` function to convert strings (like the ones above) to `Timestamp` objects, which have many attributes that help translate our human perception of dates and times for the computer's sake.
 
-[source, python]
+[CAUTION]
+====
+Python already has a `datetime` package with a `datetime` object -- `pandas Timestamp` is an adaptation of this object that works with `pandas` functions, though the two are often used interchangeably.
+====
+
+{sp}+
+
+== `to_datetime`
+
+Let's start with an example `DataFrame` that contains event types, attendance numbers, and the dates on which the events occur. We'll check the data types of our columns to see what `pandas` starts out with.
+
+[source,python]
 ----
+import pandas as pd
+
 list_1 = ['7/1/2021', '7/4/2021', '8/20/2021', '9/2/2021', '4/1/2050']
 list_2 = ['Presentation', 'Class', 'Presentation', 'Event', 'Class']
 list_3 = [25, 0, 50, 48, 1000000]
@@ -15,14 +28,13 @@ list_3 = [25, 0, 50, 48, 1000000]
 myDF = pd.DataFrame(zip(list_1, list_2, list_3), columns=['date', 'type', 'attendance'])
 print(myDF.dtypes)
 ----
-
 ----
 date          object
 type          object
 attendance     int64
 ----
 
-As we can see in the example, the first `date` column shows as `object` in the output. In this case if we tried to use any of the date time functions we would get an error. Thankfully we can convert the column to the correct date time format: 
+As we can see from the output, `date` is a general `object` -- this doesn't help us, as we need a `datetime` object and its host of useful functions and attributes. The simplest way to convert this only requires our `to_datetime` function, the column we want to change, and the format our dates come in:
 
 [source, python]
 ----
@@ -36,12 +48,36 @@ type                  object
 attendance             int64
 ----
 
-We can now see in the output that the `date` column has been updated to `datetime64[ns]`. This will allow us to utilize the Pandas date time functions. The `format=` field can be a bit confusing. When using this field we need to pass the type of date format that we'd expect to use. In this case `%m` indicates month, `%d` indicates day, and `%Y` indicates year. 
+Hold on -- what's with the `datetime64[ns]` object? In spite of this output, if we test the type of our individual dates (for example, `type(myDF.date[0])`)
 
-Date time formatting *does* pay attention to capitalization. For example, `%y` is the year without the century while `%Y` is the year with the century. Think `13` compared to `2013`. Thankfull there are lots of https://strftime.org[helpful tables] to explain the different formats. You'll also need to match the separators for the different date formats. If the date field is `8-1-2021` instead of `8/1/2021` you'll need to match that in the format input.  
+{sp}+
+
+=== `format` Argument
+
+The date column is now saved with the data type that we want. `format` looks odd, but the idea is that we are telling `pandas` how to perceive the date: month first, then day, then year, separated by forward slashes. If the dates had dashes or some other separator, we could indicate this in `format` to ensure `pandas` is reading it correctly.
+
+`datetime` formatting *does* pay attention to capitalization. For example, `%y` means the date excludes century, while `%Y` includes century (think 13 compared to 2013). There are lots of https://strftime.org[helpful tables] to explain the different formats, and we'll include the main ones here:
+
+* Month:
+** `%b` -- abbreviated month, "Oct"; `%B` -- full month name, "October"
+** `%m` -- month number with leading zero, "04"; `%-m` -- month number, no leading zero, "4"
+* Day:
+** `%a` -- abbreviated weekday, "Mon"; `%A` -- full weekday name, "Monday"
+** `%d` -- day number with leading zero, "07"; `%-d` -- day number, no leading zero, "7"
+* Year: 
+** `%y` -- last two numbers of year, "14"; `%Y` -- full year, "1914"
+
+[WARNING]
+====
+`%M` corresponds to minute, while `%m` corresponds to month.
+====
+
+{sp}+
 
 == Date Time Methods
 Once you have the data in the correct data type there are lots of functions that can be beneficial when working with date time data. A few of the most common functions are included below: 
+
+=== Examples
 
 *What if I just wanted the month or year?*
 
@@ -97,7 +133,7 @@ print(myDF)
 4 2050-04-01         Class     1000000     2050-04-08
 ----
 
-*What if I wanted to see how many days until a specific date?*
+==== How would I see the number of days until a specific date?
 
 [source, python]
 ----
