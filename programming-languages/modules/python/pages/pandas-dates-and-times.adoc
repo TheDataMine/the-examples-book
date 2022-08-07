@@ -8,7 +8,7 @@ To help, `pandas` introduced the `to_datetime` function to convert strings (like
 
 [CAUTION]
 ====
-Python already has a `datetime` package with a `datetime` object -- `pandas Timestamp` is an adaptation of this object that works with `pandas` functions, though the two are often used interchangeably.
+Python already has a `datetime` package with a `datetime` object -- `pandas Timestamp` is an adaptation of this object that works with `pandas` functions, though the two are often used interchangeably. In fact, the `pandas` documentation doesn't have `datetime` object page, just a `Timestamp` one.
 ====
 
 {sp}+
@@ -34,9 +34,9 @@ type          object
 attendance     int64
 ----
 
-As we can see from the output, `date` is a general `object` -- this doesn't help us, as we need a `datetime` object and its host of useful functions and attributes. The simplest way to convert this only requires our `to_datetime` function, the column we want to change, and the format our dates come in:
+As we can see from the output, `date` is a general `object` -- this doesn't help us, as we need a `Timestamp` object and its host of useful functions and attributes. The simplest way to convert this only requires our `to_datetime` function, the column we want to change, and the format our dates come in:
 
-[source, python]
+[source,python]
 ----
 myDF['date'] = pd.to_datetime(myDF['date'], format='%m/%d/%Y')
 print(myDF.dtypes)
@@ -48,15 +48,23 @@ type                  object
 attendance             int64
 ----
 
-Hold on -- what's with the `datetime64[ns]` object? In spite of this output, if we test the type of our individual dates (for example, `type(myDF.date[0])`)
+Hold on -- what's with the `datetime64[ns]` object? In spite of this output, if we test the type of our individual dates, we find that they are indeed `Timestamp` objects. The implication is that all the `Timestamp` attributes are usable when working with `date`.
+
+[source,python]
+----
+type(myDF.date[0])
+----
+----
+<class 'pandas._libs.tslibs.timestamps.Timestamp'>
+----
 
 {sp}+
 
 === `format` Argument
 
-The date column is now saved with the data type that we want. `format` looks odd, but the idea is that we are telling `pandas` how to perceive the date: month first, then day, then year, separated by forward slashes. If the dates had dashes or some other separator, we could indicate this in `format` to ensure `pandas` is reading it correctly.
+The date column is now saved with the data type that we want. If you recall, we had an odd-looking `format` argument. The idea is that we are telling `pandas` how to parse the date: month first, then day, then year, separated by forward slashes. If the dates had dashes or some other separator, we could indicate this in `format` to ensure `pandas` is reading it correctly.
 
-`datetime` formatting *does* pay attention to capitalization. For example, `%y` means the date excludes century, while `%Y` includes century (think 13 compared to 2013). There are lots of https://strftime.org[helpful tables] to explain the different formats, and we'll include the main ones here:
+`format` *does* pay attention to capitalization. For example, `%y` means the date excludes century, while `%Y` includes century (think 13 compared to 2013). There are https://strftime.org[helpful tables] to explain the different formats, and we'll include the main ones here:
 
 * Month:
 ** `%b` -- abbreviated month, "Oct"; `%B` -- full month name, "October"
@@ -74,20 +82,89 @@ The date column is now saved with the data type that we want. `format` looks odd
 
 {sp}+
 
-== Date Time Methods
-Once you have the data in the correct data type there are lots of functions that can be beneficial when working with date time data. A few of the most common functions are included below: 
+== Dates/Times Objects, Methods, and Attributes
+
+Converting data using `to_datetime` is only useful if we can extract further information using `Timestamp` and other `pandas` packages.
+
+{sp}+
+
+=== Time Differences: `Timedelta` and `DateOffset`
+
+The `Timedelta` and `DateOffset` objects are simple: `TimeDelta` contains the length of time between two dates/times, while `DateOffset` contains a date itself when a difference of time is provided.
+
+{sp}+
+
+==== `Timedelta`
+
+For `Timedelta`, you can use either keyword arguments or a pair including `(value, unit)` to indicate the duration of time.
+
+[source,python]
+----
+import pandas as pd
+
+day_example = pd.Timedelta(days=6)
+week_example = pd.Timedelta(weeks=14)
+print(day_example)
+print(week_example)
+----
+----
+6 days 00:00:00
+98 days 00:00:00
+----
+
+As we can see here, `Timedelta` works in days, hours, minutes, and seconds, where the conversion of 1 week into 7 days applies before output. Since months and years have differing numbers of days, you cannot use them when generating `Timedeltas`.
+
+{sp}+
+
+==== `DateOffset`
+
+Imported from `pandas.tseries.offsets`, `DateOffset` is another method 
+
+{sp}+
+
+=== `dt` operator
+
+You'll notice that `Timestamp` attributes include basic elements of date information -- `month`, `day`, `year`, `second`, `day_of_week`, and so on. Let's try and creating a `month` column from `date` in `myDF`:
+
+[source,python]
+----
+myDF['month'] = myDF['date'].month
+----
+----
+AttributeError: 'Series' object has no attribute 'month'
+----
+
+As the error message says, we can't get `month` from the `date` column because it's a `Series`, not a `Timestamp`. Instead of looping through each value or using `apply`, we have the `dt` accessor, allowing us to use `Timestamp` attributes and functions column-wide. Now we can create our `month` column:
+
+[source,python]
+----
+myDF['month'] = myDF['date'].dt.month
+print(myDF)
+----
+----
+        date          type  attendance  month
+0 2021-07-01  Presentation          25      7
+1 2021-07-04         Class           0      7
+2 2021-08-20  Presentation          50      8
+3 2021-09-02         Event          48      9
+4 2050-04-01         Class     1000000      4
+----
+
+{sp}+
 
 === Examples
 
-*What if I just wanted the month or year?*
+==== Create `month` and `year` columns from our `date` column.
 
+.Click to see solution
+[%collapsible]
+====
 [source, python]
 ----
 myDF['month'] = myDF['date'].dt.month
 myDF['year'] = myDF['date'].dt.year
 print(myDF)
 ----
-
 ----
         date          type  attendance  month  year
 0 2021-07-01  Presentation          25      7  2021
@@ -96,45 +173,53 @@ print(myDF)
 3 2021-09-02         Event          48      9  2021
 4 2050-04-01         Class     1000000      4  2050
 ----
+====
 
-*What if I wanted to find the day of the week?*
+==== Create the `weekday` column from `date`.
 
+.Click to see solution
+[%collapsible]
+====
 [source, python]
 ----
-myDF['day_of_the_week'] = myDF['date'].dt.day_name()
+myDF['weekday'] = myDF['date'].dt.day_name()
 print(myDF)
 ----
-
 ----
-        date          type  attendance day_of_the_week
-0 2021-07-01  Presentation          25        Thursday
-1 2021-07-04         Class           0          Sunday
-2 2021-08-20  Presentation          50          Friday
-3 2021-09-02         Event          48        Thursday
-4 2050-04-01         Class     1000000          Friday
+        date          type  attendance   weekday
+0 2021-07-01  Presentation          25  Thursday
+1 2021-07-04         Class           0    Sunday
+2 2021-08-20  Presentation          50    Friday
+3 2021-09-02         Event          48  Thursday
+4 2050-04-01         Class     1000000    Friday
 ----
+====
 
-There is also a `month_name()` function that could be used!
+==== Shift all the days in `date` forward by one week, replacing the old dates in the process.
 
-*What if I wanted to shift all the days forward one week?*
-
+.Click to see solution
+[%collapsible]
+====
 [source, python]
 ----
-myDF['one_week_later'] = myDF['date'] + pd.Timedelta("7 days")
+myDF['date'] = myDF['date'] + pd.Timedelta("7 days")
 print(myDF)
 ----
-
 ----
-        date          type  attendance one_week_later
-0 2021-07-01  Presentation          25     2021-07-08
-1 2021-07-04         Class           0     2021-07-11
-2 2021-08-20  Presentation          50     2021-08-27
-3 2021-09-02         Event          48     2021-09-09
-4 2050-04-01         Class     1000000     2050-04-08
+        date          type  attendance
+0 2021-07-08  Presentation          25
+1 2021-07-11         Class           0
+2 2021-08-27  Presentation          50
+3 2021-09-09         Event          48
+4 2050-04-08         Class     1000000
 ----
+====
 
-==== How would I see the number of days until a specific date?
+==== Use `DateOffset` to find the number of days until a specific date is reached.
 
+.Click to see solution
+[%collapsible]
+====
 [source, python]
 ----
 one_year_later = myDF['date'] + pd.offsets.DateOffset(years=1)
@@ -142,7 +227,6 @@ myDF['end_of_school'] = pd.to_datetime({'month': 5, 'day': 31, 'year':one_year_l
 myDF['days_until_school_is_over'] = myDF['end_of_school'] - myDF['date']
 print(myDF)
 ----
-
 ----
         date          type  attendance end_of_school days_until_school_is_over
 0 2021-07-01  Presentation          25    2022-05-31                  334 days
@@ -151,6 +235,9 @@ print(myDF)
 3 2021-09-02         Event          48    2022-05-31                  271 days
 4 2050-04-01         Class     1000000    2051-05-31                  425 days
 ----
+====
+
+{sp}+
 
 == Resources
-As you can see there is a ton of different functionality when working with date time objects in Pandas. As usual, Pandas has some great https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html[documentation] regarding date time functionality and all the different methods that are available. 
+As always, the information we include here is just a portion of all you can know about using dates and times in `pandas`. They have a great, extensive https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html[user guide] that includes `DatetimeIndex`, indexing using dates, and much more. 
