@@ -122,9 +122,36 @@ myDF.groupby("Year")["DepDelay"].median()
 
 == `agg`
 
-`pandas` also offers the `agg` function, which takes another function (or list of functions) as its argument, returning the name of the function as the index and the result of the function's application for each column
+`pandas` also offers the `agg` function, which takes another function (or list of functions) as its argument, returning the name of the function as the index and the result of the function's application for each column.
 
-The end result of `agg` is similar to `groupby`, but it can be applied _to `groupby` itself_ to enhance its output *AND/OR* allows for more aggregations to be performed at once. Here's an example of both at work: 
+Let's look at an example from the documentation:
+
+[source,python]
+----
+import pandas as pd
+import numpy as np
+
+df = pd.DataFrame([[1, 2, 3],
+                   [4, 5, 6],
+                   [7, 8, 9]
+                   [np.nan, np.nan, np.nan]],
+                  columns=['A', 'B', 'C'])
+print(df.agg(['sum', 'min']))
+----
+----
+        A     B     C
+sum  12.0  15.0  18.0
+min   1.0   2.0   3.0
+----
+
+As mentioned, we get the name of our functions (`sum` and `min`) as the resulting indices, then the sum and maximum value is applied to each column. 
+
+[NOTE]
+====
+When we have invalid entries (like the fourth row with all missing values), they are simply removed from consideration. If there are no complete columns that can be processed by the function(s), we get the error `ValueError: no results`.
+====
+
+The end result of `agg` is similar to `groupby`, but it can be applied _to `groupby` itself_ to enhance its output *AND/OR* allows for different functions to be performed simultaneously on different columns. Here's an example of both at work: 
 
 [source,python]
 ----
@@ -144,17 +171,15 @@ print(myDF.groupby('location').agg({'temp': 'mean', 'attendance': 'sum'}).reset_
 1     home  83.0       10930
 ----
 
-We group by location type ("home" or "away"), then supply `agg` a `dictionary` that asserts `mean` will be applied to `temp`, while `sum` will be applied to `attendance`, then reset the index to put `location` back into the `DataFrame`. That's a lot of words to describe what we did with one line of code -- `agg` enabled us to use two different functions for analysis within one `DataFrame`.
-
-Of course, we don't get to see the basic result of `agg` with the above output, so let's create another example with 
+We group by location type ("home" or "away"), then supply `agg` a `dictionary` that asserts `mean` will be applied to `temp`, while `sum` will be applied to `attendance`, then reset the index to put `location` back into the `DataFrame`. That's a lot of words to describe what we did with one line of code -- `agg` enabled us to use two different functions for analysis within one `DataFrame` grouping.
 
 {sp}+
 
 == `transform`
 
-You might have noticed above that we used `agg` both on its own and applied to the result of `groupby`, which is a `DataFrameGroupBy` object as we mentioned earlier. `transform` is another such function that can be used on its own or to augment the result of `groupby`.
+`transform`, much like `agg`, is an aggregating function that can be used on its own or to augment the result of `groupby`.
 
-Like `agg`, it takes a function as an argument (including custom `lambda` functions) and applies to the values or columns of a `DataFrame`. What's different is that the output of `transform` has to be the same length as the `DataFrame` -- if there are 8 rows in the input, there must be 8 rows in the output. We'll demonstrate this with an example from xref:https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.transform.html[the documentation]:
+Like `agg`, it takes a function as an argument (including custom `lambda` functions) and applies to the values or columns of a `DataFrame`. *What's different here* is that the output of `transform` has to be the same length as the `DataFrame` -- if there are 8 rows in the input, there must be 8 rows in the output. We'll demonstrate this with an example from xref:https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.transform.html[the documentation]:
 
 [source,python]
 ----
@@ -205,4 +230,34 @@ Date
 Name: Data, dtype: int64
 ----
 
-As it would seem, `transform` is useful when combined with `groupby` to create a new column based on the result of `groupby`.
+As it would seem, `transform` is useful when combined with `groupby` to create a new column in your `DataFrame` based on the result of `groupby`.
+
+{sp}+
+
+=== Examples
+
+==== Create the `group_size` column in the `experiment` data set, which includes the size of the `response` group. Use `groupby` and `transform` to accomplish this in 1 line of code.
+
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+experiment = pd.DataFrame({
+    "treatment": ['a', 'a', 'a', 'b', 'b', 'b'],
+    "response": ["y", "n", "o", "y", "y", "o"]
+})
+
+experiment['group_size'] = experiment.groupby('response').transform(len)
+print(experiment)
+----
+----
+  treatment response  group_size
+0         a        y           3
+1         a        n           1
+2         a        o           2
+3         b        y           3
+4         b        y           3
+5         b        o           2
+----
+====
