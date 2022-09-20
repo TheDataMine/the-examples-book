@@ -1,0 +1,377 @@
+= Gallaudet Training: Project 4 -- 2022
+
+---
+
+**Motivation:** We've now been introduced to a variety of core Python data structures. Along the way we've touched on a bit of `pandas`, `matplotlib`, and have utilized some control flow features like for loops and if statements. We will continue to touch on `pandas` and `matplotlib`, but we will take a deeper dive in this project and learn more about control flow, all while digging into the data!
+
+**Context:** We just finished a project where we were able to see the power of dictionaries and sets. In this project we will take a step back and make sure we are able to really grasp control flow (if/else statements, loops, etc.) in Python. 
+
+**Scope:** python, dicts, lists, if/else statements, for loops
+
+**Learning objectives:** 
+
+```{block, type="bbox"}
+- List the differences between lists & tuples and when to use each.
+- Explain what is a dict and why it is useful.
+- Demonstrate a working knowledge of control flow in python: if/else statements, while loops, for loops, etc.
+```
+
+Make sure to read about, and use the template found [here](#templates), and the important information about projects submissions [here](#submissions).
+
+#### Dataset
+
+The following questions will use the dataset found in Scholar:
+
+`/class/datamine/data/craigslist/vehicles.csv`
+
+#### Questions
+
+##### 1. Unlike in R, where traditional loops are rare and typically accomplished via one of the apply functions, in Python, loops are extremely common and important to understand. In Python, any iterator can be looped over. Some common iterators are: tuples, lists, dicts, sets, `pandas` Series, and `pandas` DataFrames. In the previous project we had some examples of looping over lists, let's learn how to loop over `pandas` Series and Dataframes!
+
+##### Load up our dataset `/class/datamine/data/craigslist/vehicles.csv` into a DataFrame called `myDF`. In project (3), we organized the latitude and longitude data in a dictionary called `geoDict` such that each state from the `state` column is a key, and the respective value is a list of tuples, where the first value in each tuple is the latitude (`lat`) and the second value is the longitude (`long`). Repeat this question, but **do not** use lists, instead use `pandas` to accomplish this.
+
+**Hint:** The data frame has 435,849 rows, and it takes forever to accomplish this with `pandas`.  We just want you to do this one time, to see how slow this is.  Try it first with only 10 rows, and then with 100 rows, and once you are sure it is working, try it with (say) 20,000 rows.  You do not need to do this with the entire data frame.  It takes too long!
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_hkg42wfr)
+
+[Here is a video about the new feature to reset your RStudio session if you make a big mistake or if your session is very slow](https://mediaspace.itap.purdue.edu/id/1_tr8qvwn3)
+
+**Relevant topics:** [DataFrame.iterrows()](#p-pandas-dataframe),
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+- Python code used to solve the problem.
+- Output from running your code.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+import pandas as pd
+myDF = pd.read_csv("/class/datamine/data/craigslist/vehicles.csv")
+geoDict = dict()
+for my_index, my_row in myDF.iterrows():
+    geoDict[my_row["state"]] = []
+for my_index, my_row in myDF.iterrows():
+    geoDict[my_row["state"]].append((my_row["lat"], my_row["long"]))
+    
+geoDict.get("in")[0:2]
+len(geoDict.get("in"))
+```
+
+##### 2. Wow! The solution to question (1) was _slow_. In general, you'll want to avoid looping over large DataFrames. [Here](https://stackoverflow.com/questions/16476924/how-to-iterate-over-rows-in-a-dataframe-in-pandas/55557758#55557758) is a pretty good explanation of why, as well as a good system on what to try when computing something. In this case, we could have used indexing to get latitude and longitude values for each state, and would have no need to build this dict.
+
+The method we learned in Project 3, Question 5 is faster and easier!  Just in case you did not solve Project 3, Question 5, here is a fast way to build `geoDict`:
+```
+import pandas as pd
+myDF = pd.read_csv("/class/datamine/data/craigslist/vehicles.csv")
+states_list = list(myDF.loc[:, ["state", "lat", "long"]].dropna().to_records(index=False))
+geoDict = {}
+for mytriple in states_list:
+  geoDict[mytriple[0]] = []
+for mytriple in states_list:
+  geoDict[mytriple[0]].append( (mytriple[1],mytriple[2]) )
+```
+
+##### Now we will practice iterating over a dictionary, list, _and_ tuple, all at once! Loop through `geoDict` and use f-strings to print the state abbreviation. Print the first latitude and longitude pair, as well as every 5000th latitude and longitude pair for each state. Round values to the hundreths place. For example, if the state was "pu", and it had 12000 latitude and longitude pairs, we would print the following:
+
+````
+pu:
+Lat: 41.41, Long: 41.41
+Lat: 22.21, Long: 21.21
+Lat: 11.11, Long: 10.22
+````
+
+##### In the above example, `Lat: 41.41, Long: 41.41` would be the 0th pair, `Lat: 22.21, Long: 21.21` would be the 5000th pair, and `Lat: 11.11, Long: 10.22` would be the 10000th pair. Make sure to use f-strings to round the latitude and longitude values to two decimal places.
+
+There are several ways to solve this question.  You can use whatever method is easiest for you, but please be sure (as always) to add comments to explain your method of solution.
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_7j9j7edi)
+
+**Hint:** [Enumerate](#p-enumerate) is a useful function that adds an index to our loop.
+
+**Hint:** Using an if statement and the [modulo operator](https://www.jquery-az.com/python-modulo/) could be useful.
+
+**Note:** Whenever we have a loop _within_ another loop, the "inner" loop is called a "nested" loop, as it is "nested" inside of the other.
+
+**Relevant topics:** [dicts](#p-dicts), modulus operator, [f-strings](#p-f-strings), [if/else](#p-if-else), [for loops](#p-for-loops)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+- Python code used to solve the problem.
+- Output from running your code.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+for key, value in geoDict.items():
+    print(f'{key}:')
+    for idx, triplet in enumerate(value):
+        if (idx % 5000 == 0):
+            print(f'Lat: {triplet[0]:.2f}, Long: {triplet[1]:.2f}')
+```
+
+##### 3. We are curious about how the year of the car (`year`) effects the price (`price`). In R, we could get the median price by year easily, using `tapply`:
+
+```{r, eval=F}
+tapply(myDF$price, myDF$year, median, na.rm=T)
+```
+
+##### Using `pandas`, we would do this:
+
+```{python, eval=F}
+res = myDF.groupby(['year'], dropna=True).median()
+```
+
+##### These are very convenient functions that do a lot of work for you. If we were to take a look at the median price of cars by year, it would look like:
+
+```{python, eval=F}
+import matplotlib.pyplot as plt
+res = myDF.groupby(['year'], dropna=True).median()["price"]
+plt.bar(res.index, res.values)
+```
+
+##### Using the content of the variable `my_list` provided in the code below, calculate the median car price per year without using the `median` function and without using a `sort` function.  Use only dictionaries, for loops and if statements. Replicate the plot generated by running the code above (you can use the plot to make sure it looks right).
+
+```{python, eval=F}
+my_list = list(myDF.loc[:, ["year", "price",]].dropna().to_records(index=False))
+```
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_li98uz29)
+
+**Hint:** If you do not want to write your own median function to find the median, then it is OK to just use the `getMid` function [found here](#p-median) or to use a median function from elsewhere on the web.  Just be sure to cite your source, if you do use a median function that someone else provides or that you use from the internet.  There are many small variations on median functions, especially when it comes to (for instance) lists with even length.
+
+**Hint:** It is also OK to use: `import statistics` and the function `statistics.median`
+
+**Relevant topics:** [dicts](#p-dicts), [for loops](#p-for-loops), [if/else](#p-if-else)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+- Python code used to solve the problem.
+- Output from running your code.
+- The barplot.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+from collections import defaultdict
+import matplotlib.pyplot as plt
+my_list = list(myDF.loc[:, ["year", "price",]].dropna().to_records(index=False))
+my_dict = defaultdict(list)
+for (year, price) in my_list:
+    my_dict[year].append(float(price))
+my_years, my_prices = [],[]
+for year, prices in sorted(my_dict.items()):
+    if len(prices) % 2 == 0:
+        lower_mid = int(len(prices)/2 - 1)
+        upper_mid = int(len(prices)/2)
+        prices_sorted = sorted(prices)
+        median_price = (prices_sorted[lower_mid] + prices_sorted[upper_mid]) / 2
+        
+    else:
+        median_price = sorted(prices)[int(len(prices)/2)]
+        
+    print(f'{year}: {median_price}')
+    my_years.append(year)
+    my_prices.append(median_price)
+    
+plt.bar(my_years, my_prices)
+plt.show()
+```
+
+##### 4. Now calculate the mean `price` by `year`(still not using pandas code), and create a barplot with the `price` on the y-axis and `year` on the x-axis. Whoa! Something is odd here. Explain what is happening. Modify your code to use an if statement to "weed out" the likely erroneous value. Re-plot your values.
+
+[Click here for video (same as in Question 3)](https://mediaspace.itap.purdue.edu/id/1_li98uz29)
+
+[Click here for another video](https://mediaspace.itap.purdue.edu/id/1_8kgi1uio)
+
+[Click here for one more video](https://mediaspace.itap.purdue.edu/id/1_ladqyiqg)
+
+**Hint:** It is also OK to use a built-in `mean` function, for instace: `import statistics` and the function `statistics.mean`
+
+**Relevant topics:** sorted, [for loops](#p-for-loops), [if/else](#p-if-else), [list methods](#p-list-methods)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+- Python code used to solve the problem.
+- Output from running your code.
+- The barplot.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+from collections import defaultdict
+my_dict = defaultdict(list)
+for (year, price) in my_list:
+    my_dict[year].append(price)
+my_years, my_prices = [],[]
+for year, prices in sorted(my_dict.items()):
+    print(f'{year}: {sum(prices)/len(prices)}')
+    my_years.append(year)
+    my_prices.append(sum(prices)/len(prices))
+    
+plt.bar(my_years, my_prices)
+plt.show()
+```
+
+```{python, eval=F, class.source="solution"}
+from collections import defaultdict
+my_dict = defaultdict(list)
+for (year, price) in my_list:
+    if price > 1_000_000:
+        continue
+    my_dict[year].append(price)
+my_years, my_prices = [],[]
+for year, prices in sorted(my_dict.items()):
+    avg_price = sum(prices)/len(prices)
+    print(f'{year}: {avg_price}')
+    my_years.append(year)
+    my_prices.append(avg_price)
+    
+plt.bar(my_years, my_prices)
+plt.show()
+```
+
+##### 5. List comprehensions are a neat feature of Python that allows for a more concise syntax for smaller loops. While at first they may seem difficult and more confusing, eventually they grow on you. For example, say you wanted to capitalize every `state` in a list full of states:
+
+```{python, eval=F}
+my_states = myDF['state'].to_list()
+my_states = [state.upper() for state in my_states]
+```
+
+##### Or, maybe you wanted to find the average price of cars in "excellent" condition (without `pandas`):
+
+```{python, eval=F}
+my_list = list(myDF.loc[:, ["condition", "price",]].dropna().to_records(index=False))
+my_list = [price for (condition, price) in my_list if condition == "excellent"]
+sum(my_list)/len(my_list)
+```
+
+##### Do the following using list comprehensions, and the provided code:
+
+```{python, eval=F}
+my_list = list(myDF.loc[:, ["state", "price",]].dropna().to_records(index=False))
+```
+
+- Calculate the average price of vehicles from Indiana (`in`).
+- Calculate the average price of vehicles from Indiana (`in`), Michigan (`mi`), and Illinois (`il`) combined.
+
+```{python, eval=F}
+my_list = list(myDF.loc[:, ["manufacturer", "year", "price",]].dropna().to_records(index=False))
+```
+
+- Calculate the average price of a "honda" (`manufacturer`) that is 2010 or newer (`year`).
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_husv3712)
+
+**Relevant topics:** sorted, [for loops](#p-for-loops), [if/else](#p-if-else), [list methods](#p-list-methods), sum, len, defaultdict, [matplotlib](#p-matplotlib)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+- Python code used to solve the problem.
+- Output from running your code.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+my_list = list(myDF.loc[:, ["state", "price",]].dropna().to_records(index=False))
+my_list = [price for (state,price) in my_list if state == "in"]
+print(sum(my_list)/len(my_list))
+my_list = list(myDF.loc[:, ["state", "price",]].dropna().to_records(index=False))
+my_list = [price for (state,price) in my_list if state in ('in', 'il', 'mi')]
+print(sum(my_list)/len(my_list))
+my_list = list(myDF.loc[:, ["manufacturer", "year", "price",]].dropna().to_records(index=False))
+my_list = [p for (m, y, p) in my_list if m=='honda' and y >= 2010]
+print(sum(my_list)/len(my_list))
+```
+
+##### 6. Let's use a package called `spacy` to try and parse phone numbers out of the `description` column. First, simply loop through and print the text and the label. What is the label of the majority of the phone numbers you can see?
+
+```{python, eval=F}
+import spacy
+# get list of descriptions
+my_list = list(myDF.loc[:, ["description",]].dropna().to_records(index=False))
+my_list = [m[0] for m in my_list]
+# load the pre-built spacy model
+nlp = spacy.load("en_core_web_lg")
+# apply the model to a description
+doc = nlp(my_list[0])
+# print the text and label of each "entity"
+for entity in doc.ents:
+    print(entity.text, entity.label_)
+```
+
+##### Use an if statement to filter out all entities that are not the label you see. Loop through again and see what our printed data looks like. There is still a lot of data there that we _don't_ want to capture, right? Phone numbers in the US are _usually_ 7 (5555555), 8 (555-5555), 10 (5555555555), 11 (15555555555), 12 (555-555-5555), or 14 (1-555-555-5555) digits. In addition to your first "filter", add another "filter" that keeps only text where the text is one of those lengths.
+
+##### That is starting to look better, but there are still some erroneous values. Come up with another "filter", and loop through our data again. Explain what your filter does and make sure that it does a better job on the first 10 documents than when we don't use your filter.
+
+**Note:** If you get an error when trying to knit that talks about "unicode" characters, this is caused by trying to print special characters (non-ascii). An easy fix is just to remove all non-ascii text. You can do this with the `encode` string method. For example:
+
+Instead of: 
+
+```{python, eval=F}
+for entity in doc.ents:
+    print(entity.text, entity.label_)
+```
+
+Do:
+
+```{python, eval=F}
+for entity in doc.ents:
+    print(entity.text.encode('ascii', errors='ignore'), entity.label_)
+```
+
+[Click here for video](https://mediaspace.itap.purdue.edu/id/1_cnjzidu8)
+
+**Note:** It can be fun to utilize machine learning and natural language processing, but that doesn't mean it is always the best solution! We could get rid of all of our filters and use regular expressions with much better results! We will demonstrate this in our solution.
+
+**Relevant topics:** [for loops](#p-for-loops)
+
+```{block, type="bbox"}
+**Item(s) to submit:**
+- Python code used to solve the problem.
+- Output from running your code.
+- 1-2 sentences explaining what your filter does.
+```
+
+##### Solution
+
+```{python, eval=F, class.source="solution"}
+import spacy
+my_list = list(myDF.loc[:, ["description",]].dropna().to_records(index=False))
+my_list = [m[0] for m in my_list]
+# load the pre-built spacy model
+nlp = spacy.load("en_core_web_lg")
+for doc in my_list[:10]:
+    d = nlp(doc)
+    for entity in d.ents:
+        print(entity.text.encode('ascii', errors='ignore'), entity.label_)
+for doc in my_list[:10]:
+    d = nlp(doc)
+    for entity in d.ents:
+        if entity.label_ == "CARDINAL":
+            print(entity.text.encode('ascii', errors='ignore'), entity.label_)
+for doc in my_list[:10]:
+    d = nlp(doc)
+    for entity in d.ents:
+        if entity.label_ == "CARDINAL" and len(entity.text) in [7, 8, 10, 11, 12, 14]:
+            print(entity.text.encode('ascii', errors='ignore'), entity.label_)
+for doc in my_list[:10]:
+    d = nlp(doc)
+    for entity in d.ents:
+        if entity.label_ == "CARDINAL" and len(entity.text) in [7, 8, 10, 11, 12, 14]:
+            print(entity.text.encode('ascii', errors='ignore'), entity.label_)
+            
+import re
+pattern = '\(?([0-9]{3})?\)?[-.]?([0-9]{3})[-.]?([0-9]{4})'
+for doc in my_list[:10]:
+    if matches := re.finditer(pattern, doc):
+        for match in matches:
+            print(match.group())
+```
+
+---
