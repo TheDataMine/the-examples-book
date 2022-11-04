@@ -1,0 +1,315 @@
+= `select`
+
+`select` is a handy function used to select columns from a `Data.frame` or `tibble`. For example:
+
+[source,r]
+----
+iris %>% select(Sepal.Length, Species) %>% head()
+----
+----
+   Sepal.Length Species
+ 1          5.1  setosa
+ 2          4.9  setosa
+ 3          4.7  setosa
+ 4          4.6  setosa
+ 5          5.0  setosa
+ 6          5.4  setosa
+----
+
+That alone is not that impressive, as we could easily do something like:
+
+[source,r]
+----
+iris[, c("Sepal.Length", "Species")] %>% head()
+----
+----
+    Sepal.Length Species
+ 1          5.1  setosa
+ 2          4.9  setosa
+ 3          4.7  setosa
+ 4          4.6  setosa
+ 5          5.0  setosa
+ 6          5.4  setosa
+----
+
+However, in the same way you can write 1:4 to represent a vector of numbers from 1-4, you can select columns from `Sepal.Length` to `Petal.Length` (and everything in between) by using `Sepal.Length:Petal.Length`.
+
+[source,r]
+----
+iris %>% select(Sepal.Length:Petal.Length) %>% head()
+----
+----
+   Sepal.Length Sepal.Width Petal.Length
+ 1          5.1         3.5          1.4
+ 2          4.9         3.0          1.4
+ 3          4.7         3.2          1.3
+ 4          4.6         3.1          1.5
+ 5          5.0         3.6          1.4
+ 6          5.4         3.9          1.7
+----
+
+{sp}+
+
+== Selection Helpers
+
+`select` is particularly useful when paired with selection helpers, as you can select certain columns based on their names:
+
+[source,r]
+----
+iris %>% select(contains(
+    "length"
+)) %>%
+    head()
+----
+----
+   Sepal.Length Petal.Length
+ 1          5.1          1.4
+ 2          4.9          1.4
+ 3          4.7          1.3
+ 4          4.6          1.5
+ 5          5.0          1.4
+ 6          5.4          1.7
+----
+
+[source, r]
+----
+# or case sensitive
+
+iris %>% select(contains(
+    "Length",
+    ignore.case=F
+)) %>%
+    head()
+----
+----
+   Sepal.Length Petal.Length
+ 1          5.1          1.4
+ 2          4.9          1.4
+ 3          4.7          1.3
+ 4          4.6          1.5
+ 5          5.0          1.4
+ 6          5.4          1.7
+----
+
+Selection helpers are functions that make selecting variables easier. They are particularly easy to use with `select`.
+
+{sp}+
+
+`everything` matches all variables. For example:
+
+[source, r]
+----
+iris %>% select(everything()) %>% head()
+----
+----
+   Sepal.Length Sepal.Width Petal.Length Petal.Width Species
+ 1          5.1         3.5          1.4         0.2  setosa
+ 2          4.9         3.0          1.4         0.2  setosa
+ 3          4.7         3.2          1.3         0.2  setosa
+ 4          4.6         3.1          1.5         0.2  setosa
+ 5          5.0         3.6          1.4         0.2  setosa
+ 6          5.4         3.9          1.7         0.4  setosa
+----
+
+It is primarily useful when used in combination with functions like `pivot_longer` and `pivot_wider`.
+
+{sp}+
+
+`last_col` selects the last variable, possibly with an offset.
+
+[source, r]
+----
+iris %>% select(last_col()) %>% head()
+----
+----
+   Species
+ 1  setosa
+ 2  setosa
+ 3  setosa
+ 4  setosa
+ 5  setosa
+ 6  setosa
+----
+
+Or, with an offset:
+
+[source, r]
+----
+iris %>% select(1:last_col(2)) %>% head()
+----
+----
+   Sepal.Length Sepal.Width Petal.Length
+ 1          5.1         3.5          1.4
+ 2          4.9         3.0          1.4
+ 3          4.7         3.2          1.3
+ 4          4.6         3.1          1.5
+ 5          5.0         3.6          1.4
+ 6          5.4         3.9          1.7
+----
+
+{sp}+
+
+`contains` selects columns where the columns name contains another string. For example:
+
+[source, r]
+----
+iris %>% select(contains("sepal")) %>% head()
+----
+----
+   Sepal.Length Sepal.Width
+ 1          5.1         3.5
+ 2          4.9         3.0
+ 3          4.7         3.2
+ 4          4.6         3.1
+ 5          5.0         3.6
+ 6          5.4         3.9
+----
+
+[NOTE]
+====
+`contains` is case insensitive by default.
+====
+
+In the same way that `contains` looks for a string within the column names of a data.frame, `starts_with` and `ends_with` select columns where column names either start with one or more values or end with one or more values (respectively). For example, to get the columns starting with "Sepal":
+
+[source, r]
+----
+iris %>% select(starts_with("sepal")) %>% head()
+----
+----
+   Sepal.Length Sepal.Width
+ 1          5.1         3.5
+ 2          4.9         3.0
+ 3          4.7         3.2
+ 4          4.6         3.1
+ 5          5.0         3.6
+ 6          5.4         3.9
+----
+
+Or to get columns that end in "width":
+
+[source, r]
+----
+iris %>% select(ends_with("width")) %>% head()
+----
+----
+   Sepal.Width Petal.Width
+ 1         3.5         0.2
+ 2         3.0         0.2
+ 3         3.2         0.2
+ 4         3.1         0.2
+ 5         3.6         0.2
+ 6         3.9         0.4
+----
+
+For more fine grain control, `matches` behaves the same way, but instead of literal string matching, we can feed a regular expression to `matches`. For example, we could get all columns containing one or more ".":
+
+[source, r]
+----
+iris %>% select(matches("+\\.")) %>% head()
+----
+----
+   Sepal.Length Sepal.Width Petal.Length Petal.Width
+ 1          5.1         3.5          1.4         0.2
+ 2          4.9         3.0          1.4         0.2
+ 3          4.7         3.2          1.3         0.2
+ 4          4.6         3.1          1.5         0.2
+ 5          5.0         3.6          1.4         0.2
+ 6          5.4         3.9          1.7         0.4
+----
+
+{sp}+
+
+Sometimes, you'll have datasets with columns labeled sequentially, for example:
+
+[source, r]
+----
+head(billboard)
+----
+----
+ # A tibble: 6 x 79
+   artist track date.entered   wk1   wk2   wk3   wk4   wk5   wk6   wk7   wk8
+   <chr>  <chr> <date>       <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
+ 1 2 Pac  Baby… 2000-02-26      87    82    72    77    87    94    99    NA
+ 2 2Ge+h… The … 2000-09-02      91    87    92    NA    NA    NA    NA    NA
+ 3 3 Doo… Kryp… 2000-04-08      81    70    68    67    66    57    54    53
+ 4 3 Doo… Loser 2000-10-21      76    76    72    69    67    65    55    59
+ 5 504 B… Wobb… 2000-04-15      57    34    25    17    17    31    36    49
+ 6 98^0   Give… 2000-08-19      51    39    34    26    26    19     2     2
+ # … with 68 more variables: wk9 <dbl>, wk10 <dbl>, wk11 <dbl>, wk12 <dbl>,
+ #   wk13 <dbl>, wk14 <dbl>, wk15 <dbl>, wk16 <dbl>, wk17 <dbl>, wk18 <dbl>,
+ #   wk19 <dbl>, wk20 <dbl>, wk21 <dbl>, wk22 <dbl>, wk23 <dbl>, wk24 <dbl>,
+ #   wk25 <dbl>, wk26 <dbl>, wk27 <dbl>, wk28 <dbl>, wk29 <dbl>, wk30 <dbl>,
+ #   wk31 <dbl>, wk32 <dbl>, wk33 <dbl>, wk34 <dbl>, wk35 <dbl>, wk36 <dbl>,
+ #   wk37 <dbl>, wk38 <dbl>, wk39 <dbl>, wk40 <dbl>, wk41 <dbl>, wk42 <dbl>,
+ #   wk43 <dbl>, wk44 <dbl>, wk45 <dbl>, wk46 <dbl>, wk47 <dbl>, wk48 <dbl>,
+ #   wk49 <dbl>, wk50 <dbl>, wk51 <dbl>, wk52 <dbl>, wk53 <dbl>, wk54 <dbl>,
+ #   wk55 <dbl>, wk56 <dbl>, wk57 <dbl>, wk58 <dbl>, wk59 <dbl>, wk60 <dbl>,
+ #   wk61 <dbl>, wk62 <dbl>, wk63 <dbl>, wk64 <dbl>, wk65 <dbl>, wk66 <lgl>,
+ #   wk67 <lgl>, wk68 <lgl>, wk69 <lgl>, wk70 <lgl>, wk71 <lgl>, wk72 <lgl>,
+ #   wk73 <lgl>, wk74 <lgl>, wk75 <lgl>, wk76 <lgl>
+----
+
+Here, we have columns labeled `wk1` all the way until `wk76`. Using `num_range` and `select` we can get any number of those specific columns:
+
+[source, r]
+----
+billboard %>% select(num_range("wk", 70:75)) %>% head()
+----
+----
+ # A tibble: 6 x 6
+   wk70  wk71  wk72  wk73  wk74  wk75 
+   <lgl> <lgl> <lgl> <lgl> <lgl> <lgl>
+ 1 NA    NA    NA    NA    NA    NA   
+ 2 NA    NA    NA    NA    NA    NA   
+ 3 NA    NA    NA    NA    NA    NA   
+ 4 NA    NA    NA    NA    NA    NA   
+ 5 NA    NA    NA    NA    NA    NA   
+ 6 NA    NA    NA    NA    NA    NA
+----
+
+`all_of` is a selection helper designed to select strictly the columns whose names are inside the provided vector.
+
+[source, r]
+----
+my_values <- c("Sepal.Length", "Sepal.Width")
+iris %>% select(all_of(my_values)) %>% head()
+----
+----
+   Sepal.Length Sepal.Width
+ 1          5.1         3.5
+ 2          4.9         3.0
+ 3          4.7         3.2
+ 4          4.6         3.1
+ 5          5.0         3.6
+ 6          5.4         3.9
+----
+
+But, whenever a single value in your vector isn't present, an error is thrown.
+
+[source, r]
+----
+my_values <- c("Sepal.Length", "Sepal.Width", "Sepal.Weight")
+iris %>% select(all_of(my_values)) %>% head()
+----
+----
+Error: Cannot subset columns that do not exist.
+✖ Column `Sepal.Weight` does not exist.
+----
+
+For times you would like to select the values _if they exist_, `any_of` is more useful. It is similar to `all_of`, but doesn't check if a value is missing.
+
+[source, r]
+----
+my_values <- c("Sepal.Length", "Sepal.Width", "Sepal.Weight")
+iris %>% select(any_of(my_values)) %>% head()
+----
+----
+   Sepal.Length Sepal.Width
+ 1          5.1         3.5
+ 2          4.9         3.0
+ 3          4.7         3.2
+ 4          4.6         3.1
+ 5          5.0         3.6
+ 6          5.4         3.9
+----
