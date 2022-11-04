@@ -1,0 +1,41 @@
+= `summarize`
+
+`summarize` is a useful function to get a new, tidy, data frame that is a summary of some other data. It's particularly useful in conjunction with `group_by`, when you want to compare groups.
+
+Say you wanted to do the following:
+
+* Create a new column called `Sepal.Length.Cat` with values `small` when `Sepal.Length` < 5.1, `large` when `Sepal.Length` >= 5.8, and `medium` otherwise.
+* Get a summary containing the average `Sepal.Width` by `Sepal.Length.Cat` and `Species`.
+* Get a summary containing the variation in averages for each `Species`.
+
+You could accomplish all of that with one (piped) block of code:
+
+[source,r]
+----
+iris %>% 
+    mutate(Sepal.Length.Cat = case_when(
+        Sepal.Length < 5.1 ~ "small",
+        Sepal.Length >= 5.8 ~ "large",
+        TRUE ~ "medium"
+    )) %>%
+    group_by(Sepal.Length.Cat, Species) %>%
+    summarize(avg_sepal_width_grouped = mean(Sepal.Width)) %>%
+    group_by(Species) %>%
+    summarize(std_of_avgs = sd(avg_sepal_width_grouped))
+----
+----
+ `summarise()` regrouping output by 'Sepal.Length.Cat' (override with `.groups` argument)
+----
+----
+ `summarise()` ungrouping output (override with `.groups` argument)
+----
+----
+ # A tibble: 3 x 2
+   Species    std_of_avgs
+   <fct>            <dbl>
+ 1 setosa           0.402
+ 2 versicolor       0.329
+ 3 virginica        0.255
+----
+
+As you can see, it has some pretty powerful functionality that would be more difficult to replicate (and harder to read) using base R.

@@ -1,0 +1,36 @@
+= `group_by`
+
+`group_by` is a function commonly used in conjunction with `mutate`, `transmute`, and `summarize`. It is useful when you want to perform a `tapply`-like operation on a `Data.frame`. For example, let's say you wanted to get the average `Petal.Length` by `Species`. Using `tapply`, you would do something like:
+
+[source,r]
+----
+tapply(iris$Petal.Length, iris$Species, mean)
+----
+----
+setosa versicolor  virginica 
+ 1.462      4.260      5.552
+----
+
+While useful, the end result of `tapply` isn't in a format that is conducive to further analysis or wrangling. For example, what if we wanted to calculate and then plot (in `ggplot`) the difference between the mean `Petal.Length` and the mean `Sepal.Length` by `Species`? Using `tapply`, you would have to do something like:
+
+[source,r]
+----
+diff <- tapply(iris$Petal.Length, iris$Species, mean) - tapply(iris$Sepal.Length, iris$Species, mean)
+myDF <- data.frame(Species = names(diff), diff = unname(diff))
+ggplot(myDF, aes(x=diff, y=Species)) + geom_bar(stat="identity")
+----
+
+image::tidyverse_groupby_example_1.png[width=792, height=500, loading=lazy]
+
+Again, a little bit more difficult to read than the following, and if you had more operations to complete, the previous example would make it difficult to do even more. In the following example, however, we can continue to utilize and build on `myDF`:
+
+[source, r]
+----
+myDF <- iris %>%
+    group_by(Species) %>%
+    mutate(diff=mean(Petal.Length) - mean(Sepal.Length))
+
+myDF %>% ggplot(aes(x=diff, y=Species)) + geom_bar(stat="identity")
+----
+
+image::tidyverse_groupby_example_2.png[width=792, height=500, loading=lazy]
