@@ -1,0 +1,191 @@
+= Think Summer: Project 4 Solutions -- 2022
+
+[source,sql]
+----
+%sql sqlite:////anvil/projects/tdm/data/movies_and_tv/imdb.db
+----
+
+== 1. In the titles table, the premiered column specifies the year that a movie was premiered. Use COUNT to find how many movies premiered in each year in the database, in a single query.
+
+We can group by the year `premiered` and use the `COUNT` function.
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(premiered), premiered FROM titles GROUP BY premiered LIMIT 15;
+----
+
+== 2. Use aliasing to rename the results of the COUNT function, so that rather than being labeled COUNT(*), the column appears as movies premiered. While it can be interesting to see the number of movies premiering long ago, perhaps we don’t need to see all of this information. Edit your query to only include movies from 1970+.
+
+We put a condition to limit the results to those with `premiered` from 1970 onwards, and we rename the column resulting from the `COUNT`:
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(premiered) AS 'movies premiered', premiered FROM titles WHERE premiered >= 1970 GROUP BY premiered LIMIT 15;
+----
+
+== 3 part 1. First, write a query that gets the `episode_title_id` and `season_number` for every episode of our TV show.
+
+We use the suggested `show_title_id` and extract the `episode_title_id` and the `season_number`
+
+[source,sql]
+----
+%%sql
+SELECT episode_title_id, season_number FROM episodes WHERE show_title_id = 'tt0413573' LIMIT 5;
+----
+
+== 3 part 2. 
+
+Next, use your query from part (1) as a sub-query, and get the `season_number`s for the seasons with an average `rating` of at least 8.0. The result should be a single column (`season_number`) with 10 values (if you are using `title_id` `tt0413573`).
+
+We extract the `season_number` for those seasons that have average rating 8 or higher.  We `GROUP BY` the `season_number` and we use `HAVING` to ensure that `AVG(r.rating)` is 8 or more.
+
+[source,sql]
+----
+%%sql
+SELECT s.season_number FROM
+
+(SELECT episode_title_id, season_number FROM episodes WHERE show_title_id = 'tt0413573') AS s
+
+JOIN ratings r ON s.episode_title_id = r.title_id
+
+GROUP BY s.season_number
+HAVING AVG(r.rating) >= 8;
+----
+
+== 3 part 3. Write a query that gets the `episode_number`, `season_number`, `primary_title`, and `title_id` for the TV show with your `title_id` (for example, `tt0413573`). Make sure to order the results first by `season_number` and then by `episode_number`
+
+We select these 4 variables, joining the `episodes` and `titles` tables, and ordering by the `season_number` and `episode_number`.
+
+[source,sql]
+----
+%%sql
+SELECT episode_number, season_number, primary_title, title_id 
+
+FROM episodes AS e JOIN titles AS t
+ON e.episode_title_id = t.title_id
+
+WHERE show_title_id = 'tt0413573' 
+ORDER BY season_number, episode_number LIMIT 15;
+----
+
+== 3 part 4. At this stage there are only 2 missing components to our query from part (3). First is the fact that all episodes from all seasons are returned. To address this, use logical `AND` and the `IN` operator to limit the returned episodes from your part (3) query to only the `season_number`s returned in your part (2) query.
+
+
+We add an additional `AND` into the `WHERE` from the part 3 query, using `e.season_number IN` and checking to see whether this season number is in the subquery from part 2.
+
+
+[source,sql]
+----
+%%sql
+SELECT e.episode_number, e.season_number, t.primary_title, t.title_id 
+
+FROM episodes AS e JOIN titles AS t
+ON e.episode_title_id = t.title_id
+
+WHERE show_title_id = 'tt0413573' 
+
+AND e.season_number IN (SELECT s.season_number FROM
+                                    (SELECT episode_title_id, season_number FROM episodes WHERE show_title_id = 'tt0413573') AS s
+                                    JOIN ratings r ON s.episode_title_id = r.title_id
+                                    GROUP BY s.season_number
+                                    HAVING AVG(r.rating) >= 8)
+
+ORDER BY season_number, episode_number LIMIT 15;
+----
+
+== 3 part 5. Finally, the last missing component is the individual rating for each episode. Simply start with your query from part (4), and perform a join with the ratings table to get the rating for each episode.
+
+We join the `ratings` table, matching the `episode_title_id` from the `episodes` table with the `title_id` from the `ratings` table.
+
+[source,sql]
+----
+%%sql
+SELECT e.episode_number, e.season_number, t.primary_title, t.title_id, r.rating
+
+FROM episodes AS e JOIN titles AS t
+ON e.episode_title_id = t.title_id
+
+JOIN ratings as r
+ON e.episode_title_id = r.title_id
+
+WHERE show_title_id = 'tt0413573'
+AND e.season_number IN (SELECT s.season_number FROM
+                                    (SELECT episode_title_id, season_number FROM episodes WHERE show_title_id = 'tt0413573') AS s
+                                    JOIN ratings r ON s.episode_title_id = r.title_id
+                                    GROUP BY s.season_number
+                                    HAVING AVG(r.rating) >= 8)
+
+ORDER BY season_number, episode_number LIMIT 15;
+----
+
+== Switching gears
+
+Now we switch from SQL to R.
+
+[source,R]
+----
+%%R
+library(data.table)
+myDF <- fread("/anvil/projects/tdm/data/flights/subset/2005.csv")
+----
+
+
+== 4. Use R to solve this question. (This question does not need a tapply.) What was the most popular day to travel in 2005, in terms of the total number of flights? What was the least popular day to travel?
+
+We paste together the `Year`, `Month`, and `DayofMonth`, and then tabulate the results using `table`.  Then we `sort` the results and look at the most popular and least popular days to travel.
+
+The most popular day to travel is August 5, and the least popular day to travel is November 24.
+
+[source,R]
+----
+%%R
+head(sort(table(paste(myDF$Year, myDF$Month, myDF$DayofMonth)), decreasing=T))
+----
+
+[source,R]
+----
+%%R
+head(sort(table(paste(myDF$Year, myDF$Month, myDF$DayofMonth))))
+----
+
+== 5. Which airplane (listed by TailNum) flew the most miles altogether in 2005?
+
+We sum the mileage (i.e., the `Distance`) of the flights according to the `TailNum`, and we see that the airplane with `TailNum` `N550JB` flew the most miles, namely, more than 2 million miles.  We also note that a lot of flights without a tail number listed are in the data set.
+
+[source,R]
+----
+%%R
+head(sort(tapply(myDF$Distance, myDF$TailNum, sum), decreasing=T))
+----
+
+== 6. Among the three big New York City airports `(JFK, LGA, EWR)`, which of these airports had the worst `DepDelay` (on average) in 2005? (Can you solve this with 1 line of R, using a `tapply`, rather than 3 lines of R? Hint: After you run the tapply, you can index your results using `[c("JFK", "LGA", "EWR")]` to lookup all 3 airports at once.)
+
+We take the average of the `DepDelay`, split according to the `Origin`, and we remove the missing values.
+
+`JFK` has a 10.7 minute delay (on average).
+
+`LGA` has a 9.5 minute delay (on average).
+
+`EWR` has a 12.7 minute delay (on average).
+
+[source,R]
+----
+%%R
+sort(tapply(myDF$DepDelay, myDF$Origin, mean, na.rm=T), decreasing=T)[c("JFK", "LGA", "EWR")]
+----
+
+== 7. Which flight path (i.e., which Origin-to-Dest pair) has the longest average departure delay?
+
+We find the average departure delays, split according to the Origin-to-Dest pairs, and we remove the missing values.  We see that the flight path from `PIT` to `AVP` has a 345 minute departure delay (on average).
+
+FYI, there was only 1 flight from `PIT` to `AVP`, so this is something of an anomaly!
+
+[source,R]
+----
+%%R
+head(sort(tapply( myDF$DepDelay, paste(myDF$Origin, myDF$Dest), mean, na.rm=T), decreasing=T))
+----
+
+

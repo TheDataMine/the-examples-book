@@ -1,7 +1,305 @@
-# Schedule for Day 3
+== Introduction 
+The coroner's report is back. The autopsy showed reports of brusing and potental scratch marks made from a slow moving vehicle. Oddly enough there is no DNA except for a single dog hair found on the victim.
 
-## Session 5
-9 AM - 12 PM
+The stomach contents contain pasta, dairy products and the most unique is edible flower petals. Some were orange in color.  
 
-## Session 6
-1 PM - 5 PM
+The detectives have asked us to comb thru recent yelp reviews to see if we can find any restaurants that may have a menu that matches the content of the victims stomach. 
+
+== Fuzzy Matching
+Fuzzy Matching is a way to identify elements of texts, strings, or entries that are similar but may not be exact. It goes through large text based databases and returns a percentage based on the likeness of the phrase or word/s you are looking for. 
+Levenshtein Distance is what fuzzy matching uses, it is the minimum difference between two words and the number of changes the first word would go thru to become the second. 
+
+example:
+
+. mark and park 
+the minimumm distance is 1
+
+      mark (m would have to change to p)
+
+      park
+
+. trees and bees
+
+      the minimum distance is 2
+
+      trees (t needs to be changed to b)
+
+      brees (r needs to be removed)
+
+      bees
+
+== Practice Exercises
+
+. We will start today with importing our data into a pandas dataframe. We will need to upload several Python packages to take a look and work with our data.
++
+.Click to see solution
+[%collapsible]
+====
+[source, python]
+----
+import dask.dataframe as dd
+import pandas as pd
+from rapidfuzz import process, utils, fuzz
+----
+
+[source, python]
+----
+init_df = dd.read_parquet('../data/yelp/yelp_data.parquet', engine='fastparquet')
+----
+
+====
++
+. Lets take a look at the size of our data first so we can better understand our dataset and what it looks like. 
++
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+#lets you know how many rows are in the dataframe
+print(len(init_df))
+#lets you know what and how many columns are in the dataframe
+print(init_df.columns)
+----
+
+====
++
+. Now that we know how big our dataframe is we must figure out a way to access the information that we need. 
+We can do this by using fuzzy matching to find a string of text that matches the stomach content. The stomach content was pasta, dairy and edible flower petals. The most uniquie of those is the flower petals so we will use that to help us narrow down our data. 
++
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+init_df['ratio_score'] = init_df.apply(lambda row: fuzz.partial_ratio('petal', row['text'], score_cutoff=75, processor=None), axis=1, meta=(None, 'int64'))
+----
+
+====
++
+. We will now take that data and make a new dataframe with only the Yelp reviews that have at least a 75% match to our search word which was "petal"
++
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+petal_data = init_df[init_df['ratio_score'] != 0].reset_index().compute()
+----
+
+====
++
+. Now we can put them into acending order so it will start with the reviews that have the closest % match.  Which in ourcase is 100%
++
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+sorted_petal_data = petal_data.sort_values(by=['ratio_score'], ascending=False)
+----
+
+====
++
+. How can we see the shape of the new dataframe? 
++
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+print(sorted_petal_data.shape)
+
+(280044, 11)
+----
+
+====
++
+. You can see that our dataframe is smaller but we still have 280044 rows which means we have 280044 reviews that contain the word "petal". We must figure out another way to narrow down the data. One way is to only bring up the matches that are 100% 
++
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+print(sorted_petal_data[sorted_petal_data['ratio_score'] == 100])
+----
+
+====
++
+. This will bring back just the results that are a 100% match. Lets check the size of the data again. We can do that a different way by using the command .head this will allow us to see the first several rows of data and will also tell us how many rows and how many columns are in our dataframe.
++
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+print(sorted_petal_data[sorted_petal_data['ratio_score'] == 100].head())
+----
+
+====
++
+. Well, now we know we have 800 rows left to dig through. That is still too many to do manually. Is there another way to narrow down the data? If we go back and look at the stomach content what is the most unique information we have............. Ah! thats it! An orange colored petal was found. Lets go back into our code and look for the words "orange petal".
++
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+sorted_petal_data['orange_score'] = sorted_petal_data.apply(lambda row: fuzz.partial_ratio('orange petal', row['text'], score_cutoff=75, processor=None), axis=1)
+----
+
+====
++
+. Our last step is to print our findings, fingers crossed we narrow it down to just one single review.
++
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+print(sorted_petal_data[sorted_petal_data['orange_score'] == 100])
+----
+
+====
+
+## We did it! We found the resturant!!
+We now give the resturant information to the detecitves working the case. They go and interview Chef Nicolas and his staff at the Wooden Vine. During the interview the Chef meniotned that he had only served the "Spring Chef's Tasing Menu"  to a few tables that night. The oddest of couples seemed to be couple on their first date. The waiter mentioned that they had overhood conversation regarding meeting via OkCupid. The man on the date seemed eager to leave the restaurant which is what made the Chef and waiters pay attention. They also described him as having tattoos and probably in his mid to late 30’s and physically fit. 
+
+== Next Challenge 
+
+The witnesses now lead us to our next task of the day. The detectives have asked us to go thru the most recent OkCupid data and try and find profiles that would match the description of the suspect. 
+
+== Practice Exercises
+. As we did previously we have to first import all of the data and the packages we will be using to hopefully find the profile of our suspected killer. 
++
+.Click to see solution
+[%collapsible]
+====
+[source, python]
+----
+import pandas as pd
+import numpy as np
+
+okcupid_try= pd.read_csv("/anvil/projects/tdm/corporate/gallaudet/data/data/okcupid/profiles.csv")
+----
+
+====
+
+. We want to know the shape of our data, it is important to know what kind of data and how much data we will be sorting through to find our suspect. 
++
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+okcupid_try.shape
+
+(59946, 31)
+----
+[source,python]
+----
+okcupid_try.columns
+Index(['age', 'body_type', 'diet', 'drinks', 'drugs', 'education', 'essay0',
+       'essay1', 'essay2', 'essay3', 'essay4', 'essay5', 'essay6', 'essay7',
+       'essay8', 'essay9', 'ethnicity', 'height', 'income', 'job',
+       'last_online', 'location', 'offspring', 'orientation', 'pets',
+       'religion', 'sex', 'sign', 'smokes', 'speaks', 'status'],
+      dtype='object')
+----
+
+====
+
+
+. We can see that the original dataset has almost sixty-thousand profiles. That is a lot of text to try and do manually. If we want to know what the data looks like we can look at the first 30 rows.
++
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+okcupid_try.head(30)
+----
+
+====
+
+. We have to figure out how to best find our suspect. We will be using another method of narrowing down our dataset. Notice that one of the columns is body_type. We will use this to our advantage. Using the function .unique we will pull only those rows that match the critera 'fit' and 'athletic'. 
++
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+filtered_data = okcupid_try[(okcupid_try['body_type'] == 'fit') | (okcupid_try['body_type'] == 'athletic')]
+----
+
+====
+
+. Now we print our the results of our new dataframe
++
+.Click to see solution
+[%collapsible]
+====
+[source, python]
+----
+print(filtered_data.head())
+----
+
+====
+
+. We automatically notice that there is a location column lets drop everyone that doesnt live on the East Coast. How do we do that? We use the method unique to find a list of unique locations in the location column. 
++
+.Click to see solution
+[%collapsible]
+====
+[source, python]
+----
+print(filtered_data["location"].unique())
+----
+
+====
+Wow we only find that there is only two east coast states represented in this data! New York and New Jersey
+
+. Now we want to narrow down our dataset to only showing those profiles that are from New York and New Jersey 
++
+.Click to see solution
+[%collapsible]
+====
+[source, python]
+----
+filtered_data = filtered_data[(filtered_data['location'] == 'new york, new york') | (filtered_data['location'] == 'south orange, new jersey')]
+----
+
+====
+
+. We now can filter age as well, since one of the witnesses said that the suspect was in their late to mid thirtys we will use >30 to help filter down profiles.
++
+.Click to see solution
+[%collapsible]
+====
+[source, python]
+----
+filtered_data = filtered_data[(filtered_data['age'] >= 30)]
+----
+[source, python]
+----
+print(filtered_data)
+----
+
+====
+After printing we still have 4 profiles that could be a potential lead. Hmmmm what other things did we find in the autopsy?!  Oh! thats right, a single dog hair. Luckily this dataset has a column for pets. Lets see if we reduce our number of suspect profiles again.
++
+.Click to see solution
+[%collapsible]
+====
+[source, python]
+----
+filtered_data = filtered_data[(filtered_data['pets'] == 'has dogs')]
+----
+[source, python]
+----
+print(filtered_data.head())
+----
+
+====
+We did it! Data Science for the win! We now have one profile to give to the detectives to continue their investigation! Good work data scientests!
