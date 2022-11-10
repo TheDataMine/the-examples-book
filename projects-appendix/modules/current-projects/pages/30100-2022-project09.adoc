@@ -1,0 +1,481 @@
+= TDM 30100: Project 9 -- 2022
+
+**Motivation:** Python is an incredible language that enables users to write code quickly and efficiently. When using Python to write code, you are _typically_ making a tradeoff between developer speed (the time it takes to write a functioning program) and program speed (how fast your code runs). Python code does _not_ have the advantage of easily being compiled to machine code and shared. In Python, you need to learn how to use virtual environments, and it is good to have an understanding of how to build and push a package to pypi.
+
+**Context:** This is the second in a series of 3 projects that focuses on setting up and using virtual environments, and creating a package. This is not intended to teach you everything, but rather, give you some exposure to the topics.
+
+**Scope:** Python, virtual environments, pypi
+
+.Learning Objectives
+****
+- Explain what a virtual environment is and why it is important.
+- Create, update, and use a virtual environment to run somebody else's Python code.
+- Create a Python package and publish it on pypi.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/anvil/projects/tdm/data`
+
+== Questions
+
+=== Question 1
+
+In the previous project, the author made a mistake that _may_ have caused some confusion. Many apologies! Therefore, this first question is going to be a review of what was accomplished in the previous project.
+
+Like the previous project, this project will consist primarily of your Jupyter notebook, with screenshots of your terminal after running commands. `bash` cells will _not_ work properly due to the way our environment is setup. For this reason, it is important to first open a terminal from within Jupyter Lab, to run commands, take screenshots, and display the screenshots in your Jupyter Notebook (your `.ipynb` file).
+
+**Activate our "base" image, so we start with Python 3.10 instead of Python 3.6:**
+
+[source,bash]
+----
+module load python/jupyterlab
+
+# which interpreter is active?
+which python3
+
+# list our current set of python packages using pip
+python3 -m pip list
+----
+
+**Create a virtual environment:**
+
+[source,bash]
+----
+# create the virtual environment named p9q1 in your $HOME directory
+python3 -m venv $HOME/p9q1
+
+# check out what files and folders the environment consist of
+ls -la $HOME/p9q1
+
+# which python are we currently using?
+which python3
+
+# which packages?
+python3 -m pip list
+
+# activate our newly created virtual environment
+source $HOME/p9q1/bin/activate
+
+# which python are we currently using?
+which python3
+
+# what packages do we have available?
+python3 -m pip list
+----
+
+**Activate a virtual environment:**
+
+[source,bash]
+----
+source /path/to/my/virtual/environment/bin/activate
+
+# for example, if our virtual environment was called myvenv in the $HOME directory
+source $HOME/myvenv/bin/activate
+----
+
+**Deactivate a virtual environment:**
+
+[source,bash]
+----
+deactivate
+which python3 # will no longer point to interpreter inside the virtual environment folder
+----
+
+**Install a single package to your virtual environment:**
+
+[source,bash]
+----
+# first activate the virtual environment
+source $HOME/p9q1/bin/activate
+
+# install the requests package
+python3 -m pip install requests
+----
+
+**Pin dependencies, or make the current virtual environment rebuildable by others:**
+
+[source,bash]
+----
+# first activate the virtual environment you'd like to pin the dependencies for
+source $HOME/p9q1/bin/activate
+
+# next, create a requirements.txt file with all of the packages, pinned
+python3 -m pip freeze > $HOME/requirements.txt
+----
+
+**Build a fresh virtual environment using someone else's pinned dependencies:**
+
+[source,bash]
+----
+# create the blank environment
+python3 -m venv $HOME/friendsenv
+
+# activate the environment
+source $HOME/friendsenv/bin/activate
+
+# install the _exact_ packages your friend had, using their requirements.txt
+python3 -m pip install -r $HOME/requirements.txt
+
+# verify the packages are installed
+python3 -m pip list
+python3 -m pip freeze
+----
+
+**Delete a virtual environment you don't use anymore:**
+
+[source,bash]
+----
+# IMPORTANT: Ensure you do NOT have a typo
+rm -rf $HOME/p9q1
+----
+
+Run through some of those commands, until it "pretty much" clicks. Take and include at least a couple screenshots -- no need to include everything if you feel comfortable with everything shown above.
+
+[WARNING]
+====
+Make sure to take screenshots showing your input and output from the terminal throughout this project. You final submission should show all of the steps as you walk through the project.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+Wow! When you look at all of that information from question (1), virtual environments aren't really all that much work to use!
+
+Okay, if you _haven't_ already done something similar (some of you may have), I imagine this next statement is going to be pretty exciting. By the end of this project you will create a new virtual environment and `pip install` your very own package, from https://pypi.org/!
+
+Let's start by writing the heart and soul of your package -- a function that, given an imdb id, scrapes and returns the rating. 
+
+. Create a new virtual environment to work in called `question02`.
+. Install one or more of the following packages to your environment (you will probably want at least 2 of these to write this function): `requests`, `beautifulsoup4`, `lxml`.
+. Write and test out your function, `get_rating`.
+
+Please include screenshots of the above steps, all the way until the end where a rating should print for an imdb title.
+
+[TIP]
+====
+For example, https://www.imdb.com/title/tt4236770/?ref_=nv_sr_srsg_0 would have an imdb title id of tt4236770. We want the functionality to look like the following.
+
+[source,python]
+----
+get_rating("tt4236770")
+----
+
+.output
+----
+8.7
+----
+====
+
+[TIP]
+====
+You can use the following as a skeleton -- just fill in part of the xpath expression.
+
+[source,python]
+----
+import requests
+import lxml.html
+
+def get_rating(tid: str) -> float:
+    """
+    Given an imdb title id, return the title's rating.
+    """
+    resp = requests.get(f"https://www.imdb.com/title/{tid}", stream=True)
+    resp.raw.decode_content = True
+    tree = lxml.html.parse(resp.raw)
+    element = tree.xpath("//div[@data-testid='FILL THIS IN']/span")[0]
+    return float(element.text)
+----
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+The next step in this process is to organize your files. Let's make this a simple, barebones setup.
+
+First, let's decide on the package name. Choose a package name starting with `tdm-`. For example, `tdm-drward`. Create a project directory with the same name as you package. For example, mine would be the following.
+
+[source,bash]
+----
+mkdir $HOME/tdm-drward
+----
+
+Great! This will be the name you use to install via `pip`. So in my case, it would be `python3 -m pip install tdm-drward`.
+
+Next, create 3 new files inside the `tdm-drward` (or equivalent) folder.
+
+- `LICENSE`
+- `pyproject.toml`
+- `README.md`
+
+The first file is a simple text file containing the text of your license. You can use https://choosealicense.com/ to choose a license and paste the text of the license in your `LICENSE` file.
+
+The third file is a `README.md` -- a simple markdown file where you will eventually keep the important instructions for your package. For now, go ahead and just leave it blank.
+
+The second file is a critical file that will be used to specify various bits of information about you package. For now, you can leave it blank.
+
+Next, create a new directory _inside_ the `$HOME/tdm-drward` package directory. Name the directory whatever you want. This will be the name that is used when importing your package. For example, I made `$HOME/tdm-drward/imdb`. For my package, I will do something like:
+
+[source,python]
+----
+import imdb
+
+# or
+
+from imdb import get_rating
+----
+
+Finally, copy and paste your `get_rating` function into a new file called `imdb.py`, and drop `imdb.py` into `$HOME/tdm-drward/imdb` (or your equivalent package path). In addition, create another new file called `\\__init__.py` in the same directory. Leave it blank for now. 
+
+[TIP]
+====
+Your directory structure should look something like the following.
+
+[source,bash]
+----
+tree $HOME/tdm-drward
+----
+
+.directory structure
+----
+tdm-drward
+├── imdb
+│   ├── imdb.py
+│   └── __init__.py
+├── LICENSE
+├── pyproject.toml
+└── README.md
+
+1 directory, 5 files
+----
+====
+
+Fantastic! Now, let's create a new virtual environment called `p9q3`, activate the environment, and run the following.
+
+[source,bash]
+----
+python3 -m pip install -e $HOME/tdm-drward
+----
+
+This will install the package to your `p9q3` virtual environment so you can test it out and see if it is working as intended! Let's go ahead and test it to see if it is doing what we want. Run `python3` to launch a Python interpreter for our virtual environment. Run the following Python code from within the interpreter.
+
+[source,python]
+----
+import imdb # works
+print(imdb.__version__) # error
+imdb.get_rating("tt4236770") # error
+imdb.imdb.get_rating("tt4236770") # works
+from imdb import get_rating # error
+get_rating("tt4236770") # error
+----
+
+What happens? Well, it isn't behaving exactly like we want, but we _can_ import things.
+
+[source,python]
+----
+import imdb.imdb
+imdb.imdb.get_rating("tt4236770") # will work
+
+from imdb.imdb import get_rating
+get_rating("tt4236770") # will also work
+----
+
+Here is the critial part, the `\\__init__.py` file. Any directory containing a `\\__init__.py` file is the indicator that forces Python to treat the directory as a package. If you have a complex or different directory structure, you can add code to `\\__init__.py` that will clean up your imports. When a package is imported, the code in `\\__init__.py` is executed. You can read more about this https://docs.python.org/3/tutorial/modules.html[here].
+
+Go ahead and add code to `\\__init__.py`.
+
+[source,python]
+----
+from .imdb import *
+
+__version__ = "0.0.1"
+
+print("Hi! You must have imported me!")
+----
+
+Re-install the package.
+
+[source,bash]
+----
+python3 -m pip install -e $HOME/tdm-drward
+----
+
+Now, launch a Python interpreter again and try out our original code.
+
+[source,python]
+----
+import imdb # works, prints your message
+print(imdb.__version__) # prints 0.0.1
+imdb.get_rating("tt4236770") # works
+imdb.imdb.get_rating("tt4236770") # still works
+from imdb import get_rating # works
+get_rating("tt4236770") # works
+----
+
+Wow! Okay, this should start to make a bit more sense now. Go ahead and remove the silly print statement in your `\\__init__.py` -- we don't want that anymore!
+
+Finally, let's take a look at the `pyproject.toml` file and fill is some info about our package. 
+
+.pyproject.toml
+----
+[build-system]
+requires      = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "FILL IN"
+version = "0.0.1"
+description = "FILL IN"
+readme = "README.md"
+authors = [{ name = "FILL IN", email = "FILLIN@purdue.edu" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["example", "imdb", "tutorial", "FILL IN"]
+dependencies = [
+    "lxml >= 4.9.1",
+    "requests >= 2.28.1",
+]
+requires-python = ">=3.10"
+----
+
+Be sure to fill in the "FILL IN" parts with your information! Lastly, make sure to specify any other Python packages that _your_ package depends on in the "dependencies" section. In the provided example, I require the package "lxml" of at least version 4.9.1, as well as the"requests" package with at least version 2.28.1. This makes it so when we `pip install` our package, that these other packages and _their_ dependencies are _also_ installed -- pretty cool!
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+Okay, to the best of our knowledge our package is ready to go and we want to make it publicly available to `pip install`. The next step in the process is to register an account with https://test.pypi.org https://test.pypi.org/account/register/[here]. Take note of your username and password.
+
+Next, confirm your email address. Open up the email you used to register and click on the link that was sent to you.
+
+Finally, its time to publish your package to the test package repository!
+
+In order to build and publish your package, we need two packages: `build` and `twine`. Let's setup a virtual environment and install those packages so we can use them!
+
+. Deactivate any environment that may already be active by running: `deactivate`.
+. Create a new virtual environment called `p9q4`.
+. Activate your `p9q4` virtual environment.
+. Use `pip` to install `build` and `twine`: `python3 -m pip install build twine`.
+. Build your package.
++
+[TIP]
+====
+[source,bash]
+----
+python3 -m build $HOME/tdm-drward
+----
+====
++
+. Check your package.
++
+[TIP]
+====
+[source,bash]
+----
+python3 -m twine check $HOME/tdm-drward/dist/*
+----
+
+You may get a warning, that is ok.
+====
++
+. Upload your package.
++
+[TIP]
+====
+[source,bash]
+----
+python3 -m twine upload -r testpypi $HOME/tdm-drward/dist/*
+----
+
+You will be prompted to enter your username and password. Enter the credentials associated with your newly created account.
+====
+
+Congrats! You can search for your package at https://test.pypi.org. You are ready to publish the real thing!
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+Okay, register for a Pypi account https://pypi.org/account/register/[here].
+
+Next, verify your account by checking your associated email account and clicking on the provided link.
+
+At this stage, you already built your package using `python3 -m build`, so you are ready to simply upload your package!
+
+. Deactivate any currently active virtual environment by running: `deactivate`.
+. Create a new virtual environment called `p9q5`.
+. Activate your `p9q5` virtual environment.
+. Use `pip` to install `twine`: `python3 -m pip install twine`.
+. Upload your package: `python3 -m twine upload $HOME/tdm-drward/dist/*`
++
+[TIP]
+====
+You will be prompted to enter your username and password. Enter the credentials associated with your newly created account.
+====
++
+. Fantastic! Take a look at https://pypi.org and search for your package! Even better, let's test it out!
+. Your `p9q5` virtual environment should still be active, let's pip install your package!
++
+[source,python]
+----
+python3 -m pip install tdm-drward
+----
++
+[TIP]
+====
+Of course, replace `tdm-drward` with your package name!
+====
++
+. Finally, test it out! Launch a Python interpreter and run the following.
++
+[source,python]
+----
+import imdb
+imdb.get_rating("tt4236770") # success!
+----
+
+Congratulations! I hope you all feel empowered to create your own packages!
+
+[WARNING]
+====
+Make sure to take screenshots showing your input and output from the terminal throughout this project. You final submission should show all of the steps as you walk through the project.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====
