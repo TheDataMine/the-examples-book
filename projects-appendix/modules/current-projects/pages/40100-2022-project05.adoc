@@ -1,0 +1,316 @@
+= TDM 40100: Project 5 -- 2022
+
+**Motivation:** Sometimes taking the time to simply do some experiments and benchmark things can be fun and beneficial. In this project, we are going to run some tests to see how various methods we try impact insertion performance with `sqlite`.
+
+**Context:** This is the next project in our "deepish" dive into `sqlite3`. Hint, its not really a deep dive, but its deeper than what we've covered before! https://fly.io has been doing a blog series on a truly deep dive: https://fly.io/blog/sqlite-internals-btree/, https://fly.io/blog/sqlite-internals-rollback-journal/, https://fly.io/blog/sqlite-internals-wal/, https://fly.io/blog/sqlite-virtual-machine/.
+
+**Scope:** `sqlite3`, lmod, SQL
+
+.Learning Objectives
+****
+- Learn about some of the constraints `sqlite3` has.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/anvil/projects/tdm/data/goodreads/goodreads_book_authors.json`
+- `/anvil/projects/tdm/data/goodreads/goodreads_book_series.json`
+- `/anvil/projects/tdm/data/goodreads/goodreads_books.json`
+- `/anvil/projects/tdm/data/goodreads/goodreads_reviews_dedup.json`
+
+== Questions
+
+=== Question 1
+
+The data we want to include in our `sqlite3` database is in need of wrangling prior to insertion. It is a fairly sizeable dataset -- let's start by creating our sample dataset so we can use it to estimate the amount of time it will take to create the full database.
+
+[source,python]
+----
+from pathlib import Path
+
+def split_json_to_n_parts(path_to_json: str, number_files: int, output_dir: str) -> None:
+    """
+    Given a str representing the absolute path to a `.json` file, 
+    `split_json` will split it into `number_files` `.json` files of equal size.
+    
+    Args:
+        path_to_json: The absolute path to the `.json` file.
+        number_files: The number of files to split the `.json` file into.
+        output_dir: The absolute path to the directory where the split `.json` 
+            files are to be output.
+
+    Returns:
+        Nothing.
+        
+    Examples:
+
+        This is the second test
+        >>> test_json = '/anvil/projects/tdm/data/goodreads/test.json'
+        >>> output_dir = f'{os.getenv("SCRATCH")}/p5testoutput'
+        >>> os.mkdir(output_dir)
+        >>> number_files = 2
+        >>> split_json_to_n_parts(test_json, number_files, output_dir)
+        >>> output_dir = Path(output_dir)
+        >>> number_output_files = sum(1 for _ in output_dir.glob("*.json"))
+        >>> shutil.rmtree(output_dir)
+        >>> number_output_files
+        2
+    """
+    path_to_json = Path(path_to_json)
+    num_lines = sum(1 for _ in open(path_to_json))
+    group_amount = num_lines//number_files + 1
+    with open(path_to_json, 'r') as f:
+        part_number = 0
+        writer = None
+        for idx, line in enumerate(f):
+            if idx % group_amount == 0:
+                if writer:  
+                    writer.close()
+                    
+                writer = open(str(Path(output_dir) / f'{path_to_json.stem}_{part_number}.json'), 'w')
+                part_number += 1
+                
+            writer.write(line)
+----
+
+[source,python]
+----
+output_dir = f'{os.getenv("HOME")}/goodreads_samples'
+shutil.rmtree(output_dir)
+os.mkdir(output_dir)
+number_files = 1
+split_json_to_n_parts(f'/anvil/projects/tdm/data/goodreads/goodreads_samples/goodreads_books.json', number_files, output_dir)
+split_json_to_n_parts(f'/anvil/projects/tdm/data/goodreads/goodreads_samples/goodreads_book_authors.json', number_files, output_dir)
+split_json_to_n_parts(f'/anvil/projects/tdm/data/goodreads/goodreads_samples/goodreads_book_series.json', number_files, output_dir)
+split_json_to_n_parts(f'/anvil/projects/tdm/data/goodreads/goodreads_samples/goodreads_reviews_dedup.json', number_files, output_dir)
+----
+
+Create the empty database.
+
+[source,ipython]
+----
+%%bash
+
+rm $HOME/my.db || true
+sqlite3 $HOME/my.db "CREATE TABLE reviews (
+    id TEXT PRIMARY KEY,
+	user_id TEXT, 
+	book_id INTEGER,
+	rating INTEGER,
+	review_text TEXT,
+    date_added TEXT,
+    date_updated TEXT,
+    read_at TEXT,
+    started_at TEXT,
+    n_votes INTEGER,
+    n_comments INTEGER
+);"
+
+sqlite3 $HOME/my.db "CREATE TABLE books (
+    id INTEGER PRIMARY KEY,
+	isbn TEXT,
+    text_reviews_count INTEGER,
+    country_code TEXT,
+    language_code TEXT,
+    asin TEXT,
+    is_ebook INTEGER,
+    average_rating REAL,
+    kindle_asin TEXT,
+    description TEXT,
+    format TEXT,
+    link TEXT,
+    publisher TEXT,
+    num_pages INTEGER,
+    publication_day INTEGER,
+    isbn13 TEXT,
+    publication_month INTEGER,
+    edition_information TEXT,
+    publication_year INTEGER,
+    url TEXT,
+    image_url TEXT,
+    ratings_count INTEGER,
+    work_id TEXT,
+    title TEXT,
+    title_without_series TEXT
+);"
+
+sqlite3 $HOME/my.db "CREATE TABLE authors_books (
+    id INTEGER PRIMARY KEY,
+    author_id INTEGER,
+    book_id INTEGER,
+    role TEXT,
+    FOREIGN KEY (author_id) REFERENCES authors (id),
+    FOREIGN KEY (book_id) REFERENCES books (id)
+);"
+
+sqlite3 $HOME/my.db "CREATE TABLE books_series (
+    id INTEGER PRIMARY KEY,
+    book_id INTEGER,
+    series_id INTEGER,
+    FOREIGN KEY (book_id) REFERENCES books (id),
+    FOREIGN KEY (series_id) REFERENCES series (id)
+);"
+
+sqlite3 $HOME/my.db "CREATE TABLE authors (
+    id INTEGER PRIMARY KEY,
+	average_rating REAL,
+    text_reviews_count INTEGER,
+    name TEXT,
+    ratings_count INTEGER
+);"
+
+sqlite3 $HOME/my.db "CREATE TABLE shelves (
+    id INTEGER PRIMARY KEY,
+    name TEXT
+);"
+
+sqlite3 $HOME/my.db "CREATE TABLE books_shelves (
+    id INTEGER PRIMARY KEY,
+    shelf_id INTEGER,
+    book_id INTEGER,
+    count INTEGER,
+    FOREIGN KEY (shelf_id) REFERENCES shelves (id),
+    FOREIGN KEY (book_id) REFERENCES books (id)
+);"
+
+sqlite3 $HOME/my.db "CREATE TABLE series (
+    id INTEGER PRIMARY KEY,
+	numbered INTEGER,
+    note TEXT,
+    description TEXT,
+    title TEXT,
+    series_works_count INTEGER,
+    primary_work_count INTEGER
+);"
+----
+
+Check out `/anvil/projects/tdm/data/goodreads/gr_insert.py`. Use the unix `time` function to execute the script and determine how long it took to run. Estimate the amount of time it will would take to insert the full dataset. To run the script in a bash cell, you would do something like.
+
+[source,ipython]
+----
+%%bash
+
+python3 /anvil/projects/tdm/data/goodreads/gr_insert.py 0
+----
+
+Where the single argument indicates which files to read in. In this first example, it will process all files ending in `_0`. When we further split the data into parts, this will help use point the script at certain subsets of the data.
+
+[IMPORTANT]
+====
+To keep things simplified, we are going to skip a few things that take more time. Mainly, scraping the images, and the authors_books, books_shelves, and books_series tables.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+Typically, one way to speed things up is to throw more processing power at it. Let's use 2 processes instead of 1 to insert our data. Start with a fresh (empty) database, and reinsert your data but use `joblib` to use 2 processors. What happened?
+
+[TIP]
+====
+Copy `gr_insert.py` into the same directory as your notebook. Then, the following imports will work.
+
+[source,python]
+----
+from gr_insert import insert_all
+import joblib
+from joblib import Parallel
+from joblib import delayed
+----
+====
+
+[TIP]
+====
+https://joblib.readthedocs.io/en/latest/parallel.html[This] example should help.
+====
+
+[TIP]
+====
+To get started, split your data into parts as follows.
+
+[source,python]
+----
+output_dir = f'{os.getenv("HOME")}/goodreads_samples'
+shutil.rmtree(output_dir)
+os.mkdir(output_dir)
+number_files = 2
+split_json_to_n_parts(f'/anvil/projects/tdm/data/goodreads/goodreads_samples/goodreads_books.json', number_files, output_dir)
+split_json_to_n_parts(f'/anvil/projects/tdm/data/goodreads/goodreads_samples/goodreads_book_authors.json', number_files, output_dir)
+split_json_to_n_parts(f'/anvil/projects/tdm/data/goodreads/goodreads_samples/goodreads_book_series.json', number_files, output_dir)
+split_json_to_n_parts(f'/anvil/projects/tdm/data/goodreads/goodreads_samples/goodreads_reviews_dedup.json', number_files, output_dir)
+----
+====
+
+[TIP]
+====
+You should get an error talking about something being "locked".
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+`sqlite3`, by default, can only have 1 writer at a time. So even though we have two processes trying to insert data, `sqlite3` can't keep going. In our case, one of the processes got a "database locked" issue. That's a huge bummer, but at least we can run queries while data is being inserted, right? Let's give it a try.
+
+Start with a fresh database. Run the following command in a bash cell. This will spawn two processes that will try to connect to the database at the same time. The first process will be inserting data (like before). The second process will try to continually make silly `SELECT` queries for 1 minute. 
+
+[source,ipython]
+----
+%%bash
+
+python3 gr_insert.py 0 &
+python3 gr_insert.py 0 read &
+----
+
+What happens?
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+As you may have figured out, no, by default you cannot both read and write data to an `sqlite3` database concurrently. However, this is possible by activating the write ahead log (WAL), cool!
+
+Start with a fresh database again, figure out _how_ to activate the WAL, activate it, and repeat question 3. Does it work now?
+
+This is a pretty big deal, and makes `sqlite3` an excellent choice for any database that doesn't need to have fantastic, concurrent write performance. Things like blogs and other small data systems could easily be backed by `sqlite3`, no problem! It also means that if you have an application that is creating a lot of data very rapidly, it is possibly _not_ the best choice.
+
+The WAL is an actual file? Find the file, what is it named?
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+Read the 4 articles provided in the **context** at the top of the project. Write a short paragraph about what you learned. What was the thing you found most interesting? If you are interested, feel free to try and replicate some of the examples they demonstrate.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====
