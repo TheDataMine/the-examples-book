@@ -1,0 +1,125 @@
+= Think Summer: Project 3 Solutions -- 2022
+
+[source,sql]
+----
+%sql sqlite:////anvil/projects/tdm/data/movies_and_tv/imdb.db
+----
+
+== 1. Examine all six of the tables in the imdb database: akas, crew, episodes, people, ratings, titles.  Identify each of the primary keys in each table, and identify each of the foreign keys in each table.
+
+We just look at each table, and see which keys are primary and which keys are foreign.
+
+In the `titles` table, the `title_id` is a primary key
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles LIMIT 5;
+----
+
+In the `ratings` table, the `title_id` is a foreign key
+
+[source,sql]
+----
+%%sql
+SELECT * FROM ratings LIMIT 5;
+----
+
+In the `akas` table, the `title_id` is a foreign key
+
+[source,sql]
+----
+%%sql
+SELECT * FROM akas LIMIT 5;
+----
+
+In the `people` table, the `person_id` is a primary key
+
+[source,sql]
+----
+%%sql
+SELECT * FROM people LIMIT 5;
+----
+
+In the `crew` table, the `title_id` and `person_id` are foreign keys
+
+[source,sql]
+----
+%%sql
+SELECT * FROM crew LIMIT 5;
+----
+
+In the `episodes` table, the `episode_title_id` and `show_title_id` are foreign keys
+
+[source,sql]
+----
+%%sql
+SELECT * FROM episodes LIMIT 5;
+----
+
+== 2. Write a SQL query to confirm that the `title_id` "tt0413573" does indeed belong to Grey's Anatomy.
+
+We just query the `titles` table and look for that `title_id`
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles WHERE title_id = 'tt0413573' LIMIT 5;
+----
+
+The `title_id` of Dr Ward's favorite show is "tt0108778"
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles WHERE title_id = 'tt0108778' LIMIT 5;
+----
+
+== 3. Write a query that gets a list of all of the `episodes_title_id`s (found in the `episodes` table), with the associated `primary_title` (found in the `titles` table) for each episode of Grey's Anatomy.
+
+We use the same technique that we did yesterday with the Friends episodes.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM episodes AS e JOIN titles AS t ON e.show_title_id = t.title_id
+JOIN titles AS u ON e.episode_title_id = u.title_id
+WHERE show_title_id = 'tt0413573' LIMIT 5;
+----
+
+== 4. Write a query that prints the `primary_title`, `rating`, and `votes` for all films with a rating of at least 8 and at least 50000 votes. Like in the previous version of this question, limit your output to 15 results.
+
+We just join the `titles` table, and `SELECT` the 3 variables needed.
+
+[source,sql]
+----
+%%sql
+SELECT t.primary_title, r.rating, r.votes FROM ratings AS r JOIN titles AS t WHERE (r.rating >= 8) AND (r.votes >= 50000) LIMIT 15;
+----
+
+== 5. Write a query that returns a list of just `episode_title_ids` (found in the `episodes` table), with the associated `primary_title` (found in the `titles` table) for each episode.
+
+We did this already for the Friends show:
+
+[source,sql]
+----
+%%sql
+SELECT e.episode_title_id, u.primary_title FROM episodes AS e JOIN titles AS t ON e.show_title_id = t.title_id
+JOIN titles AS u ON e.episode_title_id = u.title_id
+WHERE show_title_id = 'tt0108778' LIMIT 5;
+----
+
+== 6. Write a query that adds the rating to the end of each episode. To do so, use the query you wrote in (5) as a subquery. Which episode has the highest rating? Is it also your favorite episode?
+
+We just join the `ratings` table and sort by the highest ratings.  It is not surprising that the last episode of Friends has the highest rating.
+
+[source,sql]
+----
+%%sql
+SELECT e.episode_title_id, u.primary_title, r.rating FROM episodes AS e JOIN titles AS t ON e.show_title_id = t.title_id
+JOIN titles AS u ON e.episode_title_id = u.title_id
+JOIN ratings AS r ON e.episode_title_id = r.title_id
+WHERE show_title_id = 'tt0108778' ORDER BY r.rating DESC LIMIT 5;
+----
+
+

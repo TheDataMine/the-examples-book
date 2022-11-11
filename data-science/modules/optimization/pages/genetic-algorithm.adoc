@@ -6,15 +6,19 @@ This overview only scratches the surface of how genetic algorithms can be used, 
 
 Much of the code base for the example was adapated from a great https://machinelearningmastery.com/simple-genetic-algorithm-from-scratch-in-python/[article] by Jason Brownlee on the topic. It's definitely worth a read! 
 
+{sp}+
+
 == Algorithm Structure
 
 The genetic algorithm at a high level is fairly straightforward. You have a population of potential "parent objects" that are evaluated based on an objective function (goal). The top few "parents" are selected and create "children objects". The children objects also have a chance to have minor mutations that can change their value. 
 
 This process continues until their the objective function (goal) stops improving or you hit a limit on the number of iterations that you want to run. We'll see this in the code examples below. First we'll start by breaking each piece of the model out for understanding and then show a use case with the full function. 
 
+{sp}+
+
 == Objective Function
 
-The most important part of the genetic algorithm is the `objective function`. This is the evaluation metric for the algorithm and helps the code optimize for the overall goal. 
+The most important part of the genetic algorithm is the *objective function*. This is the evaluation metric for the algorithm and helps the code optimize for the overall goal. 
 
 In our example we are going to play around with optimizing for the https://en.wikipedia.org/wiki/Knapsack_problem[knapsack problem]. 
 
@@ -22,7 +26,7 @@ In this example we have a knapsack with a limited amount of carrying capacity. E
 
 Using this information we can write our initial objective function. 
 
-[source, python]
+[source,python]
 ----
 def objective(x, profit, weight, weight_limit):
     total_profit = np.sum(np.array(x) * np.array(profit))
@@ -39,6 +43,8 @@ The `total_penalty` calculation above has an arbitrary 1000 tacked on to the end
 
 Once we have an idea of what we want to optimize we can build the structure of the algorithm. 
 
+{sp}+
+
 == Creating the Algorithm
 
 The basic framework of a genetic algorithm is highlighted below. We'll be working through each framework step in the following sections. 
@@ -51,6 +57,8 @@ The basic framework of a genetic algorithm is highlighted below. We'll be workin
 - Occasionally mutate some of the children (not as bad as it sounds).
 - Run it all again!
 
+{sp}+
+
 === Generating the Population
 
 This is one of the more confusing parts of genetic algorithms. To allow for mutation each value has to be created in bits (lots of 1's and 0's). This allows for subtle mutations when running the algorithm. We want to keep the changes minor in order to keep the same relative search space.
@@ -61,7 +69,7 @@ In the code below the `n_bits` parameter sets the maximum possible value. We onl
 
 The `bounds` parameter is how we regulate the range of search values for our inputs. In the knapsack example this code is saying that we have 5 potential items to take and we can take anywhere between 0 and 5 of those items.
 
-[source, python]
+[source,python]
 ----
 bounds = [[0.0, 5.0], [0.0, 5.0], [0.0, 5.0], [0.0, 5.0], [0.0, 5.0]]
 n_bits = 16
@@ -71,7 +79,7 @@ pop = [np.random.randint(0, 2, n_bits*len(bounds)).tolist() for _ in range(n_pop
 
 In order to evaluate this population of bit strings (1's and 0's) we need a function to decode the value to an int. 
 
-[source, python]
+[source,python]
 ----
 def decode(bounds, n_bits, bitstring, type_of_scale='default'):
     decoded = []
@@ -95,9 +103,9 @@ def decode(bounds, n_bits, bitstring, type_of_scale='default'):
 
 In this method the full bit string is passed in and then broken into 5 sets of 16 bit values. These values are then translated into `str` types and then finally into `int` types. This translation gives us our value for the algorithm. For example, `[0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]` turns into 21,835. 
 
-These values are then scaled to ensure that they fit into the range of possible values that we are looking for. In this example 21,835 is changed to 2 after rounding.  
+These values are then scaled to ensure that they fit into the range of possible values that we are looking for. In this example, 21,835 is changed to 2 after rounding.  
 
-[source, python]
+[source,python]
 ----
 def original_scaling(bounds, biggest_possible_int, i, num_to_scale):
     value = bounds[i][0] + (num_to_scale / biggest_possible_int) * (bounds[i][1] - bounds[i][0])
@@ -117,10 +125,12 @@ For this specific knapsack problem the values are rounded to whole numbers using
 
 To get a baseline for our values we can just decode an evaluate the first item in the population. 
 
-[source, python]
+[source,python]
 ----
 best, best_eval = 0, objective(decode(bounds, n_bits, pop[0]), profit, weight, max_weight)
 ----
+
+{sp}+
 
 === Creating a New Generation
 
@@ -128,7 +138,7 @@ Now that we have our population, a way to understand our values, and a baseline 
 
 The first part of the generation loop is pretty easy. We just loop through all of the current population to find the value that's best.
 
-[source, python]
+[source,python]
 ----
 for gen in range(n_iter):
         decoded = [decode(bounds, n_bits, p) for p in pop]
@@ -159,7 +169,7 @@ There are other selection techniques, such as roulette, that can be used dependi
 
 A more verbose example of how the tournament selection works is included below. 
 
-[source, python]
+[source,python]
 ----
 def selection(pop, scores, k=3):
     selection_ix = np.random.randint(len(pop))
@@ -179,7 +189,7 @@ At a high level the tournament code selects a random "parent" from the current p
 
 For each set of new parents a "child object" is created that is a `crossover` of the bit values of each parent. 
 
-[source, python]
+[source,python]
 ----
 # Combine the parents to create child objects.
 def crossover(p1, p2, r_cross):
@@ -193,7 +203,7 @@ def crossover(p1, p2, r_cross):
 
 Also each child has an occasional mutation. Usually the mutation rate is set to be around 1 bit per child. This helps to keep the values in the range of the high scoring "parent objects". 
 
-[source, python]
+[source,python]
 ----
 # Code for mutations
 def mutation(bitstring, r_mut):
@@ -204,7 +214,7 @@ def mutation(bitstring, r_mut):
 
 Once the children have been generated we have a new population and we start the process all over again! The full generation loop is included below for reference. 
 
-[source, python]
+[source,python]
 ----
 for gen in range(n_iter):
         decoded = [decode(bounds, n_bits, p) for p in pop]
@@ -228,11 +238,13 @@ for gen in range(n_iter):
 
 We'll put all of this together with the full example below. 
 
-== I am the knapsack!
+{sp}+
+
+== I am the Knapsack!
 
 First we'll define all the methods that we went through one-by-one above. 
 
-[source, python]
+[source,python]
 ----
 def objective(x, profit, weight, weight_limit):
     total_profit = np.sum(np.array(x) * np.array(profit))
@@ -240,7 +252,7 @@ def objective(x, profit, weight, weight_limit):
     return total_profit - total_penalty
 ----
 
-[source, python]
+[source,python]
 ----
 def original_scaling(bounds, biggest_possible_int, i, num_to_scale):
     value = bounds[i][0] + (num_to_scale / biggest_possible_int) * (bounds[i][1] - bounds[i][0])
@@ -270,7 +282,7 @@ def decode(bounds, n_bits, bitstring, type_of_scale='default'):
     return decoded
 ----
 
-[source, python]
+[source,python]
 ----
 # Run the tournament
 def selection(pop, scores, k=3):
@@ -297,7 +309,7 @@ def mutation(bitstring, r_mut):
             bitstring[i] = 1 - bitstring[i]
 ----
 
-[source, python]
+[source,python]
 ----
 def run_genetic_algorithm(objective, bounds, n_bits, n_iter, n_pop, r_cross, r_mut, profit, weight, max_weight):
     print("Generating the population!")
@@ -328,6 +340,8 @@ def run_genetic_algorithm(objective, bounds, n_bits, n_iter, n_pop, r_cross, r_m
 
 Now that we have our framework and objective function defined we can talk through what the code is going to do to solve the knapsack problem. 
 
+{sp}+
+
 === Knapsack Parameters
 
 Let's say in this case that our knapsack can hold 25 lbs. In planning our trip we have the items below available to us. Each item has a value score, but also a weight that it adds to the knapsack. 
@@ -344,7 +358,7 @@ Let's say in this case that our knapsack can hold 25 lbs. In planning our trip w
 
 For each of the items the algorithm will have the option to take between 0 and 5 of the item.
 
-[source, python]
+[source,python]
 ----
 bounds = [[0.0, 5.0], [0.0, 5.0], [0.0, 5.0], [0.0, 5.0], [0.0, 5.0]]
 item_profit = [25, 100, 10, 30, 101]
@@ -354,7 +368,7 @@ max_weight = 25
 
 We can then specify that we want to iterate through the optimization 15 times. We can keep 16 bit values since our largest value is 5. We'll randomly choose 100 people in our "population". We want to set `r_cross` to a high probability to allow lots of "children" from the population and `r_mut` to low to keep the mutations in the similar search space. 
 
-[source, python]
+[source,python]
 ----
 n_iter = 15
 n_bits = 16
@@ -365,7 +379,7 @@ r_mut = 1.0 / (float(n_bits) * len(bounds))
 
 Once we have these defined we run the algorithm! It will randomly create a population, find a baseline score, choose parents, keep the best parents, create children from those parents with an occasional mutation, and repeat the whole process 15 times. Simple right?
 
-[source, python]
+[source,python]
 ----
 best, score = run_genetic_algorithm(objective, bounds, n_bits, n_iter, n_pop, r_cross, r_mut, item_profit, item_weight, max_weight)
 ----
@@ -417,7 +431,7 @@ Whether or not this will actually help you survive is debatable and the odd mixt
 
 However, what's really cool is that we can check the weight of each item. 
 
-[source, python]
+[source,python]
 ----
 output_array = np.array(decode(bounds, n_bits, best))
 print(output_array)
@@ -427,7 +441,7 @@ print(output_array)
 [2. 0. 0. 1. 0.]
 ----
 
-[source, python]
+[source,python]
 ----
 print("The total weight of the final items is {}".format(np.sum(np.array(item_weight) * output_array)))
 ----
