@@ -1,23 +1,25 @@
 = Reading & writing data
 
-== `read_csv`
+== Reading data
 
-`read_csv` is a function that allows you to read tabular data into a `pandas` DataFrame.
+The beginning step of most projects when using `pandas` is reading a file and storing it. The primary function we use is `read_csv`, which *reads* in *.csv* files and outputs a xref:pandas-dataframes[`DataFrame`]. Understanding a `DataFrame` isn't vital for this tutorial, just that `read_csv` outputs one.
 
-=== Examples
+As with any package, we must import `pandas`, and the customary import statement is `import pandas as pd`. Let's use `read_csv` to save the file "grades.csv" into the variable `myDF`:
 
-==== How do I read a csv file called `grades.csv` into a `pandas` DataFrame?
 
-.Solution
-====
 [source, python]
 ----
 import pandas as pd
 
-myDF = pd.read_csv("./grades.csv")
-myDF.head()
+myDF = pd.read_csv("grades.csv")
 ----
 
+Cool! That was a lot of words to describe a very simple line of code. We can use the `head` function call to get a view of our `myDF` data.
+
+[source,python]
+----
+myDF.head()
+----
 ----
    grade       year
 0    100     junior
@@ -26,17 +28,36 @@ myDF.head()
 3     74  sophomore
 4     44     senior
 ----
-====
 
 [NOTE]
 ====
-include::partial$relative-paths.adoc[]
+`read_csv` is not the only way to create a `DataFrame` -- recall that the function name is tied to the file type. 
+
+".feather" and ".parquet" are two file types that make the storing and reading of `DataFrames` much more efficient, and can be read with `read_feather` and `read_parquet`, respectively.
 ====
 
+{sp}+
 
-==== How do I read a csv file called `grades_semi.csv` into a `pandas` DataFrame, where `grades_semi.csv` is semi-colon-separated instead of comma-separated?
+=== `read_csv` Useful Parameters
 
-.Solution
+Our function only needs a valid filename to operate, but it has dozens of optional parameters that change what it does.
+
+`sep` is short for **sep**arator -- "csv" is an acronym for comma-separated values, and if you look at the raw text for a .csv file, you'll find all the values are indeed separated by commas. If your data entries are separated by tabs or semicolons, you'll have to clarify `sep="\t"` or `sep=";"` for your `DataFrame` to be correct.
+
+`names`/`header` are complementary parameters that assign names to the columns of your `DataFrame`. If `names` is empty, then `header` takes the first row of the data as the column names; otherwise, `names` takes a list of _unique_ values to use as the column names.
+
+`nrows` will select however many rows of data you want. The default is reading the whole file, but some datasets are so huge, limiting your data intake might be necessary.
+
+`dtype` can be supplied with a *dictionary* of column-name:desired-data-type key/value pairs to replace `read_csv` default assignments for a column's type.
+
+{sp}+
+
+=== Examples
+
+==== How do I read a .csv file called `grades_semi.csv` into a `pandas` DataFrame, where `grades_semi.csv` is semi-colon-separated instead of comma-separated?
+
+.Click to see solution
+[%collapsible]
 ====
 [source, python]
 ----
@@ -56,4 +77,91 @@ myDF.head()
 ----
 ====
 
-=== Resources
+==== Read in "grades.csv" and change the data types of `year` to string and `grade` to float64 _in one line_.
+
+.Click to see solution
+[%collapsible]
+====
+First we'll read in "grades.csv" without any alterations and look at the column types.
+
+[source,python]
+----
+import pandas as pd
+
+grades = pd.read_csv("grades.csv")
+print(grades.dtypes)
+print(grades.head())
+----
+----
+grade     int64
+year     object
+dtype: object
+
+   grade       year
+0    100     junior
+1     99  sophomore
+2     75  sophomore
+3     74  sophomore
+4     44     senior
+----
+
+Obviously, integer grades aren't helpful or realistic, and we want our year values to be more intuitive. We'll accomplish the prompt using the `dtype` parameter.
+
+[source,python]
+----
+grades_better = pd.read_csv("grades.csv", dtype={"year": "string", "grade": "float64"})
+grades_better.dtypes
+----
+----
+   grade       year
+0  100.0     junior
+1   99.0  sophomore
+2   75.0  sophomore
+3   74.0  sophomore
+4   44.0     senior
+----
+
+Perfect, now our desired data manipulations will work properly on these columns.
+====
+
+{sp}+
+
+== Writing Data
+
+You will likely encounter situations while working with `pandas` where you must alter your data (clean, filter, cut, or so on) and then replace your file or output a new one. To accomplish this, `to_csv` is your best option.
+
+Many of the parameters are shared between reading and writing functions, meaning that mastering one will give you an advantage for learning the other. Similar to the reading functions, the writing functions have counterparts for creating Excel, feather, parquet, and other file types if .csv isn't what you want.
+
+{sp}+
+
+=== Examples
+
+==== In "grades.csv", make the values in `year` uppercase, then save your file as "fixed_grades.csv" in your current directory.
+
+.Click to see solution
+[%collapsible]
+====
+Check xref:https://thispointer.com/convert-column-values-to-uppercase-in-pandas-dataframe/[this website] for this (and other) methods of column conversion.
+
+In case you're unfamiliar with directories, starting with the "." symbol allows you to access your current directory.
+
+[source,python]
+----
+import pandas as pd
+
+grades = pd.read_csv("grades.csv")
+grades.year = grades.year.str.upper()
+grades.to_csv('./fixed_grades.csv')
+grades
+----
+----
+   grade       year
+0    100     JUNIOR
+1     99  SOPHOMORE
+2     75  SOPHOMORE
+3     74  SOPHOMORE
+4     44     SENIOR
+----
+
+Nice! Now if we create a `DataFrame` from "fixed_grades.csv", we'll get the output shown above.
+====

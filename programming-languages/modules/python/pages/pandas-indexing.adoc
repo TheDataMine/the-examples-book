@@ -1,66 +1,171 @@
-= Pandas Indexing
+= Indexing
 
-== Pandas Methods
-Pandas has some very beneficial indexing functions that allow additional logic to be added when working with data in a DataFrame or Series. Two of the most common methods are `iloc` and `loc`. The `loc` method is primarily label based while `iloc` is primarily and integer based indexer. For example, given the following DataFrame: 
+== Basics and Simple Accessing Methods
+It is implausible that you will always need an entire dataset when doing analysis, so being able to efficiently pick subsets of data is an important skill. `pandas` has some vital indexing functions that add logical parameters when working with a `DataFrame` or `Series`. 
 
-[source, python]
+{sp}+
+
+=== `[]` and `.`
+
+Using brackets and periods to index in `pandas` are the most basic methods of indexing, and thus allow for simpler subset selection. Both are limited to *column* selection, so you won't be able to select the first row of an object with `df[1]` or `df.1`.
+
+This indexing is done based on the column name -- if we had a column named "columnA", we could select it using `df['columnA']` or `df.columnA`.
+
+Selecting multiple columns is also possible by nesting a list within your brackets: `df[['columnA', 'columnB', 'columnC']]`. This is _not_ possible when using `.` to select attributes -- you are additionally unable to use `.` to select:
+
+* Columns that match names of `pandas` methods -- `max`, `head`, `describe`, etc.
+* xref:https://docs.python.org/3/reference/lexical_analysis.html#identifiers[Identifiers], including keywords, whitespace, and literals. _If your column has a space in its name (which can happen often), you cannot select it with `.`_
+
+{sp}+
+
+=== Slicing
+
+If we consider simple `[]` and `.` indexing to be column selection, we can consider `:` indexing to be row selection. You still start by using brackets, but when `:` is included, the *rows* are now selected instead of columns. _Only_ our rows can be selected when using simple slicing, but as you will soon see, slicing is a tool that is used heavily in more complex indexing.
+
+`:` slicing is inclusive, with an implied 0 for the start and the object's last index implied for the end. Thus, the input `print(df[:])` selects all rows and is the same as `print(df)`. You can add a negative sign to the end index to _exclude_ the last n elements.
+
+If you want to skip certain elements, you can add another colon after the stop index, which would take the following form: `df[0:4:2]`. There is an implied skip of 1 (meaning no skip at all), meaning `print(df[:]) == print(df[::]) == print(df)`. You can add a negative sign in front of the skip parameter to slice the object in reverse order.
+
+{sp}+
+
+=== `isin()`
+
+The `isin` method (derived from *is in*) is a `pandas` method that mirrors the `in` keyword in other programming languages. It's a `Series` method that is passed a list (or list-like object), returning `True` or `False` depending on the value's inclusion in the list.
+
+The potential applications are simple to imagine -- what if I only wanted to select certain states from a `DataFrame` containing information on the United States? How about information when the records include the day of the week, and I only want Mondays and Thursdays? These desires are very easily translated into code.
+
+[source,python]
 ----
-import pandas as pd
-
-myDF = pd.read_csv("./flights_sample.csv")
-myDF.head()
+days = pd.Series(['Monday', 'Thursday', 'Wednesday', 'Saturday', 'Saturday', 'Monday'])
+print(days.isin(['Monday', 'Thursday']))
+----
+----
+0     True
+1     True
+2    False
+3    False
+4    False
+5     True
 ----
 
+[source,python]
 ----
-   Year  Month  DayofMonth  ...  NASDelay  SecurityDelay  LateAircraftDelay 
-0  1987     10          14  ...       NaN            NaN                NaN
-1  1990     10          15  ...       NaN            NaN                NaN
-2  1990     10          17  ...       NaN            NaN                NaN
-3  1990     10          18  ...       NaN            NaN                NaN
-4  1991     10          19  ...       NaN            NaN                NaN
+print(days[days.isin(['Monday', 'Thursday'])])
 ----
-
-The `loc` function allows us to add logic to our indexing. If we wanted to get only the rows where `Year` is 1990 we could try: 
-
-[source, python]
 ----
-love_the_90s = myDF.loc[myDF.loc[:, 'Year'] == 1990, :]
-print(love_the_90s)
+0      Monday
+1    Thursday
+5      Monday
 ----
 
-----
-   Year  Month  DayofMonth  ...  NASDelay  SecurityDelay  LateAircraftDelay
-1  1990     10          15  ...       NaN            NaN                NaN
-2  1990     10          17  ...       NaN            NaN                NaN
-3  1990     10          18  ...       NaN            NaN                NaN
-----
+`DataFrames` have their own `isin` method, but as we'll demonstrate in the next section, using the `Series` method is better when combined with the `loc`/`iloc` functions.
 
-Alternatively, you could write the code below to get the same outcome: 
+{sp}+
 
-[source, python]
+=== Examples
+
+For the following, we use the code `np.random.randn(num_rows, num_columns)` to generate a random `DataFrame`. The point is not for the output values to match, but rather the rows/columns.
+
+
+==== Return the column `A` from `DataFrame df`.
+
+.Click to see solution
+[%collapsible]
+====
+[source,python]
 ----
-love_the_90s = myDF.loc[myDF['Year'] == 1990, :]
+# method 1: []
+print(df['A'])
+# method 2: .
+print(df.A)
 ----
-
 ----
-   Year  Month  DayofMonth  ...  NASDelay  SecurityDelay  LateAircraftDelay
-1  1990     10          15  ...       NaN            NaN                NaN
-2  1990     10          17  ...       NaN            NaN                NaN
-3  1990     10          18  ...       NaN            NaN                NaN
+0   -2.676859
+1    0.110410
+2    1.263104
+3    0.161416
+4   -0.213868
 ----
+====
 
-The `:` simply means "all rows" if it is _before_ the comma, and "all columns" if it is _after_ the comma. In the same way, having `myDF['Year'] == 1990` _before_ the first comma, means to filter rows where `myDF['Year'] == 1990` results in `True`. 
 
-*Note* you could use `iloc` instead of `loc` for any of the previous examples. Both `iloc` and `loc` allow for boolean (logical) based indexing. Since `myDF['Year'] == 1990` or `myDF.loc[:, 'Year'] == 1990` both result in a Series of `True` and `False` values either will work. 
+==== Return columns `A`, `B`, and `D` from `DataFrame df`.
 
-Similarly, we can use either `loc` or `iloc` to isolate a single column or Series: 
-
-[source, python]
+.Click to see solution
+[%collapsible]
+====
+[source,python]
 ----
+print(df[['A', 'B', 'D']])
+----
+----
+          A         B         D
+0  0.461834  0.456688 -1.061509
+1  1.003698  1.115509  0.120536
+2  0.814746  2.793606 -0.281329
+3  0.766533  0.138788  0.479603
+4 -0.084290 -0.141935  0.755774
+----
+====
+
+
+==== Return every other row in `DataFrame numbers`.
+
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+print(numbers[::2])
+----
+----
+          A         B         C         D
+0 -0.234193 -0.775527 -1.250210  1.421642
+2 -3.402812  0.388646  1.199761  1.366917
+4 -0.373406  0.868126 -0.063795  1.202232
+6 -0.872389  1.717326 -0.709681 -0.339897
+----
+====
+
+==== Return all of `numbers` except the last 3 rows.
+
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+print(numbers[:-3])
+----
+----
+          A         B         C         D
+0 -0.293664 -0.072110  0.937070  1.611655
+1 -0.431300  1.992882  0.175886 -0.777462
+2 -0.014344 -0.018958  0.085689  1.749314
+3  0.577731 -0.505912  1.576066 -0.688136
+4 -1.125129  1.710249  1.230097  0.634027
+----
+====
+
+{sp}+
+
+
+== Multi-dimensional Indexing: `loc` and `iloc`
+
+
+Fortunately, there are many ways to select multiple dimensions for subsetting, and they generally allow conditionals to further specify the data points you want.
+
+The `loc` method allows for label-based indexing, while `iloc` is primarily integer-based. These are two of the best functions to use when indexing, so we'll be using plenty of examples to demonstrate their versatility.
+
+We can use either `loc` or `iloc` to isolate a single column or `Series`. The differences between the two are strict; if you try to use row/column indices for `loc` or row/column names with `iloc`, you'll get an error.
+
+[source,python]
+----
+# option 1: loc
 just_the_year = myDF.loc[:, 'Year']
+# option 2: iloc, matches option 1
+just_the_year = myDF.iloc[:, 0]  # Year is the first column.
 print(just_the_year)
 ----
-
 ----
 0    1987
 1    1990
@@ -73,38 +178,16 @@ print(just_the_year)
 8    1991
 ----
 
-[source, python]
-----
-just_the_year = myDF.iloc[:, 0] #Year is the first column.
-print(just_the_year)
-----
+The comma is important here -- everything before the comma indicates row selection, while everything after indicates column selection. You should recognize the `:` from slicing, and we can now slice on _both_ dimensions thanks to `loc`!
 
-----
-0    1987
-1    1990
-2    1990
-3    1990
-4    1991
-5    1991
-6    1991
-7    1991
-8    1991
-----
+The same two techniques can both be used for multiple rows and columns as well. Something to keep in mind is that `.iloc` slicing is _exclusive_, contrasting the _inclusivity_ of standard slicing and `.loc` slicing.
 
-The same two techniques can both be used for multiple rows as well: 
-
-[source, python]
+[source,python]
 ----
 year_month = myDF.loc[:, ('Year', 'Month')]
-print(year_month)
-----
-
-[source, python]
-----
 year_month = myDF.iloc[:, 0:2]
 print(year_month)
 ----
-
 ----
    Year  Month
 0  1987     10
@@ -118,53 +201,37 @@ print(year_month)
 8  1991     10
 ----
 
-As mentioned above, the first entry in `loc` and `iloc` idicated the rows. If we wanted to isolate specific rows in a DataFrame we could use similar log to the previous example but for the rows entry: 
-
-[source, python]
+[source,python]
 ----
-i_want_three_rows = myDF.loc[0:2, :]
-print(i_want_three_rows)
+putting_it_together = myDF.loc[0:2, ['Year', 'Month', 'DayofMonth']]
+putting_it_together = myDF.iloc[0:3, 0:3]
+print(putting_it_together)
 ----
-
 ----
-   Year  Month  DayofMonth  ...  NASDelay  SecurityDelay  LateAircraftDelay
-0  1987     10          14  ...       NaN            NaN                NaN
-1  1990     10          15  ...       NaN            NaN                NaN
-2  1990     10          17  ...       NaN            NaN                NaN
+   Year  Month  DayofMonth
+0  1987     10          14
+1  1990     10          15
+2  1990     10          17
 ----
 
-Using `iloc` looks pretty similar. However it should be noted that because the `iloc` indexing is not inclusive it only returns 2 rows instead of 3.  
+{sp}+
 
-[source, python]
-----
-i_want_three_rows = myDF.iloc[0:2, :]
-print(i_want_three_rows)
-----
+Lots of `loc` and `iloc` examples can look similar, but when we change the index of a `DataFrame`, we get to see some crucial differences:
 
-----
-   Year  Month  DayofMonth  ...  NASDelay  SecurityDelay  LateAircraftDelay
-0  1987     10          14  ...       NaN            NaN                NaN
-1  1990     10          15  ...       NaN            NaN                NaN
-----
-
-Even though the code may look pretty similar the functionality behind `loc` and `iloc` is very different. We can show the difference in behavior if we change the index of the DataFrame: 
-
-[source, python]
+[source,python]
 ----
 list_1 = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 list_2 = ['Apple', 'Banana', 'Coffee', 'Nothing', 'Oatmeal']
 list_3 = [1, 3, 6, 8, 1]
 
-column_names = ['day_of_the_week', 'breakfast', 'nonsense']
-
+column_names = ['day_of_week', 'breakfast', 'rating']
 index_values = [1,1,2,2,3]
 
 myDF = pd.DataFrame(zip(list_1, list_2, list_3), columns=column_names, index=index_values)
 print(myDF)
 ----
-
 ----
-  day_of_the_week breakfast  nonsense
+      day_of_week breakfast    rating
 1          Monday     Apple         1
 1         Tuesday    Banana         3
 2       Wednesday    Coffee         6
@@ -172,88 +239,164 @@ print(myDF)
 3          Friday   Oatmeal         1
 ----
 
-[source, python]
+[source,python]
 ----
 print(myDF.loc[0:2,:])
 ----
-
 ----
-  day_of_the_week breakfast  nonsense
+      day_of_week breakfast    rating
 1          Monday     Apple         1
 1         Tuesday    Banana         3
 2       Wednesday    Coffee         6
 2        Thursday   Nothing         8
 ----
 
-In this example the `loc` function is saying that it should return any indexes that have values of 0, 1, or 2 `[0:2]`. For the example DataFrame it only returns the rows with 1 or 2 since we don't have any 0 indicies.  
+Since `loc` is symbol-based, we will get all the rows with the index of 0, 1, or 2, instead of getting the first 3 rows. We get a much different result when directly swapping `loc` with `iloc`:
 
-[source, python]
+[source,python]
 ----
 print(myDF.iloc[0:2,:])
 ----
-
 ----
-  day_of_the_week breakfast  nonsense
+      day_of_week breakfast    rating
 1          Monday     Apple         1
 1         Tuesday    Banana         3
 ----
 
-In comparison the `iloc` will only get the rows in positions 0 and 1. In this case they both happen to have an index of 1. 
+{sp}+
 
-You can also index on both rows and columns: 
 
-[source, python]
-----
-rows_and_columns = myDF.iloc[0:2, 0:2]
-print(rows_and_columns)
-----
+=== Boolean Statements
 
-[source, python]
-----
-rows_and_columns = myDF.loc[0:1, ('day_of_the_week', 'breakfast')]
-print(rows_and_columns)
-----
 
-----
-  day_of_the_week breakfast
-1          Monday     Apple
-1         Tuesday    Banana
-----
+Utilizing logical statements when indexing is vital -- you will commonly encounter situations where using sequences to select data does not suffice. When the values you want are scattered throughout the `DataFrame`, you'll want conditional statements.
 
-The logic that `loc` and `iloc` allow is one of the most impactful features of Pandas indexing. In addition, the logic statements can be chained together. For example, if you wanted to get the rows for `Monday` or that didn't have `Breakfast` you could do the following: 
+Let's say we want only Mondays and the days where no breakfast was eaten. We can combine conditional statements as follows: 
 
-[source, python]
+[source,python]
 ----
-monday_or_breakfast = myDF.loc[(myDF.loc[:, "day_of_the_week"]=="Monday") | (myDF.loc[:, "breakfast"]=="Nothing"), :]
+monday_or_breakfast = myDF.loc[(myDF.loc[:, "day_of_week"]=="Monday") | (myDF.loc[:, "breakfast"]=="Nothing"), :]
 print(monday_or_breakfast)
 ----
-
 ----
-  day_of_the_week breakfast  nonsense
+      day_of_week breakfast    rating
 1          Monday     Apple         1
 2        Thursday   Nothing         8
 ----
 
-*Note:* in this example the parentheses `()` are critical. Withouth the parentheses Python doesn't know how to evaulate the multiple statements and will error. The following will *not* work: 
+Nice! The parentheses `()` are critical here -- `pandas` doesn't know how to evaulate multiple statements with `|` alone and will throw an error. The following will *not* work (and also looks worse): 
 
-[source, python]
+[source,python]
 ----
-monday_or_breakfast = myDF.loc[myDF.loc[:, "day_of_the_week"]=="Monday" | myDF.loc[:, "breakfast"]=="Nothing", :]
-print(monday_or_breakfast)
+monday_or_breakfast = myDF.loc[myDF.loc[:, "day_of_week"]=="Monday" | myDF.loc[:, "breakfast"]=="Nothing", :]
 ----
 
-You can use `&` for the logical AND just as you can use `|` for the logical OR: 
+You can use `&` for the logical AND just as you can use `|` for the logical OR:
 
-[source, python]
+[source,python]
 ----
-apple_and_one = myDF.loc[(myDF.loc[:, "breakfast"]=="Apple") & (myDF.loc[:, "nonsense"]==1), :]
+apple_and_one = myDF.loc[(myDF.loc[:, "breakfast"]=="Apple") & (myDF.loc[:, "rating"]==1), :]
 print(apple_and_one)
 ----
-
 ----
-  day_of_the_week breakfast  nonsense
+      day_of_week breakfast    rating
 1          Monday     Apple         1
 ----
 
-== Resources
-If you haven't done it before the https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html[10 minute intro to Pandas] is a great quick introduction. Similarly, the Pandas documentation has a good section on https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html[indexing and selecting data].
+{sp}+
+
+
+=== Examples
+
+
+==== "flights_sample.csv" example
+.Click to see solution
+[%collapsible]
+====
+Take the following example from the "flights_sample.csv" file:
+
+[source,python]
+----
+import pandas as pd
+
+myDF = pd.read_csv("flights_sample.csv")
+print(myDF.head())
+----
+----
+   Year  Month  DayofMonth  ...  NASDelay  SecurityDelay  LateAircraftDelay 
+0  1987     10          14  ...       NaN            NaN                NaN
+1  1990     10          15  ...       NaN            NaN                NaN
+2  1990     10          17  ...       NaN            NaN                NaN
+3  1990     10          18  ...       NaN            NaN                NaN
+4  1991     10          19  ...       NaN            NaN                NaN
+----
+
+This call to `head` would be the equivalent to the line `myDF.loc[0:4, :]`.
+
+Let's say we want only the data from 1990 -- the best strategy is to use a conditional.
+
+[source,python]
+----
+# option 1: nested .loc call
+love_the_90s = myDF.loc[myDF.loc[:, 'Year'] == 1990, :]
+# option 2: nested bracket selection; equivalent to 1
+love_the_90s = myDF.loc[myDF['Year'] == 1990, :]
+print(love_the_90s)
+----
+----
+   Year  Month  DayofMonth  ...  NASDelay  SecurityDelay  LateAircraftDelay
+1  1990     10          15  ...       NaN            NaN                NaN
+2  1990     10          17  ...       NaN            NaN                NaN
+3  1990     10          18  ...       NaN            NaN                NaN
+----
+
+Cool! This gives us what we want... but what's with the weird nesting? The thing with conditionals is that the statement only evaluates to `True` or `False` -- boolean values, in other words. In our example, the statement `myDF['Year'] == 1990` on its own would evaluate to:
+
+----
+0    False
+1     True
+2     True
+3     True
+4    False
+----
+
+Obviously this only gives us information on `Year` and its values, but now we know *which rows* contain the information we want. We now nest our row selection in its proper location within our outer `.loc` call, then use `:` to select all columns of `myDF`. _This_ is why nesting was necessary.
+
+{sp}+
+
+Now, how do we repeat this example with `.iloc`? We can try swapping `.loc` with `.iloc` directly in Option 1, but we'll run into the error message `ValueError: Location based indexing can only have [integer, integer slice (START point is INCLUDED, END point is EXCLUDED), listlike of integers, boolean array] types`. This is a long way of saying we can only include _numbers_ or _a boolean list_ when using `.iloc`.
+
+Knowing the above knowledge, we see that `Year` is the first column in `myDF`, corresponding to 0 (since `pandas` uses 0-indexing). This works for the inner call, but notice how we said `iloc` works on boolean _lists_, *not* boolean `Series`. If we try to use `iloc` on the outer call, we get another error, meaning that we need to keep it as `loc`: 
+
+[source,python]
+----
+# option 3: nested .iloc call
+love_the_90s = myDF.loc[myDF.iloc[:, 'Year'] == 1990, :]
+print(love_the_90s)
+----
+----
+   Year  Month  DayofMonth  ...  NASDelay  SecurityDelay  LateAircraftDelay
+1  1990     10          15  ...       NaN            NaN                NaN
+2  1990     10          17  ...       NaN            NaN                NaN
+3  1990     10          18  ...       NaN            NaN                NaN
+----
+====
+
+
+==== Return the entries for which `country` is in Europe within `DataFrame people`.
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+people = pd.DataFrame({'first_init': list('SRSE'), 'last_init': list('MVNS'), 
+                       'country': ['Ireland', 'Singapore', 'Japan', 'Netherlands']})
+
+print(people.loc[people.country.isin(['Ireland', 'Netherlands']), :])
+----
+----
+  first_init last_init      country
+0          S         M      Ireland
+3          E         S  Netherlands
+----
+====
