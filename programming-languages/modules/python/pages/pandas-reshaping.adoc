@@ -1,23 +1,31 @@
-= Reshaping in Pandas
+= Reshaping `pandas` Objects
 
-== pivot
-The `pivot` method from Pandas is a powerful tool that can be used to reshape a DataFrame. `pivot` takes 3 main arguments: `index`, `columns`, and `values`. 
+Sometimes the data you receive is inconvenient -- all of it can be useful, but you might have received it with too many redundant columns or a column that would be more useful as an index. To accomodate this, `pandas` has several functions and practices that allow you to reshape your data.
 
-* `index` -> the column of the DataFrame that will be the new index. 
-* `columns` -> the column of the DataFrame where you would like each unique value to be mapped to a column.
-* `values` -> the column of the DataFrame for which you'd like the values to be. 
+{sp}+
 
-For example, given the sample DataFrame below lets say that we wanted to have attendance for home and away games displayed across the different weeks of the season: 
+== `pivot`
 
-[source, python]
+The `pivot` method is the main method for reshaping, taking arguments for `index`, `columns`, and `values`, whose applications are very straightforward.
+
+* `index`: the _original_ `DataFrame` column whose values will become the *pivoted* `DataFrame` *indices*. 
+* `columns`: the _original_ `DataFrame` column whose values will become the *pivoted* `DataFrame` *column names*.
+* `values`: the _original_ `DataFrame` column whose values will occupy the *pivoted* `DataFrame` *values*.
+
+Given the sample `DataFrame` below, let's use `pivot` to set `location` as our index values, `week_of_season` as the new columns, and `attendance` as our values: 
+
+[source,python]
 ----
+import pandas as pd
+
 list_1 = ['Wisconsin', 'IU', 'Rutgers', 'Michigan State', 'Ohio State']
 list_2 = ['home', 'away', 'home', 'away', 'home']
 list_3 = [85, 78, 90, 75, 74]
 list_4 = [500, 1000, 430, 4800, 10000]
 list_5 = [1, 2, 3, 4, 5]
 
-myDF = pd.DataFrame(zip(list_1, list_2, list_3, list_4, list_5), columns=['opponent', 'location', 'temp', 'attendance', 'week_of_season'])
+myDF = pd.DataFrame(zip(list_1, list_2, list_3, list_4, list_5), 
+                    columns=['opponent', 'location', 'temp', 'attendance', 'week_of_season'])
 
 print(myDF.pivot(index='location', columns='week_of_season', values='attendance'))
 ----
@@ -29,38 +37,86 @@ away              NaN  1000.0    NaN  4800.0      NaN
 home            500.0     NaN  430.0     NaN  10000.0
 ----
 
-If we wanted to we could also swap the columns and indexes: 
+`pivot` is easy to use and manipulate, as any column can take the place of `index`, `columns`, and `values` depending on your application.
 
-[source, python]
-----
-print(myDF.pivot(index='week_of_season', columns='location', values='attendance'))
-----
+A notable feature is that `values` can be omitted from the function call, resulting in a higher-order column name for each of the remaining columns, _then_ your values specified in the `columns` parameter. We'll repeat the above example, now making `week_of_season` our index and `location` our column values.
 
+[source,python]
 ----
-location          away     home
-week_of_season                 
-1                  NaN    500.0
-2               1000.0      NaN
-3                  NaN    430.0
-4               4800.0      NaN
-5                  NaN  10000.0
+football_pivot = myDF.pivot(index='week_of_season', columns='location')
+print(football_pivot)
 ----
-
-As before, you can also use `reset_index()` to bring the index back in as a column.
-
-[source, python]
 ----
-print(myDF.pivot(index='week_of_season', columns='location', values='attendance').reset_index())
+                      opponent              temp       attendance         
+location                  away        home  away  home       away     home
+week_of_season                                                            
+1                          NaN   Wisconsin   NaN  85.0        NaN    500.0
+2                           IU         NaN  78.0   NaN     1000.0      NaN
+3                          NaN     Rutgers   NaN  90.0        NaN    430.0
+4               Michigan State         NaN  75.0   NaN     4800.0      NaN
+5                          NaN  Ohio State   NaN  74.0        NaN  10000.0
 ----
 
+Cool! The benefit here is that you have a correctly-shaped `DataFrame` that has all the values you (or your partners) might need in the future. Selecting one column uses standard indexing from this point:
+
+[source,python]
 ----
-location  week_of_season    away     home
-0                      1     NaN    500.0
-1                      2  1000.0      NaN
-2                      3     NaN    430.0
-3                      4  4800.0      NaN
-4                      5     NaN  10000.0
+print(football_pivot['opponent'])
+----
+----
+location                  away        home
+week_of_season                            
+1                          NaN   Wisconsin
+2                           IU         NaN
+3                          NaN     Rutgers
+4               Michigan State         NaN
+5                          NaN  Ohio State
 ----
 
-== Resources
-While `pivot` is one of the most used Pandas shaping methods, there are many more helpful methods for different situations. It's recommended to read through the https://pandas.pydata.org/docs/user_guide/reshaping.html[Pandas doc on reshaping] to get familiar with the other functions that are available. 
+{sp}+
+
+== `melt`
+
+The features of `melt` are split into identifier variables and measured variables:
+
+* The identifiers are _not_ indices, but they are static parts of your data that you want to maintain, such as names or locations. These are usually duplicated for each measured variable you have.
+* Measured variables are all the non-identifier columns. They are *melted* into the column `variable`, which contains the names of each measured column, and `value`, each column's corresponding value for that identifier.
+
+We'll show an example before we get too wordy:
+
+[source,python]
+----
+import pandas as pd
+
+hail = pd.DataFrame(
+    {
+        "first": ["Purdue", "Dr"],
+        "last": ["Pete", "Ward"],
+        "topic": ["Cheerleading", "Progeny"],
+        "score": [100, 7],
+    }
+)
+
+print(hail)
+----
+----
+    first  last         topic  score
+0  Purdue  Pete  Cheerleading    100
+1      Dr  Ward       Progeny      7
+----
+
+[source,python]
+----
+print(hail.melt(id_vars=['first', 'last']))
+----
+----
+    first  last variable         value
+0  Purdue  Pete    topic  Cheerleading
+1      Dr  Ward    topic       Progeny
+2  Purdue  Pete    score           100
+3      Dr  Ward    score             7
+----
+
+We can interpret `melt` as an anti-`pivot` -- we're minimizing the number of columns by putting more data in rows, resulting in repetition of our identifier variable(s) for each measured variable.
+
+In addition to selecting your identifier variables, you can select your measured variables using `value_vars=`, change "variable" to something else using `var_name=`, and change "value" to something else using `value_name=`.
