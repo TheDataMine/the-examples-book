@@ -1,0 +1,97 @@
+Now, you're able to pin seven different possible trackings. In other words, we have seven possible suspects. 
+
+There are camera surveillance nearby and we are able to capture some pictures of possibly suspects. We have released the picture with highest resolution of each person. The pictures have been maximumally enhanced and cannot be more enhanced (due to low quality of cameras)
+
+Please use the profile you created using the data from the Yelp and OkCupid analysis to narrow down hopefully one image.
+
+You are able to access the seven pictures in `~/corporate/gallaudet/data/camera-surveillance` in Anvil. 
+
+
+Once you have narrowed down to one image, you're able to run it through the local police's database to see if there's any hit. 
+
+The database is located `~/corporate/gallaudet/mugshots/`
+
+[source, python]
+----
+import pandas as pd
+my_df = pd.read_csv("/home/x-kqlacy/corporate/gallaudet/data/mugshots/mugshots.csv")
+my_df.head()
+----
+
+You can get the size of the dataset. 
+[source, python]
+----
+my_df.shape
+----
+
+As you can see, we have exactly 1200 mugshots. Can you imagine to look through 1200 people manually to find the best match?
+
+You can view one image in Python. 
+[source, python]
+----
+from PIL import Image
+import os
+
+# this changes your working directory
+os.chdir("/anvil/projects/tdm/corporate/gallaudet/data/mugshots/")
+
+# feel free to change the number to any number up to 1199
+Image.open(my_df['image'][0])
+----
+
+Suppose you run this line of code:
+[source, python]
+----
+import numpy as np
+
+# feel free to change the number to any number up to 1199
+np.array(Image.open(my_df['image'][0]))
+----
+
+You'll see the image in a 2-D array. Every number you see in your array represents a pixel in the image. Pretty cool, eh?
+
+The fact that an image is just a 2-D array. We can compare two images by looking at their numeric array. 
+
+There's a function called *structural similarity index measure* (SSIM). It's used to measure the similiarity between two images. https://medium.com/srm-mic/all-about-structural-similarity-index-ssim-theory-code-in-pytorch-6551b455541e[To learn more about SSIM, this website page is a good place to start.]
+
+The Python function, `compare_ssim`, will return the possibility of two images coming from the same source (being similar). 
+
+Please edit the code below to update the directory to the image you selected.
+[source, python]
+----
+evidence = Image.open("/anvil/projects/tdm/corporate/gallaudet/data/camera-surveillance/YOUR_FILE")
+
+max_value = 0
+file_name = 'not found'
+----
+
+Let's run through the mugshot database to find the best match to your evidence image. 
+
+[source, python]
+----
+from SSIM_PIL import compare_ssim
+
+for image in my_df['image']:
+    if max_value < compare_ssim(Image.open(image), evidence, GPU=False):
+        max_value = compare_ssim(Image.open(image), evidence, GPU=False)
+        file_name = image
+----
+
+If you get a hit in the database, your `file_name` variable will be updated to the actual file name. Let's print the image in Python.
+
+[source, python]
+----
+Image.open(file_name)
+----
+
+Is the `file_name` image you printed similar to your selected image?
+
+Who is the guy?? You have this person's mugshot, and you know this person is in the database. But you have receieved no information about this person. 
+
+You can get more information about this mugshot by running this line:
+[source, python]
+----
+my_df[my_df['image'] == file_name]
+----
+
+Congrats, you have solved the case. 
