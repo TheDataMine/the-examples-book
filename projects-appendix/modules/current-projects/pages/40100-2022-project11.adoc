@@ -22,7 +22,57 @@ If you did not complete the previous project, we will provide you with the code 
 
 [source,python]
 ----
-
+def get_links(search_term: str) -> list[str]:
+    """
+    Given a search term, return a list of web links for all of the resulting properties.
+    """
+    def _load_cards(driver):
+        """
+        Given the driver, scroll through the cards
+        so that they all load.
+        """
+        cards = driver.find_elements("xpath", "//article[starts-with(@id, 'zpid')]")
+        while True:
+            try:
+                num_cards = len(cards)
+                driver.execute_script('arguments[0].scrollIntoView();', cards[num_cards-1])
+                time.sleep(2)
+                cards = driver.find_elements("xpath", "//article[starts-with(@id, 'zpid')]")
+                if num_cards == len(cards):
+                    break
+                num_cards = len(cards)
+            except StaleElementReferenceException:
+                # every once in a while we will get a StaleElementReferenceException
+                # because we are trying to access or scroll to an element that has changed.
+                # this probably means we can skip it because the data has already loaded.
+                continue
+                
+    links = []
+    url = f"https://www.zillow.com/homes/for_sale/{'-'.join(search_term.split(' '))}_rb/"
+    
+    firefox_options = Options()
+    # Headless mode means no GUI
+    firefox_options.add_argument("--headless")
+    firefox_options.add_argument("--disable-extensions")
+    firefox_options.add_argument("--no-sandbox")
+    firefox_options.add_argument("--disable-dev-shm-usage")
+    driver = webdriver.Firefox(options=firefox_options)
+    
+    with driver as d:
+        d.get(url)
+        d.delete_all_cookies()
+        while True:
+            time.sleep(2)
+            _load_cards(d)
+            links.extend([e.get_attribute("href") for e in d.find_elements("xpath", "//a[@data-test='property-card-link' and @class='property-card-link']")])
+            next_link = d.find_element("xpath", "//a[@rel='next']")
+            if next_link.get_attribute("disabled") == "true":
+                break
+            url = next_link.get_attribute('href')
+            d.delete_all_cookies()
+            next_link.click()
+                                                            
+    return links
 ----
 
 There is a _lot_ of rich data on a home's page. If you want to gauge the housing market in an area or for a `search_term`, there are two pieces of data that could be particularly useful: the "Price history" and "Public tax history" components of the page.
