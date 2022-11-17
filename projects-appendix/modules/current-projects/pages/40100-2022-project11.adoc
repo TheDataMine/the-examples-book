@@ -146,6 +146,92 @@ Just print the first 500 characters of the results of `blob_to_html` to avoid cl
 If you are unsure how to do any of this -- please feel free to post in Piazza!
 ====
 
+[TIP]
+====
+Here is some skeleton code. The structure provided here works well for the problem.
+
+import uuid
+import os
+
+def link_to_blob(link: str) -> bytes:
+    def _load_tables(driver):
+        """
+        Given the driver, scroll through the cards
+        so that they all load.
+        """
+        # find price and tax history element using xpath
+        table = driver.find_element(...)
+        
+        # scroll the table into view
+        driver.execute_script(...)
+        
+        # sleep 2 seconds
+        time.sleep(2)
+        
+        try:
+            # find the "See complete tax history" button (if it exists)
+            see_more = driver.find_element(...)
+            
+            # click the button to reveal the rest of the history (if it exists)
+            see_more.click()
+            
+        except NoSuchElementException:
+            pass
+        
+        try:
+            # find the "See complete price history" button (if it exists)
+            see_more = driver.find_element(...)
+            
+            # click the button to reveal the rest of the history (if it exists)
+            see_more.click()
+            
+        except NoSuchElementException:
+            pass
+    
+    # create a .html file with a random name using the uuid package so there aren't collisions
+    filename = f"{uuid.uuid4()}.html"
+    
+    # open the file 
+    with open(filename, 'w') as f:
+        firefox_options = Options()
+        # Headless mode means no GUI
+        firefox_options.add_argument("--headless")
+        firefox_options.add_argument("--disable-extensions")
+        firefox_options.add_argument("--no-sandbox")
+        firefox_options.add_argument("--disable-dev-shm-usage")
+
+        driver = webdriver.Firefox(options=firefox_options)
+        driver.get(link)
+        time.sleep(2)
+        _load_tables(driver)
+        
+        # write the page source to the file
+        f.write(...)
+        driver.quit()
+        
+    # open the file in read binary mode
+    with open(filename, 'rb') as f:
+        # read the binary contents that are ready to be inserted into a sqlite BLOB
+        blob = f.read()
+        
+    # remove the file from the filesystem -- we don't need it anymore
+    os.remove(filename)
+    
+    return blob
+====
+
+[TIP]
+====
+Use this trick: https://the-examples-book.com/data-science/data-formats/xml#write-an-xpath-expression-to-get-every-div-element-where-the-string-abc123-is-in-the-class-attributes-value-as-a-substring for finding and clicking the “see more” buttons for the two tables. If you dig into the HTML youll see there is some text you can use to jump right to the two tables.
+
+To add to this, if instead of `@class, 'abc'` you use `text(), 'abc'` it will try to match the values between elements to "abc". For example, `//div[contains(text(), 'abc')]` will match `<div>abc</div>`.
+====
+
+[TIP]
+====
+Remember the goal of this problem is to click the "see more" buttons (if they exist on a given page), and then just save the whole HTML page and convert it to binary for storage.
+====
+
 .Items to submit
 ====
 - Code used to solve this problem.
