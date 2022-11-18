@@ -150,6 +150,8 @@ If you are unsure how to do any of this -- please feel free to post in Piazza!
 ====
 Here is some skeleton code. The structure provided here works well for the problem.
 
+[source,python]
+----
 import uuid
 import os
 
@@ -218,6 +220,7 @@ def link_to_blob(link: str) -> bytes:
     os.remove(filename)
     
     return blob
+----
 ====
 
 [TIP]
@@ -268,6 +271,14 @@ my_blob = link_to_blob("https://www.zillow.com/homedetails/2180-N-Brentwood-Cir-
 get_price_history(blob_to_html(my_blob))
 ----
 
+Where
+
+[source,python]
+----
+def blob_to_html(blob: bytes) -> str:
+    return blob.decode("utf-8")
+----
+
 .output
 ----
 [['11/9/2022', 'Price change', 275000],
@@ -304,6 +315,63 @@ get_tax_history(blob_to_html(my_blob))
  [2003, 1624, 112900],
  [2002, 1577, 110300],
  [2000, 288, 15700]]
+----
+====
+
+[TIP]
+====
+Some skeleton hints if you want extra help. See discussion: https://piazza.com/class/l6usy14kpkk66n/post/lalzk6hi8ark
+
+[source,python]
+----
+def get_price_history(html: str):
+    tree = lxml.html.fromstring(html)
+    # xpath to find the price and tax history table
+    # then, you can use the xpath `following-sibling::div` to find the `div` that directly follows the 
+    # price and tax history div (hint, look for "Price-and-tax-history" in the id attribute of a div element
+    # after the "following-sibling::div" part, look for <tr> elements with an id attribute
+    trs = tree.xpath(...)
+    values = []
+    for tr in trs:
+        # xpath on the "tr" to find td with an inner span. Use string methods to remove the $ and remove the ",", and to remove trailing whitespace
+        price = tr.xpath(...)[2].text.replace(...).replace(...).strip()
+
+        # if price is empty, make it None
+        if price == '':
+            price = None
+
+        # append the values 
+        values.append([tr.xpath(...)[0].text, tr.xpath(...)[1].text, price])
+    
+    return values
+----
+====
+
+[TIP]
+====
+More skeleton code help, if wanted. See discussion: https://piazza.com/class/l6usy14kpkk66n/post/lalzk6hi8ark
+
+[source,python]
+----
+def get_tax_history(html: str):
+    tree = lxml.html.fromstring(html)
+    try:
+        # find the 'Price-and-tax-history' div, then, the following-sibling::div, then a table element, then a tbody element
+        tbody = tree.xpath("//div[@id='Price-and-tax-history']/following-sibling::div//table//tbody")[1]
+    except IndexError:
+        return None
+    values = []
+    # get the trs in the tbody
+    for tr in tbody.xpath(".//tr"):
+        # replace the $, ",", and "-", strip whitespace
+        prop_tax = tr.xpath(...)[1].text.replace(...).replace(...).replace(...).strip()
+        # if prop_tax is empty set to None
+        if prop_tax == '':
+            prop_tax = None
+        # add the data, for the last item in the list, remove $ and ","
+        values.append([int(tr.xpath(...)[0].text), prop_tax, int(tr.xpath(...)[2].text.replace(...).replace(...))])
+    
+    return values
 ----
 ====
 
