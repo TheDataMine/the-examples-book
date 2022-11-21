@@ -283,7 +283,51 @@ The `selenium` version will be posted below on Monday, November 21.
 
 [source,python]
 ----
-# to be released
+import uuid
+import os
+
+def link_to_blob(link: str) -> bytes:
+    def _load_tables(driver):
+        """
+        Given the driver, scroll through the cards
+        so that they all load.
+        """
+        table = driver.find_element("xpath", "//div[@id='Price-and-tax-history']")
+        driver.execute_script('arguments[0].scrollIntoView();', table)
+        time.sleep(2)
+        try:
+            see_more = driver.find_element("xpath", "//span[contains(text(), 'See complete tax history')]")
+            see_more.click()
+        except NoSuchElementException:
+            pass
+        try:
+            see_more = driver.find_element("xpath", "//span[contains(text(), 'See complete price history')]")
+            see_more.click()
+        except NoSuchElementException:
+            pass
+    
+    filename = f"{uuid.uuid4()}.html"
+    with open(filename, 'w') as f:
+        firefox_options = Options()
+        # Headless mode means no GUI
+        firefox_options.add_argument("--headless")
+        firefox_options.add_argument("--disable-extensions")
+        firefox_options.add_argument("--no-sandbox")
+        firefox_options.add_argument("--disable-dev-shm-usage")
+
+        driver = webdriver.Firefox(options=firefox_options)
+        driver.get(link)
+        time.sleep(2)
+        _load_tables(driver)
+        f.write(driver.page_source)
+        driver.quit()
+        
+    with open(filename, 'rb') as f:
+        blob = f.read()
+        
+    os.remove(filename)
+    
+    return blob
 ----
 ====
 
@@ -293,7 +337,35 @@ The `get_price_history` and `get_tax_history` solutions will be posted below on 
 
 [source,python]
 ----
-# to be released
+import lxml.html
+
+def get_price_history(html: str):
+    tree = lxml.html.fromstring(html)
+    trs = tree.xpath("//div[@id='Price-and-tax-history']/following-sibling::div//tr[@id]")
+    values = []
+    for tr in trs:
+        price = tr.xpath(".//td/span")[2].text.replace("$", "").replace(",", "").strip()
+        if price == '':
+            price = None
+        values.append([tr.xpath(".//td/span")[0].text, tr.xpath(".//td/span")[1].text, price])
+    
+    return values
+
+
+def get_tax_history(html: str):
+    tree = lxml.html.fromstring(html)
+    try:
+        tbody = tree.xpath("//div[@id='Price-and-tax-history']/following-sibling::div//table//tbody")[1]
+    except IndexError:
+        return None
+    values = []
+    for tr in tbody.xpath(".//tr"):
+        prop_tax = tr.xpath(".//td/span")[1].text.replace("$", "").replace(",", "").replace("-", "").strip()
+        if prop_tax == '':
+            prop_tax = None
+        values.append([int(tr.xpath(".//td/span")[0].text), prop_tax, int(tr.xpath(".//td/span")[2].text.replace("$", "").replace(",", ""))])
+    
+    return values
 ----
 ====
 
