@@ -22,7 +22,57 @@ If you did not complete the previous project, we will provide you with the code 
 
 [source,python]
 ----
-
+def get_links(search_term: str) -> list[str]:
+    """
+    Given a search term, return a list of web links for all of the resulting properties.
+    """
+    def _load_cards(driver):
+        """
+        Given the driver, scroll through the cards
+        so that they all load.
+        """
+        cards = driver.find_elements("xpath", "//article[starts-with(@id, 'zpid')]")
+        while True:
+            try:
+                num_cards = len(cards)
+                driver.execute_script('arguments[0].scrollIntoView();', cards[num_cards-1])
+                time.sleep(2)
+                cards = driver.find_elements("xpath", "//article[starts-with(@id, 'zpid')]")
+                if num_cards == len(cards):
+                    break
+                num_cards = len(cards)
+            except StaleElementReferenceException:
+                # every once in a while we will get a StaleElementReferenceException
+                # because we are trying to access or scroll to an element that has changed.
+                # this probably means we can skip it because the data has already loaded.
+                continue
+                
+    links = []
+    url = f"https://www.zillow.com/homes/for_sale/{'-'.join(search_term.split(' '))}_rb/"
+    
+    firefox_options = Options()
+    # Headless mode means no GUI
+    firefox_options.add_argument("--headless")
+    firefox_options.add_argument("--disable-extensions")
+    firefox_options.add_argument("--no-sandbox")
+    firefox_options.add_argument("--disable-dev-shm-usage")
+    driver = webdriver.Firefox(options=firefox_options)
+    
+    with driver as d:
+        d.get(url)
+        d.delete_all_cookies()
+        while True:
+            time.sleep(2)
+            _load_cards(d)
+            links.extend([e.get_attribute("href") for e in d.find_elements("xpath", "//a[@data-test='property-card-link' and @class='property-card-link']")])
+            next_link = d.find_element("xpath", "//a[@rel='next']")
+            if next_link.get_attribute("disabled") == "true":
+                break
+            url = next_link.get_attribute('href')
+            d.delete_all_cookies()
+            next_link.click()
+                                                            
+    return links
 ----
 
 There is a _lot_ of rich data on a home's page. If you want to gauge the housing market in an area or for a `search_term`, there are two pieces of data that could be particularly useful: the "Price history" and "Public tax history" components of the page.
@@ -96,6 +146,95 @@ Just print the first 500 characters of the results of `blob_to_html` to avoid cl
 If you are unsure how to do any of this -- please feel free to post in Piazza!
 ====
 
+[TIP]
+====
+Here is some skeleton code. The structure provided here works well for the problem.
+
+[source,python]
+----
+import uuid
+import os
+
+def link_to_blob(link: str) -> bytes:
+    def _load_tables(driver):
+        """
+        Given the driver, scroll through the cards
+        so that they all load.
+        """
+        # find price and tax history element using xpath
+        table = driver.find_element(...)
+        
+        # scroll the table into view
+        driver.execute_script(...)
+        
+        # sleep 2 seconds
+        time.sleep(2)
+        
+        try:
+            # find the "See complete tax history" button (if it exists)
+            see_more = driver.find_element(...)
+            
+            # click the button to reveal the rest of the history (if it exists)
+            see_more.click()
+            
+        except NoSuchElementException:
+            pass
+        
+        try:
+            # find the "See complete price history" button (if it exists)
+            see_more = driver.find_element(...)
+            
+            # click the button to reveal the rest of the history (if it exists)
+            see_more.click()
+            
+        except NoSuchElementException:
+            pass
+    
+    # create a .html file with a random name using the uuid package so there aren't collisions
+    filename = f"{uuid.uuid4()}.html"
+    
+    # open the file 
+    with open(filename, 'w') as f:
+        firefox_options = Options()
+        # Headless mode means no GUI
+        firefox_options.add_argument("--headless")
+        firefox_options.add_argument("--disable-extensions")
+        firefox_options.add_argument("--no-sandbox")
+        firefox_options.add_argument("--disable-dev-shm-usage")
+
+        driver = webdriver.Firefox(options=firefox_options)
+        driver.get(link)
+        time.sleep(2)
+        _load_tables(driver)
+        
+        # write the page source to the file
+        f.write(...)
+        driver.quit()
+        
+    # open the file in read binary mode
+    with open(filename, 'rb') as f:
+        # read the binary contents that are ready to be inserted into a sqlite BLOB
+        blob = f.read()
+        
+    # remove the file from the filesystem -- we don't need it anymore
+    os.remove(filename)
+    
+    return blob
+----
+====
+
+[TIP]
+====
+Use this trick: https://the-examples-book.com/data-science/data-formats/xml#write-an-xpath-expression-to-get-every-div-element-where-the-string-abc123-is-in-the-class-attributes-value-as-a-substring for finding and clicking the “see more” buttons for the two tables. If you dig into the HTML youll see there is some text you can use to jump right to the two tables.
+
+To add to this, if instead of `@class, 'abc'` you use `text(), 'abc'` it will try to match the values between elements to "abc". For example, `//div[contains(text(), 'abc')]` will match `<div>abc</div>`.
+====
+
+[TIP]
+====
+Remember the goal of this problem is to click the "see more" buttons (if they exist on a given page), and then just save the whole HTML page and convert it to binary for storage.
+====
+
 .Items to submit
 ====
 - Code used to solve this problem.
@@ -130,6 +269,14 @@ Here is some example output from my functions -- you do not need to match this i
 ----
 my_blob = link_to_blob("https://www.zillow.com/homedetails/2180-N-Brentwood-Cir-Lecanto-FL-34461/43641432_zpid/")
 get_price_history(blob_to_html(my_blob))
+----
+
+Where
+
+[source,python]
+----
+def blob_to_html(blob: bytes) -> str:
+    return blob.decode("utf-8")
 ----
 
 .output
@@ -171,6 +318,63 @@ get_tax_history(blob_to_html(my_blob))
 ----
 ====
 
+[TIP]
+====
+Some skeleton hints if you want extra help. See discussion: https://piazza.com/class/l6usy14kpkk66n/post/lalzk6hi8ark
+
+[source,python]
+----
+def get_price_history(html: str):
+    tree = lxml.html.fromstring(html)
+    # xpath to find the price and tax history table
+    # then, you can use the xpath `following-sibling::div` to find the `div` that directly follows the 
+    # price and tax history div (hint, look for "Price-and-tax-history" in the id attribute of a div element
+    # after the "following-sibling::div" part, look for <tr> elements with an id attribute
+    trs = tree.xpath(...)
+    values = []
+    for tr in trs:
+        # xpath on the "tr" to find td with an inner span. Use string methods to remove the $ and remove the ",", and to remove trailing whitespace
+        price = tr.xpath(...)[2].text.replace(...).replace(...).strip()
+
+        # if price is empty, make it None
+        if price == '':
+            price = None
+
+        # append the values 
+        values.append([tr.xpath(...)[0].text, tr.xpath(...)[1].text, price])
+    
+    return values
+----
+====
+
+[TIP]
+====
+More skeleton code help, if wanted. See discussion: https://piazza.com/class/l6usy14kpkk66n/post/lalzk6hi8ark
+
+[source,python]
+----
+def get_tax_history(html: str):
+    tree = lxml.html.fromstring(html)
+    try:
+        # find the 'Price-and-tax-history' div, then, the following-sibling::div, then a table element, then a tbody element
+        tbody = tree.xpath("//div[@id='Price-and-tax-history']/following-sibling::div//table//tbody")[1]
+    except IndexError:
+        return None
+    values = []
+    # get the trs in the tbody
+    for tr in tbody.xpath(".//tr"):
+        # replace the $, ",", and "-", strip whitespace
+        prop_tax = tr.xpath(...)[1].text.replace(...).replace(...).replace(...).strip()
+        # if prop_tax is empty set to None
+        if prop_tax == '':
+            prop_tax = None
+        # add the data, for the last item in the list, remove $ and ","
+        values.append([int(tr.xpath(...)[0].text), prop_tax, int(tr.xpath(...)[2].text.replace(...).replace(...))])
+    
+    return values
+----
+====
+
 .Items to submit
 ====
 - Code used to solve this problem.
@@ -182,6 +386,57 @@ get_tax_history(blob_to_html(my_blob))
 Write code that uses the `get_links` function to get a list of links for a `search_term`. Process each link in the list and insert the retrieved data into your `houses.db` database.
 
 Once complete, run a couple queries that demonstrate that the data was successfully inserted into the database.
+
+[TIP]
+====
+Here is some skeleton code to assist.
+
+[source,python]
+----
+import sqlite3
+from urllib.parse import urlsplit
+from tqdm.notebook import tqdm
+
+links = get_links("47933")
+
+# connect to database
+con = sqlite3.connect(...)
+for link in tqdm(links): # this shows a progress bar for assistance
+
+    # use link_to_blob to get the blob
+
+    # use urlsplit to extract the zpid from the link
+
+    # add values to a tuple for insertion into the database
+    to_insert = (linkid, blob)
+
+    # get a cursor
+    cur = con.cursor()
+
+    # insert the data into the houses table using the cursor
+
+    # get price history data to insert
+    to_insert = get_price_history(blob_to_html(blob))
+
+    # insert id into price history data
+    for val in to_insert:
+        val.insert(0, linkid)
+
+    # insert the data into the price_history table using the cursor
+
+    # prep the tax history data in the exact same way as price history
+
+    # if there is tax history data, insert the ids just like before
+
+    # insert the data into the tax_history table using the cursor
+
+    # commit the changes 
+    con.commit()
+
+# close the connection
+con.close()
+----
+====
 
 .Items to submit
 ====
