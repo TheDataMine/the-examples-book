@@ -1,0 +1,164 @@
+= SLURM Jobs on Anvil
+
+Most often we reach the need for SLURM jobs when the front-end Anvil computer nodes no longer have enough power to run our code. 
+
+In this example, we'll take a simple Python notebook and translate it into a SLURM job. 
+
+We'll also provide some important points on using SLURM within The Data Mine and with GPUs. 
+
+== Jupyter Lab to SLURM
+
+The code below allows us to filter the `precip.csv` data by a starting letter. 
+
+This works great for our small data set, but let’s say we wanted to make this into a SLURM job so that we could run it on much more data over a longer period of time. 
+
+[source, python]
+----
+import pandas as pd
+# Path to the data file in string format
+file_to_read = "/anvil/projects/tdm/data/precip/precip.csv"
+# Read in the data file as a dataframe
+init_data = pd.read_csv(file_to_read)
+# Check if each row consists of 'M' in 'place' column in
+# the dataframe, returning either False or True
+data_mask = init_data['place'].str.contains("M", regex=True)
+----
+
+The first thing we'll need to do is move this into a Python script. 
+
+There's lots of helpful documentation on writing https://realpython.com/run-python-scripts/[your first Python script], but the most important parts are the file type and shebang (the line at the top of the Linux script). 
+
+The Python script's file type should be a `.py` file. We can create this in our Juypter Lab session. 
+
+The shebang at the top of the file is usually `#!/usr/bin/env python3`. This helps the script know which Python to use during execution. 
+
+Starting with this information, we'll create a `python_slurm.py` file in the Jupyter Lab session and add the lines below.
+
+*Important:* Be sure to update the last line to use your ID for the output. 
+
+[source, python]
+----
+#!/usr/bin/env python3
+
+import pandas as pd
+file_to_read = "/anvil/projects/tdm/data/precip/precip.csv"
+init_data = pd.read_csv(file_to_read)
+data_mask = init_data['place'].str.contains("M", regex=True)
+
+# Keep the rows that consist of 'M'
+filtered_data = init_data[data_mask]
+# Save the data frame as a csv file in your home directory
+filtered_data.to_csv("/home/x-dgi804/filter_out.csv")
+----
+
+Awesome! Now that we have that setup, we can create a SLURM submission script. 
+
+These are the instructions that SLURM will use to run the job. 
+
+== Submitting a job to SLURM
+
+SLURM works with job submission scripts to know how to run a file. 
+
+Similar to the last step, these are script that we setup, but they use a `.sh` file extension. 
+
+We can create these files via Jupyter Lab as well and populate them with the lines below. 
+
+We'll name the script file `slurm_test.sh`.
+
+[IMPORTANT]
+====
+When running a job with CPU's on Anvil be sure to choose the `shared` queue. 
+
+If not, you may accidentally request whole nodes with can use up much more compute. 
+====
+
+[IMPORTANT]
+====
+Because we often want to use the same Python environment that we use in Jupyter Lab, we can also take steps to use that specific kernel. 
+
+In this case, you'll see us add the lines below, but this can be updated to use any kernel object. 
+
+[source, python]
+----
+module use /anvil/projects/tdm/opt/core
+module load tdm
+module load python/f2022-s2023
+----
+====
+
+*Important:* Be sure to update the lines to correct paths for the output. 
+
+[source, bash]
+----
+#!/bin/bash
+# FILENAME:  myjobsubmissionfile
+#SBATCH -A cis220051
+#SBATCH --nodes=1  
+#SBATCH --ntasks=4 
+#SBATCH --time=04:00:00
+#SBATCH -p shared
+#SBATCH -o /home/x-dgi804/SLURM_output/myjob.out
+#SBATCH -e /home/x-dgi804/SLURM_output/myjob.out
+#SBATCH -J david_slurm_example
+
+module use /anvil/projects/tdm/opt/core
+module load tdm
+module load python/f2022-s2023
+
+python3 python_slurm.py     
+----
+
+Great! Now we should have everything ready to run our first SLURM job. 
+
+The last thing we need to do is submit it. 
+
+== Submitting a SLURM job
+
+The best reference for this process is the https://www.rcac.purdue.edu/knowledge/brown/run/slurm/submit[RCAC knowledge base.]
+
+Because we specified most of our SLURM arguments in our `.sh` script, we should be able to run `sbatch slurm_test.sh`.
+
+Once the job is submitted, you'll get a notification that it has been launched as well as the associated job number. 
+
+We can check our running jobs with the `squeue` command. In my case, I'd run `squeue -u x-dgi804`.
+
+If the job completes successfully, we should see our `filter_out.csv` generated in our $HOME directory. 
+
+If we have any issues, we can check the logs that we specified in our SLURM submission job above (`myjob.out`).
+
+== Using GPU with SLURM
+
+GPU follows a very similar pattern to the steps above. The big exception is in our SLURM submission script. 
+
+If we wanted to utilize GPU's the script would look similar to the lines below. 
+
+[source, bash]
+----
+#!/bin/bash
+# FILENAME:  myjobsubmissionfile
+#SBATCH -A cis220051-gpu
+#SBATCH --nodes=1  
+#SBATCH --ntasks=4 
+#SBATCH --gpus-per-node=1
+#SBATCH --time=04:00:00
+#SBATCH -p gpu
+#SBATCH -o /home/x-dgi804/SLURM_output/myjob.out
+#SBATCH -e /home/x-dgi804/SLURM_output/myjob.out
+#SBATCH -J david_slurm_example
+
+module use /anvil/projects/tdm/opt/core
+module load tdm
+module load python/f2022-s2023
+
+python3 python_slurm.py
+----
+
+We added a few additional lines for GPU specific resources and updated our queue and allocation, but outside of those items, the script and python file would be the same. 
+
+[IMPORTANT]
+====
+
+It's the responsibility of the developer to ensure that the GPU code is utilizing the GPU resources. 
+
+In the case of our example above, if we ran this on GPU's we wouldn't be seeing much of an advantage. 
+====
