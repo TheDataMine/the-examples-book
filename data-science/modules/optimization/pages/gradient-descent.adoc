@@ -1,44 +1,101 @@
-Optimizers in Machine Learning: Gradient Descent
-------------------------------------------------
-Intro paragraph
+= Optimizers in Machine Learning: Gradient Descent
+In the context of Machine Learning (ML), the space of optimization is the heart which helps its models stay alive. Basically, it is a way for models to `learn` better from the data. In this blog, we will start from the basics of optimization, their need and functioning and build a popular optimization algorithm - Gradient Descent, from scratch in Python.
 
 
-What are optimizers?
-^^^^^^^^^^^^^^^^^^^^
-Also talk about terminology
+== Optimization: Basics and Terminology
+As the name suggests, optimization is a technique to `optimize` the value of a function having variables which might be constrained to take or not take certain values. Let's break down into pieces, by considering the case of single variables and the same can be extended to multivariate case. The function $f(x)$ is called the objective function, or the loss function in the context of ML, whose value we need to minimize (or equivalently maximize $-f(x)$) where $x$ can take all real values $\mathbb{R}$. The optimizer is tasked is to find the optimal point $x^*$ in the search space (here, the whole real number line) for which the value of the objective function is minimum. Mathematically, it is often denoted by $x^* = argmin_x f(x)}$ (read as, the argument $x$ of $f(.)$ which minimizes the function). 
+
+[NOTE]
+====
+Without loss of generality, finding minimum of a function $f(x)$ is equivalent to finding maximum of $-f(x)$. For this reason, we often describe the optimization procedures for one case, usually minimum.
+====
+
+== How does it work?
+A naive approach is to try out all possible values and reach the optimal point but it would be very inefficient due to large search space and it will take infinite amount of time and computation to explore all possible values of $x$. Can we optimize better? Yes! If the function is differentiable in the interval in the search space, we can leverage derivatives or gradients to guide us in the optimal direction. There are various techniques proposed in the literature and we look at one of the basic, yet powerful optimizer - Gradient Descent.
 
 
-Why do we need them?
-^^^^^^^^^^^^^^^^^^^^
-Discuss applications
+== Gradient Descent 
+The core idea of this optimization procedure is to iteratively move towards the optimal point by using the gradients. The knowledge of gradients give us a whole lot of information, i.e., for a given point in space, they point in the direction of maximal change and their magnitude reflects the amount of change. The procedure to find minima works as follows: (a) start from a point in space at random, (b) compute the gradient at that point, iteratively move to next step using gradient and repeat until convergence. 
+
+image::gradient-descent-1.png[Overview of Gradient Descent Algorithm, loading=lazy, title="Overview of Gradient Descent Algorithm"]
+
+The vanilla variant of this algorithm uses information from first order gradient and assumes that function is fully differentiable in the interval of search space. Further, it is guaranteed to find the optimal solution for convex functions no matter where we start, but it can get stuck at local minima for concave function depending upon the starting position and hence may not return us the global minima. 
+
+GradientDescentAlgorithm:  
+Input: function to minimize $f(x)$, and learning rate \eta  
+Output: optimal point $x^*$ for which input function gives minima  
+
+1. $x_0 = 0$, $i = 0$ 
+2. do:
+3.      $x_{i+1} = x_i - \eta \nabla f(x)$, where $\nabla = \frac{\partial f(x)}{\partial x}$
+4. until convergence;
+
+[NOTE]
+====
+Since, gradients points in direction of increasing maximal change, the negative sign in above algorithm ensures that we move in the opposite direction for minimum and hence the name `gradient descent`.
+====
+
+There is a hyperparameter involved in this algorithm, which is the step-size aka. learning rate $\eta$. This is a measure of control of how far you want to shift from the last point to the next point. If learning rate is small, we are effectively taking baby steps to reach minima and it may take longer time and large steps before convergence. On the flip side, using a large learning rate can make the trajectory overshoot the minima and keep it bouncing around the minima. Generally, a good practice in ML is to start with low value, say $\eta = 0.001$ and adjust it in multiples of 3, if needed.
+
+Another part of the algorithm is to establish a stopping criteria for the infinite loop. It can be either user-defined by providing number of iterations to perform (usually as an input parameter) or defining a tolerance parameter which ceases the loop if the difference in the function value drops below it.
+
+(Advantages and Disadvantages)
 
 
-Gradient Descent 
-^^^^^^^^^^^^^^^^
-Discuss the core idea
+== Python Implementation
+A toy implementation of the gradient descent algorithm is described below:
 
+[source,python]
+----
+import numdifftools as nd
 
-Python Implementation (from scratch!)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Code in python
+def gd_optimizer(f_x, lr=0.01, iters=10):
+    '''
+    f_x:    lambda function, function to minimize
+    lr:     float, learing rate
+    iters:  integer, number of iterations
+    '''
+    x = 0
+    for i in range(iters):
+        print (f'Iteration {i}: f(x) = {f_x(x)}, x = {x}')
+        grad = nd.Gradient(f_x)(x)
+        x = x - lr * grad
+    return x
 
+gd_optimizer(lambda x: x**2 + 2*x + 3, lr=0.1, iters=20) 
+----
 
-Usage in PyTorch
-^^^^^^^^^^^^^^^^
-Syntax of using in pytorch library
-
-
-Interactive Tool for visualization
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
+Output:
+----
+Iteration 0: f(x) = 3, x = 0
+Iteration 1: f(x) = 2.64, x = -0.19999999999999987
+Iteration 2: f(x) = 2.4096, x = -0.36
+Iteration 3: f(x) = 2.262144, x = -0.4879999999999999
+Iteration 4: f(x) = 2.16777216, x = -0.5903999999999999
+Iteration 5: f(x) = 2.107374182400006, x = -0.6723199999999909
+Iteration 6: f(x) = 2.0687194767360038, x = -0.7378559999999929
+Iteration 7: f(x) = 2.0439804651110425, x = -0.7902847999999941
+Iteration 8: f(x) = 2.028147497671067, x = -0.8322278399999952
+Iteration 9: f(x) = 2.018014398509483, x = -0.8657822719999962
+Iteration 10: f(x) = 2.0115292150460693, x = -0.892625817599997
+Iteration 11: f(x) = 2.007378697629484, x = -0.9141006540799986
+Iteration 12: f(x) = 2.00472236648287, x = -0.9312805232639989
+Iteration 13: f(x) = 2.0030223145490367, x = -0.945024418611199
+Iteration 14: f(x) = 2.0019342813113834, x = -0.9560195348889592
+Iteration 15: f(x) = 2.0012379400392852, x = -0.9648156279111674
+Iteration 16: f(x) = 2.0007922816251424, x = -0.9718525023289338
+Iteration 17: f(x) = 2.0005070602400914, x = -0.977482001863147
+Iteration 18: f(x) = 2.0003245185536587, x = -0.9819856014905178
+Iteration 19: f(x) = 2.0002076918743414, x = -0.9855884811924143
+-0.9884707849539315 # returns approx -0.98 which is closer to -1 (actual minima)
+----
+== Interactive Tool for visualization
 *Inputs*:
-
     * function def, f(x)
     * learning rate, lr
     * max/min
     * range
 
 *Outputs*:
-
     * trajectory of points to reach max/min
     
