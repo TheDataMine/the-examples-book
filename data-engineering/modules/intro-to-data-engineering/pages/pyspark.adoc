@@ -1,4 +1,4 @@
-= pyspark
+= PySpark
 
 image::pyspark.png[]
 
@@ -23,3 +23,50 @@ Spark basically written in Scala and later on due to its industry adaptation itâ
 * PySpark is also used to process real-time data using Streaming and Kafka.
 * PySpark natively has machine learning and graph libraries.
 * PySpark provides a variety of methods for data processing along with methods to convert PySpark DataFrame to Pandas Dataframe and vice-versa.
+
+
+[source,python]
+----
+from pyspark.sql import SparkSession
+import pandas as pd
+import numpy as np
+import time
+
+# Create the Session
+spark = SparkSession.builder\
+    .master("local")\
+    .appName("PySpark Tutorial")\
+    .getOrCreate()
+
+data = {'col1':np.random.randint(1,10,10000000),'col2':np.random.randint(1,10,10000000)}
+df = pd.DataFrame(data)
+
+pandasDF = df.copy()
+
+spark.conf.set("spark.sql.execution.arrow.pyspark.enabled","true")
+sparkDF = spark.createDataFrame(df)
+----
+
+[source,python]
+----
+startPandas = time.time()
+pandasDF['col2'] = pandasDF['col2'].map(lambda x: x - (x*10/100))
+endPandas = time.time()
+print(endPandas - startPandas)
+----
+
+----
+2.008172035217285
+----
+
+[source,python]
+----
+startSpark = time.time()
+sparkRDD = sparkDF.rdd.map(lambda x: [x[0],x[1] - (x[1]*10/100)])
+endSpark = time.time()
+print(endSpark - startSpark)
+----
+
+----
+0.013193845748901367
+----
