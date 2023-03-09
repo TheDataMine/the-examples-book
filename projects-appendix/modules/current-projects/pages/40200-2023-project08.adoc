@@ -1,0 +1,223 @@
+= TDM 40200: Project 8 -- 2023
+
+**Motivation:** Dashboards are everywhere -- many of our corporate partners' projects are to build dashboards (or dashboard variants)! Dashboards are used to interactively visualize some set of data. Dashboards can be used to display, add, remove, filter, or complete some customized operation to data. Ultimately, a dashboard is really a website focused on displaying data. Dashboards are so popular, there are entire frameworks designed around making them with less effort, faster. Two of the more popular examples of such frameworks are https://shiny.rstudio.com/[`shiny`] (in R) and https://dash.plotly.com/introduction[`dash`] (in Python). While these tools are incredibly useful, it can be very beneficial to take a step back and build a dashboard (or website) from scratch (we are going to utilize many powerfuly packages and tools that make this far from "scratch", but it will still be more from scratch than those dashboard frameworks).
+
+**Context:** This is the seventh in a series of projects focused around slowly building a dashboard. Students will have the opportunity to: create a backend (API) using `fastapi`, connect the backend to a database using `aiosql`, use the `jinja2` templating engine to create a frontend, use `htmx` to add "reactivity" to the frontend, create and use forms to insert data into the database, containerize the application so it can be deployed anywhere, and deploy the application to a cloud provider. Each week the project will build on the previous week, however, each week will be self-contained. This means that you can complete the project in any order, and if you miss a week, you can still complete the following project using the provided starting point.
+
+**Scope:** Python, dashboards
+
+.Learning Objectives
+****
+- Continue to develop skills and techniques using `fastapi` to build a backend.
+- Learn how to use `pydantic` for data validation and type hints.
+- Learn how `fastapi` and `pydantic` work together to create endpoints that validate data and return typed responses.
+- Create a directory structure to assemble a `fastapi` backend.
+- Use `fastapi` and `jinja2` to build a frontend.
+- Use `fastapi` and `html` to create forms to submit data to the database.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/anvil/projects/tdm/data/movies_and_tv/imdb.db`
+
+== Questions
+
+[WARNING]
+====
+Interested in being a TA? Please apply: https://purdue.ca1.qualtrics.com/jfe/form/SV_08IIpwh19umLvbE
+====
+
+=== Question 1
+
+[IMPORTANT]
+====
+This project assumes you have a working backend and frontend from the previous project. Need a clean slate? You can copy over a working API starting Saturday, March 4th.
+
+[source,bash]
+----
+mv $SCRATCH/imdb $SCRATCH/imdb.bak2
+mkdir $SCRATCH/imdb
+cp -a /anvil/projects/tdm/etc/project07/* $SCRATCH/imdb
+cp /anvil/projects/tdm/data/movies_and_tv/imdb.db $SCRATCH/imdb/backend/api/
+----
+
+Then, to run the API, first load up our Python environment.
+
+[source,bash]
+----
+module use /anvil/projects/tdm/opt/core
+module load tdm
+module load python/f2022-s2023
+----
+
+Next, find an unused port to run the API on.
+
+[source,bash]
+----
+find_port # 7777, for example
+----
+
+Then, run the API using the port from the previous step, in our case, 7777.
+
+[source,bash]
+----
+cd $SCRATCH/imdb
+python3 -m uvicorn backend.api.api:app --reload --port 7777
+----
+
+In addition, open another terminal to run the frontend using another port, in our case, 8888.
+
+[source,bash]
+----
+cd $SCRATCH/imdb
+python3 -m uvicorn frontend.endpoints:app --reload --port 8888
+----
+
+You can visit the following links to see the barebones pages.
+
+- http://localhost:8888/titles/tt1825683
+- http://localhost:8888/people/nm0430107
+- http://localhost:8888/cast/tt1825683
+====
+
+The goal of this project is to create functioning _forms_ that allow a user to add a new person and title to the database. We will break down the steps for you, as forms _can_ be a bit confusing.
+
+Let's start by creating templates for our 2 new forms: `create_person.html` and `create_title.html`. These are templates that will live in our _frontend_. Use the following resource to put together the `<form>` elements for each of these pages.
+
+- https://developer.mozilla.org/en-US/docs/Web/HTML/Element/form
+
+[TIP]
+====
+Pay close attention to the `action` and `method` attributes of the `<form>` element. Since we are uploading new data, the `method` will be `post`, and the `action` will be the URL of the endpoint that will handle the form submission.
+====
+
+[TIP]
+====
+You can use this as a starting point for your templates.
+
+[source,html]
+----
+<html>
+    <head>
+        <title>Create thing</title>
+    </head>
+    <body>
+
+    </body>
+</html>
+----
+====
+
+[TIP]
+====
+Don't forget your "submit" button! This will be responsible for making the request to the given endpoint in your `action` attribute with the http method specified in your `method` attribute. For example, if you have a form with the `action` attribute `http://localhost:1234/api/thing` and the `method` attribute `put`, then when the user clicks the submit button, the browser will make a `PUT` request to `http://localhost:1234/api/thing`, with the content of the form fields.
+====
+
+[TIP]
+====
+For this project, our people request will have the following fields: `person_id`, `name`, `born`, and `died` only.
+For this project, our titles request will have the following fields: `title_id`, `type`, `primary_title`, `original_title`, `runtime_minutes`, `premiered`, and `ended` only.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+Next, its time to create endpoints that will show our forms! Since these endpoints will only be responsible for displaying our form, they should be part of our _frontend_. We will create 2 endpoints:
+
+- `GET /people/create`
+- `GET /titles/create`
+
+These endpoints should simply display the forms we created in the previous step.
+
+For this question, include a screenshot showing each of your forms in the browser.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+At this stage, you should be able to pop open a browser and visit `http://localhost:8888/people/create/` and `http://localhost:8888/titles/create/` and see your forms. However, if you try to submit the form, nothing will happen -- after all, we haven't created the api endpoints that will handle the form submissions yet!
+
+Let's start that process now.
+
+First, create two new queries in your `queries.sql` file: `create_person` and `create_title`. These queries should insert a new row into the `people` and `titles` tables, respectively. 
+
+For this question, paste the queries (the complete additions to the `queries.sql` file) in a jupyter notebook markdown cell.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+Finally, create two new api endpoints (in your backend). These endpoints should be straightforward and do the following. 
+
+. Establish a connection to the database.
+. Insert the data.
+. Return a `dict` with values as a form of a success message.
+
+[TIP]
+====
+https://fastapi.tiangolo.com/tutorial/request-forms/#define-form-parameters[This] and https://github.com/tiangolo/fastapi/issues/854[this] will likely be helpful.
+====
+
+[TIP]
+====
+If you want a field to be optional, you'll want to do something like:
+
+[source,python]
+----
+from typing import Union
+from fastapi import Form
+
+async def some_func(some_field: Union[str, None] = Form(None)):
+    pass
+----
+====
+
+[TIP]
+====
+These will need to be `POST` requests, since we are adding new data to the database.
+====
+
+For this question, go ahead and test it out! Please _use_ your new forms to create a new person and new title. Include screenshots of the forms right _before_ clicking "submit". Then, include screenshots of the forms right _after_ clicking "submit".
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+Last but certainly not least, lets go ahead and view our new title and person using our frontend. Navigate to the following pages and include screenshots of the pages in your notebook.
+
+- http://localhost:8888/titles/{your_new_title_id}
+- http://localhost:8888/people/{your_new_person_id}
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+
+In addition, please review our xref:projects:current-projects:submissions.adoc[submission guidelines] before submitting your project.
+====

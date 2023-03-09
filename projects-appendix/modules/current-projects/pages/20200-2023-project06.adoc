@@ -1,0 +1,223 @@
+= TDM 20200: Project 6 -- 2023
+
+**Motivation:** This project we are continuing to focus on your web scraping skills, introducing you to some common deceptions, and give you the chance to apply what you've learned to something you are interested in.
+
+**Context:** This is the last project focused on web scraping. 
+We have created a few problmatic situations that can come up when you are first learning to scrape data. Our goal is to share some tips on how to get around the issue.  
+
+**Scope:** Python, web scraping 
+
+.Learning Objectives
+****
+- Use the requests package to scrape a web page.
+- Use the lxml/selenium package to filter and parse data from a scraped web page.
+- Learn how to step around header-based filtering.
+- Learn how to handle rate limiting. 
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Questions
+
+[WARNING]
+====
+Interested in being a TA? Please apply: https://purdue.ca1.qualtrics.com/jfe/form/SV_08IIpwh19umLvbE
+====
+
+=== Question 1
+
+We have setup 4 special URLs for you to use: https://static.the-examples-book.com, https://ip.the-examples-book.com, https://header.the-examples-book.com, https://sheader.the-examples-book.com. Each website uses different methods to _rate limit_ traffic.
+
+Rate limiting is an issue that comes up often when scraping data. When a website notices that the pages are being navigated faster than humans are able to, the speed causes the website to throw a red flag to the website host that some one could be scraping their content. This is when the website will introduce a rate limit to prevent web scraping.
+
+If you are able to open a browser and navigate to https://sheader.the-examples-book.com. Once there you should be presented with some basic information about the request. 
+
+Now let us check to see what happens if you open up your Jupyter notebook, import the `requests` package and scrape the webpage. 
+
+You _should_ be presented with HTML that indicates your request was blocked. 
+
+https://sheader.the-examples-book.com is designed to block all requests where the User-Agent header has "requests" in it. By default, the `requests` package will use the User-Agent header with a value of "python-requests/2.26.0", which has "requests" in it. 
+
+Backing up a little bit, _headers_ are part of your _request_. In general, you can think of headers as some extra data that gives the server or client some context about the request. You can read about headers https://developer.mozilla.org/en-US/docs/Glossary/Request_header[here]. You can find a list of the various headers https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers[here]. 
+
+Each header has a purpose. One common header is called https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent[User-Agent]. A user-agent is something like:
+
+----
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.16; rv:86.0) Gecko/20100101 Firefox/86.0
+----
+
+From the Mozilla link, this header is a string that "lets servers and network peers identify the application, operating system, and browser that is requesting a resource." Basically, if you are browsing the internet with a browser like Firefox or Chrome, the server will know which browser you are using. In the provided example, we are using Firefox 86 from Mozilla, on a Mac running Mac OS 10.16 with an Intel processor.
+
+When making a request using the `requests` package, the following is what the headers look like.
+
+[source,python]
+----
+import requests
+
+response = requests.get("https://sheader.the-examples-book.com")
+print(response.request.headers)
+----
+
+.Output
+----
+{'User-Agent': 'python-requests/2.28.2', 'Accept-Encoding': 'gzip, deflate, br', 'Accept': '*/*', 'Connection': 'keep-alive'}
+----
+
+As you can see, the User-Agent header has the word "requests" in it, so it will be blocked.
+
+You can set the headers to be whatever you'd like using the `requests` package. Simply pass a dictionary containing the headers you'd like to use to the `headers` argument of `requests.get`. Modify the headers so you are able to scrape the response. Print the response using the following code.
+
+[source,python]
+----
+my_response = requests.get(...)
+print(my_response.text)
+----
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+++++
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_j4f5a738&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
+++++
+
+Navigate to https://header.the-examples-book.com. Refresh the page a few times, as you do you will notice how the "Cf-Ray" header is changes.
+Write a function called `get_ray` that accepts a url as an argument, and scrapes the _value_ of the Cf-Ray header and return the text.
+
+Run the following code.
+
+[source,python]
+----
+for i in range(6):
+    print(get_ray('https://header.the-examples-book.com'))
+----
+
+What happens then? Now pop open the webpage in a browser and refresh the page 6 times in rapid succession, what do you see?
+
+Run the following code again, but this time use a different header.
+
+[source,python]
+----
+for i in range(6):
+    print(get_ray('https://header.the-examples-book.com', headers={...}))
+----
+
+This website is designed to adapt and block requests if they have the same header and make requests too quickly. Create a https://github.com/tamimibrahim17/List-of-user-agents[list] of valid user agents and modify your code to utilize them to get 50 "Cf-Ray" values rapidly (in a loop).
+
+[TIP]
+====
+You may want to modify `get_ray` to accept a `headers` argument.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+Navigate to https://ip.the-examples-book.com. This page is designed to allow only 5 requests every minute from a single IP address. To verify that this is true go ahead and rapidly refresh the page 6 times in a row, then (without wifi) try to load the page on your cell phone immediately after. You will notice that the cell phone loads, but the browser doesn't.
+
+IP blocking is one of the most common ways to block traffic. Websites will monitor web activity and use complicated algorithms to block IP addresses that appear to be scraping data. The solution will be that we need to scrape content at a certain pace, or figure out a way to use different IP addresses.
+
+Simply scraping content at a certain pace will not work. Unfortunately even if we randomize periods of time between scraping values, algorithms that are used are clever. 
+
+The best way to bypass IP blocking is to use a different IP address. We can accomplish this by using a proxy server. A proxy server is another computer that will pass the request on for you. The relayed request is now made from behind the proxy servers IP address.
+
+The following code attempts to scrape some free proxy servers.
+
+[source,python]
+----
+import lxml.html
+
+def get_proxies():
+    url = "https://www.sslproxies.org/"
+    resp = requests.get(url)
+    root = lxml.html.fromstring(resp.text)
+    trs = root.xpath("//div[contains(@class, 'fpl-list')]//table//tr")
+    proxies_aux = []
+    for e in trs[1:]:
+        ip = e.xpath(".//td")[0].text
+        port = e.xpath(".//td")[1].text
+        proxies_aux.append(f"{ip}:{port}")
+    
+    proxies = []
+    for proxy in proxies_aux[:25]:
+        proxies.append({'http': f'http://{proxy}', 'https': f'http://{proxy}'})
+        
+    return proxies
+----
+
+Play around with the code and test proxy servers out until you find one that works. The following code should help get you started.
+
+[source,python]
+----
+p = get_proxies()
+resp = requests.get("https://ip.the-examples-book.com", proxies=p[0], verify=False, headers={'User-Agent': f"{my_user_agents[0]}"}, timeout=15)
+print(resp.text)
+----
+
+A couple of notes:
+
+- `timeout` is set to 15 seconds, because it is likely the proxy will not work if it takes longer than 15 seconds to respond.
+- We set a user-agent header so some proxy servers won't automatically block our requests.
+
+You can stop once you receive and print a successful response. As you will see, unless you pay for a working set of proxy servers, it is very difficult to combat having your IP blocked.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+++++
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_reu00xek&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
+++++
+
+Test out https://static.the-examples-book.com. This page is designed to only allow x requests per period of time, regardless of the IP address or headers.
+
+Write code that scrapes 50 Cf-Ray values from the page. If you attempt to scrape them too quickly, you will get an error. Specifically, `response.status_code` will be 429 instead of 200.
+
+[source,python]
+----
+resp = requests.get("https://static.the-examples-book.com")
+resp.status_code # will be 429 if you scrape too quickly
+----
+
+Different websites have different rules, one way to counter this defense is by exponential backoff. Exponential backoff is a system whereby you scrape a page until you receive some sort of error, then you wait x seconds before scraping again. Each time you receive an error, the wait time increases exponentially.
+
+There is a really cool package that does this for us! Use the https://pypi.org/project/backoff/[backoff] package to accomplish this task.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+For full credit you can choose to do either option 1 or option 2.
+
+**Option 1:** Figure out how many requests (_r_) per time period (_p_) you can make to https://static.the-examples-book.com. Keep in mind that the server will only respond to _r_ requests per time period (_p_) -- this means that fellow students requests will count towards the quota. Figure out _r_ and _p_. Answers do not need to be exact.
+
+**Option 2:** Use your skills to scrape data from a website we have not yet scraped. Once you have the data create something with it, you can create a graphic, perform some sort of analysis etc. The only requirement is that you scrape at least 100 "units". A "unit" is 1 thing you are scraping. For example, if scraping baseball game data, I would need to scrape the height of 100 players, or the scores of 100 games, etc. 
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+
+In addition, please review our xref:projects:current-projects:submissions.adoc[submission guidelines] before submitting your project.
+====
