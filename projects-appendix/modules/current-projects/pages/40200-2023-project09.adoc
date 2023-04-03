@@ -1,0 +1,198 @@
+= TDM 40200: Project 9 -- 2023
+
+**Motivation:** Dashboards are everywhere -- many of our corporate partners' projects are to build dashboards (or dashboard variants)! Dashboards are used to interactively visualize some set of data. Dashboards can be used to display, add, remove, filter, or complete some customized operation to data. Ultimately, a dashboard is really a website focused on displaying data. Dashboards are so popular, there are entire frameworks designed around making them with less effort, faster. Two of the more popular examples of such frameworks are https://shiny.rstudio.com/[`shiny`] (in R) and https://dash.plotly.com/introduction[`dash`] (in Python). While these tools are incredibly useful, it can be very beneficial to take a step back and build a dashboard (or website) from scratch (we are going to utilize many powerfuly packages and tools that make this far from "scratch", but it will still be more from scratch than those dashboard frameworks).
+
+**Context:** This is the eighth in a series of projects focused around slowly building a dashboard. Students will have the opportunity to: create a backend (API) using `fastapi`, connect the backend to a database using `aiosql`, use the `jinja2` templating engine to create a frontend, use `htmx` to add "reactivity" to the frontend, create and use forms to insert data into the database, containerize the application so it can be deployed anywhere, and deploy the application to a cloud provider. Each week the project will build on the previous week, however, each week will be self-contained. This means that you can complete the project in any order, and if you miss a week, you can still complete the following project using the provided starting point.
+
+**Scope:** Python, dashboards
+
+.Learning Objectives
+****
+- Continue to develop skills and techniques using `fastapi` to build a backend.
+- Learn how to use `pydantic` for data validation and type hints.
+- Learn how `fastapi` and `pydantic` work together to create endpoints that validate data and return typed responses.
+- Create a directory structure to assemble a `fastapi` backend.
+- Use `fastapi` and `jinja2` to build a frontend.
+- Use `fastapi` and `html` to create forms to submit data to the database.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/anvil/projects/tdm/data/movies_and_tv/imdb.db`
+
+== Questions
+
+=== Question 1
+
+Let's start this project with a fresh slate: fresh frontend and backend to work on.
+
+[source,bash]
+----
+mv $SCRATCH/imdb $SCRATCH/imdb.bak3
+mkdir $SCRATCH/imdb
+cp -a /anvil/projects/tdm/etc/project08/* $SCRATCH/imdb
+cp /anvil/projects/tdm/data/movies_and_tv/imdb.db $SCRATCH/imdb/backend/api/
+----
+
+Then, to run the API, first load up our Python environment.
+
+[source,bash]
+----
+module use /anvil/projects/tdm/opt/core
+module load tdm
+module load python/f2022-s2023
+----
+
+Next, find an unused port to run the API on.
+
+[source,bash]
+----
+find_port # 7777, for example
+----
+
+Then, run the API using the port from the previous step, in our case, 7777.
+
+[source,bash]
+----
+cd $SCRATCH/imdb
+python3 -m uvicorn backend.api.api:app --reload --port 7777
+----
+
+In addition, open another terminal to run the frontend using another port, in our case, 8888.
+
+[source,bash]
+----
+cd $SCRATCH/imdb
+python3 -m uvicorn frontend.endpoints:app --reload --port 8888
+----
+
+You can visit the following links to see the barebones pages.
+
+- http://localhost:8888/titles/tt1825683
+- http://localhost:8888/people/nm0430107
+- http://localhost:8888/cast/tt1825683
+
+This is all you need to do for this question -- just make sure those pages load up correctly.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+You may notice a few changes to the frontend and backend. They are largely just changes so that you can add a title, select the genres for the title, and add the number of votes and rating as well. If you peek in the backend, you will see that this is accomplished using 2 database inserts. One insert handles inserting the data that normally lives in the `titles` table, and the other handles inserting the `rating`, `votes`, and `title_id` in the `ratings` table. Its not any harder than the previous project, however, it added unnecessary complexity that we didn't want you to worry about for your very first project dealing with forms.
+
+For this project, we are going to implement two new pages:
+
+- http://localhost:8888/people/{person_id}/update
+- http://localhost:8888/titles/{title_id}/update
+
+Ultimately, these two pages will display forms with the current data for the given person with `person_id` or title with `title_id`, and allow the user to replace any information with new _updated_ information. Upon clicking the buttons, the data will be updated in the database. Pretty straightforward! This is all common behavior, and the _update_ part of CRUD (create, read, update, and delete).
+
+First thing is first, start by creating two new templates: `update_person.html` and `update_title.html`. For now, these can be copy/pasted from the `create_person.html` and `create_title.html` templates -- we will make progressive modifications to these templates as we go.
+
+Next, create two new endpoints in `endpoints.py`: 1 to handle displaying the `update_person.html` template (using a function called `update_person`), and 1 to handle displaying the `update_title.html` template (using a function called `update_title`). 
+
+Finish this question by taking two screenshots of the two new pages, and including them in your jupyter notebook.
+
+- http://localhost:8888/people/nm0430107/update
+- http://localhost:8888/titles/tt1825683/update
+
+Please make sure that the URL is included in the screenshots.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+Well, these pages are pretty boring, and so far, not really helpful at all! We can't really _see_ the data we are wanting to modify! Who is person `nm0430107`? What is title `tt1825683`? It is important to _both_ have a form to update data and to be able to _see_ the data we are wanting to update! 
+
+The way to accomplish this is by using the `value` attribute of the various `input` tags in the `update_title.html` and `update_person.html` templates. For example, given the following `input` tag:
+
+[source,html]
+----
+<input type="text" name="primary_name" id="primary_name" value="John Smith">
+----
+
+The resulting form will look like a regular "text" `input` field, but it will already have the text "John Smith" inside of it! 
+
+Update the `update_person` and `update_title` functions in `endpoints.py` to make a request (using the `httpx` library, just like we do in the `get_title` function in `endpoints.py`) and get the current information for the person or title of interest. Pass this data to the `update_person.html` or `update_title.html` templates, and use the `value` attribute to display the current data in the form.
+
+Finish this question by taking two screenshots of the two new pages, and including them in your jupyter notebook.
+
+- http://localhost:8888/people/nm0430107/update
+- http://localhost:8888/titles/tt1825683/update
+
+Please make sure that the URL is included in the screenshots.
+
+[TIP]
+====
+A tip for handling the checkboxes. In your `endpoints.py` `update_title` function, edit the response before returning it, as follows.
+
+[source,python]
+----
+response = resp.json()
+    
+    genres = response.get("genres")
+    for genre in genres:
+        response[genre.lower().replace("-", "_")] = True
+----
+
+This will do two primary things. Let you access each checkbox and check it in the template by doing something like:
+
+[source,html]
+----
+<input type="checkbox" name="genres" id="sci-fi" value="sci-fi" {% if object.sci_fi %}checked{% endif %}>
+----
+
+In addition, it will convert the "-" in "sci-fi" to an underscore, so it can be accessed in the template.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+Okay, the final step is to actually update the data in the database upon a form submission. In order to make this work, you must update your two templates so that the `method` attribute is `post`, and the `action` attribute is `/people/{person_id}/update` or `/titles/{title_id}/update` endpoints of your backend.
+
+Next, you must update your backend, so those endpoints take the form data and actually _update_ the data in the database. To do this, you will need to create two new endpoints in `api.py` that take the form data and update the values in the database. Please note, you will also need to create two new queries in `queries.sql`.
+
+Use both of your new "update" forms to update a known title and actor. Take two screenshots of the pages that appear _after_ submitting the forms. Include these screenshots in your jupyter notebook.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+Finally, prove that your updates were successful by taking two screenshots of the following pages, now that you've updated the data in the database.
+
+- http://localhost:8888/people/nm0430107
+- http://localhost:8888/titles/tt1825683
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+
+In addition, please review our xref:projects:current-projects:submissions.adoc[submission guidelines] before submitting your project.
+====
