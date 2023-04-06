@@ -181,9 +181,9 @@ cp /home/tdm/ubuntu_mounted/casper/filesystem.squashfs /home/tdm/ubuntu_fs
 cd /home/tdm/ubuntu_fs
 doas unsquashfs filesystem.squashfs
 cd
-mv /home/tdm/ubuntu_fs/squashfs-root /home/tdm/
+doas mv /home/tdm/ubuntu_fs/squashfs-root /home/tdm/
 rm -rf /home/tdm/ubuntu_fs/*
-cp -r /home/tdm/squashfs-root/* /home/tdm/ubuntu_fs/
+doas cp -r /home/tdm/squashfs-root/* /home/tdm/ubuntu_fs/
 
 # cleanup
 doas umount ubuntu_mounted
@@ -409,12 +409,46 @@ doas su # become the superuser/root
 
 mkdir /sys/fs/cgroup/cpuset/tdm # create a directory for our cpuset cgroup
 
-ps aux # search for the PID of /bin/bash with unshare, mine was 2627
+ps aux
+----
+
+The output of `ps aux` should look something like the following.
+
+.ps aux output
+----
+ 2028 root      0:00 containerd --config /var/run/docker/containerd/containerd.toml --log-level info
+ 2300 root      0:00 /sbin/syslogd -t -n
+ 2329 root      0:00 /sbin/acpid -f
+ 2361 chrony    0:00 /usr/sbin/chronyd -f /etc/chrony/chrony.conf
+ 2388 root      0:00 /usr/sbin/crond -c /etc/crontabs -f
+ 2426 root      0:00 sshd: /usr/sbin/sshd [listener] 0 of 10-100 startups
+ 2433 root      0:00 /sbin/getty 38400 tty1
+ 2434 root      0:00 /sbin/getty 38400 tty2
+ 2438 root      0:00 /sbin/getty 38400 tty3
+ 2442 root      0:00 /sbin/getty 38400 tty4
+ 2446 root      0:00 /sbin/getty 38400 tty5
+ 2450 root      0:00 /sbin/getty 38400 tty6
+ 2454 root      0:00 sshd: tdm [priv]
+ 2456 tdm       0:00 sshd: tdm@pts/0
+ 2457 tdm       0:00 -zsh
+ 2514 root      0:00 unshare -p -f --mount-proc=/home/tdm/ubuntu_fs/proc chroot /home/tdm/ubuntu_fs /bin/bash
+ 2515 root      0:00 /bin/bash
+ 2523 root      0:00 sshd: tdm [priv]
+ 2525 tdm       0:00 sshd: tdm@pts/1
+ 2526 tdm       0:00 -zsh
+ 2528 root      0:00 zsh
+ 2530 root      0:00 ps aux
+----
+
+Notice the line _directly below_ the line with `unshare -p -f ...` -- this is the PID of the process we want to restrict! In this case, it is `2515`.
+
+[source,bash]
+----
 echo 0 > /sys/fs/cgroup/cpuset/tdm/cpuset.mems
 echo 0 > /sys/fs/cgroup/cpuset/tdm/cpuset.cpus
-echo 2627 > /sys/fs/cgroup/cpuset/tdm/tasks
+echo 2515 > /sys/fs/cgroup/cpuset/tdm/tasks
 
-# this limits the task with PID 2627 to only use CPU 0
+# this limits the task with PID 2515 to only use CPU 0
 
 mkdir /sys/fs/cgroup/memory/tdm # create a directory for our memory cgroup
 
@@ -424,7 +458,7 @@ echo 0 > /sys/fs/cgroup/memory/tdm/memory.swappiness
 # lets also limit the memory to 100 MB
 echo 100000000 > /sys/fs/cgroup/memory/tdm/memory.limit_in_bytes
 
-echo 2627 > /sys/fs/cgroup/memory/tdm/tasks
+echo 2515 > /sys/fs/cgroup/memory/tdm/tasks
 ----
 
 Let's test out the memory cgroup by creating the following `hungry.py` Python script and running it from within our container.
