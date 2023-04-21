@@ -1,0 +1,137 @@
+= SQLite
+
+https://sqlite.org/index.html[SQLite] is a widely used open-source SQL DB engine. This tool allows users to quickly create, populate, and utilize SQL DBs in many different environments. 
+
+In this example we'll be covering use of SQLite with Python. This is because in The Data Mine the Python interface is the most common way that students interact with SQLite. 
+
+== Setting up SQLite DB in Python
+
+The first step in creating our SQLite DB is creating the DB object. 
+
+This can be done in Python and leverage some helpful SQLite functionality. If we pass SQLite a DB name and it isn't able to find it, it will create the DB object for us. 
+
+Link: https://www.sqlitetutorial.net/sqlite-python/creating-database/[SQLite Python: Creating a New Database]
+
+[source, python]
+----
+import sqlite3
+from sqlite3 import Error
+
+new_connection = None
+
+try:
+    conn = sqlite3.connect("example.db")
+    print(sqlite3.version)
+except Error as e:
+    print(e)
+finally:
+    if conn:
+        conn.close()
+----
+
+The code above should create an "example.db" environment in our directory. 
+
+If you pass a full path into the `.connect()` function, it will generate the DB in that directory. 
+
+For example, if I add `example.db` it will create it in my current directory, but if I add `/anvil/projects/tdm/example.db` it will create it in the `/anvil/projects/tdm` directory. 
+
+The `example.db` object is an empty shell that we can use to build our database. Right now it doesn't contain anything, but our next step will be to build the data schema. 
+
+A schema is like the layout for the database. It tells us what the column names will be, what type of data they will store, and if they are related to other columns in the table through keys. 
+
+We can run the code below to setup the schema and then we'll take a look at what it's doing. 
+
+[source, python]
+----
+db_conn = sqlite3.connect("example.db")
+
+db_create_table_query = '''
+    CREATE TABLE sqlite3_table1 (
+        id INTEGER PRIMARY KEY,
+        first_name TEXT NOT NULL,
+        last_name TEXT NOT NULL,
+        in_tdm INTEGER
+    );'''
+
+cursor = db_conn.cursor()
+
+cursor.execute(db_create_table_query)
+
+db_conn.commit()
+db_conn.close()
+----
+
+The code above creates a new table named sqlite3_table1 in our `example.db`. The table has 4 columbns: `id`, `first_name`, `last_name`, and `in_tdm`. 
+
+The `id` column is the primary key. This means that if we add other tables to the database and include `id` as their primary key we should be able to connect the tables through that key. 
+
+We can also see that we defined a data type for each variable (`INTEGER` and `TEXT`). There is a helpful link below that talks through the different data types in SQLite. 
+
+Now that we have our DB object and our schema we can add specific rows of data. 
+
+Links:
+* https://pynative.com/python-sqlite/#h-create-sqlite-table-from-python[Python: Create SQLite Table]
+* https://www.sqlite.org/datatype3.html[Datatypes in SQLite]
+
+[source, python]
+----
+db_conn = sqlite3.connect("example.db")
+
+db_add_rows = '''
+    INSERT INTO sqlite3_table1
+        (id, first_name, last_name, in_tdm)
+    VALUES
+        (0, 'Doctor', 'Ward', TRUE),
+        (1, 'Purdue', 'Pete', TRUE),
+        (2, 'Santa', 'Claus', FALSE);'''
+
+cursor = db_conn.cursor()
+cursor.execute(db_add_rows)
+
+db_conn.commit()
+db_conn.close()
+----
+
+The code above will add 3 lines of data to our new `sqlite3_table1` table that we created in the previous step. 
+
+We should now have a single table populated with data in our `example.db` that we can query. 
+
+Link: https://stackoverflow.com/questions/452859/inserting-multiple-rows-in-a-single-sql-query[Python: How to instert multiple rows of data.]
+
+As a last step, we can query our database to ensure that the new rows appear. 
+
+[source, python]
+----
+db_conn = sqlite3.connect("example.db")
+
+db_select_records = '''
+    SELECT * FROM sqlite3_table1 
+    WHERE in_tdm is TRUE;'''
+
+cursor = db_conn.cursor()
+cursor.execute(db_select_records)
+
+print(cursor.fetchall())
+----
+
+Output:
+====
+[(0, 'Doctor', 'Ward', 1), (1, 'Purdue', 'Pete', 1)]
+====
+
+We can see with the two records above that we have rows of data in our database! 
+
+We can also see that the query worked, because it did not return the record with a 0 (FALSE) for the `in_tdm` column. 
+
+Link: https://stackoverflow.com/questions/50613392/how-to-print-the-results-of-a-sqlite-query-in-python[Print SQLite Query Results in Python]
+
+We've now finished building our simple SQLite database! 
+
+This is just the start. There are lots of layers of complexity to building these database objects. Please feel free to share if you have additional content!
+
+[TIP]
+====
+You'll notice that in each section above we run a `conn.close()` function.
+
+It's a good idea to run this at the very end of your code, but it's totally OK to keep the database connection open if you plan to run multiple actions. 
+====
