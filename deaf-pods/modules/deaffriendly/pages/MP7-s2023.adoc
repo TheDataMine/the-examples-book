@@ -1,0 +1,842 @@
+= deaffriendly: Mini Project 7 -- Spring 2023
+
+**Motivation:** In this project, we are going to learn how to web scrape in Python. Some popular open-source packages in Python are `requests` and `bs4` which we will use for this project. `bs4` or `beautifulSoup` is used for pulling data out of HTML and XML files. `requests` is used to send HTTP requests.
+
+This project will web scrape board game information from https://boardgamegeek.com/browse/boardgame.
+
+NOTE: We are going to web scrape data from the website (dynamic, not static), and this website can update anytime. So, it is possible that your scraped data are different from your classmate who scrape the data from the website on the next day.
+
+
+**Scope:** Python, Jupyter Lab, Anvil
+
+.Learning objectives
+****
+- Learn how a website is structured
+- Web scrape data from the website, https://boardgamegeek.com/browse/boardgame
+- Convert pandas dataframe to `csv` file
+****
+
+Make sure to read about and use the template found https://the-examples-book.com/projects/current-projects/templates[here]. Also make sure to read the important information about projects submissions https://the-examples-book.com/projects/current-projects/submissions[here].
+
+== Data
+
+The following questions will use the data found on https://boardgamegeek.com/browse/boardgame
+
+Important to note that the top list can change anytime, and the data you scrape from the website today can be different from the data you scrape from the same website on the next day.
+
+== Background
+
+Web scraping is a fancy word for 'copying and pasting.' There are several different appraoches, and Wikipedia wrote a summary page about it https://en.wikipedia.org/wiki/Web_scraping[here].
+
+Here's a https://the-examples-book.com/workshops/gallygoogle/webscraping#what-are-websites-are-made-of[brief summary about website structures]. *It's important to take some time to read and review it as this will help you understand and do your Project 7*
+
+=== Look at the Board Game Geek website
+Visit https://boardgamegeek.com/browse/boardgame[the Board Game Geek website].
+
+You can see that the board games are organized into a structured table. 
+
+We have ranking, image, title, three different kinds of rating, and links to buy.
+
+Suppose you want to copy and paste the top 10 or 100 board games. That's easy to do manually. But if you want the data for top 1000 board games, that can become time-consuming, tiring, and/or tedious.
+
+Right-click anywhere on the webpage to get a small popout menu with additional information and/or properities. Select 'Inspect'.
+
+image::MP7_InspectFeature.png[Locating "Inspect" in the pop-out menu, width=620, height=480, loading=lazy, title="Right-click to find inspect feature in the pop-out menu"]
+
+Then, the inspector (and other inspector tools) will appear. Appearance will look different for each user, but the usage of the `inspect` feature is the same.
+
+image::MP7_PopOut.png[Inspector Tab, width=620, height=480, loading=lazy, title="At the bottom of the webpage, there is a box that shows you the HTML code that builds the website"]
+
+Hover over any line in the insepector will highlight the area on the webpage the line is for.
+Hover over any area or item on the webpage and then `right-click -> 'Inspect'` will take you to the line in the HTML structure.
+
+Feel free to play around to get a better sense of HTML page.
+
+Reminder: Please review this https://the-examples-book.com/workshops/gallygoogle/webscraping#what-are-websites-are-made-of[brief summary about website structures].
+
+== Let's get started!
+[source,python]
+----
+import requests # send HTTPs request easily
+from bs4 import BeautifulSoup # a popular library for parsing html in web-scraping
+
+# Let me assign a string of the URL to a variable called data_url
+data_url = "https://boardgamegeek.com/browse/boardgame"
+
+# Let's get the webpage
+response = requests.get(data_url)
+print(response)
+----
+
+Your output should be `<Response [200]>`.
+
+The `200` code means the request was successful. +
+If a URL does not exist or something else happens, you'd receive a different code (maybe `400` for bad request, `403` for forbidden, etc.)
+
+[source,python]
+----
+# Let's get the contents of the response
+html = response.text
+print(html)
+----
+
+It can be difficult, trying to read that long, chaotic string. Note that the contents printed are as the same as you see in your Inspector tab.
+
+Instead, we can use BeautifulSoup to convert that string into a more organized, nested data structure.
+
+[source,python]
+----
+# Convert html to a BeautifulSoup object, nested data structure
+soup = BeautifulSoup(html, "html.parser")
+print(soup)
+----
+
+At this point, you can see how the webpage is structured. You also can see where the board games are located if you scroll up carefully.
+
+=== Look at the Board Game Geek website, Again
+
+Visit https://boardgamegeek.com/browse/boardgame[the Board Game Geek website].
+
+I'm only interested in extracting game data from the table itself on the webpage.
+
+I'll hover my mouse over any game title and inspect. It'll take me to the exact location in the HTML structure.
+
+Inside the Inspector tab, I'll minimize the rows until I reach the table consiting of all games. 
+
+image::MP7_TableLocation.png[Locating the board game table in the Inspector Tab, width=620, height=480, loading=lazy, title="Locating the board game table in the Inspector Tab"]
+
+We can see that the table can be found in a tag called `id` and that `id` tag is called `collectionitems`.
+
+Each game board can be found in a tag called `tr` with `id` called `row_`.
+
+With that information, we know exactly where to extract from the BeautifulSoup object.
+
+=== Step 1: Figure out how variables are structured
+[source,python]
+----
+# This line is techincally two parts combined
+# First look for the first 'id' tag named 'collectionitems' and extract everything inside that tag
+# Then in that extraction, we search for all the 'tr' tag with 'id' value of 'row_'
+main = soup.find(id="collectionitems").find_all("tr", {"id": "row_"})
+----
+
+The line of code above consists of two different `find` searches. To understand what is happening exactly, you can take it apart into two parts like this:
+[source,python]
+----
+first_search = soup.find(id="collectionitems")
+second_search = first_search.find_all("tr", {"id": "row_"})
+main = second_search
+----
+
+Based on the webpage, we know there are 100 board games in total. We can check if we extracted the data properly by checking the length of `main` as its output is a list of all data consisting of `tr id = row_`.
+[source,python]
+----
+# Print the length of the variable, main
+print(len(main))
+# Output should be 100
+----
+
+Let's look at the first board game.
+
+[source,python]
+----
+# Print the first board game
+print(main[0])
+----
+
+If you want to print "pretty" or print a BeautifulSoup object into a organized, formatted Unicode string where a new line is printed for every tag and every string, you can use `prettify()`
+[source,python]
+----
+# Print the first board game (pretty)
+print(main[0].prettify())
+----
+
+I encourage you to pause and take a look at the output of `main[0]`.
+
+Based on the output, we can extract ranking, hypertext reference (href), image alternative, image hyperlink, game title, year, game slogan, geek rating, average rating, and number of voters. 10 variables. 
+
+*First Variable: ranking*
+
+The ranking is located between a tag called `tr`.
+
+`find()` will search for the first hit. `find_all()` will search for all hits.
+
+Here, we just want the first result of `find("td")` so we will use `find()` function, assuming the rank is always on the top of the `main[0]` output.
+
+[source,python]
+----
+# First search of the tag 'td'
+main[0].find("td")
+----
+
+The output does consist of the ranking number! But we don't want the other stuff around the number. We can use `text` function.
+
+[source,python]
+----
+# Extract the text inside the tags
+main[0].find("td").text
+----
+
+The output looks sorta better but not exactly as what we want. We want just the ranking number. We can use `strip()` to get rid of whitespaces. (`\n` means newline. `\t` means newtab.)
+
+[source,python]
+----
+# Remove whitespaces
+main[0].find("td").text.strip()
+----
+
+Yay! We get the output in the exact format we want.
+
+*Second, Third, and Fourth Variable: href, img_alt, img_link*
+
+Looking at the output of `main[0]`, all href, img_alt, and img_link information are inside a tag called `td`. +
+But there are multiple tags named `td`. +
+So, we need to provide additional information. The particular tag has a `class` called "collection_thumbnail". +
+That class information will help us extract the right information.
+
+[source,python]
+----
+# Search for the first tag named 'td' 
+main[0].find('td', class_="collection_thumbnail")
+----
+
+href, img_alt, and img_link information are inside the `a` tag (the `a` tag is inside the `td` tag).
+
+Here are two examples of obtaining the href:
+[source,python]
+----
+#Example 1
+main[0].find('a', href=True).get('href')
+----
+[source,python]
+----
+#Example 2
+main[0].find('a', href=True)['href']
+----
+
+Similiar for img_alt and img_link.
+[source,python]
+----
+#Example 1
+main[0].find('img', alt=True).get('alt')
+----
+[source,python]
+----
+#Example 2
+# It's OK to not include alt=True as there's only one `img` tag in the main[0]
+main[0].find('img', alt=True).get('alt')
+----
+[source,python]
+----
+#Example 3
+main[0].find('img', alt=True)['alt']
+----
+[source,python]
+----
+# Example 4
+# It's OK to not include alt=True as there's only one `img` tag in the main[0]
+main[0].find('img')['alt']
+----
+
+### Challenge: Find the img_link. 
+TIP: The image link is the hyperlink right after `src =` inside the `img` tag
+
+*Fifth Variable: Game Title*
+
+Looking at the output of `main[0]`, the game title is located inside the `a` tag. +
+But there are multiple `a` tags in `main[0]`, so additional information is needed. The particular tag consiting of the game title has a `class` called "primary". +
+
+[source,python]
+----
+# First search of the tag `a` with a `class` called "primary"
+main[0].find("a", class_="primary")
+# The output consists of the full tag
+----
+
+We extracted the right tag! Recall `text` function to get text inside the tag.
+
+[source,python]
+----
+# Extract the text inside the tag
+main[0].find("a", class_="primary").text
+----
+
+We got our game title!
+
+*Sixth Variable: Year*
+
+Go back to the output of `main[0]`. 
+
+### Challenge: What tag has the year information?
+_Once the tag name is idenitified, please replace TAG_NAME with the actual name of the tag._
+
+[source,python]
+----
+# First search of the tag
+main[0].find(TAG_NAME)
+----
+
+[source,python]
+----
+# Extract the text inside the tag
+main[0].find(TAG_NAME).text
+----
+
+*Seventh Variable: Slogan*
+
+Looking at the output of `main[0]`, the game slogan is located inside the `p` tag. +
+There is no other `p` tags in `main[0]`, so additional information is not needed.
+
+[source,python]
+----
+# First search of the tag
+main[0].find("p")
+# The output consists of the full tag
+----
+
+We extracted the right tag! Recall `text` function to get text inside the tag.
+
+[source,python]
+----
+# Extract the text inside the tag
+main[0].find("p").text
+----
+
+Recall the `strip()` function to get rid of whitespaces.
+
+[source,python]
+----
+# Remove whitespaces
+main[0].find("p").text.strip()
+----
+
+Yay! We get the slogan in the exact format we want.
+
+*Eighth, Ninth, Tenth Variable: Geek Rating, Average Rating, Number of Voters*
+
+Looking at the output of `main[0]`, try to find geek rating, average rating, and number of voters. +
+Notice that all three variables share the same tag and class information. And the combination of tag and class is unique (i.e., there is no other `td` tag consiting of `class` named "collection_bggrating" beside those three variables). That makes our extraction easy by using `find_all` which will return a list of all search hits.
+
+[source,python]
+----
+main[0].find_all("td", class_="collection_bggrating")
+# The output should be a list of three items
+----
+
+I assume that the variables will be in the same order (geek rating, average rating, number of voters).
+
+[source,python]
+----
+# Geek rating
+main[0].find_all("td", class_="collection_bggrating")[0]
+----
+
+[source,python]
+----
+# Average rating
+main[0].find_all("td", class_="collection_bggrating")[1]
+----
+
+[source,python]
+----
+# Number of voters
+main[0].find_all("td", class_="collection_bggrating")[2]
+----
+
+Good job! At this point, we successfully extracted all 10 variables for the first board game! 
+
+=== Step 2: Get all data for 100 board games
+
+Recall that you checked the length of `main` and it should be 100 as there are 100 board games listed on the webpage. 
+
+The previous step, we figured out where the variables are located in the HTML structure. Now, we want to scrape those variables for all 100 games, using a `for` loop.
+
+We can use a `for` loop to repeat the same chunk of codes for every item in the `main` list.
+
+There are several ways to write a `for` loop. Depends on your preference - everyone has a unique writing style.
+
+Here are two examples of getting rank number for every board game in `main`.
+
+##### Example 1
+[source,python]
+----
+# Let x be an item from a list
+for x in main:
+    print(x.find("td").text.strip())
+----
+
+In Example 1, you assign every item in the list to `x` (e.g., `x = main[0]`). Then the `for` loop will go through every item in the list and get the text inside the first `td` tag.
+
+##### Example 2
+[source,python]
+----
+# Let x be a number
+for x in range(0, len(main)):
+    print(main[x].find("td").text.strip())
+----
+
+In Example 2, you assign a number to `x` (e.g., `x = 0`). Then the `for` loop will go through every number from `0` to the value of the length of the main and get the text inside the first `td` tag. +
+Note that the loop stops once it reaches the value of the length of the `main` (i.e., the loop will not go through the chunk of code when `x=100`).
+
+We have 10 variables, and let's initialize an empty list for each variable. 
+
+[source,python]
+----
+# 10 variables
+# Feel free to change any variable name
+rank_list = []
+id_list = []
+image_alt_list = []
+image_list = []
+name_list = []
+year_list = []
+slogan_list = []
+geek_rating = []
+avg_rating = []
+num_voters = []
+----
+
+You can use `append()` function to add an output to a list.
+
+Taking the same `for` loop examples, we can adjust the code to append every output to the list, `rank_list`
+
+##### Example 1
+[source,python]
+----
+# Make sure the list is empty
+rank_list = []
+# Let x be an item from a list
+for x in main:
+    rank_list.append(x.find("td").text.strip())
+----
+
+##### Example 2
+[source,python]
+----
+# Make sure the list is empty
+rank_list = []
+# Let x be a number
+for x in range(0, len(main)):
+    rank_list.append(main[x].find("td").text.strip())
+----
+
+You can check your rank list variable to make sure the output is correct. 
+[source,python]
+----
+# Check the length of the list
+print(len(rank_list))
+# Check the contents inside the list
+print(rank_list)
+----
+
+### Challenge: Create a big `for` loop to extract all 10 variables for all 100 games
+
+Adjust your code to go through 100 games and get all 10 variables.
+
+.Click here to get a hint
+[%collapsible]
+====
+Your format should be something like this: +
+----
+for x in ____: 
+    rank_list.append(___________) 
+    id_list.append(_____________) 
+    image_alt_list.append(______) 
+    image_list.append(__________) 
+    name_list.append(___________) 
+    year_list.append(___________) 
+    slogan_list.append(_________) 
+    geek_rating.append(_________) 
+    avg_rating.append(__________) 
+    num_voters.append(__________)
+----
+====
+
+Once all data have been extracted and appended to correct list variables, it's good coding practice to check to make sure you have expected outputs.
+
+[source,python]
+----
+# Check the length for each list
+print(len(rank_list))
+print(len(id_list))
+print(len(image_alt_list))
+print(len(image_list))
+print(len(name_list))
+print(len(year_list))
+print(len(slogan_list))
+print(len(geek_rating))
+print(len(avg_rating))
+print(len(num_voters))
+# The output should be all 100
+----
+
+Good job! At this point, we successfully extracted all 10 variables for top 100 board game! 
+
+=== Step 3: Combine all lists into a dataframe
+
+Now, we want to combine all list variables into a dataframe, where each list is a column. This is doable using `DataFrame()` from the `pandas` library.
+
+CAUTION: To create a dataframe, all the lists must be in same length.
+
+[source,python]
+----
+import pandas as pd
+
+# Combine all those lists into a dataframe
+games_scraped = pd.DataFrame({
+    'rank': rank_list,
+    'id': id_list,
+    'image_alt': image_alt_list,
+    'image': image_list,
+    'name': name_list,
+    'year': year_list,
+    'slogan': slogan_list,
+    'geek_rating': geek_rating,
+    'avg_rating': avg_rating,
+    'num_voters': num_voters
+})
+# Check to make sure we have the expected output
+games_scraped.shape
+# Should be 100 rows, 10 columns
+----
+
+Let's print the head of the new-created dataframe!
+
+[source,python]
+----
+games_scraped.head()
+----
+
+How cool is that?! You web scraped the data for top 100 board games and convert into a dataframe for data analysis.
+
+=== Step 4: Go big!
+
+A nice thing about this URL: https://boardgamegeek.com/browse/boardgame/page/1 +
+You can change the number `1` to a different number.  +
+For example, https://boardgamegeek.com/browse/boardgame/page/4 will take us the fourth page consisting of 301th to 400th board games.
+
+Let's scrape all board games up to page 20!
+
+We can generate URLs using a `for` loop. A nice thing about f-strings is they are flexible. We can update anywhere in a string with an input.
+[source,python]
+----
+# Let x be a number, starting at 1 and stopping at 21
+for x in range(1, 21):
+    # Update the URL's page number using f-string
+    print(f'https://boardgamegeek.com/browse/boardgame/page/{x}')
+----
+
+### Challenge: Create a `for` loop to move all the URLs to a list called `url_list` using `append()` function
+
+Now, we have a list of URLs we want to scrape from. We can make a bigger `for` loop to go through all the webpages and scrape all board game data.
+
+### Challenge: Using your loop you created to scrape 10 variables in Step 2, add an outside `for` loop to go through all the URLs in `url_list`
+
+TIP: Don't forget to reset or empty your 10 variable lists.
+
+.Click here to get a hint
+[%collapsible]
+====
+Your format should be something like this: +
+----
+for y in _____: 
+    response = requests.get(--------)
+    html = response.text
+    soup = BeautifulSoup(html, "html.parser")
+    main = soup.find(id="collectionitems").find_all("tr", {"id": "row_"})
+    for x in ____: 
+        rank_list.append(___________) 
+        id_list.append(_____________)
+        image_alt_list.append(______) 
+        image_list.append(__________) 
+        name_list.append(___________) 
+        year_list.append(___________) 
+        slogan_list.append(_________) 
+        geek_rating.append(_________) 
+        avg_rating.append(__________) 
+        num_voters.append(__________)
+----
+====
+
+=== Step 4: Debugging time
+
+You got an error? It's time to debug.
+
+In the red-colored message (traceback), the last line usually gives you a hint what triggered the error.
+
+The error message says, " `AttributeError: 'NoneType' object has no attribute 'text'` "
+
+Hmm, let's find out which webpage the `for` loop stopped at.
+[source,python]
+----
+print(y)
+----
+
+Let's find out which board game the `for` loop stopped at.
+[source,python]
+----
+print(len(rank_list))
+----
+
+Let's find this board game on the actual webpage (the output of `y`). +
+
+Did you see that the board game doesn't have a slogan? We found the cause of the error.
+
+Remember `main` scrapes 100 board games at a time - there are 100 board games per page. So we can to use `mod` function to find the reminder after dividing the number by 100.
+
+[source,python]
+----
+len(rank_list) % 100
+----
+
+Look at the red-colored error message again. It points the line of code that caused the error. For this case, `slogan_list.append(______)` triggered the error message.
+
+Recall in Step 2, we have this line of code to find slogan: `main[0].find("p")`. We can replace `0` with the value we just calcuated.
+[source,python]
+----
+main[len(rank_list) % 100-1].find("p")
+# The output should be None
+----
+
+If you try to get text from the `p` tag:
+[source,python]
+----
+# Extract the text inside the tag
+main[len(rank_list) % 100-1].find("p").text
+# The output should be an error
+----
+
+We found the cause. Now, we need to fix our code to avoid this error.
+
+If a slogan doesn't exist for a board game, we can print 'NA' instead. +
+That is our `if/else` condition. 
+[source,python]
+----
+# If no slogan, we can just append a string 'NA' to the list instead
+if main[len(rank_list) % 100-1].find("p") == None:
+    print("NA")
+else:
+    print(main[len(rank_list) % 100-1].find("p").text.strip())
+----
+
+### Challenge: Update your `for` loops to include the if/else conditon above.
+
+.Click here to get a hint
+[%collapsible]
+====
+Your format should be something like this: +
+----
+for y in _____: 
+    response = requests.get(--------)
+    html = response.text
+    soup = BeautifulSoup(html, "html.parser")
+    main = soup.find(id="collectionitems").find_all("tr", {"id": "row_"})
+    for x in ____: 
+        rank_list.append(___________) 
+        id_list.append(_____________) 
+        image_alt_list.append(______) 
+        image_list.append(__________) 
+        name_list.append(___________) 
+        year_list.append(___________) 
+        if x.find("p") == None:
+            slogan_list.append(_____) 
+        else:
+            slogan_list.append(_____) 
+        geek_rating.append(_________) 
+        avg_rating.append(__________) 
+        num_voters.append(__________)
+----
+====
+
+Run that loop again. Don't forget to reset your 10 variable lists first.
+
+Another error?! Time to debug. 
+
+Same error message but points at a different variable this time.
+
+Let's find out which webpage the `for` loop stopped at.
+[source,python]
+----
+print(y)
+----
+
+Let's find out which board game the `for` loop stopped at.
+[source,python]
+----
+print(len(rank_list))
+----
+
+Let's find this board game on the actual webpage (the output of `y`). +
+
+Did you see that the board game doesn't have a year? We found the cause of the error.
+
+Recall in Step 2, we have this line of code to find year: `main[0].find(TAG_NAME)` where TAG_NAME is the tag you identified in Step 2.
+[source,python]
+----
+main[len(rank_list) % 100-1].find(TAG_NAME)
+# The output should be None
+----
+
+If you try to get text from the `p` tag:
+[source,python]
+----
+# Extract the text inside the tag
+main[len(rank_list) % 100-1].find(TAG_NAME).text
+# The output should be an error
+----
+
+We found the cause. Now, we need to fix our code to avoid this error.
+
+If year doesn't exist for a board game, we can print 'NA' instead. +
+That is our `if/else` condition.
+
+### Challenge: Update your `for` loops to include the if/else conditon above.
+
+.Click here to get a hint
+[%collapsible]
+====
+Your format should be something like this: +
+----
+for y in _____: 
+    response = requests.get(--------)
+    html = response.text
+    soup = BeautifulSoup(html, "html.parser")
+    main = soup.find(id="collectionitems").find_all("tr", {"id": "row_"})
+    for x in ____: 
+        rank_list.append(___________) 
+        id_list.append(_____________) 
+        image_alt_list.append(______) 
+        image_list.append(__________) 
+        name_list.append(___________) 
+        if x.find(TAG_NAME) == None:
+            year_list.append(_______) 
+        else:
+            year_list.append(_______) 
+        if x.find("p") == None:
+            slogan_list.append(_____) 
+        else:
+            slogan_list.append(_____) 
+        geek_rating.append(_________) 
+        avg_rating.append(__________) 
+        num_voters.append(__________)
+----
+====
+
+Run that loop again. Don't forget to reset your 10 variable lists first.
+
+.Click here if you get the `Max retries exceeded` error
+[%collapsible]
+====
+The error message says, " `SSLError: HTTPSConnectionPool: Max retries exceeded` " +
+This is a common error message when you send too many requests fromt he same IP address in a short period of time. + 
+
+We can use `sleep()` from the `time` package to delay the execution of the code for the given number of seconds.
+
+[source,python]
+----
+from time import sleep
+----
+
+Adjust your code to add `sleep(5)`. It should look something like this:
+----
+for y in _____: 
+    sleep(5) # delay by 5 seconds
+    response = requests.get(--------)
+    html = response.text
+    soup = BeautifulSoup(html, "html.parser")
+    main = soup.find(id="collectionitems").find_all("tr", {"id": "row_"})
+    for x in ____: 
+        rank_list.append(___________) 
+        id_list.append(_____________) 
+        image_alt_list.append(______) 
+        image_list.append(__________) 
+        name_list.append(___________) 
+        if x.find(TAG_NAME) == None:
+            year_list.append(_______) 
+        else:
+            year_list.append(_______) 
+        if x.find("p") == None:
+            slogan_list.append(_____) 
+        else:
+            slogan_list.append(_____) 
+        geek_rating.append(_________) 
+        avg_rating.append(__________) 
+        num_voters.append(__________)
+----
+====
+
+=== Step 4: Generate a CSV file
+
+Yay for making this far! You successfully scraped all games up to page 20. Whoo!
+
+Now, we want to put this data into a CSV file, so we can have quick access to this data without the need of going through the webscraping process again.
+
+First, we need to combine the lists into a dataframe. 
+
+[source,python]
+----
+# Combine all those lists into a dataframe
+games_scraped_20Pages = pd.DataFrame({
+    'rank': rank_list,
+    'id': id_list,
+    'image_alt': image_alt_list,
+    'image': image_list,
+    'name': name_list,
+    'year': year_list,
+    'slogan': slogan_list,
+    'geek_rating': geek_rating,
+    'avg_rating': avg_rating,
+    'num_voters': num_voters
+})
+# Get the size of dataframe
+games_scraped.shape
+----
+
+WOW! We scraped 2000 board games!
+Let's print the head of the new-created dataframe.
+
+[source,python]
+----
+games_scraped.head()
+----
+
+Now, we can convert this dataframe into a CSV file.  +
+Make sure to replace "YOUR_USERNAME" with your actual username.
+[source,python]
+----
+#Convert your dataframe to a csv file
+games_scraped_20Pages.to_csv("/home/x-YOUR_USERNAME/miniProject7_datafile.csv")  
+----
+
+You should see the new-created CSV file called "miniProject7_datafile.csv" in your home directory on the left column. 
+
+== YOU DID IT!!
+
+How cool is that?! It makes "copy and paste" much easier and faster if you have so many items to extract. This is a powerful skill to have, and with this skill, you're pretty much unstoppable.
+
+100% optional. If you want to practiece your new webscraping skills, here are some websites to try: +
+
+* https://www.billboard.com/charts/hot-100/ +
+* https://www.rottentomatoes.com/browse/movies_in_theaters/ +
+* https://www.imdb.com/chart/top/?ref_=nv_mv_250 +
+* https://www.goodreads.com/list/show/1043.Books_That_Should_Be_Made_Into_Movies
+
+Some websites are challenging to scrape, typically social medias and any website with somewhat good security.
+
+CAUTION: Web scraping is not illegal, but it can be if you disgard a website's terms of service and scrape confidential information for profit. You can get banned from a site. Some sites have IP tracking or have a difficult platform to scrape from. 
+
+
+.Items to submit
+====
+* Python code used to answer all your Challenge questions (7 in total) +
+** Make sure to comment/mark which code is for which challenge question in your notebook
+** Make sure to include all the code required to run your entire notebook
+* Your CSV file consisting of scraped data
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our https://the-examples-book.com/projects/current-projects/submissions[submission guidelines] before submitting your project.
+====
