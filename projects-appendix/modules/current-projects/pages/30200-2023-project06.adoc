@@ -1,0 +1,339 @@
+= TDM 30200: Project 6 -- 2023
+
+**Motivation:** In this project we will slowly get familiar with SLURM, the job scheduler installed on Anvil.
+
+**Context:** This is the second in a series of (now) 4 projects focused on parallel computing using SLURM and Python.
+
+**Scope:** SLURM, unix, Python
+
+.Learning Objectives
+****
+- Use basic SLURM commands to submit jobs, check job status, kill jobs, and more.
+- Understand the differences between `srun` and `sbatch` commands.
+- Predict the resources (cpus and memory) an `srun` job will use based on the arguments and context.
+- Write and use a job script to solve a problem faster than you would be able to without a high performance computing (HPC) system.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/anvil/projects/tdm/data/coco/unlabeled2017/*.jpg`
+- `/anvil/projects/tdm/data/coco/attempt02/*.jpg`
+
+== Questions
+
+[WARNING]
+====
+Interested in being a TA? Please apply: https://purdue.ca1.qualtrics.com/jfe/form/SV_08IIpwh19umLvbE
+====
+
+=== Question 1
+
+The more you practice the clearer your understanding will be. So we will be putting our new skills to use to solve a problem.
+
+We begin with a dataset full of images: `/anvil/projects/tdm/data/coco/unlabeled2017/*.jpg`. 
+
+We know a picture of Dr. Ward is (naturally) included in the folder. The problem is, Dr. Ward is sneaky and he has added a duplicate image of himself in our dataset. This duplicate could cause problems and we need a clean dataset.
+
+It is time consuming and not best practice to manually go through the entire dataset to find the duplicate. Thinking back to some of the past work, we remember that a hash algorithm is a good way to identify the duplicate image. 
+
+Below is code you could use to produce a hash of an image. 
+
+[source,python]
+----
+import hashlib
+
+with open("/anvil/projects/tdm/data/coco/unlabeled2017/000000000013.jpg", "rb") as f:
+    print(hashlib.sha256(f.read()).hexdigest())
+----
+
+[NOTE]
+====
+In general a hash function, is a function that takes an input and produces a unique "hash", or alphanumeric string. Meaning if you find two identical hashes, most likely you can assume that the inputs are identical.
+====
+
+By finding the hash of all of the images in the first folder, then using sets to quickly find the duplicate image. You can write a Python script that outputs a file containing the hash of each image 
+
+[NOTE]
+====
+For our example, the file `000000000013.jpg` has the hash `7ad591844b88ee711d1eb60c4ee6bb776c4795e9cb4616560cb26d2799493afe`.
+====
+
+Parallelize the file creating and search process will make finding the duplicate faster. 
+
+[source,python]
+----
+#!/usr/bin/python3
+
+import os
+import sys
+import hashlib
+import argparse
+
+
+def hash_file_and_save(files, output_directory):
+    """
+    Given an absolute path to a file, generate a hash of the file and save it
+    in the output directory with the same name as the original file.
+    """
+
+    for file in files:
+        file_name = os.path.basename(file)
+        file_hash = hashlib.sha256(open(file, "rb").read()).hexdigest()
+        output_file_path = os.path.join(output_directory, file_name)
+        with open(output_file_path, "w") as output_file:
+            output_file.write(file_hash)
+
+
+def main():
+    
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(help="possible commands", dest='command')
+    hash_parser = subparsers.add_parser("hash", help="generate and save hash")
+    hash_parser.add_argument("files", help="files to hash", nargs="+")
+    hash_parser.add_argument("-o", "--output", help="directory to output file to", required=True)
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
+    args = parser.parse_args()
+
+    if args.command == "hash":
+        hash_file_and_save(args.files, args.output)
+
+if __name__ == "__main__":
+    main()
+----
+
+Quickly recognizing that it is not efficient to have an `srun` command for each image, you'd have to programmatically build the job script, also the script runs quickly so there would be a rapid build up wasted time with overhead related to calling `srun`, allocating resources, etc. Instead for efficency create a job script that splits the images into groups of 12500 or less. Then, within 10 `srun` commands you will be able to use the provided Python script to process the 12500 images. 
+
+The Python script we've provided works as follows.
+
+[source,bash]
+----
+./hash.py hash --output /path/to/outputfiles/ /path/to/image1.jpg /path/to/image2.jpg 
+----
+
+The above command will generate a hash of the two images (although there could be _n_ images provided) and save the hash in the output directory with the same name as the original image. For example, the following command will calculate the hash of the image `000000000013.jpg` and save it in a file named `000000000013.jpg` in the `$SCRATCH` directory. This file is **not** an image -- it is a _text_ file containing the hash, `7ad591844b88ee711d1eb60c4ee6bb776c4795e9cb4616560cb26d2799493afe`. You can see this by running `cat $SCRATCH/000000000013.jpg`.
+
+[source,python]
+----
+./hash.py hash --output $SCRATCH /anvil/projects/tdm/data/coco/unlabeled2017/000000000013.jpg
+----
+
+[IMPORTANT]
+====
+You'll need to give execute permissions to your `hash.py` script. You can do this with `chmod +x hash.py`.
+====
+
+[TIP]
+====
+https://stackoverflow.com/questions/21668471/bash-script-create-array-of-all-files-in-a-directory[This] stackoverflow post shows how to get a Bash array full of absolute paths to files in a folder.
+====
+
+[TIP]
+====
+To pass many arguments (_n_ arguments) to our Python script, you can `./hash.py hash --output /path/to/outputfiles/ ${my_array[@]}`.
+====
+
+[TIP]
+====
+https://stackoverflow.com/questions/23747612/how-do-you-break-an-array-in-groups-of-n[This] stackoverflow post shows how to break an array of values into groups of _x_.
+====
+
+[TIP]
+====
+Don't forget to clear out the SLURM environment variables in any new terminal session:
+
+[source,bash]
+----
+for i in $(env | awk -F= '/SLURM/ {print $1}'); do unset $i; done;
+----
+====
+
+Create a job script that processes all of the images in the folder, and outputs the hash of each image into a file with the same name as the original image. Output these files into a folder in `$SCRATCH`, so, for example, `$SCRATCH/q1output`. You will likely want to create the `q1output` directory before running your job script.
+
+[NOTE]
+====
+This job took about 3 minutes and 32 seconds to run. Finding the duplicate image took about 36 seconds.
+====
+
+Once the images are all hashed, in your Jupyter notebook, write Python code that processes all of the hashes (by reading the files you've saved in `$SCRATCH/q1output`) and prints out the name of one of the duplicate images. Display the image in your notebook using the following code.
+
+[source,python]
+----
+from IPython import display
+display.Image("/path/to/duplicate_image.jpg")
+----
+
+To answer this question, submit the functioning job script AND the code in the Jupyter notebook that was used to find (and display) the duplicate image.
+
+[TIP]
+====
+Using sets will help find the duplicate image. One set can store new hashes that haven't yet been seen. The other set can store duplicates, since there is only 1 duplicate you can immediately return the filename when found!
+
+https://stackoverflow.com/questions/9835762/how-do-i-find-the-duplicates-in-a-list-and-create-another-list-with-them[This] stackoverflow post shares some ideas to manage this. 
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+In the previous question, you were able to use the sha256 hash to efficiently find the extra image that the trickster Dr. Ward added to our dataset. Dr. Ward, knowing all about hashing algorithms, thinks he has a simple solution to circumventing your work. In the "new" dataset: `/anvil/projects/tdm/data/coco/attempt02`, he has modified the value of a single pixel of his duplicate image. 
+
+Re-run your SLURM job from the previous question on the _new_ dataset, and process the results to try to find the duplicate image. Was Dr. Ward's modification successful? Do your best to explain why or why not.
+
+[TIP]
+====
+I would start by creating a new folder in `$SCRATCH` to store the new hashes.
+
+[source,bash]
+----
+mkdir $SCRATCH/q2output
+----
+
+Next, I would update the job script to output files to the new directory, and change the directory of the input files to the new dataset.
+====
+
+[NOTE]
+====
+If at this point in time you are wondering "why would we do this when we can just use `joblib` and get 128 cores and power through some job?". The answer is because `joblib` will be limited to the number of cpus on the given node you are running your Python script on. SLURM allows us to allocate _well_ over 128 cpus, and has much higher computing potential! In addition to that, it is (arguably) easier to write a single threaded Python job to run on SLURM, than to parallelize your code using `joblib`.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+Unfortunately, Dr. Ward was right, and our methodology didn't work. Luckily, there is a cool technique called perceptual hashing that is _almost_ meant just for this! Perceptual hashing is a technique that can be used to know whether or not any two images appear the same, without actually _viewing_ the images. The general idea is this. Given two images that are _essentially_ the same (maybe they have a few different pixels, have been cropped, gone through a filter, etc.), a perceptual hash can give you a very good idea whether the images are the "same" (or close enough). Of course, it is not a perfect tool, but most likely good enough for our purposes.
+
+To be a little more specific, two images are very likely the same if their perceptual hashes are the same. If two perceptual hashes are the same, their Hamming distance is 0. For example, if your hashes were: `8f373714acfcf4d0` and `8f373714acfcf4d0`, the Hamming distance would be 0, because if you convert the hexadecimal values to binary, at each position in the string of 0s and 1s, the values are identical. If 1 of the 0s and 1s didnt match after converting to binary, this would be a Hamming distance of 1. 
+
+Use the https://github.com/JohannesBuchner/imagehash[`imagehash`] library, and modify your job script from the previous project to use perceptual hashing instead of the sha256 algorithm to produce 1 file for each image where the filename remains the same as the original image, and the contents of the file contains the hash. 
+
+[WARNING]
+====
+Make sure to clear out your slurm environment variables before submitting your job to run with `sbatch`. If you are submitting the job from a terminal, run the following.
+
+[source,bash]
+----
+for i in $(env | awk -F= '/SLURM/ {print $1}'); do unset $i; done;
+sbatch my_job.sh
+----
+
+If you are in a bash cell in Jupyter Lab, do the same.
+
+[source,ipython]
+----
+%%bash
+
+for i in $(env | awk -F= '/SLURM/ {print $1}'); do unset $i; done;
+sbatch my_job.sh
+----
+====
+
+[IMPORTANT]
+====
+In order for the `imagehash` library to work, we need to make sure the dependencies are loaded up. To do this, we will use the container where our environment is stored:
+
+[source,bash]
+----
+#!/bin/bash
+#SBATCH --account=datamine
+...other SBATCH options...
+
+srun ... singularity exec /anvil/projects/tdm/apps/containers/images/python:f2022-s2023.sif python3 /path/to/new/hash.py &
+
+wait
+----
+====
+
+[TIP]
+====
+To help get you going using this package, let me demonstrate using the package.
+
+[source,python]
+----
+import imagehash
+from PIL import Image
+
+my_hash = imagehash.phash(Image.open("/anvil/projects/tdm/data/coco/attempt02/000000000008.jpg"))
+print(my_hash) # d16c8e9fe1600a9f
+my_hash # numpy array of True (1) and False (0) values
+my_hex = "d16c8e9fe1600a9f"
+imagehash.hex_to_hash(my_hex) # numpy array of True (1) and False (0)
+----
+====
+
+[IMPORTANT]
+====
+Make sure that you pass the hash as a string to the `output_file.write` method. So something like: `output_file.write(str(file_hash))`.
+====
+
+[IMPORTANT]
+====
+Make sure that once you've written your script, `my_script.sh`, that you submit it to SLURM using `sbatch my_script.sh`, _not_ `./my_script.sh`.
+====
+
+[TIP]
+====
+It would be a good idea to make sure you've modified your hash script to work properly with the `imagehash` library. Test out the script by running the following (assuming your Python code is called `hash.py`, and it is in your `$HOME` directory.
+
+[source,bash]
+----
+$HOME/hash.py hash --output $HOME /anvil/projects/tdm/data/coco/attempt02/000000000008.jpg
+----
+
+This should produce a file, `$HOME/000000000008.jpg`, containing the hash of the image.
+====
+
+[WARNING]
+====
+Make sure your `hash.py` script has execute permissions!
+
+[source,bash]
+----
+chmod +x $HOME/hash.py
+----
+====
+
+Process the results. Did you find the duplicate image? Explain what you think could have happened.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+What!?! That is pretty cool! You found the "wrong" duplicate image? Well, I guess it is totally fine to find multiple duplicates. Modify the code you used to find the duplicates so it finds all of the duplicates and originals. In total there should be 50. Display 2-5 of the pairs (or triplets or more). Can you see any of the subtle differences? Hopefully you find the results to be pretty cool! If you look, you _will_ find Dr. Wards hidden picture, but you do not have to exhaustively display all 50 images.
+
+[WARNING]
+====
+Please turn in all 3 job scripts (for questions 1-3). Please turn in both `hash.py` files (for questions 2-3). Please turn in your Jupyter Notebook that demonstrates finding the duplicates for questions 1 and 3, and 4.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+
+In addition, please review our xref:projects:current-projects:submissions.adoc[submission guidelines] before submitting your project.
+====

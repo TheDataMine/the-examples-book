@@ -1,0 +1,311 @@
+= TDM 20200: Project 4 -- 2023
+
+**Motivation:** Learning to scrape data can take time. We want to make sure you get comfortable with it! For this reason, we will continue to scrape data from Zillow to answer various questions. This will allow you to continue to get familiar with the tools, without having to re-learn everything about the website of interest. 
+
+**Context:** This is the third project on web scraping, where we will continue to focus on honing our skills using `selenium`.
+
+**Scope:** Python, web scraping, selenium, matplotlib/plotly 
+
+.Learning Objectives
+****
+- Review and summarize the differences between XML and HTML/CSV.
+- Use the requests package to scrape a web page.
+- Use the lxml package to filter and parse data from a scraped web page.
+- Use the beautifulsoup4 package to filter and parse data from a scraped web page.
+- Use selenium to interact with a browser in order to get a web page to a desired state for scraping. 
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Questions
+
+[WARNING]
+====
+Interested in being a TA? Please apply: https://purdue.ca1.qualtrics.com/jfe/form/SV_08IIpwh19umLvbE
+====
+
+=== Question 1
+
+In the last question of the previous project -- we provided code that would emulate scrolling down slowing in the browser, giving all of the properties that appear in our Zillow search a chance to load. The final result was a list of `zpid_VALUE` to each of the 40 properties that appeared in our search.
+
+Here is the thing -- we want to get the data for all of the properties that appear in our search, not just the first 40. For example, if you load up https://www.zillow.com/homes/for_sale/32607_rb/ there are 56 listings, but only 40 appear on the first page of results. In fact, each page of results only contains 40 listings. In order to see the "next 40" listings, we need to click the "next" button at the bottom of the page, or a button that says "2", "3", "4", etc. This is a common technique websites use to break up many results into smaller, more manageable chunks. It is called "pagination". 
+
+There are a variety of ways you can handle scraping pages that use pagination, depending on how the website is implemented. Sometimes a webpage will have a _query parameter_ that indicates what page of results are loaded. For example, you may see a page like https://example.com/?page=1. Well, if you manually change the page number from 1 to 2, it may show you the next set of results. This _can_ be the easiest way to handle pagination -- after all, if web pages are setup this way, you could use a package like `requests` without the need to utilize a browser emulator.
+
+Give it a shot -- can you look at the webpage and HTML and figure out if there is a way to craft the URL to display the second page of results for the zip code 32607? If you can, write a loop that scrapes both the first and second page and prints out all of the resulting `zpid_VALUE`. At the time of writing, there were about 56 total.
+
+[TIP]
+====
+For convenience here is the rather long "setup" code to use selenium on Anvil.
+
+[source,python]
+----
+import time
+import uuid
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import StaleElementReferenceException
+
+firefox_options = Options()
+firefox_options.add_argument("--window-size=810,1080")
+# Headless mode means no GUI
+firefox_options.add_argument("--headless")
+firefox_options.add_argument("--disable-extensions")
+firefox_options.add_argument("--no-sandbox")
+firefox_options.add_argument("--disable-dev-shm-usage") 
+
+driver = webdriver.Firefox(options=firefox_options)
+driver.quit()
+----
+====
+
+[TIP]
+====
+If you hover over the page 2 button, there may be a hint at the end of the URL in the `<a href="some_link">` that would be worth adding to your URL. In Firefox, you can hover over the button and a link will appear in the lower left-hand corner of the browser.
+====
+
+[TIP]
+====
+I wrote a function to make the solution more clear. Here is some start code you can use if you want.
+
+[source,python]
+----
+def get_zpid(search_term: str, page: int = 1):
+    
+    def _load_all_cards(driver):
+        cards = driver.find_elements("xpath", "//article[starts-with(@id, 'zpid')]")
+        while True:
+            try:
+                num_cards = len(cards)
+                driver.execute_script('arguments[0].scrollIntoView();', cards[num_cards-1])
+                time.sleep(2)
+                cards = driver.find_elements("xpath", "//article[starts-with(@id, 'zpid')]")
+                if num_cards == len(cards):
+                    break
+                num_cards = len(cards)
+            except StaleElementReferenceException:
+                # every once in a while we will get a StaleElementReferenceException
+                # because we are trying to access or scroll to an element that has changed.
+                # this probably means we can skip it because the data has already loaded.
+                continue
+                
+    driver = webdriver.Firefox(options=firefox_options)
+    # TODO: add a call to driver.get here
+    time.sleep(5)
+    _load_all_cards(driver)
+    
+    # loop through cards and append zpid to results
+        
+    driver.quit()
+        
+    return results
+----
+
+[source,python]
+----
+zpids = []
+for i in range(2):
+    zpids.extend(get_zpid("32607", i+1))
+    
+zpids
+----
+
+.expected output (or close)
+----
+['zpid_58879763',
+ 'zpid_42717098',
+ 'zpid_54478236',
+ 'zpid_58879802',
+ 'zpid_70737074',
+ 'zpid_42719676',
+ 'zpid_2069654950',
+ 'zpid_42717501',
+ 'zpid_66690088',
+ 'zpid_42718511',
+ 'zpid_42716336',
+ 'zpid_42719800',
+ 'zpid_42718955',
+ 'zpid_82053142',
+ 'zpid_42717633',
+ 'zpid_42716062',
+ 'zpid_42717813',
+ 'zpid_70737079',
+ 'zpid_42716226',
+ 'zpid_42719564',
+ 'zpid_42719508',
+ 'zpid_42718336',
+ 'zpid_70737207',
+ 'zpid_2060617221',
+ 'zpid_87624811',
+ 'zpid_2059830219',
+ 'zpid_42716488',
+ 'zpid_42716708',
+ 'zpid_2060491271',
+ 'zpid_42716533',
+ 'zpid_333248349',
+ 'zpid_66702765',
+ 'zpid_58880069',
+ 'zpid_42717050',
+ 'zpid_42716171',
+ 'zpid_42717159',
+ 'zpid_42719707',
+ 'zpid_2060421486',
+ 'zpid_2061764814',
+ 'zpid_70737130',
+ 'zpid_2060614103',
+ 'zpid_138087779',
+ 'zpid_66695681',
+ 'zpid_2060102431',
+ 'zpid_2060614457',
+ 'zpid_2060772247',
+ 'zpid_2060613859',
+ 'zpid_2061808737',
+ 'zpid_42717815',
+ 'zpid_2060932429',
+ 'zpid_2060422629',
+ 'zpid_2067830782',
+ 'zpid_2061601655',
+ 'zpid_245827979',
+ 'zpid_2077628862',
+ 'zpid_42718849']
+----
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+What we did the previous question isn't always possible. In addition, our stopping criteria is not clear. What do we mean by this? Well, how many pages are available? If there are only 2 pages, and we ask for the 3rd page, you'll notice zillow will bring you back to the first page. Modify your code from the previous question to handle this situation. Package everything into a nice function called `get_zpids` that takes a search term and returns a list of all the zpids for all of the pages, no matter how many there are. 
+
+[WARNING]
+====
+I would recommend adding the following print statement at the beginning of the `_load_all_cards` function.
+
+[source,python]
+----
+print(driver.current_url)
+----
+
+Why? It _may_ turn out that this strategy of navigating to the next page is not a good one. If you get a captcha page, this can be a sign to change your strategy. Note that if you do, this is OK, just print the current url so that we can see it is a captcha page, and move on to the next question.
+====
+
+[TIP]
+====
+Notice how if you are on the _last_ page of listings, the "next" arrow is greyed out. Use the browsers inspector to investigate. What is the attribute that causes the button to be greyed out? You can use this to determine if you are on the last page.
+====
+
+[TIP]
+====
+[source,python]
+----
+get_zpids("32607")
+----
+
+.expected output (or close)
+----
+['zpid_58879763',
+ 'zpid_42717098',
+ 'zpid_54478236',
+ 'zpid_58879802',
+ 'zpid_70737074',
+ 'zpid_42719676',
+ 'zpid_2069654950',
+ 'zpid_42717501',
+ 'zpid_66690088',
+ 'zpid_42718511',
+ 'zpid_42716336',
+ 'zpid_42719800',
+ 'zpid_42718955',
+ 'zpid_82053142',
+ 'zpid_42717633',
+ 'zpid_42716062',
+ 'zpid_42717813',
+ 'zpid_70737079',
+ 'zpid_42716226',
+ 'zpid_42719564',
+ 'zpid_42719508',
+ 'zpid_42718336',
+ 'zpid_70737207',
+ 'zpid_2060617221',
+ 'zpid_87624811',
+ 'zpid_2059830219',
+ 'zpid_42716488',
+ 'zpid_42716708',
+ 'zpid_2060491271',
+ 'zpid_42716533',
+ 'zpid_333248349',
+ 'zpid_66702765',
+ 'zpid_58880069',
+ 'zpid_42717050',
+ 'zpid_42716171',
+ 'zpid_42717159',
+ 'zpid_42719707',
+ 'zpid_2060421486',
+ 'zpid_2061764814',
+ 'zpid_70737130',
+ 'zpid_2060614103',
+ 'zpid_138087779',
+ 'zpid_66695681',
+ 'zpid_2060102431',
+ 'zpid_2060614457',
+ 'zpid_2060772247',
+ 'zpid_2060613859',
+ 'zpid_2061808737',
+ 'zpid_42717815',
+ 'zpid_2060932429',
+ 'zpid_2060422629',
+ 'zpid_2067830782',
+ 'zpid_2061601655',
+ 'zpid_245827979',
+ 'zpid_2077628862',
+ 'zpid_42718849']
+----
+====
+
+[TIP]
+====
+One potential way to handle the control flow is to use an infinite while loop. You can use the `break` statement to exit the loop if some criteria is met, otherwise, you can use the `continue` statement to skip the rest of the loop (if there is any) and go to the next iteration.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+So far, pretty cool (or maybe disappointing, depending on your results)! Being able to navigate pagination programmatically is important. As it turns out, its not normal for a human to do the equivalent of typing `page=1`, `page=2`, etc., and then clicking enter to navigate to the next page. As such, it is likely you received a captcha page. One way to potentially handle this is to delete all of the cookies from the browser right before you are about to navigate to the next page.
+
+Modify you code from the previous question to clear the cookies prior to navigating to the next page. If you previously received a captcha page, does it work now?
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+Even though our cookie delete trick _should_ have worked from the previous question -- depending on how the website is setup, it may not. Another way we could make our behavior more human-like would be to click the "next" button instead of doing the equivalent of typing in `page=2` with the URL and hitting enter.
+
+Modify you code from the previous question to _click_ the "next" button on the page to navigate to the next page, instead of using `driver.get` to navigate to the next page.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+
+In addition, please review our xref:projects:current-projects:submissions.adoc[submission guidelines] before submitting your project.
+====
