@@ -1122,6 +1122,33 @@ c. Revise your answer to `2a`, by actually multiplying the `population` data by 
 `[3] "Arizona has 2212000 people."        "Arkansas has 2110000 people."`
 `[5] "California has 21198000 people."    "Colorado has 2541000 people."`
 
+Solution:
+
+a.
+
+`mapply( function(x,y) {paste("The uppercase version of ", x, " is ", y, sep="")} , x=c("a","b","c","d","e"), y=c("A","B","C","D","E"), USE.NAMES=FALSE )`
+
+b.
+
+`mapply( function(x,y) {paste(x, " has ", y, " thousand people.", sep="")} , x=row.names(state.x77), y=state.x77[ ,"Population"], USE.NAMES=FALSE )`
+
+or we could use
+
+`mapply( function(x,y) {paste(x, " has ", y, " thousand people.", sep="")} , x=row.names(state.x77), y=state.x77[ ,1], USE.NAMES=FALSE )`
+
+c.
+
+`mapply( function(x,y) {paste(x, " has ", y*1000, " people.", sep="")} , x=row.names(state.x77), y=state.x77[ ,"Population"], USE.NAMES=FALSE )`
+
+or we could use
+
+`mapply( function(x,y) {paste(x, " has ", y*1000, " people.", sep="")} , x=row.names(state.x77), y=state.x77[ ,1], USE.NAMES=FALSE )`
+
+or we could even multiply the vector itself by 1000, e.g.,
+
+`mapply( function(x,y) {paste(x, " has ", y, " people.", sep="")} , x=row.names(state.x77), y=1000*state.x77[ ,"Population"], USE.NAMES=FALSE )`
+
+
 Question 3.
 
 a. Make a `data.frame` containing all of the cars from `mtcars` with `hp>100` and `8` cylinders.  Create a new `data.frame` with these cars, displaying only the `mpg`, `cyl`, `hp`, and `qsec`.
@@ -1129,6 +1156,33 @@ a. Make a `data.frame` containing all of the cars from `mtcars` with `hp>100` an
 b. Make a `data.frame` containing all of the rows describing provences from the `swiss` data set with 50% or more `Catholics` and 50% or more of `males` involved in agriculture.  Within this specific `data.frame`, find the mean and standard deviation of the `Fertility` data.
 
 c. Make a `data.frame` containing all of the rows in the `chickwts` data for which the feed is either `horsebean` or `soybean`.  What is the average weight (altogether) across these two kinds of feed?
+
+Solution:
+
+a.  The cars with hp>100 and 8 cylinders have the following mpg, cyl, hp, and qsec:
+
+`subset(mtcars, subset=hp>100 & cyl==8, select=c(mpg,cyl,hp,qsec))`
+
+b.  The swiss data.frame, limited to data with 50% or more Catholics and 50% or more of males involved in agriculture is:
+
+`subset(swiss, subset=Catholic>=50 & Agriculture>=50)`
+
+The mean of the Fertility data from this smaller data.frame is  79.51667
+
+`mean(subset(swiss, subset=Catholic>=50 & Agriculture>=50)$Fertility)`
+
+and the standard deviation is  8.678797
+
+`sd(subset(swiss, subset=Catholic>=50 & Agriculture>=50)$Fertility)`
+
+c.  The chickwts data, for which the feed is either horsebean or soybean, is:
+
+`subset( chickwts, subset=feed %in% c("horsebean","soybean"))`
+
+The average weight across these two kinds of feed is  210.5
+
+`mean(subset( chickwts, subset=feed %in% c("horsebean","soybean"))$weight)`
+
 
 Question 4.
 
@@ -1141,6 +1195,228 @@ b.  Extract the `temperature`, `electrical conductivity`, `salinity`, and `time`
 
 c.  Extract the `temperature`, `electrical conductivity`, `salinity`, and `time` data from the `SATURN03` station at depth `13.0m`, from: `http://amb6400b.stccmop.org:8080/thredds/dodsC/preliminary_data/saturn03/saturn03.1300.R.CT` (Beware: Again, the starting month is not the same for this data set, compared to the previous two.)
 
+Solution:
+
+a.
+
+one-time code
+
+`install.packages("ncdf")`
+
+`library(ncdf)`
+
+General function for getting the parameter names from SATURN 03, in a given folder (myfolder), for a given date (mydate)
+
+[source,r]
+----
+getparameternames <- function(myfolder, mydate) {
+  mync <- open.ncdf( paste("http://amb6400b.stccmop.org:8080/thredds/dodsC/preliminary_data/saturn03/", myfolder, "/", mydate, ".nc", sep="") )
+  mycount <- mync$nvars
+  mynames <- sapply( c(1:mycount), function(x) {mync$var[[x]]$name} )
+  close.ncdf(mync)
+  mynames
+}
+----
+
+General function for getting the data from SATURN 03, in a given folder (myfolder), for a given date (mydate), for a given parameter (myparameter)
+
+[source,r]
+----
+getdata <- function(myfolder, mydate, myparameter) {
+  mync <- open.ncdf( paste("http://amb6400b.stccmop.org:8080/thredds/dodsC/preliminary_data/saturn03/", myfolder, "/", mydate, ".nc", sep="") )
+  myvec <- get.var.ncdf(mync, mync$var[[myparameter]])
+  close.ncdf(mync)
+  myvec
+}
+----
+
+General function for getting the times from SATURN 03, in a given folder (myfolder), for a given date (mydate)
+
+[source,r]
+----
+gettimes <- function(myfolder, mydate) {
+  mync <- open.ncdf( paste("http://amb6400b.stccmop.org:8080/thredds/dodsC/preliminary_data/saturn03/", myfolder, "/", mydate, ".nc", sep="") )
+  mytimes <- get.var.ncdf(mync,"time")
+  close.ncdf(mync)
+  mytimes
+}
+----
+
+retrieving the data from the 2.4m data sets
+
+`v <- paste( rep(2009:2014,each=12),  rep(sprintf("%02d", 1:12), 6), sep="" )`
+
+Finally, we throw away the months Oct, Nov, Dec 2014
+
+`v <- v[-(70:72)]`
+
+and we throw away Jan through July 2009:
+
+`v <- v[-(1:7)]`
+
+`v`
+
+We get the name data for all 62 months for all 3 variables, at 2.4m:
+
+`namematrix4a240 <- mapply( FUN=getparameternames, myfolder="saturn03.240.A.CT", mydate=v, USE.NAMES=FALSE)`
+
+Parameters 1, 2, 3 are (respectively) temperature, electrical conductivity, salinity:
+
+[source,r]
+----
+namematrix4a240[1, ]
+namematrix4a240[2, ]
+namematrix4a240[3, ]
+----
+
+this gives us a list of the month-by-month temperature data at 2.4m, which we called "temperature240":
+
+`temperature240 <- mapply(FUN=getdata, myfolder="saturn03.240.A.CT", mydate=v, myparameter=1, USE.NAMES=FALSE)`
+
+this gives us a list of the month-by-month conductivity data at 2.4m, which we called "conductivity240":
+
+`conductivity240 <- mapply(FUN=getdata, myfolder="saturn03.240.A.CT", mydate=v, myparameter=2, USE.NAMES=FALSE)`
+
+this gives us a list of the month-by-month salinity data at 2.4m, which we called "salinity240":
+
+`salinity240 <- mapply(FUN=getdata, myfolder="saturn03.240.A.CT", mydate=v, myparameter=3, USE.NAMES=FALSE)`
+
+Now we get the times for all months at 2.4m:
+
+`mytimes4a240 <- mapply(FUN=gettimes, myfolder="saturn03.240.A.CT", mydate=v, USE.NAMES=FALSE)`
+
+b.
+
+retrieving the data from the 8.2m data sets
+
+`v <- paste( rep(2009:2014,each=12),  rep(sprintf("%02d", 1:12), 6), sep="" )`
+
+Finally, we throw away the months Oct, Nov, Dec 2014
+
+`v <- v[-(70:72)]`
+
+and we throw away Jan through Oct 2009:
+
+`v <- v[-(1:10)]`
+
+`v`
+
+We get the name data for all 59 months for all 3 variables, at 8.2m:
+
+`namematrix4b820 <- mapply( FUN=getparameternames, myfolder="saturn03.820.A.CT", mydate=v, USE.NAMES=FALSE)`
+
+Parameters 1, 2, 3 are (respectively) temperature, electrical conductivity, salinity:
+
+[source,r]
+----
+namematrix4b820[1, ]
+namematrix4b820[2, ]
+namematrix4b820[3, ]
+----
+
+this gives us a list of the month-by-month temperature data at 8.2m, which we called "temperature820":
+
+`temperature820 <- mapply(FUN=getdata, myfolder="saturn03.820.A.CT", mydate=v, myparameter=1, USE.NAMES=FALSE)`
+
+this gives us a list of the month-by-month conductivity data at 8.2m, which we called "conductivity820":
+
+`conductivity820 <- mapply(FUN=getdata, myfolder="saturn03.820.A.CT", mydate=v, myparameter=2, USE.NAMES=FALSE)`
+
+this gives us a list of the month-by-month salinity data at 8.2m, which we called "salinity820":
+
+`salinity820 <- mapply(FUN=getdata, myfolder="saturn03.820.A.CT", mydate=v, myparameter=3, USE.NAMES=FALSE)`
+
+Now we get the times for all months at 8.2m:
+
+`mytimes4b820 <- mapply(FUN=gettimes, myfolder="saturn03.820.A.CT", mydate=v, USE.NAMES=FALSE)`
+
+If we observe carefully, we notice that some of the variables are stored inconsistently.
+
+We fix that here.
+
+[source,r]
+----
+sapply(46:59, function(x) {
+  temporaryname1 <<- namematrix4b820[3,x];
+  temporaryname2 <<- namematrix4b820[1,x];
+  temporaryname3 <<- namematrix4b820[2,x];
+  namematrix4b820[1,x] <<- temporaryname1;
+  namematrix4b820[2,x] <<- temporaryname2;
+  namematrix4b820[3,x] <<- temporaryname3;
+  temporarytemperature820 <<- salinity820[[x]];
+  temporaryconductivity820 <<- temperature820[[x]];
+  temporarysalinity820 <<- conductivity820[[x]];
+  temperature820[[x]] <<- temporarytemperature820;
+  conductivity820[[x]] <<- temporaryconductivity820;
+  salinity820[[x]] <<- temporarysalinity820;
+} )
+----
+
+c.
+
+retrieving the data from the 13.0m data sets
+
+`v <- paste( rep(2008:2014,each=12),  rep(sprintf("%02d", 1:12), 7), sep="" )`
+
+Finally, we throw away the months Oct, Nov, Dec 2014
+
+`v <- v[-(82:84)]`
+
+and we throw away Jan through Mar 2008:
+
+`v <- v[-(1:3)]`
+
+`v`
+
+We get the name data for all 78 months for all 3 variables, at 13.0m:
+
+`namematrix4c1300 <- mapply( FUN=getparameternames, myfolder="saturn03.1300.R.CT", mydate=v, USE.NAMES=FALSE)`
+
+Parameters 1, 2, 3 are (respectively) temperature, electrical conductivity, salinity:
+
+[source,r]
+----
+namematrix4c1300[1, ]
+namematrix4c1300[2, ]
+namematrix4c1300[3, ]
+----
+
+this gives us a list of the month-by-month temperature data at 13.0m, which we called "temperature1300":
+
+`temperature1300 <- mapply(FUN=getdata, myfolder="saturn03.1300.R.CT", mydate=v, myparameter=1, USE.NAMES=FALSE)`
+
+this gives us a list of the month-by-month conductivity data at 13.0m, which we called "conductivity1300":
+
+`conductivity1300 <- mapply(FUN=getdata, myfolder="saturn03.1300.R.CT", mydate=v, myparameter=2, USE.NAMES=FALSE)`
+
+this gives us a list of the month-by-month salinity data at 13.0m, which we called "salinity1300":
+
+`salinity1300 <- mapply(FUN=getdata, myfolder="saturn03.1300.R.CT", mydate=v, myparameter=3, USE.NAMES=FALSE)`
+
+Now we get the times for all months at 13.0m:
+
+`mytimes4c1300 <- mapply(FUN=gettimes, myfolder="saturn03.1300.R.CT", mydate=v, USE.NAMES=FALSE)`
+
+If we observe carefully, we notice that some of the variables are stored inconsistently.
+
+We fix that here.
+
+[source,r]
+----
+sapply(65:78, function(x) {
+  temporaryname2 <<- namematrix4c1300[3,x];
+  temporaryname3 <<- namematrix4c1300[2,x];
+  namematrix4c1300[2,x] <<- temporaryname2;
+  namematrix4c1300[3,x] <<- temporaryname3;
+  temporaryconductivity1300 <<- salinity1300[[x]];
+  temporarysalinity1300 <<- conductivity1300[[x]];
+  conductivity1300[[x]] <<- temporaryconductivity1300;
+  salinity1300[[x]] <<- temporarysalinity1300;
+} )
+----
+
+
+
 Question 5.
 
 Extract the `Phycoerythrin` and `time` data from the `SATURN03` station at depths `2.4m`, `8.2m`, and `13.0m` from:
@@ -1150,6 +1426,93 @@ Extract the `Phycoerythrin` and `time` data from the `SATURN03` station at depth
 `http://amb6400b.stccmop.org:8080/thredds/dodsC/preliminary_data/saturn03/saturn03.820.A.Phycoerythrin/`
 
 `http://amb6400b.stccmop.org:8080/thredds/dodsC/preliminary_data/saturn03/saturn03.1300.R.Phycoerythrin/`
+
+Solution:
+
+retrieving the data from the 2.4m data sets
+
+`v <- paste( rep(2010:2012,each=12),  rep(sprintf("%02d", 1:12), 3), sep="" )`
+
+Finally, we throw away the months Sep, Oct, Nov, Dec 2012
+
+`v <- v[-(33:36)]`
+
+and we throw away Jan through June 2010:
+
+`v <- v[-(1:6)]`
+
+`v`
+
+We get the name data for all 26 months for the 1 variable, at 2.4m:
+
+`namematrix5a240 <- mapply( FUN=getparameternames, myfolder="saturn03.240.A.Phycoerythrin", mydate=v, USE.NAMES=FALSE)`
+
+`namematrix5a240`
+
+this gives us a list of the month-by-month phycoerythrin data at 2.4m, which we called "phycoerythrin240":
+
+`phycoerythrin240 <- mapply(FUN=getdata, myfolder="saturn03.240.A.Phycoerythrin", mydate=v, myparameter=1, USE.NAMES=FALSE)`
+
+Now we get the times for all months at 2.4m:
+
+`mytimes5a240 <- mapply(FUN=gettimes, myfolder="saturn03.240.A.Phycoerythrin", mydate=v, USE.NAMES=FALSE)`
+
+retrieving the data from the 8.2m data sets
+
+`v <- paste( rep(2010:2012,each=12),  rep(sprintf("%02d", 1:12), 3), sep="" )`
+
+Finally, we throw away the months Sep, Oct, Nov, Dec 2012
+
+`v <- v[-(33:36)]`
+
+and we throw away Jan through June 2010:
+
+`v <- v[-(1:6)]`
+
+`v`
+
+We get the name data for all 26 months for the 1 variable, at 8.2m:
+
+`namematrix5b820 <- mapply( FUN=getparameternames, myfolder="saturn03.820.A.Phycoerythrin", mydate=v, USE.NAMES=FALSE)`
+
+`namematrix5b820`
+
+this gives us a list of the month-by-month phycoerythrin data at 8.2m, which we called "phycoerythrin820":
+
+`phycoerythrin820 <- mapply(FUN=getdata, myfolder="saturn03.820.A.Phycoerythrin", mydate=v, myparameter=1, USE.NAMES=FALSE)`
+
+Now we get the times for all months at 8.2m:
+
+`mytimes5b820 <- mapply(FUN=gettimes, myfolder="saturn03.820.A.Phycoerythrin", mydate=v, USE.NAMES=FALSE)`
+
+retrieving the data from the 13.0m data sets
+
+`v <- paste( rep(2010:2012,each=12),  rep(sprintf("%02d", 1:12), 3), sep="" )`
+
+Finally, we throw away the months Sep, Oct, Nov, Dec 2012
+
+`v <- v[-(33:36)]`
+
+and we throw away Jan through June 2010:
+
+`v <- v[-(1:6)]`
+
+`v`
+
+We get the name data for all 26 months for the 1 variable, at 13.0m:
+
+`namematrix5c1300 <- mapply( FUN=getparameternames, myfolder="saturn03.1300.R.Phycoerythrin", mydate=v, USE.NAMES=FALSE)`
+
+`namematrix5c1300`
+
+this gives us a list of the month-by-month phycoerythrin data at 13.0m, which we called "phycoerythrin1300":
+
+`phycoerythrin1300 <- mapply(FUN=getdata, myfolder="saturn03.1300.R.Phycoerythrin", mydate=v, myparameter=1, USE.NAMES=FALSE)`
+
+Now we get the times for all months at 13.0m:
+
+`mytimes5c1300 <- mapply(FUN=gettimes, myfolder="saturn03.1300.R.Phycoerythrin", mydate=v, USE.NAMES=FALSE)`
+
 
 Question 6.
 
@@ -1161,6 +1524,130 @@ Extract the `Oxygen Concentration` (`oxygen`), `Oxygen Saturation` (`oxygensat`)
 
 `http://amb6400b.stccmop.org:8080/thredds/dodsC/preliminary_data/saturn03/saturn03.1300.R.Oxygen/`
 
+Solution:
+
+retrieving the data from the 2.4m data sets
+
+`v <- paste( rep(2010:2014,each=12),  rep(sprintf("%02d", 1:12), 5), sep="" )`
+
+Finally, we throw away the months Oct, Nov, Dec 2014
+
+`v <- v[-(58:60)]`
+
+and we throw away Jan through May 2010:
+
+`v <- v[-(1:5)]`
+
+`v`
+
+We get the name data for all 52 months for both variables, at 2.4m:
+
+`namematrix6a240 <- mapply( FUN=getparameternames, myfolder="saturn03.240.A.Oxygen", mydate=v, USE.NAMES=FALSE)`
+
+`namematrix6a240[1, ]`
+
+`namematrix6a240[2, ]`
+
+this gives us a list of the month-by-month oxygen data at 2.4m, which we called "oxygen240":
+
+`oxygen240 <- mapply(FUN=getdata, myfolder="saturn03.240.A.Oxygen", mydate=v, myparameter=1, USE.NAMES=FALSE)`
+
+this gives us a list of the month-by-month oxygensat data at 2.4m, which we called "oxygensat240":
+
+`oxygensat240 <- mapply(FUN=getdata, myfolder="saturn03.240.A.Oxygen", mydate=v, myparameter=2, USE.NAMES=FALSE)`
+
+Now we get the times for all months at 2.4m:
+
+`mytimes6a240 <- mapply(FUN=gettimes, myfolder="saturn03.240.A.Oxygen", mydate=v, USE.NAMES=FALSE)`
+
+retrieving the data from the 8.2m data sets
+
+`v <- paste( rep(2010:2014,each=12),  rep(sprintf("%02d", 1:12), 5), sep="" )`
+
+Finally, we throw away the months Oct, Nov, Dec 2014
+
+`v <- v[-(58:60)]`
+
+and we throw away Jan through May 2010:
+
+`v <- v[-(1:5)]`
+
+`v`
+
+We get the name data for all 52 months for both variables, at 8.2m:
+
+`namematrix6b820 <- mapply( FUN=getparameternames, myfolder="saturn03.820.A.Oxygen", mydate=v, USE.NAMES=FALSE)`
+
+`namematrix6b820[1, ]`
+
+`namematrix6b820[2, ]`
+
+this gives us a list of the month-by-month oxygen data at 8.2m, which we called "oxygen820":
+
+`oxygen820 <- mapply(FUN=getdata, myfolder="saturn03.820.A.Oxygen", mydate=v, myparameter=1, USE.NAMES=FALSE)`
+
+this gives us a list of the month-by-month oxygensat data at 8.2m, which we called "oxygensat820":
+
+`oxygen820sat <- mapply(FUN=getdata, myfolder="saturn03.820.A.Oxygen", mydate=v, myparameter=2, USE.NAMES=FALSE)`
+
+Now we get the times for all months at 8.2m:
+
+`mytimes6b820 <- mapply(FUN=gettimes, myfolder="saturn03.820.A.Oxygen", mydate=v, USE.NAMES=FALSE)`
+
+retrieving the data from the 13.0m data sets
+
+`v <- paste( rep(2010:2014,each=12),  rep(sprintf("%02d", 1:12), 5), sep="" )`
+
+Finally, we throw away the months Sep, Oct, Nov, Dec 2012
+
+`v <- v[-(58:60)]`
+
+and we throw away Jan through May 2010:
+
+`v <- v[-(1:5)]`
+
+`v`
+
+We get the name data for all 52 months for both variables, at 13.0m:
+
+`namematrix6c1300 <- mapply( FUN=getparameternames, myfolder="saturn03.1300.R.Oxygen", mydate=v, USE.NAMES=FALSE)`
+
+`namematrix6c1300[1, ]`
+
+`namematrix6c1300[2, ]`
+
+this gives us a list of the month-by-month oxygen data at 13.0m, which we called "oxygen1300":
+
+`oxygen1300 <- mapply(FUN=getdata, myfolder="saturn03.1300.R.Oxygen", mydate=v, myparameter=1, USE.NAMES=FALSE)`
+
+this gives us a list of the month-by-month oxygensat data at 13.0m, which we called "oxygensat1300":
+
+`oxygensat1300 <- mapply(FUN=getdata, myfolder="saturn03.1300.R.Oxygen", mydate=v, myparameter=2, USE.NAMES=FALSE)`
+
+Now we get the times for all months at 13.0m:
+
+`mytimes6c1300 <- mapply(FUN=gettimes, myfolder="saturn03.1300.R.Oxygen", mydate=v, USE.NAMES=FALSE)`
+
+If we observe carefully, we notice that some of the variables are stored inconsistently.
+
+We fix that here.
+
+[source,r]
+----
+sapply(39:52, function(x) {
+  temporaryname1 <<- namematrix6c1300[2,x];
+  temporaryname2 <<- namematrix6c1300[1,x];
+  namematrix6c1300[1,x] <<- temporaryname1;
+  namematrix6c1300[2,x] <<- temporaryname2;
+  temporaryoxygen1300 <<- oxygensat1300[[x]];
+  temporaryoxygensat1300 <<- oxygen1300[[x]];
+  oxygen1300[[x]] <<- temporaryoxygen1300;
+  oxygensat1300[[x]] <<- temporaryoxygensat1300;
+} )
+----
+
+
+
 Question 7.
 
 a. For each of the 3 types of data listed above (in questions `4`, `5`, `6`) at each of the 3 depths, find the number of data points per month.  For instance, starting with the `temperature`/`conductivity`/`salinity` data at depth `2.4m`, find the number of data points per month.  Then do the same for `8.2m` and for `13.0m`.  Then do this again for the `Phycoerythrin` data.  Then do it again for the `Oxygen` data.  To express your answers, use the `mapply` function to print sentences that say statements like:
@@ -1168,6 +1655,167 @@ a. For each of the 3 types of data listed above (in questions `4`, `5`, `6`) at 
 
 b. Re-calculate your answer to `7a`, so that it is normalized according to the number of days in the month. In other words, get the number of data points divided by the number of days in the month. To express your answers, use the `mapply` function to print sentences that say statements like:
 `Month 06 of year 2012 contains an average of 6756.733 data points per day, during the 30 day period, for a total of 202,702 data points during the month, at depth 2.4m.`
+
+Solution:
+
+a.  For the temperature/conductivity/salinity data:
+
+[source,r]
+----
+mapply( function(x,y,z) {paste("Month ", x, " of year ", y, " of the saturn03.240.A.CT data contains ",
+        length(z), " data points at depth 2.4m", sep="")}, x=rep(sprintf("%02d", 1:12), 6)[-c(1:7,70:72)], 
+        y=rep(2009:2014,each=12)[-c(1:7,70:72)], z=temperature240, USE.NAMES=FALSE )
+----
+
+[source,r]
+----
+mapply( function(x,y,z) {paste("Month ", x, " of year ", y, " of the saturn03.820.A.CT data contains ",
+        length(z), " data points at depth 8.2m", sep="")}, x=rep(sprintf("%02d", 1:12), 6)[-c(1:10,70:72)], 
+        y=rep(2009:2014,each=12)[-c(1:10,70:72)], z=temperature820, USE.NAMES=FALSE )
+----
+
+[source,r]
+----
+mapply( function(x,y,z) {paste("Month ", x, " of year ", y, " of the saturn03.1300.R.CT data contains ",
+        length(z), " data points at depth 13.0m", sep="")}, x=rep(sprintf("%02d", 1:12), 7)[-c(1:3,82:84)], 
+        y=rep(2008:2014,each=12)[-c(1:3,82:84)], z=temperature1300, USE.NAMES=FALSE )
+----
+
+For the phycoerythrin data:
+
+[source,r]
+----
+mapply( function(x,y,z) {paste("Month ", x, " of year ", y, " of the saturn03.240.A.Phycoerythrin data contains ",
+        length(z), " data points at depth 2.4m", sep="")}, x=rep(sprintf("%02d", 1:12), 3)[-c(1:6,33:36)], 
+        y=rep(2010:2012,each=12)[-c(1:6,33:36)], z=phycoerythrin240, USE.NAMES=FALSE )
+----
+
+[source,r]
+----
+mapply( function(x,y,z) {paste("Month ", x, " of year ", y, " of the saturn03.820.A.Phycoerythrin data contains ",
+        length(z), " data points at depth 8.2m", sep="")}, x=rep(sprintf("%02d", 1:12), 3)[-c(1:6,33:36)], 
+        y=rep(2010:2012,each=12)[-c(1:6,33:36)], z=phycoerythrin820, USE.NAMES=FALSE )
+----
+
+[source,r]
+----
+mapply( function(x,y,z) {paste("Month ", x, " of year ", y, " of the saturn03.1300.R.Phycoerythrin data contains ",
+        length(z), " data points at depth 13.0m", sep="")}, x=rep(sprintf("%02d", 1:12), 3)[-c(1:6,33:36)], 
+        y=rep(2010:2012,each=12)[-c(1:6,33:36)], z=phycoerythrin1300, USE.NAMES=FALSE )
+----
+
+For the oxygen data:
+
+[source,r]
+----
+mapply( function(x,y,z) {paste("Month ", x, " of year ", y, " of the saturn03.240.A.Oxygen data contains ",
+        length(z), " data points at depth 2.4m", sep="")}, x=rep(sprintf("%02d", 1:12), 5)[-c(1:5,58:60)], 
+        y=rep(2010:2014,each=12)[-c(1:5,58:60)], z=oxygen240, USE.NAMES=FALSE )
+----
+
+[source,r]
+----
+mapply( function(x,y,z) {paste("Month ", x, " of year ", y, " of the saturn03.240.A.Oxygen data contains ",
+        length(z), " data points at depth 8.2m", sep="")}, x=rep(sprintf("%02d", 1:12), 5)[-c(1:5,58:60)], 
+        y=rep(2010:2014,each=12)[-c(1:5,58:60)], z=oxygen820, USE.NAMES=FALSE )
+----
+
+[source,r]
+----
+mapply( function(x,y,z) {paste("Month ", x, " of year ", y, " of the saturn03.240.A.Oxygen data contains ",
+        length(z), " data points at depth 13.0m", sep="")}, x=rep(sprintf("%02d", 1:12), 5)[-c(1:5,58:60)], 
+        y=rep(2010:2014,each=12)[-c(1:5,58:60)], z=oxygen1300, USE.NAMES=FALSE )
+----
+
+b.  For the temperature/conductivity/salinity data:
+
+[source,r]
+----
+days<-rep(c(31,28,31,30,31,30,31,31,30,31,30,31), 6)[-c(1:7,70:72)]
+days[31] <- 29
+mapply( function(x,y,z,d) {paste("Month ", x, " of year ", y, " of the saturn03.240.A.CT data contains ",
+        "an average of ", length(z)/d, " data points per day, during the ", d, " day period, for a total of ",                       
+        length(z), " data points during the month, at depth 2.4m", sep="")}, x=rep(sprintf("%02d", 1:12), 6)[-c(1:7,70:72)], 
+        y=rep(2009:2014,each=12)[-c(1:7,70:72)], z=temperature240, d=days, USE.NAMES=FALSE )
+----
+
+[source,r]
+----
+days<-rep(c(31,28,31,30,31,30,31,31,30,31,30,31), 6)[-c(1:10,70:72)]
+days[28] <- 29
+mapply( function(x,y,z,d) {paste("Month ", x, " of year ", y, " of the saturn03.820.A.CT data contains ",
+        "an average of ", length(z)/d, " data points per day, during the ", d, " day period, for a total of ",                       
+        length(z), " data points during the month, at depth 8.2m", sep="")}, x=rep(sprintf("%02d", 1:12), 6)[-c(1:10,70:72)], 
+        y=rep(2009:2014,each=12)[-c(1:10,70:72)], z=temperature820, d=days, USE.NAMES=FALSE )
+----
+
+[source,r]
+----
+days<-rep(c(31,28,31,30,31,30,31,31,30,31,30,31), 7)[-c(1:3,82:84)]
+days[47] <- 29
+mapply( function(x,y,z,d) {paste("Month ", x, " of year ", y, " of the saturn03.1300.R.CT data contains ",
+        "an average of ", length(z)/d, " data points per day, during the ", d, " day period, for a total of ",                       
+        length(z), " data points during the month, at depth 13.0m", sep="")}, x=rep(sprintf("%02d", 1:12), 7)[-c(1:3,82:84)], 
+        y=rep(2008:2014,each=12)[-c(1:3,82:84)], z=temperature1300, d=days, USE.NAMES=FALSE )
+----
+
+For the phycoerythrin data:
+
+[source,r]
+----
+days<-rep(c(31,28,31,30,31,30,31,31,30,31,30,31), 3)[-c(1:6,33:36)]
+days[20] <- 29
+mapply( function(x,y,z,d) {paste("Month ", x, " of year ", y, " of the saturn03.240.A.Phycoerythrin data contains ",
+        "an average of ", length(z)/d, " data points per day, during the ", d, " day period, for a total of ",                       
+        length(z), " data points during the month, at depth 2.4m", sep="")}, x=rep(sprintf("%02d", 1:12), 3)[-c(1:6,33:36)], 
+        y=rep(2010:2012,each=12)[-c(1:6,33:36)], z=phycoerythrin240, d=days, USE.NAMES=FALSE )
+----
+
+[source,r]
+----
+mapply( function(x,y,z,d) {paste("Month ", x, " of year ", y, " of the saturn03.820.A.Phycoerythrin data contains ",
+        "an average of ", length(z)/d, " data points per day, during the ", d, " day period, for a total of ",                       
+        length(z), " data points during the month, at depth 8.2m", sep="")}, x=rep(sprintf("%02d", 1:12), 3)[-c(1:6,33:36)], 
+        y=rep(2010:2012,each=12)[-c(1:6,33:36)], z=phycoerythrin820, d=days, USE.NAMES=FALSE )
+----
+
+[source,r]
+----
+mapply( function(x,y,z,d) {paste("Month ", x, " of year ", y, " of the saturn03.1300.R.Phycoerythrin data contains ",
+        "an average of ", length(z)/d, " data points per day, during the ", d, " day period, for a total of ",                       
+        length(z), " data points during the month, at depth 13.0m", sep="")}, x=rep(sprintf("%02d", 1:12), 3)[-c(1:6,33:36)], 
+        y=rep(2010:2012,each=12)[-c(1:6,33:36)], z=phycoerythrin1300, d=days, USE.NAMES=FALSE )
+----
+
+For the oxygen data:
+
+[source,r]
+----
+days<-rep(c(31,28,31,30,31,30,31,31,30,31,30,31), 5)[-c(1:5,58:60)]
+days[21] <- 29
+mapply( function(x,y,z,d) {paste("Month ", x, " of year ", y, " of the saturn03.240.A.Oxygen data contains ",
+        "an average of ", length(z)/d, " data points per day, during the ", d, " day period, for a total of ",                       
+        length(z), " data points during the month, at depth 2.4m", sep="")}, x=rep(sprintf("%02d", 1:12), 5)[-c(1:5,58:60)], 
+        y=rep(2010:2014,each=12)[-c(1:5,58:60)], z=oxygen240, d=days, USE.NAMES=FALSE )
+----
+
+[source,r]
+----
+mapply( function(x,y,z,d) {paste("Month ", x, " of year ", y, " of the saturn03.820.A.Oxygen data contains ",
+        "an average of ", length(z)/d, " data points per day, during the ", d, " day period, for a total of ",                       
+        length(z), " data points during the month, at depth 8.2m", sep="")}, x=rep(sprintf("%02d", 1:12), 5)[-c(1:5,58:60)], 
+        y=rep(2010:2014,each=12)[-c(1:5,58:60)], z=oxygen820, d=days, USE.NAMES=FALSE )
+----
+
+[source,r]
+----
+mapply( function(x,y,z,d) {paste("Month ", x, " of year ", y, " of the saturn03.1300.R.Oxygen data contains ",
+        "an average of ", length(z)/d, " data points per day, during the ", d, " day period, for a total of ",                       
+        length(z), " data points during the month, at depth 13.0m", sep="")}, x=rep(sprintf("%02d", 1:12), 5)[-c(1:5,58:60)], 
+        y=rep(2010:2014,each=12)[-c(1:5,58:60)], z=oxygen1300, d=days, USE.NAMES=FALSE )
+----
+
+
 
 Question 8.
 
@@ -1182,6 +1830,37 @@ This makes `f` into a function that can predict the `temperature` behavior at an
 Finally, we can plot the `temperature` versus the `oxygen saturation` data this way:
 `plot(tempatoxygentimes,oxydata)`
 
+Solution:
+
+a. The temperature data are here:
+
+`tempdata <- getdata(myfolder="saturn03.240.A.CT", mydate="201206", myparameter=1)`
+
+The analogous times are here:
+
+`temptimes <- gettimes(myfolder="saturn03.240.A.CT", mydate="201206")`
+
+b. The oxygen data are here:
+
+`oxydata <- getdata(myfolder="saturn03.240.A.Oxygen", mydate="201206", myparameter=1)`
+
+The analogous times are here:
+
+`oxytimes <- gettimes(myfolder="saturn03.240.A.Oxygen", mydate="201206")`
+
+c.
+
+`tempfunction <- approxfun(temptimes, tempdata)`
+
+This makes f into a function that can predict the temperature behavior at any time we like. Then we run the function on the oxygen saturation times, to see how temperature would have behaved at the 15725 times when oxygen saturation was measured:
+
+`tempatoxygentimes <- tempfunction(oxytimes)`
+
+Finally, we can plot the temperature versus the oxygen saturation data this way:
+
+`plot(tempatoxygentimes,oxydata)`
+
+
 Question 9.
 
 a.  Make comparisons between some of the other variables, in the style of how we did things in question `8`.
@@ -1192,6 +1871,29 @@ c.  What could go wrong with the method discussed in `8` and `9`?  Hint: for ins
 `range(temptimes)`
 `plot( tempfunction(seq(1338537601,1341129599,by=100) ) )`
 How could we potentially fix the problem that happens when missing data occurs?  [You do not have to actually fix it; but briefly mention some way that you might fix it.]  Can you see this problem in the plot?  [We will discuss this problem more, in a set of future questions, in another project.]
+
+Solution:
+
+a. The conductivity data are here:
+
+`conductivitydata <- getdata(myfolder="saturn03.240.A.CT", mydate="201206", myparameter=2)`
+
+`saldata <- getdata(myfolder="saturn03.240.A.CT", mydate="201206", myparameter=3)`
+
+The analogous times are the same as temptimes
+
+b. Answers will vary.
+
+The salinity and conductivity data sure seem to be pretty strongly correlated. Perhaps this has something to do with the nature of electrical conductivity, and how it is affected by the salinity of the water.
+
+`plot(saldata[conductivitydata<20], conductivitydata[conductivitydata<20])`
+
+c. Answers will vary.
+
+One definitely potential problem, however, is that there are "gaps" in the data, and any kind of imputation of values that happens within a gap will be somewhat artificial, e.g., would miss the natural oscillations in the data.
+
+For instance, the temperature data has natural oscillations, but those are missed if we naively try to impute data within the gaps.
+
 
 Question 10.
 
@@ -1205,6 +1907,173 @@ c.  What are the sizes (i.e., dimensions) of the 4th variable in each of the 7 f
 d.  If you store the `time` vector from a file in a vector `t`, then the code:  `format(as.POSIXct(3600*t, origin="1800-01-01"), tz="UTC+0:00")`  will convert the time into a human-readable format.  The `3600` converts the hours into seconds, and the seconds are given in units after January 1, 1800.  (Dr Ward fiddled around with this for awhile to figure this out.)  Question:  Do all 7 files have the same time vector?
 
 e.  What is the `time` unit between consecutive times in each of these vectors?
+
+Solution:
+
+a. Each of the 7 files contains 4 variables:
+
+[source,r]
+----
+getparameternames <- function(mytype, mydate) {
+  mync <- open.ncdf( paste("/data/public/NARR/pressure/", mytype, ".", mydate, ".nc", sep="") )
+  mycount <- mync$nvars
+  mynames <- sapply( c(1:mycount), function(x) {mync$var[[x]]$name} )
+  close.ncdf(mync)
+  mynames
+}
+----
+
+[source,r]
+----
+getparameternames("air", "201206")
+getparameternames("hgt", "201206")
+getparameternames("omega", "201206")
+getparameternames("shum", "201206")
+getparameternames("tke", "201206")
+getparameternames("uwnd", "201206")
+getparameternames("vwnd", "201206")
+----
+
+b. 
+
+[source,r]
+----
+getdata <- function(mytype, mydate, myparameter) {
+  mync <- open.ncdf( paste("/data/public/NARR/pressure/", mytype, ".", mydate, ".nc", sep="") )
+  myvec <- get.var.ncdf(mync, mync$var[[myparameter]])
+  close.ncdf(mync)
+  myvec
+}
+----
+
+Getting the lat data:
+
+[source,r]
+----
+airlatdata <- getdata("air", "201206", 1)
+hgtlatdata <- getdata("hgt", "201206", 1)
+omegalatdata <- getdata("omega", "201206", 1)
+shumlatdata <- getdata("shum", "201206", 1)
+tkelatdata <- getdata("tke", "201206", 1)
+uwndlatdata <- getdata("uwnd", "201206", 1)
+vwndlatdata <- getdata("vwnd", "201206", 1)
+----
+
+Each of the lat variables contains 96673 pieces of data:
+
+`sapply(list(airlatdata, hgtlatdata, omegalatdata, shumlatdata, tkelatdata, uwndlatdata, vwndlatdata), length)`
+
+`dim(airlatdata)`
+
+Each of the lat variables contains the exact same data:
+
+`sapply(list(airlatdata, hgtlatdata, omegalatdata, shumlatdata, tkelatdata, uwndlatdata, vwndlatdata), function(x) { sum(x != airlatdata)})`
+
+Getting the lon data:
+
+[source,r]
+----
+airlondata <- getdata("air", "201206", 2)
+hgtlondata <- getdata("hgt", "201206", 2)
+omegalondata <- getdata("omega", "201206", 2)
+shumlondata <- getdata("shum", "201206", 2)
+tkelondata <- getdata("tke", "201206", 2)
+uwndlondata <- getdata("uwnd", "201206", 2)
+vwndlondata <- getdata("vwnd", "201206", 2)
+----
+
+Each of the lon variables contains 96673 pieces of data:
+
+`sapply(list(airlondata, hgtlondata, omegalondata, shumlondata, tkelondata, uwndlondata, vwndlondata), length)`
+
+`dim(airlondata)`
+
+Each of the lon variables contains the exact same data:
+
+`sapply(list(airlondata, hgtlondata, omegalondata, shumlondata, tkelondata, uwndlondata, vwndlondata), function(x) { sum(x != airlondata)})`
+
+Getting the Lambert Conformal data:
+
+[source,r]
+----
+airlcdata <- getdata("air", "201206", 3)
+hgtlcdata <- getdata("hgt", "201206", 3)
+omegalcdata <- getdata("omega", "201206", 3)
+shumlcdata <- getdata("shum", "201206", 3)
+tkelcdata <- getdata("tke", "201206", 3)
+uwndlcdata <- getdata("uwnd", "201206", 3)
+vwndlcdata <- getdata("vwnd", "201206", 3)
+----
+
+Each of the Lambert Conformal variables contains 96673 pieces of data:
+
+`sapply(list(airlcdata, hgtlcdata, omegalcdata, shumlcdata, tkelcdata, uwndlcdata, vwndlcdata), length)`
+
+`length(airlcdata)`
+
+Each of the Lambert Conformal variables contains the exact same data:
+
+`sapply(list(airlcdata, hgtlcdata, omegalcdata, shumlcdata, tkelcdata, uwndlcdata, vwndlcdata), function(x) { sum(x != airlcdata)})`
+
+c. Getting the 4th variable:
+
+[source,r]
+----
+airdata <- getdata("air", "201206", 4)
+hgtdata <- getdata("hgt", "201206", 4)
+omegadata <- getdata("omega", "201206", 4)
+shumdata <- getdata("shum", "201206", 4)
+tkedata <- getdata("tke", "201206", 4)
+uwnddata <- getdata("uwnd", "201206", 4)
+vwnddata <- getdata("vwnd", "201206", 4)
+----
+
+The lengths of each of these variables are:
+
+`sapply(list(airdata,hgtdata,omegadata,shumdata,tkedata,uwnddata,vwnddata),length)`
+
+The dimensions of each of these variables are:
+
+`sapply(list(airdata,hgtdata,omegadata,shumdata,tkedata,uwnddata,vwnddata),dim)`
+
+The percentage of missing data in each of the 7 files is:
+
+`sapply(list(airdata,hgtdata,omegadata,shumdata,tkedata,uwnddata,vwnddata), function(x) {sum(is.na(x))/length(x)} )`
+
+d. Getting the times:
+
+[source,r]
+----
+gettimes <- function(mytype, mydate) {
+  mync <- open.ncdf( paste("/data/public/NARR/pressure/", mytype, ".", mydate, ".nc", sep="") )
+  mytimes <- get.var.ncdf(mync,"time")
+  close.ncdf(mync)
+  mytimes
+}
+----
+
+[source,r]
+----
+airtimes <- gettimes("air", "201206")
+hgttimes <- gettimes("hgt", "201206")
+omegatimes <- gettimes("omega", "201206")
+shumtimes <- gettimes("shum", "201206")
+tketimes <- gettimes("tke", "201206")
+uwndtimes <- gettimes("uwnd", "201206")
+vwndtimes <- gettimes("vwnd", "201206")
+----
+
+Each of the times vectors contains the exact same data:
+
+`sapply(list(airtimes, hgttimes, omegatimes, shumtimes, tketimes, uwndtimes, vwndtimes), function(x) { sum(x != airtimes)})`
+
+e. There are 3 hours between consecutive times in each of the vectors.
+
+`airformattedtimes <- format(as.POSIXct(airtimes*3600, origin="1800-01-01"), tz="UTC+0:00")`
+
+`head(airformattedtimes)`
+
+
 
 == Project 6
 
