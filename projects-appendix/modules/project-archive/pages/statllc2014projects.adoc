@@ -698,6 +698,29 @@ a. Consider the departure times (`DepTime`).  What fraction of the data are miss
 
 b. Within the departure times that are recorded (i.e., that are not `NA` values), the times are stored in `hhmm` format.  So there should be at most `24*60 = 1440` such possible times.  Are there other `DepTime` values?  Are they correct or perhaps erroneous?  How many such `DepTime` values (overall) seem to be erroneous?
 
+Solution:
+
+a. We can find the NA values using is.na.  If we sum the result, the TRUE's (from the is.na) become 1's and the FALSE's become 0's, so we get the number of NA's.  Then we can divide by the total number of DepTime's to get the desired fraction, which is 0.01939045.
+
+`sum(is.na(bigDF$DepTime))/length(bigDF$DepTime)`
+
+b. There are several values that are not valid times, as we can see:
+
+`levels(as.factor(bigDF$DepTime[!is.na(bigDF$DepTime)]))`
+
+It is up to whether you included (or not) the times 0000 and/or 2400, i.e., how you handled the midnight time. For example, here I am allowing 0000 but not 2400, but other methods are possible. Once we have the times less than 2400, we can check to make sure that the number of minutes is less than 60, by taking a modulus by 100, i.e., by dividing by 100 and getting the remainder.
+
+We see that, once we restrict to times less than 2400, all of the times have valid minutes:
+
+`sum((bigDF$DepTime[!is.na(bigDF$DepTime) & (bigDF$DepTime < 2400)] %% 100) >= 60)`
+
+So the only invalid minutes are those which are 2400 or larger:                 
+
+`length(bigDF$DepTime[!is.na(bigDF$DepTime) & (bigDF$DepTime >= 2400)])`
+
+So there are 2695 such values that are >= 2400.
+
+
 Question 2.
 
 a.  Which departure times are the best, for minimizing the arrival delay (`ArrDelay`)?  More specifically, if our goal is to minimize the arrival delay, which of these 4 time categories is best time of day for our departure?  Between 12 midnight and 6 AM?  Between 6 AM and 12 noon?  Between 12 noon and 6 PM?  Or between 6 PM and 12 midnight?
@@ -705,6 +728,25 @@ a.  Which departure times are the best, for minimizing the arrival delay (`ArrDe
 b.  Which of the 4 time categories for the departure will have the highest variance for arrival delay?
 
 c.  Now please solve `2a` and `2b` again, splitting the data not only by the best time of day but also by the airline too.  That way, we can know what time of day and which airline we might prefer to use.
+
+Solution:
+
+a. We use tapply to split the ArrDelay, according to the four suggested groupings of the DepTime's.
+
+`tapply(bigDF$ArrDelay, cut(bigDF$DepTime, breaks=c(0,600,1200,1800,2400),include.lowest=TRUE), mean, na.rm=TRUE)`
+
+The best times to depart (by this measure) are between 6 AM and 12 noon.
+
+b. The highest variance in ArrDelay's occur for flights departing between 12 midnight and 6 AM.
+
+`tapply(bigDF$ArrDelay, cut(bigDF$DepTime, breaks=c(0,600,1200,1800,2400),include.lowest=TRUE), var, na.rm=TRUE)`
+
+c. Now we analyze by airline too.
+
+`tapply(bigDF$ArrDelay, list(cut(bigDF$DepTime, breaks=c(0,600,1200,1800,2400),include.lowest=TRUE), bigDF$UniqueCarrier), mean, na.rm=TRUE)`
+
+`tapply(bigDF$ArrDelay, list(cut(bigDF$DepTime, breaks=c(0,600,1200,1800,2400),include.lowest=TRUE), bigDF$UniqueCarrier), var, na.rm=TRUE)`
+
 
 Question 3.
 
@@ -716,6 +758,35 @@ c.  If we reconsider `3a` and `3b`, by splitting the data year by year, are the 
 
 d.  Which are the most 10 popular pairs of departure/arrival city pairs?  (For instance, `IND-to-ORD` might be one such popular pair.)
 
+Solution:
+
+a. The cities with the most departures are:
+
+`ATL     ORD     DFW     DEN     LAX     PHX     IAH     LAS     DTW     EWR `
+
+`sort(tapply(bigDF$Origin, bigDF$Origin, length),decreasing=TRUE)[1:10]`
+
+b. The cities with the most arrivals are:
+
+`ATL     ORD     DFW     DEN     LAX     PHX     IAH     LAS     DTW     EWR `
+
+`sort(tapply(bigDF$Dest, bigDF$Dest, length),decreasing=TRUE)[1:10]`
+
+c. Wrapping everything up into one line, we can do this as follows, with the columns in order from 2006 to 2008, reading left-to-right. Indeed, the answers are pretty consistent, from year to year. For most departures:
+
+`sapply(1:3, function(j) names(sort(tapply(bigDF$Origin, list(bigDF$Origin, bigDF$Year), length)[,j], decreasing=TRUE))[1:10])`
+
+For most arrivals:
+
+`sapply(1:3, function(j) names(sort(tapply(bigDF$Dest, list(bigDF$Dest, bigDF$Year), length)[,j], decreasing=TRUE))[1:10])`
+
+d. The 10 most popular departure/arrival pairs are:
+
+`from OGG to HNL from HNL to OGG from LAX to LAS from LAS to LAX from SAN to LAX from LAX to SAN from BOS to LGA from LGA to BOS from SFO to LAX from HNL to LIH `
+
+`sort(table(paste("from", bigDF$Origin, "to", bigDF$Dest)), decreasing=TRUE)[1:10]`
+
+
 Question 4.
 
 a.  Which 5 airports are most likely to be on time for arrivals (on average)?
@@ -725,6 +796,33 @@ b.  Which 5 airports are most likely to be on time for departures (on average)?
 c.  Which 5 airports are most likely to be delayed for arrivals (on average)?
 
 d.  Which 5 airports are most likely to be delayed for departures (on average)?
+
+Solution:
+
+a. these 5 airports are most likely to be on time for arrivals (on average)
+
+`HVN        ITH        LIH        EAU        ITO        HTS        OGG        KOA        PIH        CDC`
+
+`sort(tapply(bigDF$ArrDelay, bigDF$Dest, mean, na.rm=TRUE))[1:10]`
+
+b. these 5 airports are most likely to be on time for departures (on average)
+
+`GLH       WYS       PIH       HVN       ITO       COD       EKO       CDC       LIH       IYK`
+
+`sort(tapply(bigDF$DepDelay, bigDF$Origin, mean, na.rm=TRUE))[1:10]`
+
+c. these 5 airports are most likely to be delayed for arrivals (on average)
+
+`MQT      OTH      ACK      SOP      HHH      ISO      MCN      EWR      TTN      CIC`
+
+`sort(tapply(bigDF$ArrDelay, bigDF$Dest, mean, na.rm=TRUE), decreasing=TRUE)[1:10]`
+
+d. these 5 airports are most likely to be delayed for departures (on average)
+
+`ACK      PIR      PUB      SOP      OTH      CEC      ADK      LMT      CKB      AKN`
+
+`sort(tapply(bigDF$DepDelay, bigDF$Origin, mean, na.rm=TRUE), decreasing=TRUE)[1:10]`
+
 
 Question 5.
 
@@ -736,11 +834,54 @@ c.  What percent of flights depart between 12 midnight and 6 AM?  Between 6 AM a
 
 d.  Can you study 5b and 5c simultaneously, e.g., can you give an analysis by day of the week and time of day (in tandem), so that we know precisely which days of the week and which portions of the days are busiest for departures, i.e., so that we have a finer breakdown of the departure data?
 
+Solution:
+
+a. The best day of the week to fly, to minimize delayed arrivals, is Saturday (DayOfWeek=6)
+
+`tapply(bigDF$ArrDelay, bigDF$DayOfWeek, mean, na.rm=TRUE)`
+
+b. The portions of flights, by day, is (Monday is DayOfWeek=1; Sunday is DayOfWeek=7) the following:
+
+`0.1479634 0.1453808 0.1467945 0.1473238 0.1478121 0.1245277 0.1401976`
+
+`tapply(bigDF$DayOfWeek, bigDF$DayOfWeek, length)/length(bigDF$DayOfWeek)`
+
+c. The portions of flights, by time of day, is:
+
+`12 midnight to 6 AM:  0.02610195`
+
+`6 AM to 12 noon:      0.38311298`
+
+`12 noon to 6 PM:      0.37239489`
+
+`6 PM to 12 midnight:  0.21839018`
+
+`tapply(bigDF$DepTime[bigDF$DepTime<2400 & !is.na(bigDF$DepTime)], cut(bigDF$DepTime[bigDF$DepTime<2400 & !is.na(bigDF$DepTime)], breaks=c(0,600,1200,1800,2400), include.lowest=TRUE), length)/length(bigDF$DepTime[bigDF$DepTime<2400 & !is.na(bigDF$DepTime)])`
+
+d. Also with a breakdown by day of the week, we have:
+
+`tapply(bigDF$DepTime[bigDF$DepTime<2400 & !is.na(bigDF$DepTime)], list( cut(bigDF$DepTime[bigDF$DepTime<2400 & !is.na(bigDF$DepTime)], breaks=c(0,600,1200,1800,2400), include.lowest=TRUE),  bigDF$DayOfWeek[bigDF$DepTime<2400 & !is.na(bigDF$DepTime)]), length)/length(bigDF$DepTime[bigDF$DepTime<2400 & !is.na(bigDF$DepTime)])`
+
+
 Question 6.
 
 a.  Which 5 carriers are the most likely to be delayed?
 
 b.  Which 5 carriers are the most likely to be on time?
+
+Solution:
+
+a. The most likely carriers to be delayed are:
+
+`OH        F9        EV        NW        TZ`
+
+`sort(tapply(bigDF$ArrDelay[bigDF$ArrDelay > 0], bigDF$UniqueCarrier[bigDF$ArrDelay > 0], length) / tapply(bigDF$ArrDelay, bigDF$UniqueCarrier, length))`
+
+b. The most likely carriers to be on time are:
+
+`FL        WN        9E        AQ        HA`
+
+`sort(tapply(bigDF$ArrDelay[bigDF$ArrDelay <= 0], bigDF$UniqueCarrier[bigDF$ArrDelay <= 0], length) / tapply(bigDF$ArrDelay, bigDF$UniqueCarrier, length))`
 
 Question 7.
 
@@ -748,17 +889,83 @@ a.  Give a month-by-month breakdown of the percentage of cancelled flights.
 
 b.  What are the worst 3 months of the year for cancelled flights?  I.e., during which 3 months are the most flights cancelled?  (Since 1987 is an incomplete year, please avoid the data from 1987 for `7a` and `7b`, because we do not want to unfairly balance the months.)
 
+Solution:
+
+a. Here is a month-by-month breakdown of cancelled flights:
+
+`tapply(bigDF$Cancelled[bigDF$Cancelled==1], list(bigDF$Year[bigDF$Cancelled==1], bigDF$Month[bigDF$Cancelled==1]), length)/tapply(bigDF$Cancelled, list(bigDF$Year, bigDF$Month), length)`
+
+b. The worst months of the year for cancelled flights are, respectively, Feb (worst of all!), Dec (2nd worst), Jan (3rd worst)
+
+`sort(tapply(bigDF$Cancelled[bigDF$Cancelled==1], list(bigDF$Month[bigDF$Cancelled==1]), length)/tapply(bigDF$Cancelled, list(bigDF$Month), length),decreasing=TRUE)[1:3]`
+
+
 Question 8.
 
 Make a plot that shows how the number of flights departing `ORD` has changed, year by year.  Then add similar data to the same plot, for the number of flights departing `IND`, year by year.
+
+Solution:
+
+First we get the counts:
+
+[source,r]
+----
+ChiDF <- subset(bigDF, subset=bigDF$Origin == "ORD")
+ChiCounts <- tapply(ChiDF$Year, ChiDF$Year, length)
+IndDF <- subset(bigDF, subset=bigDF$Origin == "IND")
+IndCounts <- tapply(IndDF$Year, IndDF$Year, length)
+----
+
+Then we build the dotchart:
+`dotchart(rbind(ChiCounts, IndCounts))`
+
 
 Question 9.
 
 Read the documentation for the `dotchart` function.  Make a `dotchart` as follows:  The x-axis should be the percentage of the time that flights are delayed more than 30 minutes.  On the y-axis, the main groupings should be according to month, and within each month, please show O'Hare and Indianapolis as cities of departure for flights.  The data to be displayed are the `DepDelay` data for 2007 only.  So the overall plot will show, month-by-month, a comparison of the `DepDelay` data for O'Hare and Indianapolis.
 
+Solution:
+
+First we get the 2007 data only:
+
+`Chi2007DF <- subset(bigDF, subset=bigDF$Origin == "ORD" & Year==2007)`
+
+`Ind2007DF <- subset(bigDF, subset=bigDF$Origin == "IND" & Year==2007)`
+
+Then we get the delay counts and the total counts:
+
+`Chi2007DelayCounts <- tapply(Chi2007DF$DepDelay[Chi2007DF$DepDelay>30], Chi2007DF$Month[Chi2007DF$DepDelay>30], length)`
+
+`Chi2007AllCounts <- tapply(Chi2007DF$DepDelay, Chi2007DF$Month, length)`
+
+`Ind2007DelayCounts <- tapply(Ind2007DF$DepDelay[Ind2007DF$DepDelay>30], Ind2007DF$Month[Ind2007DF$DepDelay>30], length)`
+
+`Ind2007AllCounts <- tapply(Ind2007DF$DepDelay, Ind2007DF$Month, length)`
+
+Finally we make a matrix and then a dotchart:
+
+`M <- rbind(Chi2007DelayCounts/Chi2007AllCounts, Ind2007DelayCounts/Ind2007AllCounts)`
+
+`row.names(M) <- c("ORD","IND")`
+
+`dotchart(M)`
+
+
 Question 10.
 
 Make another `dotchart`, similar to the one in question `9`, where the main groupings on the y-axis are O'Hare and Indianapolis, and within each city, display all 12 months.  Again, the data to be displayed are the `DepDelay` data for 2007.  The x-axis should again be the percentage of the time that flights are delayed more than 30 minutes.  So the overall plot will show, for each of the two cities, a month-by-month comparison of the `DepDelay` data.  If you are able, you can organize the months according to their percentage of time delayed more than 30 minutes, rather than according to alphabetic order.
+
+Solution:
+
+Now we rearrange the matrix from #9, switching the role of rows and columns, by taking a transpose:
+
+`newM <- t(M)`
+
+Then we plot the data:
+
+`dotchart(newM)`
+
+
 
 == Project 4
 
@@ -825,6 +1032,73 @@ f. Check that `R` did the right thing in `1e` by manually finding the variance o
 g.  If you accidentally use `c` instead of `list` in `1e`, `R` just takes the variance of each individual value, but `R` gives an `NA` when taking the variance of an individual value (you can try this, e.g., `var(3.79)` gives `NA`, so `R` returns `NA` for each value).  Please give this (incorrect) behavior a try!
 
 h.  Examine the head of the `Cars93` data.  This data set has a lot of types of columns.  Use `sapply` to find out the kinds of classes for each of the 27 columns in this `data.frame` (using just one call to `sapply`; hint: use `class` for the function).
+
+Solution:
+
+a.
+
+[source,r]
+----
+98 299 299  71  32
+library(MASS)
+sapply( list(LakeHuron, geyser$waiting, geyser$duration, chickwts$weight, mtcars$mpg), length )
+----
+
+b.
+
+[source,r]
+----
+579.004082  72.314381   3.460814 261.309859  20.090625
+sapply( list(LakeHuron, geyser$waiting, geyser$duration, chickwts$weight, mtcars$mpg), mean )
+----
+
+
+c.  We get the same answers as above
+
+[source,r]
+----
+mean(LakeHuron)
+mean(geyser$waiting)
+mean(geyser$duration)
+mean(chickwts$weight)
+mean(mtcars$mpg)
+----
+
+d.
+
+`sapply( c(LakeHuron, geyser$waiting, geyser$duration, chickwts$weight, mtcars$mpg), mean )`
+
+e.
+
+[source,r]
+----
+1.737911  192.941101    1.317683 6095.502616   36.324103
+sapply( list(LakeHuron, geyser$waiting, geyser$duration, chickwts$weight, mtcars$mpg), var )
+----
+
+f.  We get the same answers as above
+
+[source,r]
+----
+var(LakeHuron)
+var(geyser$waiting)
+var(geyser$duration)
+var(chickwts$weight)
+var(mtcars$mpg)
+----
+
+g.
+
+`sapply( c(LakeHuron, geyser$waiting, geyser$duration, chickwts$weight, mtcars$mpg), var )`
+
+h.
+
+[source,r]
+----
+head(Cars93)
+sapply( Cars93, class )
+----
+
 
 Question 2.
 
