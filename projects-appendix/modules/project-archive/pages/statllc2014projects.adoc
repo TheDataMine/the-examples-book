@@ -2091,6 +2091,48 @@ c. Make a simple linear regression model to try to predict the 'electrical condu
 
 d. Which one of these linear models seems most amenable to linear modeling?  Why?
 
+Solutions:
+
+`DF <- read.csv("http://llc.stat.purdue.edu/2014/29000/projects/saturn03.240.A.CT_2012_06_PD0.csv")`
+
+`head(DF)`
+
+a.
+
+[source,r]
+----
+plot(DF$water_temperature[DF$water_temperature<500 & DF$water_electrical_conductivity<20],
+     DF$water_electrical_conductivity[DF$water_temperature<500 & DF$water_electrical_conductivity<20])
+mylm <- lm( DF$water_electrical_conductivity[DF$water_temperature<500 & DF$water_electrical_conductivity<20]
+            ~ DF$water_temperature[DF$water_temperature<500 & DF$water_electrical_conductivity<20])
+abline(mylm)
+----
+
+b.
+
+[source,r]
+----
+plot(DF$water_temperature[DF$water_temperature<500], DF$water_salinity[DF$water_temperature<500])
+mylm <- lm( DF$water_salinity[DF$water_temperature<500]
+            ~ DF$water_temperature[DF$water_temperature<500])
+abline(mylm)
+----
+
+c.
+
+[source,r]
+----
+plot(DF$water_salinity[DF$water_electrical_conductivity<20], DF$water_electrical_conductivity[DF$water_electrical_conductivity<20])
+mylm <- lm( DF$water_electrical_conductivity[DF$water_electrical_conductivity<20]
+            ~ DF$water_salinity[DF$water_electrical_conductivity<20])
+abline(mylm)
+----
+
+d.  The last of these linear models seems most amenable to linear modeling, because salinity and electrical conductivity seem to be (perhaps) almost linearly related.
+
+We can also read the summaries of the 3 linear models in 1a, 1b, and 1c, to make a more precise comparison.
+
+
 Question 2.
 
 a. Make a simple linear regression model to predict the `mpg` from the `mtcars` data, based on the `hp`.  Plot the two variables, along with the line suggested by a simple linear regression model.
@@ -2098,6 +2140,27 @@ a. Make a simple linear regression model to predict the `mpg` from the `mtcars` 
 b. Make a multiple regression model to predict the `mpg` from the `mtcars` data, based on the `hp` and the `disp`.
 
 c. Using the multiple regression model, what kind of `mpg` might we guess that a car has, if it has 147 `hp` and 230 `disp`?
+
+a.
+
+`mylm <- lm( mtcars$mpg ~ mtcars$hp)`
+
+`plot( mtcars$hp, mtcars$mpg)`
+
+`abline(mylm)`
+
+b.
+
+`mylm <- lm( mtcars$mpg ~ mtcars$hp + mtcars$disp)`
+
+c.
+
+`summary(mylm)`
+
+So we could estimate the mpg to be about  20.10484  if the car has 147 hp and 230 disp.
+
+`30.735904 - 0.024840*147 - 0.030346*230`
+
 
 Question 3.
 
@@ -2113,6 +2176,38 @@ e. Draw the line from the simple linear regression model on the plot.
 
 f. Repeat steps `3c` through `3e`, removing the outliers, e.g., removing the flights with departure delays that are more than `500` and removing those that are less than `-50`.  I.e., restrict attention to flights with departure delays between `-50` and `500`.
 
+a.  First we get the 1990 data.
+
+`DF <- read.csv("/data/public/dataexpo2009/1990.csv")`
+
+b.  Next, we take a subset with just the flights from June 1990.
+
+`juneDF <- subset(DF, Month==6)`
+
+c.  To predict the arrival delays from the departure delays, we build a linear model:
+
+`mylm <- lm( juneDF$ArrDelay ~ juneDF$DepDelay)`
+
+d.  Here is a plot of both types of delays:
+
+`plot( juneDF$DepDelay, juneDF$ArrDelay )`
+
+e.  Now we add the regression line
+
+`abline(mylm)`
+
+f.  Now we do these steps again, removing some of the outliers.
+
+[source,r]
+----
+mylm <- lm( juneDF$ArrDelay[juneDF$DepDelay < 500 & juneDF$DepDelay > -50]
+              ~ juneDF$DepDelay[juneDF$DepDelay < 500 & juneDF$DepDelay > -50])
+plot( juneDF$DepDelay[juneDF$DepDelay < 500 & juneDF$DepDelay > -50],
+              juneDF$ArrDelay[juneDF$DepDelay < 500 & juneDF$DepDelay > -50] )
+abline(mylm)
+----
+
+
 Question 4.
 
 a.  Generate 100 (continuous) uniform random numbers, uniformly distributed between 0 and 1.
@@ -2125,6 +2220,35 @@ d.  Use a `qqplot` to convince yourself that the numbers from `4b` have the same
 
 e.  Re-do parts `4a` through `4d` with millions of numbers instead of just 100 numbers, to reinforce this notion in your mind.
 
+Solution:
+
+a. Here are 100 (continuous) Uniform random numbers, uniformly distributed between 0 and 1:
+
+`U <- runif(100)`
+
+b. Now we make the required transformation:
+
+`V <- -log(U)/3`
+
+c. Here are 100 Exponential random numbers, with rate 3
+
+`X <- rexp(100, rate=3)`
+
+d. Here is the desired qqplot; notice that it almost looks like a straight line.
+
+`qqplot( V, X)`
+
+e. Now we re-do parts 4a through 4d with a million (instead of a hundred) numbers per variable:
+
+`U <- runif(1000000)`
+
+`V <- -log(U)/3`
+
+`X <- rexp(1000000, rate=3)`
+
+`qqplot( V, X)`
+
+
 Question 5.
 
 a.  Generate 1,000,000 (continuous) uniform random numbers (each between 0 and 1) and store them in a matrix `M` with 1000 rows and 1000 columns.
@@ -2134,6 +2258,27 @@ b.  Use the `apply` function to sum each row of `M`.  So we get 1000 numbers, ea
 c.  Subtract 500 from each entry of `v` and then (afterwards) divide each number by `sqrt(1000/12)`, i.e., by `9.1287`.  Store the result in a new vector `w`.
 
 d. Use a `qqplot` to convince yourself that the entries of `w` are approximately standard normal random numbers, i.e., normal random numbers with mean 0 and standard deviation 1.
+
+Solution:
+
+a. Here is the desired matrix:
+
+`M <- matrix( runif(1000000), nrow=1000)`
+
+b. Here are the row sums:
+
+`v <- apply(M, 1, sum)`
+
+c. Here are the scaled-and-shifted values:
+
+`w <- (v-500)/sqrt(1000/12)`
+
+d. Here is the desired qqplot
+
+`x <- rnorm(1000)`
+
+`qqplot( w,x )`
+
 
 Question 6.
 
@@ -2145,15 +2290,88 @@ c.  Subtract 2000 from each entry of `v` and then (afterwards) divide each numbe
 
 d. Use a `qqplot` to convince yourself that the entries of `w` are approximately standard normal random numbers, i.e., normal random numbers with mean 0 and standard deviation 1.
 
+a. Here is the desired matrix:
+
+`M <- matrix( rexp(100000000, rate=5), nrow=10000)`
+
+b. Here are the row sums:
+
+`v <- apply(M, 1, sum)`
+
+c. Here are the scaled-and-shifted values:
+
+`w <- (v-2000)/20`
+
+d. Here is the desired qqplot
+
+`x <- rnorm(10000)`
+
+`qqplot( w,x )`
+
+
 Question 7.
 
 a.  Use the built-in `R` data set for "Pharmacokinetics of Theophylline" (stored in `Theoph`) to build a multiple linear regression model of the concentration, based on the weight, dose, and time.
 
 b.  If a person weighed `66 kg`, and received a dose of `4 mg/kg`, and it has been 6 hours since the dose was administered, what is the predicted level of concentration?
 
+a. Here is a multiple linear regression model for concentration, based on weight, dose, and time, in the Theoph data set
+
+`mylm <- lm( Theoph$conc ~ Theoph$Wt + Theoph$Dose + Theoph$Time)`
+
+b.
+
+`summary(mylm)`
+
+We could estimate the concentration to be about  4.22351 mg/L if the person weighs 66kg, receives a dose of 4 mg/kg, and it has been 6 hours since the dose was administered.
+
+`-4.45137 + 0.06832*66 + 1.16716*4 - 0.12572*4`
+
+
 Question 8.
 
 Look at the departure delays from the June 1990 flights.  If we restrict attention to departure delays of 30 minutes or more, what kind of distribution do you think the data has?  Normal?  Uniform?  Exponential?  Justify your answer with a `qqplot`.  How closely can you estimate the parameter(s) of the distribution you think that this data has?
+
+Solution:
+
+The vector of departure delays that are longer than 30 has length 28022:
+
+`length(juneDF$DepDelay[juneDF$DepDelay > 30])`
+
+but does not look Normal:
+
+`qqplot(juneDF$DepDelay[juneDF$DepDelay > 30], rnorm(28022))`
+
+but does not look Uniform:
+
+`qqplot(juneDF$DepDelay[juneDF$DepDelay > 30], runif(28022))`
+
+but it DOES look Exponential:
+
+`qqplot(juneDF$DepDelay[juneDF$DepDelay > 30], rexp(28022))`
+
+We can estimate the rate by first taking the mean of these delays, which turns out to be: 70.65488
+
+`mean(juneDF$DepDelay[juneDF$DepDelay > 30], na.rm=T)`
+
+and then we can take the rate to be the inverse of this mean:
+
+`qqplot(juneDF$DepDelay[juneDF$DepDelay > 30], rexp(28022, rate=1/70.65488))`
+
+Indeed, if we explore a little more, we might find that the delays are roughly  distributed like 30 + an Exponential, so we could do something more precise like this:
+
+We see that, on average, the delay is 40.65488 minutes beyond 30:
+
+`mean(juneDF$DepDelay[juneDF$DepDelay > 30] - 30, na.rm=T)`
+
+So it makes more sense to compare the DepDelay - 30 to an Exponential:
+
+`qqplot(juneDF$DepDelay[juneDF$DepDelay > 30] - 30, rexp(28022, rate=1/40.65488))`
+
+This fit is not exact, but it is reasonable for a very rough approximation.
+
+
+
 
 == Project 7
 
