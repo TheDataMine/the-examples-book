@@ -177,5 +177,108 @@ SELECT COUNT(*) FROM episodes WHERE show_title_id = 'tt0182576' LIMIT 5;
 SELECT * FROM crew WHERE person_id = 'nm0000184' LIMIT 5;
 ----
 
+== Find and print the `title_id`, `rating`, and number of votes (`votes`) for all movies that received at least 2 million votes.
+In a second query (and new cell), use the information you found in the previous query to identify the `primary_title` of these movies.
+
+These are the movies with at least 2 million votes:
+
+[source,sql]
+----
+%%sql
+SELECT * FROM ratings WHERE votes >= 2000000 LIMIT 5;
+----
+
+and then we can lookup their titles:
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles WHERE title_id = 'tt0111161' OR title_id = 'tt0468569' OR title_id = 'tt1375666' LIMIT 5;
+----
+
+== Find the `primary_title` of every _movie_ that is over 2 hours long or that premiered after 1990. Order the result from newest premiered year to oldest, and limit the output to 15 movies. Make sure `premiered` and `runtime_minutes` are not `NULL`.  After displaying these 15 movies, run the query again in a second cell, but this time only display the number of such movies.
+
+We just add the conditions to the query about the titles table.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles WHERE (type == 'movie') AND (runtime_minutes IS NOT NULL) AND (premiered IS NOT NULL) AND ((runtime_minutes > 120) OR (premiered > 1990)) ORDER BY premiered DESC LIMIT 15;
+----
+
+Now we can find the total number of such movies, using the `COUNT`:
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*) FROM titles WHERE (type == 'movie') AND (runtime_minutes IS NOT NULL) AND (premiered IS NOT NULL) AND ((runtime_minutes > 120) OR (premiered > 1990)) ORDER BY premiered DESC LIMIT 15;
+----
+
+This can be a helpful time to mention the concept of https://stackoverflow.com/questions/45231487/order-of-operation-for-and-and-or-in-sql-server-queries[order of operations]
+
+== What movie has the longest primary title? Answer this question using just SQL.
+
+You can read more about https://www.w3resource.com/sqlite/core-functions-length.php[SQLite length]
+
+We can use the `length` function, as follows:
+
+[source,sql]
+----
+%%sql
+SELECT *, length(primary_title) FROM titles ORDER BY length(primary_title) DESC LIMIT 5;
+----
+
+== What actor has the longest name? Answer this question using just SQL.
+
+[source,sql]
+----
+%%sql
+SELECT *, length(name) FROM people ORDER BY length(name) DESC LIMIT 5;
+----
+
+== `LIKE` is a very powerful tool. You can read about SQLite's version of `LIKE` https://www.w3resource.com/sqlite/core-functions-like.php[here]. Use `LIKE` and/or R to get a count of how many movies (type='movie') that starts with each letter of the alphabet. Can you think of another way to do this? If so, show us, and explain what you did!
+
+You can read more about https://www.w3resource.com/sqlite/core-functions-like.php[SQLite LIKE]
+
+I used the `substr` function, which gets a substring from the string.  In this case, I used it to just get the first letter of the `primary_title`.
+
+[source,sql]
+----
+%%sql
+SELECT substr(primary_title,1,1), count(substr(primary_title,1,1)) FROM titles GROUP BY substr(primary_title,1,1) ORDER BY count(substr(primary_title,1,1)) DESC LIMIT 5;
+----
 
 
+
+
+
+
+
+== We already mentioned that there are six tables in the database:  `akas`, `crew`, `episodes`, `people`, `ratings`, `titles`
+
+Normally, when using SQLite, the easiest way to display the tables in the database is by running `.table` or `.tables`. This is SQLite-specific behavior and therefore cannot be used in our Jupyter Lab environment. Instead, to show the tables using an R cell, we can run the following.
+
+[source, sql]
+----
+SELECT
+    name
+FROM
+    sqlite_master
+WHERE
+    TYPE IN('table', 'view')
+    AND name NOT LIKE 'sqlite_%'
+ORDER BY
+    1;
+----
+
+Once we learn to use R to connect to the database, if `conn` is a database connection, we can just use the `dbListTables` command, to do the same thing.
+
+[source,r]
+----
+%%R
+library(RSQLite)
+conn <- dbConnect(RSQLite::SQLite(), "/anvil/projects/tdm/data/movies_and_tv/imdb.db")
+dbListTables(conn)
+----
+
+We also have xref:programming-languages:SQL:introduction.adoc[some additional information about SQL] posted in our book pages.
