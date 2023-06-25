@@ -26,11 +26,59 @@ b.  In the destination column?
 
 c.  Altogether?
 
+Solution:
+
+`cd /data/public/dataexpo2009`
+
+a. There are 347 distinct airport codes that appear in the Origin column
+
+`cut -d, -f17 allyears.csv | sort | uniq | grep -v "Origin" | wc -l`
+
+b. There are 352 distinct airport codes that appear in the Destination column
+
+`cut -d, -f18 allyears.csv | sort | uniq | grep -v "Dest" | wc -l`
+
+c. In fact, there are 352 distinct airport codes that appear in the origin and destination columns altogether.
+
+[source,bash]
+----
+cut -d, -f17 allyears.csv | grep -v "Origin" >/home/mdw/origins.txt
+cut -d, -f18 allyears.csv | grep -v "Dest" >/home/mdw/destinations.txt
+cat /home/mdw/origins.txt /home/mdw/destinations.txt | sort | uniq -c | wc -l
+----
+
+You can double-check your solution to 1a by typing:
+
+`sort /home/mdw/origins.txt | uniq -c | wc -l`
+
+and you can double-check your solution to 1b by typing:
+
+`sort /home/mdw/destinations.txt | uniq -c | wc -l`
+
+After question 1c is over, we need to be sure to delete these temporary files!
+
+[source,bash]
+----
+rm /home/mdw/origins.txt
+rm /home/mdw/destinations.txt
+----
+
 Question 2.
 
 a.  Use cut (it is always OK to use other commands in tandem, if needed) to find how many flights arrive or depart from IND.  Hint: You might need more than 1 line of code for this problem.  It might be helpful to try your code on individual years before you try it on the entire data set.
 
 b.  For a much faster solution, use grep to see how many flights arrive or depart from IND.
+
+Solution:
+
+a. There are 1646578 IND flights altogether.
+
+`cut -d, -f17,18 allyears.csv | grep IND | wc -l`
+
+b.  Of course we get the same result:
+
+`grep IND allyears.csv | wc -l`
+
 
 Question 3.
 
@@ -46,9 +94,64 @@ d.  The phrase NKNO is part of the tailnum?
 
 e.  The tailnum is blank, i.e., consisting only of zero or more whitespace characters but no other content?
 
+Solution:
+
+First we can save the tailnums to a file, for convenience:
+
+`cut -d, -f11 allyears.csv >/home/mdw/tailnums.txt`
+
+We can answer questions 3a, 3b, 3c by just classifying the various kinds of tailnums that appear in the file:
+
+`sort /home/mdw/tailnums.txt | uniq -c | sort -n | tail`
+
+a. There are 37245646 lines equal to NA
+
+b. There are 351056 lines equal to 0
+
+c. There are 55349 lines equal to 000000
+
+d. There are 756609 flights that have NKNO in the tailnum:
+
+`grep NKNO /home/mdw/tailnums.txt | wc -l`
+
+e. There are 139774 flights that have (only) zero or more whitespace characters, but no other content.
+
+`grep '^[:space:]*$' /home/mdw/tailnums.txt | wc -l`
+
+or we could get this same answer by going back to our solution for 3abc, and noticing this same answer from that solution.
+
+
 Question 4.
 
 Which 10 planes took the most flights overall?
+
+Solution:
+
+The 10 planes that took the most flights overall can be found by:
+
+`cut -d, -f11 allyears.csv | sort | uniq -c | sort -n | tail -n15`
+
+We get the following:
+
+[source,bash]
+----
+  34216 N522
+  34230 N521
+  34253 N523
+  34254 N513
+  34275 N524
+  34344 N514
+  34394 N527
+  34474 N525
+  34519 N526
+  34526 N528
+  55349 000000
+ 139774
+ 351056 0
+ 572299 UNKNOW
+37245646 NA
+----
+
 
 Question 5.
 
@@ -58,13 +161,86 @@ b.  What was the largest number of flights that this airplane ever made during a
 
 c.  How many flights did this airplane make on November 3, 1995?
 
+Solution:
+
+a. The airplane with tailnum N528 made 34526 flights altogether.
+
+`grep ,N528, allyears.csv | wc -l`
+
+b. This airplane made 14 flights on a single day. This happened three times altogether.
+
+`grep ,N528, allyears.csv | cut -d, -f1,2,3 | sort | uniq -c | sort -n | tail`
+
+c. One of those 14 flights in a single day was made on Nov 3, 1995:
+
+`grep ,N528, allyears.csv | cut -d, -f1,2,3 | grep -w 1995,11,3 | wc -l`
+
+
 Question 6.
 
 How many flights has each airline had (as an Origin) from each airport?  E.g., give a list of all pairs of (Origin) airports and airlines, with the associated counts.  Please sort from the highest count to the lowest count.  This question should give you some insight about which airports are hubs for which airlines.
 
+Solution:
+
+We can print them all, if we leave the tail off the command below. For convenience, here we just print the 10 most popular.
+
+`cut -d, -f17,9 allyears.csv | grep -v Origin | sort | uniq -c | sort -nr | head`
+
+We get the following:
+
+[source,bash]
+----
+3884756 DL,ATL
+3312135 AA,DFW
+2726727 UA,ORD
+2176716 NW,DTW
+2120503 NW,MSP
+2073554 AA,ORD
+2008069 US,CLT
+1814823 CO,IAH
+1809174 UA,DEN
+1681793 US,PIT
+----
+
+
 Question 7.
 
 How many airplane flights occur per year?
+
+Solution:
+
+To get the flights per year, we can just do the following:
+
+`cut -d, -f1 allyears.csv | grep -v Year | sort | uniq -c | sort -n`
+
+We get these results
+
+[source,bash]
+----
+1311826 1987
+5041200 1989
+5070501 1993
+5076925 1991
+5092157 1992
+5180048 1994
+5202096 1988
+5270893 1990
+5271359 2002
+5327435 1995
+5351983 1996
+5384721 1998
+5411843 1997
+5527884 1999
+5683047 2000
+5967780 2001
+6488540 2003
+7009728 2008
+7129270 2004
+7140596 2005
+7141922 2006
+7453215 2007
+----
+
 
 == Project 2
 
@@ -82,21 +258,77 @@ a.  How many users are on the llc machine?
 b.  If we restrict ourselves to users whose home directory resides
         in the /home filesystem, how many users does llc have?
 
+Solution:
+
+a. There are about 191 users on the llc machine.
+
+`cat /etc/passwd | wc -l`
+
+b. There are 156 users whose home directory resides in the /home filesystem:
+
+`cat /etc/passwd | cut -d\: -f6 | grep /home | wc -l`
+
+
 Question 2.
 
 Considering the first names of people on the llc machine, which first names appear 3 or more times?
+
+Solution:
+
+
+There are 3 first names that each appear 3 times: Christine, Emily, and Michael, and there is 1 first name that appears 4 times:  David.
+
+`cat /etc/passwd | cut -d\: -f5 | cut -d" " -f1 | sort | uniq -c | sort -n`
+
 
 Question 3.
 
 Print a list of all origin-to-destination airplane routes (from the Data Expo 2009) that are 2500 miles or longer.
 
+Solution:
+
+The list of all origin-to-destination routes that are 2500 miles or longer can be discovered by:
+
+`cat /data/public/dataexpo2009/allyears.csv | grep -v Origin | awk -F, '{if ($19 >= 2500) print $17, $18}' | sort | uniq -c | sort -n`
+
+and this list includes the number of counts of such routes; the most popular such routes are (we list just the top 10 of them here)...
+
+[source,bash]
+----
+  46274 BOS SFO
+  47400 SFO BOS
+  53587 BOS LAX
+  54797 LAX BOS
+  57702 EWR SFO
+  61635 SFO EWR
+ 104253 JFK SFO
+ 105628 SFO JFK
+ 108092 LAX HNL
+ 110549 HNL LAX
+----
+
 Question 4.
 
 How many miles has United flown altogether?
 
+Solution:
+
+
+United has flown 12185717876 miles altogether.
+
+`awk -F, '{if ($9 == "UA") unitedmiles += $19} END {print unitedmiles}' /data/public/dataexpo2009/allyears.csv`
+
+
 Question 5.
 
 How many flights have a departure delay of 15 minutes or longer, but an arrival delay of 5 minutes or less?
+
+Solution:
+
+There are 983916 flights that have a departure delay of 15 minutes or longer, but an arrival delay of 5 minutes or less.
+
+`awk -F, '{if (($15 <= 5) && ($16 >= 15)) print $15, $16}' /data/public/dataexpo2009/allyears.csv | wc -l`
+
 
 Question 6.
 
@@ -124,11 +356,45 @@ b. How much money has been donated by individuals to Donald Trump's committee `"
 
 c. Who received the most separate donations: Clinton, Sanders, or Trump?  The committee number for Sanders is `C00577130`.
 
+Solution:
+
+a. Hillary Clinton's campaign has received 191262903 from individuals.
+
+`awk -F\| '{if ($1 == "C00575795") mycontributions += $15} END {print mycontributions}' /data/public/election2016/itcont.txt`
+
+b. Donald Trump's campaign has received 23935255 from individuals.
+
+`awk -F\| '{if ($1 == "C00580100") mycontributions += $15} END {print mycontributions}' /data/public/election2016/itcont.txt`
+
+c. Hillary Clinton's campaign has received 864587 separate donations:
+
+`awk -F\| '{if ($1 == "C00575795") print $0}' /data/public/election2016/itcont.txt | wc -l`
+
+Donald Trump's campaign has received 57249 separate donations:
+
+`awk -F\| '{if ($1 == "C00580100") print $0}' /data/public/election2016/itcont.txt | wc -l`
+
+Bernie Sanders's campaign has received 1502306 separate donations:
+
+`awk -F\| '{if ($1 == "C00577130") print $0}' /data/public/election2016/itcont.txt | wc -l`
+
+
 Question 7.
 
 a.  In which state were donations given most frequently?
 
 b.  What was the total amount of donations given, from donors in that state?
+
+Solution:
+
+a. Donations were given most frequently in California (CA).
+
+`awk -F\| '{print $10}' /data/public/election2016/itcont.txt | sort | uniq -c | sort -n`
+
+b. A total amount of 532031973 was given from donors in California (CA).
+
+`awk -F\| '{if ($10 == "CA") mycontributions += $15} END {print mycontributions}' /data/public/election2016/itcont.txt`
+
 
 Question 8.
 
@@ -140,11 +406,31 @@ b.  Which campaign was second most popular with the students? (Hint: This is not
 
 c.  Which campaign was third most popular with the students?
 
+Solution:
+
+Students gave the largest number of donations to C00577130 (Bernie Sanders).
+
+Students gave the second largest number of donations to C00401224 (ACTBLUE).
+
+Students gave the third largest number of donations to C00575795 (Hillary Clinton).
+
+`awk -F\| '{if ($13 ~ "STUDENT") print $1}' /data/public/election2016/itcont.txt | sort | uniq -c | sort -n`
+
 Question 9.
 
 a.  In which state do most homemakers live?
 
 b.  How much money (dollar amount) was donated altogether by homemakers?
+
+Solution:
+
+a. Most homemakers live in California (CA).
+
+`awk -F\| '{if ($13 ~ "HOMEMAKER") print $10}' /data/public/election2016/itcont.txt | sort | uniq -c | sort -n`
+
+b. The amount of money donated by homemakers is 103916397.
+
+`awk -F\| '{if ($13 ~ "HOMEMAKER") mycontributions += $15} END {print mycontributions}' /data/public/election2016/itcont.txt`
 
 Question 10.
 
@@ -153,9 +439,33 @@ Question 10.
 How many bytes are stored altogether in these files?
 Hint:  Do not use `wc`.  That would take way too long.
 
+Solution:
+
+There are 733007732737 bytes stored altogether in the files:
+
+`ls -la /data/public/subtraction | grep x*t*.txt | awk '{myfilesize += $5} END {print myfilesize}'`
+
 Bonus question:  Considering the files from question 10, how many occurrences are there of the character 0? 1? 2? ... 9?
 
 (This question is not required but might be fun to try.)
+
+Solution:
+
+Here is an answer based on a modification to the discussion from this thread:
+
+http://superuser.com/questions/485800/whats-the-quickest-way-to-count-the-number-of-each-character-in-a-file/485811
+
+first we make a program to do this:
+
+`echo 'unsigned long long int cache[16777216],x,y;char buf[16777216],letters[]="0123456789"; int main(){while((x=read(0,buf,sizeof buf))>0)for(y=0;y<x;y++)cache[(unsigned char)buf[y]]++;for(x=0;x<sizeof letters-1;x++)printf("%llu ",cache[letters[x]]);printf("\n");}' | gcc -w -xc -`
+
+then we run the file on all of the data:
+
+`cat /data/public/subtraction/x*t16384.txt | ./a.out`
+
+and we get the following counts of the number of occurrences of the characters 0 through 9:
+
+`1162210234 218946980 259323591 270558260379 261891382 383125732544 77220073802 0 41247776 25852896`
 
 
 == Project 3
@@ -176,11 +486,31 @@ This data is stored on the llc machine in the directory `/data/public/election20
 
 On which day of the election season were the average donations (by dollar amount) the largest?
 
+Solution:
+
+`myDF <- read.delim("/data/public/election2016/itcont.txt", sep="|", header=F)`
+
+The average donations were the largest on September 16, 2014.
+
+`sort(tapply(myDF$V15, myDF$V14, mean))`
+
+
 Question 2.
 
 a. On which 10 days of the campaign were the largest number of donations made?
 
 b. On which 10 days of the campaign were the largest dollar amounts of donations made?
+
+Solution:
+
+a. The largest number of donations were made on these 10 days, e.g., the most donations were made on December 31, 2015
+
+`tail(sort(table(myDF$V14)), 10)`
+
+b. The largest dollar amounts of donations were made on these 10 days, e.g., the most donations were made on June 30, 2015
+
+`tail(sort(tapply(myDF$V15, myDF$V14, sum)), 10)`
+
 
 Question 3.
 
@@ -190,9 +520,42 @@ b. How many of those donations came from Purdue employees who live in West Lafay
 
 c. Among all Purdue donations from 3a, which campaign account received the largest number of donations?
 
+Solution:
+
+a. There were 1277 donations by people at Purdue.
+
+`length(grep("PURDUE", myDF$V12))`
+
+b. Among those donations, 599 of them were made by residents of West Lafayette.
+
+[source,r]
+----
+v <- myDF$V9[grep("PURDUE", myDF$V12)]
+v1 <- grep("WEST LAFAYETTE", v)
+v2 <- grep("W LAFAYETTE", v)
+v3 <- grep("W. LAFAYETTE", v)
+length(v1) + length(v2) + length(v3)
+----
+
+c. Among the donations by people at Purdue, the campaign C00401224 (ACTBLUE) received the largest number of donations.
+
+`tail(sort(table(myDF$V1[grep("PURDUE", myDF$V12)])))`
+
+
 Question 4.
 
 Consider (only) the residents of Lafayette and West Lafayette.  What is the size of an average donation from such people?
+
+Solution:
+
+We search for the cities from Indiana that contain Lafayette in the name, because this will also get cities with West Lafayette in the name too.
+
+Then we look at all such donation amounts, and take the average.
+
+The average size of such a donation is 121.8081 dollars.
+
+`mean(myDF$V15[grepl("LAFAYETTE", myDF$V9) & grepl("IN", myDF$V10)])`
+
 
 Question 5.
 
@@ -200,15 +563,42 @@ a. Which 10 professions made the largest numbers of donations?  (Do not worry ab
 
 b. Which 10 professions had the largest total dollar amount of donations?
 
+Solution:
+
+a. The largest number of donations were made from these 10 professions:
+
+`tail(sort(tapply(myDF$V15, myDF$V13, length)), 11)`
+
+b. The largest dollar amount of donations were made from these 10 professions:
+
+`tail(sort(tapply(myDF$V15, myDF$V13, sum)), 11)`
+
+
 Question 6.
 
 Find the total dollar amount of contributions, grouped according to each of the following individual zip codes: 47901, 47902, 47903, 47904, 47905, 47906, 47907, 47909, 47996.  If a zip code is listed as a 9-digit zip, then you need to (first) trim it down to a 5-digit zip code.  Hint: strtrim might be helpful for this purpose.
+
+Solution:
+
+The total dollar amount of donations in the local zip codes are:
+
+`tapply(myDF$V15,strtrim(myDF$V11,5),sum)[c("47901","47902","47903","47904","47905","47906","47907","47909","47996")]`
 
 Question 7.
 
 a. Find the top 15 cities in Indiana according to the total amount of money donated.
 
 b. Find the top 15 cities in the USA, according to the total amount of money donated.
+
+Solution:
+
+a. The top 15 cities in Indiana, according to the amount donated, are
+
+`tail(sort(tapply(myDF$V15[myDF$V10 == "IN"],myDF$V9[myDF$V10 == "IN"],sum)),15)`
+
+b. The top 15 cities in the whole country, according to the amount donated, are
+
+`tail(sort(tapply(myDF$V15,myDF$V9,sum)),15)`
 
 Question 8.
 
@@ -224,6 +614,16 @@ and
 
 `"DONALD J. TRUMP FOR PRESIDENT, INC."`, `C00580100`
 
+Solution:
+
+a. Hillary Clinton received the largest amount of money on July 29, 2016.
+
+`tail(sort(tapply(myDF$V15[myDF$V1 == "C00575795"],myDF$V14[myDF$V1 == "C00575795"],sum)))`
+
+b. Donald Trump received the largest amount of money on June 22, 2016.
+
+`tail(sort(tapply(myDF$V15[myDF$V1 == "C00580100"],myDF$V14[myDF$V1 == "C00580100"],sum)))`
+
 Question 9.
 
 a.  Paste together (using the paste command) into a new vector the following information about each donor: the Name, City, State, and Zip_Code.
@@ -235,6 +635,50 @@ b.  Which donor donated the most times to Clinton's campaign?
 c.  Which donor donated the most times to Trump's campaign?
 
 d.  How many people have chosen to donate to both of the campaigns, i.e., they donated money to both Clinton and Trump?
+
+Solution:
+
+a. A vector of the donor information can be formed in this way:
+
+`donorvec <- paste(myDF$V8, myDF$V9, myDF$V10, myDF$V11)`
+
+b. The donor who donated the most times to the Clinton campaign was MITCHELL, MARCIA LOS ANGELES CA 900363146
+
+`tail(sort(tapply( myDF$V1 == "C00575795", donorvec, sum)))`
+
+c. The donor who donated the most times to the Trump campaign was Trump himself: TRUMP, DONALD J. NEW YORK NY 10022
+
+`tail(sort(tapply( myDF$V1 == "C00580100", donorvec, sum)))`
+
+d. To get the counts of the number of times that each person donated to each of the two campains (respectively), we compute these two vectors:
+
+[source,r]
+----
+clintoncounts <- tapply( myDF$V1 == "C00575795", donorvec, sum )
+trumpcounts <- tapply( myDF$V1 == "C00580100", donorvec, sum )
+----
+
+We can make sure that they came in the same order, by checking the lengths,
+
+[source,r]
+----
+length(clintoncounts)
+length(trumpcounts)
+----
+
+and moreover by checking to see that the names of the vectors agree:
+
+`sum(names(clintoncounts) != names(trumpcounts))`
+
+now we store the names of the donors in this order, and see which donors have a positive donation count for both:
+
+[source,r]
+----
+donornames <- names(clintoncounts)
+donornames[(clintoncounts > 0) & (trumpcounts > 0)]
+----
+
+There are only 3 such people.
 
 
 == Project 4
@@ -253,6 +697,126 @@ For example, for group 1, please submit:
 `p04g1.docx`  (a Word file)
 `p04g1.pdf`   (an Adobe Acrobat pdf file)
 `p04g1.html`  (an html file)
+
+Solution:
+
+[source,r]
+----
+---
+title: "Project4"
+author: "Mark Daniel Ward"
+date: "October 2016"
+output: pdf_document
+---
+
+```{r cache=TRUE}
+myDF <- read.delim("/data/public/election2016/itcont.txt", sep="|", header=F)
+```
+
+## Question 1
+The average donations were the largest on September 16, 2014.
+```{r}
+sort(tapply(myDF$V15, myDF$V14, mean))
+```
+## Question 2
+2a. The largest number of donations were made on these 10 days, e.g., the most donations were made on December 31, 2015
+```{r}
+tail(sort(table(myDF$V14)), 10)
+```
+2b. The largest dollar amounts of donations were made on these 10 days, e.g., the most donations were made on June 30, 2015
+```{r}
+tail(sort(tapply(myDF$V15, myDF$V14, sum)), 10)
+```
+## Question 3
+3a. There were 1277 donations by people at Purdue.
+```{r}
+length(grep("PURDUE", myDF$V12))
+```
+3b. Among those donations, 599 of them were made by residents of West Lafayette.
+```{r}
+v <- myDF$V9[grep("PURDUE", myDF$V12)]
+v1 <- grep("WEST LAFAYETTE", v)
+v2 <- grep("W LAFAYETTE", v)
+v3 <- grep("W. LAFAYETTE", v)
+length(v1) + length(v2) + length(v3)
+```
+3c. Among the donations by people at Purdue, the campaign C00401224 (ACTBLUE) received the largest number of donations.
+```{r}
+tail(sort(table(myDF$V1[grep("PURDUE", myDF$V12)])))
+```
+## Question 4
+We search for the cities from Indiana that contain Lafayette in the name, because this will also get cities with West Lafayette in the name too.
+Then we look at all such donation amounts, and take the average.
+The average size of such a donation is 121.8081 dollars.
+```{r}
+mean(myDF$V15[grepl("LAFAYETTE", myDF$V9) & grepl("IN", myDF$V10)])
+```
+## Question 5
+5a. The largest number of donations were made from these 10 professions:
+```{r}
+tail(sort(tapply(myDF$V15, myDF$V13, length)), 11)
+```
+5b. The largest dollar amount of donations were made from these 10 professions:
+```{r}
+tail(sort(tapply(myDF$V15, myDF$V13, sum)), 11)
+```
+## Question 6
+The total dollar amount of donations in the local zip codes are:
+```{r}
+tapply(myDF$V15,strtrim(myDF$V11,5),sum)[c("47901","47902","47903","47904","47905","47906","47907","47909","47996")]
+```
+## Question 7
+7a. The top 15 cities in Indiana, according to the amount donated, are
+```{r}
+tail(sort(tapply(myDF$V15[myDF$V10 == "IN"],myDF$V9[myDF$V10 == "IN"],sum)),15)
+```
+7b. The top 15 cities in the whole country, according to the amount donated, are
+```{r}
+tail(sort(tapply(myDF$V15,myDF$V9,sum)),15)
+```
+## Question 8
+8a. Hillary Clinton received the largest amount of money on July 29, 2016.
+```{r}
+tail(sort(tapply(myDF$V15[myDF$V1 == "C00575795"],myDF$V14[myDF$V1 == "C00575795"],sum)))
+```
+8b. Donald Trump received the largest amount of money on June 22, 2016.
+```{r}
+tail(sort(tapply(myDF$V15[myDF$V1 == "C00580100"],myDF$V14[myDF$V1 == "C00580100"],sum)))
+```
+## Question 9
+9a. A vector of the donor information can be formed in this way:
+```{r}
+donorvec <- paste(myDF$V8, myDF$V9, myDF$V10, myDF$V11)
+```
+9b. The donor who donated the most times to the Clinton campaign was MITCHELL, MARCIA LOS ANGELES CA 900363146
+```{r}
+tail(sort(tapply( myDF$V1 == "C00575795", donorvec, sum)))
+```
+9c. The donor who donated the most times to the Trump campaign was Trump himself: TRUMP, DONALD J. NEW YORK NY 10022
+```{r}
+tail(sort(tapply( myDF$V1 == "C00580100", donorvec, sum)))
+```
+9d. To get the counts of the number of times that each person donated to each of the two campains (respectively), we compute these two vectors:
+```{r}
+clintoncounts <- tapply( myDF$V1 == "C00575795", donorvec, sum )
+trumpcounts <- tapply( myDF$V1 == "C00580100", donorvec, sum )
+```
+We can make sure that they came in the same order, by checking the lengths,
+```{r}
+length(clintoncounts)
+length(trumpcounts)
+```
+and moreover by checking to see that the names of the vectors agree:
+```{r}
+sum(names(clintoncounts) != names(trumpcounts))
+```
+now we store the names of the donors in this order, and see which donors have a positive donation count for both:
+```{r}
+donornames <- names(clintoncounts)
+donornames[(clintoncounts > 0) & (trumpcounts > 0)]
+```
+There are only 3 such people.
+----
 
 
 == Project 5
@@ -298,11 +862,58 @@ d. Use the do.call function to rbind these 84 data.frames into one data.frame ca
 
 e. Repeat the steps above, to gather the data about these same 3 variables from depth 8.2m into one data.frame called bigDF82 (which will have a little less than 6 million observations).
 
+Solution:
+
+a. Create a vector corresponding to the 84 months from Nov 2009 through Oct 2016, and create a second vector containing the corresponding years.
+
+[source,r]
+----
+mymonths <- as.integer(format(seq(as.Date("2009/11/01"), by="month", length=84), "%m"))
+myyears <- as.integer(format(seq(as.Date("2009/11/01"), by="month", length=84), "%Y"))
+----
+
+b. Use these vectors in the context of an mapply function, to obtain the 84 months of data about the water temperature, salinity, and electrical conductivity at the SATURN03 station at the depth 2.4m. The result should be a list that contains 84 data.frames.
+
+`mylist <- mapply(myfunction, 3, 240, mymonths, myyears, SIMPLIFY=FALSE)`
+
+c. Use the sapply function to verify that all 84 data.frames have the variable names in the same order.
+
+`sum(colnames(mylist[[1]]) != sapply(mylist, colnames))`
+
+d. Use the do.call function to rbind these 84 data.frames into one data.frame called bigDF24. Check that the resulting data.frame has a little more than 7 million observations.
+
+`bigDF24 <- do.call(rbind, mylist)`
+
+e. Repeat the steps above, to gather the data about these same 3 variables from depth 8.2m into one data.frame called bigDF82 (which will have a little less than 6 million observations).
+
+[source,r]
+----
+mylist <- mapply(myfunction, 3, 820, mymonths, myyears, SIMPLIFY=FALSE)
+sum(colnames(mylist[[1]]) != sapply(mylist, colnames))
+bigDF82 <- do.call(rbind, mylist)
+----
+
+
 Question 2.
 
 a. Restricting attention to the 2.4m data, what is the longest time period for which no data is available, i.e., what is the longest time period in which no data is collected?
 
 b. On which day does that biggest gap occur?
+
+Solution:
+
+a. Restricting attention to the 2.4m data, what is the longest time period for which no data is available, i.e., what is the longest time period in which no data is collected?
+
+`mymax <- which.max(diff(as.POSIXct(bigDF24$time, "%Y/%m/%d %H:%M:%S", origin="1970-01-01")))`
+
+The longest time period is 21.09657 days
+
+`as.POSIXct(bigDF24$time, "%Y/%m/%d %H:%M:%S", origin="1970-01-01")[mymax+1] - as.POSIXct(bigDF24$time, "%Y/%m/%d %H:%M:%S", origin="1970-01-01")[mymax]`
+
+b. This occurs from roughly Feb 4, 2014 to Feb 25, 2014. We did not take the Pacific time zone into account yet; we will do that in the code in question 3.
+
+`as.POSIXct(bigDF24$time, "%Y/%m/%d %H:%M:%S", origin="1970-01-01")[mymax:(mymax+1)]`
+
 
 Question 3.
 
@@ -312,11 +923,75 @@ b. Plot the resulting daily mean values for water_temperature at depth 2.4m.
 
 c. Re-consider 3a and 3b for water_electrical_conductivity, and then also for water_salinity.
 
+Solution:
+
+a.  Find the daily mean values for water_temperature at depth 2.4m.
+
+`meantemp <- tapply(bigDF24$water_temperature, format(as.POSIXct(bigDF24$time-60*60*8, "%Y/%m/%d", origin="1970-01-01"), tz="PST", "%Y/%m/%d"), mean)`
+
+b.  Plot the resulting daily mean values for water_temperature at depth 2.4m.
+
+`plot(as.Date(names(meantemp)),meantemp)`
+
+c.  Re-consider 3a and 3b for water_electrical_conductivity, and then also for water_salinity.
+
+[source,r]
+----
+meanelec <- tapply(bigDF24$water_electrical_conductivity, format(as.POSIXct(bigDF24$time-60*60*8, "%Y/%m/%d", origin="1970-01-01"), tz="PST", "%Y/%m/%d"), mean)
+plot(as.Date(names(meanelec)),meanelec)
+----
+
+The electrical conductivity was erroneous for much of the data in the previous plot, so we fix it here.
+
+[source,r]
+----
+plot(as.Date(names(meanelec)[meanelec > -100]),meanelec[meanelec > -100])
+meansal <- tapply(bigDF24$water_salinity, format(as.POSIXct(bigDF24$time-60*60*8, "%Y/%m/%d", origin="1970-01-01"), tz="PST", "%Y/%m/%d"), mean)
+plot(as.Date(names(meansal)),meansal)
+----
+
+
 Question 4.
 
 a. Decide what constitutes a false reading, i.e., data that is probably an outlier. What are your criteria for having a false reading?
 
 b. How many false readings occur at depth 2.4m? Please break your responses down to a month-by-month tally, for each variable.
+
+Solution:
+
+ab. Decide what constitutes a false reading, i.e., data that is probably an outlier. What are your criteria for having a false reading? It looks like the temperature should always be between (roughly) 0 to 30 degrees, and there are four false readings for the water temperature.
+
+[source,r]
+----
+sum( (bigDF24$water_temperature < 0) | (bigDF24$water_temperature > 30), na.rm=T )
+baddates <- (bigDF24$water_temperature < 0) | (bigDF24$water_temperature > 30)
+
+tapply(bigDF24$water_temperature[baddates], format(as.POSIXct(bigDF24$time[baddates]-60*60*8, "%Y/%m/%d", origin="1970-01-01"), tz="PST", "%Y/%m"), length)
+----
+
+It initially looks like the salinity should always be between (roughly) 0 to 25, and that would imply that there are 257579 false readings for the salinity
+
+[source,r]
+----
+sum( (bigDF24$water_salinity < 0) | (bigDF24$water_salinity > 25), na.rm=T )
+baddates <- (bigDF24$water_salinity < 0) | (bigDF24$water_salinity > 25)
+
+tapply(bigDF24$water_salinity[baddates], format(as.POSIXct(bigDF24$time[baddates]-60*60*8, "%Y/%m/%d", origin="1970-01-01"), tz="PST", "%Y/%m"), length)
+----
+
+but then, if we consider the rest of the salinity values, they are all less than 32, so the rest of the salinity values are probably OK after all.
+
+`summary(bigDF24$water_salinity[baddates])`
+
+Perhaps all of the electrical conductivity values below -100 are faulty. Indeed, we can check that the electrical conductivity values should be nonnegative. Probably the values larger than 30 are erroneous.
+
+[source,r]
+----
+sum( (bigDF24$water_electrical_conductivity < 0) | (bigDF24$water_electrical_conductivity > 30), na.rm=T )
+baddates <- (bigDF24$water_electrical_conductivity < 0) | (bigDF24$water_electrical_conductivity > 30)
+
+tapply(bigDF24$water_electrical_conductivity[baddates], format(as.POSIXct(bigDF24$time[baddates]-60*60*8, "%Y/%m/%d", origin="1970-01-01"), tz="PST", "%Y/%m"), length)
+----
 
 Question 5.
 
@@ -334,6 +1009,16 @@ Hint: It might be helpful to use the sapply and paste commands, as well as the `
 
 It is NOT NECESSARY to extract the titles and artists for the songs in the database. Just download the 3000+ webpages from the web (each one in XML), and we'll come back later to this data, to scrape the titles and artists, and do some analysis. For now, we just want to download the data files.
 
+Solution:
+
+[source,r]
+----
+v <- seq(as.Date("1958-08-09"), as.Date("2016-10-08"), by="week")
+mycommands <- sapply(v, function(x) 
+  paste("curl www.billboard.com/charts/hot-100/", x, " >", x, sep="") )
+sapply(mycommands, system)
+----
+
 Question 6.
 
 Consider the New York City taxi data located at:
@@ -346,6 +1031,16 @@ http://www.nyc.gov/html/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pd
 
 Use the system and either the wget or curl command, inside R, to scrape all of the yellow taxi cab data (in CSV format) into the *scratch* folder for your team. You can scrape these directly using bash if you prefer (in fact, that is probably recommended), but make sure that the code that you use to scrape them is succinct, and if you make bash calls, please use the system command in R to make them.
 
+Solution:
+
+[source,r]
+----
+myyears <- c(rep(2009:2015,each=12),rep(2016,times=6))
+mymonths <- c(rep(sprintf("%02d",1:12),times=7), sprintf("%02d",1:6))
+myfilestodownload <- paste("curl s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_", myyears, "-", mymonths, ".csv >/scratch/mentors/mdw/", myyears, "-", mymonths, ".csv", sep="")
+sapply(myfilestodownload, system, ignore.stderr=TRUE)
+----
+
 Question 7.
 
 You may want to cut the data in various ways in bash (again using the system command in R), before answering the following questions:
@@ -354,17 +1049,92 @@ a. On which day did the most taxi cab rides occur? If a ride goes past midnight,
 
 b. For each day, determine the distribution of the number of passengers. Your output should allow you to answer questions like the following: On January 1, 2016, how many rides had 1 passenger? 2 passengers? 3 passengers? Etc.?
 
+Solution:
+
+a. 849414 rides occurred on 2010-09-19
+
+[source,r]
+----
+system("cat /scratch/mentors/mdw/20*.csv | grep -v ickup | awk -F [,\\ ] '{a[$2] += 1} END {for (i in a) print a[i], i}' | sort -n >/scratch/mentors/mdw/resultfile7a.txt")
+myDFquestion7a <- read.table("/scratch/mentors/mdw/resultfile7a.txt", sep=' ')
+dim(myDFquestion7a)
+tail(myDFquestion7a)
+----
+
+b.
+
+219590 rides on 2016-01-01 had 1 passenger
+
+63213 rides on 2016-01-01 had 2 passengers
+
+19363 rides on 2016-01-01 had 3 passengers
+
+etc...
+
+[source,r]
+----
+system("cat /scratch/mentors/mdw/20*.csv | grep -v ickup | awk -F [,\\ ] '{a[$2\" \"$6] += 1} END {for (i in a) print a[i], i}' | sort -n >/scratch/mentors/mdw/resultfile7b.txt")
+myDFquestion7b <- read.table("/scratch/mentors/mdw/resultfile7b.txt", sep=' ')
+dim(myDFquestion7b)
+tail(myDFquestion7b)
+myDFquestion7b[myDFquestion7b$V2 == "2016-01-01", ]
+----
+
 Question 8.
 
 a. For each day, determine the average distance of a taxi cab ride.
 
 b. For each day, determine the average number of passengers.
 
+Solution:
+
+a.
+
+[source,r]
+----
+system("cat /scratch/mentors/mdw/20*.csv | grep -v ickup | awk -F [,\\ ] '{a[$2] += 1; b[$2] += $7} END {for (i in a) print a[i], b[i], i}' | sort -n > /scratch/mentors/mdw/resultfile8a.txt")
+myDFquestion8a <- read.table("/scratch/mentors/mdw/resultfile8a.txt", sep=' ')
+dim(myDFquestion8a)
+v <- myDFquestion8a$V2/myDFquestion8a$V1
+names(v) <- myDFquestion8a$V3
+v
+----
+
+b.
+
+[source,r]
+----
+system("cat /scratch/mentors/mdw/20*.csv | grep -v ickup | awk -F [,\\ ] '{a[$2] += 1; b[$2] += $6} END {for (i in a) print a[i], b[i], i}' | sort -n > /scratch/mentors/mdw/resultfile8b.txt")
+myDFquestion8b <- read.table("/scratch/mentors/mdw/resultfile8b.txt", sep=' ')
+dim(myDFquestion8b)
+w <- myDFquestion8b$V2/myDFquestion8b$V1
+names(w) <- myDFquestion8b$V3
+w
+----
+
 Question 9.
 
 a. On which type of day (Sun, Mon, …, Sat) is the average distance of a ride the longest?
 
 b. On which type of day (Sun, Mon, …, Sat) is the average number of passengers in a car the largest?
+
+Solution:
+
+a. On Friday, the average is 6.130944
+
+[source,r]
+----
+myDFquestion8a$V4 <- c("Sunday", weekdays(as.Date(myDFquestion8a$V3[-1])))
+sort(tapply( myDFquestion8a$V2, myDFquestion8a$V4, sum ) / tapply( myDFquestion8a$V1, myDFquestion8a$V4, sum ))
+----
+
+b. On Saturday, the average is 1.769277
+
+[source,r]
+----
+myDFquestion8b$V4 <- c("Sunday", weekdays(as.Date(myDFquestion8b$V3[-1])))
+sort(tapply( myDFquestion8b$V2, myDFquestion8b$V4, sum ) / tapply( myDFquestion8b$V1, myDFquestion8b$V4, sum ))
+----
 
 Question 10.
 
@@ -746,29 +1516,57 @@ Question 1.
 
 Find out how many games that each baseball team won in 2015. Your result should have 30 rows.
 
+Solution:
+
+`SELECT t.yearID, t.teamID, t.name, t.W FROM teams t WHERE t.yearID = '2015';`
+
 Question 2.
 
 Find the years in which the Chicago Cubs won at least 95 games. Your result should have 7 rows.
+
+Solution:
+
+`SELECT t.yearID, t.teamID, t.name FROM teams t WHERE t.teamID = 'CHN' AND t.W >= 95;`
 
 Question 3.
 
 Find the statistics for how many home runs that Ernie Banks hit with a year-by-year breakdown, while he was playing for the Chicago Cubs. FYI, Ernie Banks was awarded the Presidential Medal of Freedom in 2013,  for his contribution to sports. Your result should have 19 rows.
 
+Solution:
+
+`SELECT m.playerID, m.nameFirst, m.nameLast, b.HR, b.yearID FROM batting b INNER JOIN master m ON b.playerID = m.playerID JOIN teams t ON b.yearID = t.yearID AND b.teamID = t.teamID WHERE m.nameFirst = 'Ernie' AND m.nameLast = 'Banks' AND t.teamID = 'CHN';`
+
 Question 4.
 
 Identify each player who hit 40 or more home runs during a year, while they were playing with the Chicago Cubs. Your result should have 18 rows, and some players achieved such an accomplishment several times (and will therefore appear in the list multiple times).
+
+Solution:
+
+`SELECT m.playerID, m.nameFirst, m.nameLast, b.HR FROM batting b INNER JOIN master m ON b.playerID = m.playerID JOIN teams t ON b.yearID = t.yearID AND b.teamID = t.teamID WHERE t.teamID = 'CHN' AND b.HR >= 40;`
 
 Question 5.
 
 Have there been any Chicago Cubs players to get 100 or more runs in a single season? Find all such Cubs players who had such an achievement since 2000.
 
+Solution:
+
+`SELECT m.nameFirst, m.nameLast, b.playerID, b.teamID, t.name, b.R, b.yearID FROM batting b JOIN master m ON m.playerID = b.playerID JOIN teams t ON b.yearID = t.yearID AND b.teamID = t.teamID WHERE b.R > 10 AND t.teamID = 'CHN' AND t.yearID >= 2000;`
+
 Question 6.
 
 Find, for each year since 1960, how many Chicago Cubs players there were in each year.  Your result should have 56 rows.
 
+Solution:
+
+`SELECT b.yearID, b.teamID, t.name, COUNT(*) FROM batting b INNER JOIN master m ON b.playerID = m.playerID INNER JOIN teams t ON (t.yearID = b.yearID AND t.teamID = b.teamID) WHERE t.teamID = 'CHN' AND t.yearID >= 1960 GROUP BY b.yearID;`
+
 Question 7.
 
 Find the player who had the largest number of doubles in one season.
+
+Solution:
+
+`SELECT m.playerID, b.yearID, m.nameFirst, m.nameLast, b.2B FROM batting b INNER JOIN master m ON b.playerID = m.playerID GROUP BY m.playerID, b.yearID ORDER BY b.2B;`
 
 Hint for questions 8, 9, 10:
 
@@ -778,9 +1576,17 @@ Question 8.
 
 Find the teams and years in which a team won at least 105 games that year. Your result should have 18 rows. Notice that some players achieved this feat during more than 1 season.
 
+Solution:
+
+`SELECT t.yearID, t.teamID, t.name, SUM(t.W) FROM teams t GROUP BY t.yearID, t.teamID HAVING SUM(t.W) >= 105;`
+
 Question 9.
 
 Find the breakdown of players who had 500 or more home runs during their lifetime.  Your result should have 26 rows.
+
+Solution:
+
+`SELECT m.playerID, m.nameFirst, m.nameLast, SUM(b.HR) FROM batting b INNER JOIN master m ON b.playerID = m.playerID GROUP BY m.playerID HAVING SUM(b.HR) > 500;`
 
 Question 10.
 
@@ -802,6 +1608,7 @@ alter table pitching add index pitching_teamID(teamID);
 
 Now find the pitchers who have made at least 3000 strikeouts during their career. Your result should have 16 rows.
 
+`SELECT m.playerID, m.nameFirst, m.nameLast, SUM(p.SO) FROM pitching p INNER JOIN master m ON p.playerID = m.playerID GROUP BY m.playerID HAVING SUM(p.SO) >= 3000;`
 
 == Project 8
 

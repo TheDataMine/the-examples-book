@@ -1,0 +1,2438 @@
+= STAT-LLC Fall 2017 STAT 29000 Projects
+
+== Project 1
+
+Question 1.
+
+a.  Read a little about the data from the ASA DataExpo 2009:
+
+http://stat-computing.org/dataexpo/2009/
+
+b.  Navigate to the scratch directory for your group using the cd command. Then use a for loop and the wget command to download the airline data, and bzip2 to unzip the data.  Try to understand what these commands are doing.
+
+[source,bash]
+----
+for ((x = 1987 ; x <= 2008 ; x++)); do
+  wget http://stat-computing.org/dataexpo/2009/$x.csv.bz2
+  bzip2 -d $x.csv.bz2
+done
+----
+
+Question 2.
+
+a.  Use the ls command to learn which of the resulting .csv files is biggest in terms of bytes.  How many bytes does this largest file have?
+
+b.  Use the wc command to learn which of the resulting .csv files has the most lines.  How many lines does this largest file have?
+
+c.  Use the cat command to concatenate all of the files together into one big file.  How many lines does this new file have?
+
+Solution:
+
+a. `2007.csv` has 702878193 bytes
+
+`ls  -la *.csv | sort -n | tail -n1`
+
+b. `2007.csv` has 7453216 lines
+
+`wc -l *.csv | grep -v total | sort -n | tail -n1`
+
+c. The new big file has 123534991 lines.
+
+[source,bash]
+----
+cat *.csv >bigfile.csv
+wc -l bigfile.csv
+----
+
+
+Question 3.
+
+a.  Use the head command to get information about the first 10 rows of the file.  Pipe the results to the cut command and extract the 17th and 18th fields (using comma as the delimiter), to get information about the first several origin-to-destination pairs.
+
+b.  Try the same concept with the tail of the file.
+
+Solution:
+
+a. The first several origin-to-destination pairs are:
+
+[source,bash]
+----
+head bigfile.csv  | cut -d, -f17-18
+Origin,Dest
+SAN,SFO
+SAN,SFO
+SAN,SFO
+SAN,SFO
+SAN,SFO
+----
+
+b. The last several lines are:
+
+`tail bigfile.csv  | cut -d, -f17-18`
+
+
+Question 4.
+
+a.  Now extract the 17th and 18th fields from the entire file.  Pipe the results to the sort command, and then pipe those results to the uniq command (with a certain flag), to find out how many flights occurred between each pair of cities.
+
+b.  Same question as 4a, but now pipe the results to the sort command again, this time with a -n flag, to put the results into sorted order.
+
+Solution:
+
+a. These are the counts of the number of flights between each pair of cities.
+
+`cat bigfile.csv | cut -d, -f17-18 | sort | uniq -c`
+
+For example, here are the last 10 entires in this list:
+
+[source,bash]
+----
+      1 YKM,SFO
+      1 YKM,SJC
+    750 YKM,SLC
+      1 YUM,GJT
+   1454 YUM,IPL
+    479 YUM,LAS
+   6929 YUM,LAX
+  13588 YUM,PHX
+      3 YUM,PSP
+    469 YUM,SLC
+----
+
+b. Here are is the sorted output.
+
+`cat bigfile.csv | cut -d, -f17-18 | sort | uniq -c | sort -n`
+
+For example, here are the last 10 entires in this list:
+
+[source,bash]
+----
+ 239183 LAS,PHX
+ 240587 PHX,LAS
+ 249250 MSP,ORD
+ 249960 ORD,MSP
+ 279116 LAX,PHX
+ 279716 PHX,LAX
+ 286328 LAS,LAX
+ 292125 LAX,LAS
+ 336938 LAX,SFO
+ 338472 SFO,LAX
+----
+
+Question 5.
+
+a.  How many origin-to-destination pairs are there?
+
+b.  Which is the most popular origin-to-destination pair?
+
+c.  Which is the 100th most popular origin-to-destination pair?  (Hint: use tail with a flag that specifies 100 results, and then pipe the results to the head command.)
+
+Solution:
+
+a. There are 8607 origin-to-destination pairs.
+
+`cat bigfile.csv | cut -d, -f17-18 | grep -v Origin | sort | uniq | wc -l`
+
+b. The most popular origin-to-destination pair is `338472 SFO,LAX`
+
+`cat bigfile.csv | cut -d, -f17-18 | grep -v Origin | sort | uniq -c | sort -n | tail -n1`
+
+c. The 100th most popular origin-to-destination pair is `119452 ORD,IAH`
+
+`cat bigfile.csv | cut -d, -f17-18 | grep -v Origin | sort | uniq -c | sort -n | tail -n100 | head -n1`
+
+
+Question 6.
+
+a.  For which origin-to-destination pair were there exactly 10000 flights from 1987 to 2008 ?
+
+b.  Which airplane flew exactly 10000 flights from 1987 to 2008 ?
+
+Solution:
+
+a. There were exactly 10000 flights on this origin-to-destination pair: DFW,GSP
+
+`cat bigfile.csv | cut -d, -f17-18 | sort | uniq -c | grep 10000`
+
+b. The airplane that flew exactly 10000 flights from 1987 to 2008 is: N494CA
+
+`cat bigfile.csv | cut -d, -f11 | sort | uniq -c | grep 10000`
+
+Question 7.
+
+a.  Were there more flights arriving in ORD or departing from ORD ?
+
+b.  Compare the number of flights from ORD to IND versus the number of flights from IND to ORD.
+
+Solution:
+
+a. The number of flights departing from ORD is:  6597442
+
+`cat bigfile.csv | cut -d, -f17 | grep ORD | wc -l`
+
+The number of flights arriving in ORD is:  6638035
+
+`cat bigfile.csv | cut -d, -f18 | grep ORD | wc -l`
+
+So there were more flight arriving in ORD.
+
+b. There were 79334 flights from ORD to IND.
+
+`cat bigfile.csv | cut -d, -f17,18 | grep ORD,IND | wc -l`
+
+There were 80498 flights from IND to ORD.
+
+`cat bigfile.csv | cut -d, -f17,18 | grep IND,ORD | wc -l`
+
+
+Question 8.
+
+8.  Which airplane flew the greatest number of flights from 1987 to 2008 ?
+
+http://stat-computing.org/dataexpo/2009/supplemental-data.html
+
+Solution:
+
+The tailnum N528 flew 34526 flights
+
+`cat bigfile.csv | cut -d, -f11 | sort | uniq -c | sort -n`
+
+
+Question 9.
+
+Use the supplemental data to make a listing of the total number of airports in each state.
+
+Solution:
+
+First we download the data about the airports
+
+`wget http://stat-computing.org/dataexpo/2009/airports.csv`
+
+Then we extract the data about the states from the 4th column and we see how many occur in each state.
+
+[source,bash]
+----
+cat airports.csv | cut -d, -f4 | sort | uniq -c
+   263 "AK"
+    73 "AL"
+    74 "AR"
+     3 "AS"
+    59 "AZ"
+----
+
+Question 10.
+
+a.  Make a list of how many flights arrived at IND in each year.
+
+b.  Make a list of how many flights occurred during each month/year pair, e.g., how many in October 1987, how many in November 1987, etc.
+
+Solution:
+
+a. We find the number of flights that arrive at IND each year.
+
+`cat [1-2]*.csv | cut -d, -f1,18 | grep IND | sort | uniq -c`
+
+We note that, in this case, the "sort" is not really needed, because the lines we want to count are already in the desired order, but we use the sort anyway, just for consistency.
+
+[source,bash]
+----
+  8707 1987,IND
+ 36961 1988,IND
+ 40042 1989,IND
+ 43437 1990,IND
+ 42508 1991,IND
+----
+
+etc.
+
+b. The same idea works, if we want to show the number of flights according to month and year.  We just use the 1st and 2nd fields.
+
+[source,bash]
+----
+cat [1-2]*.csv | cut -d, -f1,2 | sort | uniq -c
+448620 1987,10
+422803 1987,11
+440403 1987,12
+436950 1988,1
+441670 1988,10
+----
+etc.
+
+
+Question 11.
+
+On which day of the week (Monday through Sunday) are people most likely to fly to ORD?
+
+Solution:
+
+People are most likely to fly to O'Hare on the 3rd day which means Wednesday, according to the data dictionary:
+
+`http://stat-computing.org/dataexpo/2009/the-data.html`
+
+[source,bash]
+----
+cat [1-2]*.csv | cut -d, -f4,18 | grep ORD | sort | uniq -c | sort -n
+851290 6,ORD
+915345 7,ORD
+970601 5,ORD
+972314 4,ORD
+975216 1,ORD
+976395 2,ORD
+976874 3,ORD
+----
+
+Question 12.
+
+During the years 2004 to 2008 (inclusive), which airplane has landed in Chicago O'Hare the largest number of times?
+
+Solution:
+
+The airplane that has landed at O'Hare the most times between 2004 to 2008 is N670AE
+
+[source,bash]
+----
+cat 200[4-8].csv | cut -d, -f11,18 | grep ORD | sort | uniq -c | sort -n
+  3603 N656AE,ORD
+  3660 N674RJ,ORD
+  3680 N672AE,ORD
+  3742 N670AE,ORD
+  9644 000000,ORD
+  9974 ,ORD
+ 36255 0,ORD
+----
+
+
+Broader questions:
+
+Question 13.
+
+Do the seasons of the year significantly affect where people can fly?
+
+Question 14.
+
+How many of the flights in 1992 had nonnegative departure delay (i.e., did not depart early)?
+
+Solution:
+
+There were 3743719 flights in 1992 with nonnegative departure delay, i.e., without a negative sign in the DepDelay
+
+`cat 1992.csv | cut -d, -f16 | grep -v "-" | wc -l`
+
+
+== Project 2
+
+Question 1.
+
+a.  Read a little about the New York City Yellow Taxi Data
+
+http://www.nyc.gov/html/tlc/html/about/trip_record_data.shtml
+
+b.  Navigate to the scratch directory for your group using the cd command. Then use a double for loop and the wget command to download the airline data.
+
+Note:  There are 228 GB in this data set!
+
+[source,bash]
+----
+for year in {2009..2017}; do
+  for month in {01..12}; do
+    wget https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_$year-$month.csv
+  done
+done
+----
+
+c.  You will see that the various files have various numbers of columns. Please make a version of the files in which the data is consistent, i.e., in which all of the files have the same number (and type) of columns.
+
+Solution:
+
+c. We only need 6 fields for this project.
+
+The pickup date/time is always the 2nd field.
+
+The dropoff date/time is always the 3rd field.
+
+The passenger count is always the 4th field.
+
+The trip distance is always the 5th field.
+
+The payment type is the 12th field for the first 7.5 years, i.e., from January 2009 through June 2016 but is the 10th field for the last 1 year, i.e., from July 2016 to June 2017.
+
+The total amount is always the last field.  In awk, NF is the number of fields, so $NF refers to the last field.
+
+[source,bash]
+----
+cat yellow_tripdata_2009-*.csv yellow_tripdata_201[0-5]-*.csv yellow_tripdata_2016-0[1-6].csv | awk -F, 'BEGIN{OFS=","} {print $2, $3, $4, $5, $12, $NF}' >>bigfile.csv
+cat yellow_tripdata_2016-0[7-9].csv yellow_tripdata_2016-1*.csv yellow_tripdata_2017*.csv | awk -F, 'BEGIN{OFS=","} {print $2, $3, $4, $5, $10, $NF}' >>bigfile.csv
+----
+
+We used the double right arrow because it appends to the previous data, i.e., the results of the second command will not destroy the results from the first command. This makes a file that is about 94 GB.
+
+Question 2.
+
+a.  What was the largest number of passengers in a single trip?
+
+b.  On which days did those trips occur?
+
+Solution:
+
+a. We can see how many taxi cab rides occurred, with each possible number of passengers.
+
+[source,bash]
+----
+cat bigfile.csv | awk -F, '{ countpassengers[$3] = countpassengers[$3] + 1 } END{ for (key in countpassengers) { print key, countpassengers[key] }}' | sort -n >myresults.txt
+tail myresults.txt
+----
+
+It looks like a total of 255 passengers were listed on 10 of the taxi cab rides. This is probably erroneous, but nonetheless, 10 such taxi cab rides are given.
+
+[source,bash]
+----
+213 4
+223 1
+225 1
+229 1
+232 1
+247 1
+249 1
+250 3
+254 1
+255 10
+----
+
+If you prefer, we can solve this problem without awk:
+
+`cat bigfile.csv | cut -d, -f3 | sort -n | tail`
+
+and we get a similar answer.
+
+b. Those big rides (which supposedly had 255 passengers each) happened on these dates:
+
+[source,bash]
+----
+cat yellow*.csv | awk -F, '{if ($4 == 255) {print $2} }' >big10.txt &
+cat big10.txt
+2009-04-04 19:37:00
+2009-07-18 19:41:00
+2009-07-19 09:30:00
+2009-07-16 20:51:00
+2009-08-24 23:44:00
+2010-09-14 23:36:00
+2010-09-23 10:45:00
+2011-07-25 22:18:00
+2013-01-08 10:16:00
+2013-03-23 22:55:00
+----
+
+Question 3.
+
+What percentage of taxi cab trips arrived on a different day than they departed (i.e., the trip lasted past midnight)?
+
+Solution:
+
+3. In this solution, we note that sometimes there are erroneous dates, for instance, in which the departure time is listed after the arrival time, and we do not correct for such dates here. We do, however, remove the header from each file, but we do not check (for instance) for blank lines or other errors. Notice that we are using the comma and blank space as two (simultaneous) delimiters. The percentage of dates where the departure and arrival date are different is: 0.00971386, in other words, roughly 1 percent of the taxi cab rides have this property.
+
+`cat bigfile.csv | awk -F[,\ ] '{totaldates = totaldates + 1; if ($1 != $3) {wrongdates = wrongdates + 1}} END {print wrongdates/totaldates}'`
+
+Question 4.
+
+How many passengers traveled on each day?
+
+Solution:
+
+4. We keep track of the datecount for each day. Note that we again use the comma and blank space as two (simultaneous) delimiters. We put the results into the file `passengersperday.txt`
+
+[source,bash]
+----
+cat bigfile.csv | awk -F[,\ ] '{ datecount[$1] = datecount[$1] + $5} END{ for (key in datecount) { print key, datecount[key] } }' | sort -n >passengersperday.txt
+tail passengersperday.txt
+----
+
+The last several such counts are:
+
+[source,bash]
+----
+2017-06-26 471265
+2017-06-27 515074
+2017-06-28 506192
+2017-06-29 502654
+2017-06-30 491689
+----
+
+Question 5.
+
+a.  How much money was collected from passengers on each day (total amount)?
+
+b.  Same question, but restrict attention to the rides in which the passengers paid with a credit card.
+
+Solution:
+
+a. Similar to the last problem, we keep track of the datetotalamount for each day. We put the results into the file totalamountperday.txt
+
+`cat bigfile.csv | awk -F[,\ ] '{ datetotalamount[$1] = datetotalamount[$1] + $8} END{ for (key in datetotalamount) { print key, datetotalamount[key] } }' | sort -n >totalamountperday.txt`
+
+The last several such daily total amounts are:
+
+[source,bash]
+----
+tail totalamountperday.txt
+2017-06-21 5.76079e+06
+2017-06-22 5.77223e+06
+2017-06-23 5.69886e+06
+2017-06-24 4.91986e+06
+2017-06-25 4.43787e+06
+2017-06-26 4.93678e+06
+2017-06-27 5.34543e+06
+2017-06-28 5.41506e+06
+2017-06-29 5.4581e+06
+2017-06-30 4.96178e+06
+----
+
+b. We first find out how many types of ways that credit cards are denoted in the data:
+
+`cat bigfile.csv | awk -F[,\ ] '{ print $7 }' | sort | uniq -c >paymenttypes.txt`
+
+We see that there is some erroneous organization of a small amount of the data, which corrupts this column a little bit, but nonetheless, we can still make sense of the payment types.  The most important ones are:
+
+[source,bash]
+----
+26053917 Cas
+30792006 CAS
+56282593 Cash
+69117503 CASH
+382212709 CRD
+27416052 Cre
+3369965 CRE
+42561382 Credit
+2330599 CREDIT
+389969596 CSH
+  43596 Dis
+ 365825 DIS
+  94784 Dispute
+  39986 NA
+ 709645 No
+1195881 NOC
+1070012 UNK
+----
+
+So we want to sum the payments as in 5a, but first we restrict to payment type CRD, Cre, CRE, Credit, or CREDIT. Starting in 2015, we need to search for credit card type "1", according to the data dictionary:
+
+http://www.nyc.gov/html/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pdf
+
+`cat bigfile.csv | awk -F[,\ ] '{ if (($7 == "CRD") || ($7 == "Cre") || ($7 == "CRE") || ($7 == "Credit") || ($7 == "CREDIT") || ($7 == "1")) {datetotalamount[$1] = datetotalamount[$1] + $8}} END{ for (key in datetotalamount) { print key, datetotalamount[key] } }' | sort -n >credittotalamountperday.txt`
+
+The tail of the result, for instance, is:
+
+[source,bash]
+----
+2017-06-21 4.17415e+06
+2017-06-22 4.32423e+06
+2017-06-23 4.20328e+06
+2017-06-24 3.43718e+06
+2017-06-25 3.17072e+06
+2017-06-26 3.61466e+06
+2017-06-27 3.9682e+06
+2017-06-28 4.04539e+06
+2017-06-29 4.08786e+06
+2017-06-30 3.57488e+06
+----
+
+Question 6.
+
+How much travel occurred (altogether) on each day?
+
+Solution:
+
+Again, similar to 4 and 5a, we keep track of the totalmiles for each day. We put the results into the file `totalmilesperday.txt`
+
+`cat bigfile.csv | awk -F[,\ ] '{ totalmiles[$1] = totalmiles[$1] + $6} END{ for (key in totalmiles) { print key, totalmiles[key] } }' | sort -n >totalmilesperday.txt`
+
+The last several such daily total amounts are:
+
+[source,bash]
+----
+tail totalmilesperday.txt
+2017-06-21 962384
+2017-06-22 994709
+2017-06-23 988385
+2017-06-24 932349
+2017-06-25 895173
+2017-06-26 925446
+2017-06-27 945232
+2017-06-28 939698
+2017-06-29 930352
+2017-06-30 884978
+----
+
+
+Question 7.
+
+a.  How much travel occurred in miles (altogether) on trips with 1 passenger?
+
+b.  How much travel occurred in miles (altogether) on trips with 2 passenger?
+
+c.  For each integer, how much travel occurred in miles (altogether) on trips with that many passengers?
+
+Solution:
+
+We group the amount of miles traveled according to the number of passengers. We go back to (only) using a comma as a delimiter, since we are no longer using the dates. We store the results in a file called `totalmilesperpassengercount.txt`
+
+`cat bigfile.csv | awk -F, '{ milestraveled[$3] = milestraveled[$3] + $4} END{ for (key in milestraveled) { print key, milestraveled[key] } }' | sort -n >totalmilesperpassengercount.txt`
+
+[source,bash]
+----
+head totalmilesperpassengercount.txt
+ 0
+0 9.00201e+06
+ passenger_count 0
+passenger_count 0
+Passenger_Count 0
+1 5.36054e+09
+2 1.00499e+09
+3 2.95196e+08
+4 1.24224e+08
+5 2.51568e+08
+----
+
+a.  So there were 5.36054e+09 miles altogether for the trips with 1 passenger,
+
+b.  and there were 1.00499e+09 miles altogether for the trips with 2 passengers,
+
+c.  etc., etc.  We see the head of the file with all of the results, given above.
+
+
+Question 8.
+
+Returning to the airline data set:
+
+a.  How far has each airplane flown?  (I.e., group the flights by tailnum, and add the total distances of the flights for each tailnum.)
+
+b.  How far have each airline's planes flown altogether?
+
+Solution:
+
+For questions 8 through 11, the "bigfile.csv" refers to a file with all of the airline data (as opposed to all of the taxi data)
+
+a. We group the amount of miles flown according to the tailnum. We store the results in a file called totalmilesflown.txt
+
+`cat bigfile.csv | awk -F, '{ milesflown[$11] = milesflown[$11] + $19} END{ for (key in milesflown) { print key, milesflown[key] } }' | sort -n >totalmilesflown.txt`
+
+[source,bash]
+----
+tail totalmilesflown.txt
+91869E 337675
+91879E 363405
+96009E 76734
+96019E 110140
+96029E 112893
+96049E 91183
+96059E 175471
+96069E 166937
+96079E 166177
+ 81199937
+----
+
+b. Same concept, but now we group according to the carrier. We store the results in a file called totalmilesflownpercarrier.txt
+
+`cat bigfile.csv | awk -F, '{ milesflownpercarrier[$9] = milesflownpercarrier[$9] + $19} END{ for (key in milesflownpercarrier) { print key, milesflownpercarrier[key] } }' | sort -n >totalmilesflownpercarrier.txt`
+
+[source,bash]
+----
+head totalmilesflownpercarrier.txt
+AA 14237240059
+AQ 52022302
+AS 2138434915
+B6 970096179
+CO 7290881290
+DH 259805885
+DL 11782682821
+EA 557435834
+EV 764868753
+F9 299595575
+----
+
+Question 9.
+
+On each day of the year, what was/were the most popular origin-to-destination pair(s)?
+
+[Hint:  Dr Ward started this way:
+
+`cat *.csv | awk -F, '{print $1"-"$2"-"$3" "$17"-"$18}' | sort | uniq -c | sort -k2,2 -k1,1nr | awk -F" " ....`
+
+and you can try to fill in the ....
+
+This groups the dates and the flight paths and gets the counts for each. In my awk, I do this:
+
+[source,bash]
+----
+if $2 does not equals the previous date, then:
+   print the current flight (since it is a max)
+   and update the current count to $1
+   and update the current date to $2
+ else
+   if $1 equals the current count, then print the current flight
+----
+
+That's it!]
+
+Solution:
+
+First we make a listing of all dates and origin-to-destination pairs, with the associated counts.
+
+`cat bigfile.csv | cut -d, -f1,2,3,17,18 | sort -n | uniq -c >dateflights.txt`
+
+Then, for each date, we find the highest count. To do this, since the data is already sorted, we just process the data line by line in the sorted order:
+
+[source,bash]
+----
+if $2 does not equals the previous date, then:
+  print the current flight (since it is a max)
+  and update the current count to $1
+  and update the current date to $2
+else
+  if $1 equals the current count, then print the current flight
+cat bigfile.csv | awk -F, '{print $1"-"$2"-"$3" "$17"-"$18}' | sort | uniq -c | sort -k2,2 -k1,1nr | awk -F" " '{if($2 != prevdate) {prevdate=$2;prevcount=$1;print $0} else{if($1==prevcount){print $0} } }' >mostpopular.txt
+----
+
+Question 10.
+
+Consider the Friday immediately after Thanksgiving 2008.
+
+a. How many airplanes departed from each airport on that day?
+
+b. Sort the flight data for that day according to two keys simultaneously:  first according to the tailnum, and then according to the departure time.
+
+c. For each tailnum, print the departure delay of the first flight that the tailnum made on that day.
+
+d. Among the initial flight of the day that departed late, how many arrived late as well?
+
+Solution:
+
+a.  We can extract the origin airports for November 28, 2008, and then sort and use uniq -c to get a count for how many airplanes departed from each such airport:
+
+`cat 2008.csv | awk -F, '{if ($1==2008 && $2==11 && $3==28) {print $17}}' | sort | uniq -c`
+
+Here is the head, for instance:
+
+[source,bash]
+----
+     8 ABE
+     7 ABI
+    82 ABQ
+     2 ABY
+     4 ACT
+     7 ACV
+     1 ADQ
+     4 AEX
+     3 AGS
+    27 ALB
+----
+
+b.  We can extract the Tailnum, DepTime, DepDelay, and ArrDelay for each flight from November 28, 2008:
+
+`cat 2008.csv | awk -F, '{if ($1==2008 && $2==11 && $3==28) {print $11,$5,$16,$15}}' >dayafterthanksgiving.txt`
+
+Then we can sort the output, first with respect to the tailnum, and then with respect to the departure time, sorted as a number:
+
+`sort -k1,1 -k2,2n dayafterthanksgiving.txt`
+
+The first few lines are:
+
+[source,bash]
+----
+1155 -5 NA
+80009E 620 -5 -2
+80009E 939 -1 -2
+80009E 1123 -2 -5
+80009E 1506 -4 -20
+80009E 1828 -5 -13
+80009E 2216 -5 -10
+80019E 618 -2 -26
+80019E 917 -3 -3
+80019E 1128 -5 -3
+----
+
+c.  We just check to see if the current tailnum equals the previous tailnum, and if it does not, then we are looking at the first flight of the day, so we print the information for that flight.
+
+I opted to print the Tailnum, DepDelay, and ArrDelay for each such flight
+
+`sort -k1,1 -k2,2n dayafterthanksgiving.txt | awk -F" " '{if($1 != prevtailnum) {prevtailnum=$1;print $0}}' >firstflights.txt`
+
+d.  If those DepDelays and ArrDelays are negative, we print the result:
+
+`awk -F" " '{if (($3 > 0) && ($4 > 0)) {print $0}}' firstflights.txt | wc`
+
+There were about 399 such flights.
+
+This includes some NA values, but it is approximately correct, and we could further refine the answer if desired.
+
+
+Question 11.
+
+For each origin-to-destination pair, what percentage of flights had departure delays?  Hint: For each origin-to-destination pair, you may add the departure delays and divide by the number of flights.  You will probably need to utilize two separate types of counters in awk.
+
+Solution:
+
+For each origin-to-destination pair, what percentage of flights had departure delays?  Hint: For each origin-to-destination pair, you may add the departure delays and divide by the number of flights.  You will probably need to utilize two separate types of counters in awk.
+
+`cat bigfile.csv | awk -F, '{print $17"-"$18","$16}' | awk -F, '{ flightcounter[$1] = flightcounter[$1] + 1; if($2>0) {delaycounter[$1] = delaycounter[$1] + 1}} END{ for (key in flightcounter) {print delaycounter[key] / flightcounter[key], key }}' | sort -n  >flightdelaypercentages.txt`
+
+For instance, we see that the IND to ORD percentage is:
+
+`0.41642 IND-ORD`
+
+and the ORD to IND percentage is:
+
+`0.541836 ORD-IND`
+
+
+== Project 3
+
+Question 1.
+
+Load the supplemental data from the ASA DataExpo 2009 about the airports
+
+http://stat-computing.org/dataexpo/2009/airports.csv
+
+Solution:
+
+`library(ggmap)`
+
+`airportsDF <- read.csv("http://stat-computing.org/dataexpo/2009/airports.csv")`
+
+Question 2.
+
+Make a map featuring the State of Indiana, which displays all of the airports in Indiana (but no airports from other states).
+
+Solution:
+
+`mypointsDF <- data.frame(lon=airportsDF$long, lat=airportsDF$lat)`
+
+`ind_center = as.numeric(geocode("Indianapolis"))`
+
+Then we build a map of Indiana
+
+`INDMap = ggmap(get_googlemap(center=ind_center,zoom=7), extent="normal")`
+
+and we display it.
+
+`INDMap`
+
+Finally, we add the points to the map
+
+`INDMap <- INDMap + geom_point(data=mypointsDF[airportsDF$state=="IN", ])`
+
+and we display the map again.
+
+`INDMap`
+
+
+Question 3.
+
+Same as question 2, but displaying only the airports from the East North Central portion of the Midwest, namely, from IL, IN, MI, OH, WI.
+
+Solution:
+
+`midwest_center = as.numeric(geocode("South Haven, MI"))`
+
+Then we build a map of the Midwest
+
+`MidwestMap = ggmap(get_googlemap(center=midwest_center,zoom=6), extent="normal")`
+
+and we display it.
+
+`MidwestMap`
+
+Finally, we add the points to the map
+
+`MidwestMap <- MidwestMap + geom_point(data=mypointsDF[airportsDF$state %in% c("IL", "IN", "MI", "OH", "WI"), ])`
+
+and we display the map again.
+
+`MidwestMap`
+
+Question 4.
+
+Same as question 2, but for only the 48 continental US States. [Hint: R has a built-in `state.abb` so that you can avoid needing to type the necessary abbreviations.]
+
+Solution:
+
+`usa_center = as.numeric(geocode("Kansas City, MO"))`
+
+Then we build a map of the USA
+
+`USAMap = ggmap(get_googlemap(center=usa_center,zoom=4), extent="normal")`
+
+and we display it.
+
+`USAMap`
+
+Finally, we add the points to the map
+
+`USAMap <- USAMap + geom_point(data=mypointsDF[airportsDF$state %in% state.abb[state.abb != "AK" & state.abb != "HI"], ], col="blue")`
+
+and we display the map again.
+
+`USAMap`
+
+Question 5.
+
+Consider the 2008 flights in the ASA DataExpo 2009. Tabulate how many flights departed from each airport. Solve the question in two ways:
+
+a. use either `cut` or `awk` (in UNIX)
+
+b. use the `table` function in R
+
+Solution:
+
+a.  In bash, we can download the data (these are for the bash shell, not for R)
+
+`wget http://stat-computing.org/dataexpo/2009/2008.csv.bz2`
+
+and then uncompress the data
+
+`bzip2 -d 2008.csv.bz2`
+
+then we can count how many flights depart from each airport. The use of awk at the end is just to put a comma between the two fields. The grep is used to remove lines that have the word "Origin"; there is just one such line, and we do not want it.
+
+`cat 2008.csv | cut -d, -f17 | sort | uniq -c | awk '{print $1","$2}' | grep -v Origin >origins.csv`
+
+an alternative approach is:
+
+`cat 2008.csv | awk -F, '{print $17}' | sort | uniq -c | awk '{print $1","$2}' | grep -v Origin >alternativeorigins.csv`
+
+Inside R, we can import the data this way:
+
+`originsDF <- read.csv("origins.csv",header=F)`
+
+Then we can create a vector of the data
+
+`v <- originsDF$V1`
+
+and name it with the airports:
+
+[source,r]
+----
+names(v) <- originsDF$V2
+v
+length(v)
+----
+
+b.  Using the table function, we can do:
+
+[source,r]
+----
+myDF <- read.csv("2008.csv")
+w <- table(myDF$Origin)
+----
+
+
+Question 6.
+
+Save the output from 5a into a comma-separated file. Import it to R, and use R to rigorously check (i.e., not just with your eyeballs) that the results are exactly the same.
+
+Solution:
+
+To see that these are the same, we can check that there are no entries for which v and w are different.
+
+`sum(v!=w)`
+
+
+Question 7.
+
+On Thanksgiving Day 2015 (2015-11-26) there should be almost no taxi pickups where the parade route takes place:
+
+http://www.marching.com/news/2015/2015-macys-parade-lineup/2015_macys_parade_route_map.jpg
+
+a. Use awk to extract the taxi cab data from Nov 26, 2015. Use three delimiters for the data: comma, space, and colon [That way, you can easily determine the hour in which a taxi cab ride starts.] It suffices to extract the taxi cab rides that started between 9 AM and 12 noon, i.e., those rides in which the hour of departure is 9, 10, or 11.
+
+b. Save this data into a comma-separated file.
+
+c. Import the data about the longitudes and latitudes to R.
+
+Solution:
+
+On Thanksgiving Day 2015 (2015-11-26). There should be almost no taxi pickups where the parade route takes place:
+
+`http://www.marching.com/news/2015/2015-macys-parade-lineup/2015_macys_parade_route_map.jpg`
+
+ab. In bash, we can download the file as follows:
+
+[source,bash]
+----
+wget https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2015-11.csv
+cat yellow_tripdata_2015-11.csv | awk -F[,:\ ] '{if (($2 == "2015-11-26") && (($3=="09")||($3=="10")||($3=="11"))) {print $12","$13}}' >thanksgivinglonglat.csv
+----
+
+c. Now we import the data
+
+`myDF <- read.csv("thanksgivinglonglat.csv", header=F)`
+
+
+Question 8.
+
+Make a map of New York City at a zoom level of 14 that shows the entire parade route. (Use the data from question 7.) Are you able to see that taxi cab rides were unable to pickup passengers along the parade route?
+
+Solution:
+
+#8. Now we make the map
+
+[source,r]
+----
+library(ggmap)
+mypoints <- data.frame(lon=myDF$V1,lat=myDF$V2)
+----
+
+In preparation for making a map, we get the center of New York City from Google:
+
+`nyc_center = as.numeric(geocode("Carnegie Hall"))`
+
+Then we build a map of New York
+
+[source,r]
+----
+NYCMap = ggmap(get_googlemap(center=nyc_center,zoom=14), extent="normal")
+NYCMap
+NYCMap <- NYCMap + geom_point(
+  data=mypoints[mypoints$lat>40.746 & mypoints$lat<40.785 & mypoints$lon> -74.01 & mypoints$lon< -73.95, ])
+  NYCMap
+----
+
+Question 9.
+
+Use the tapply and summary functions to learn about the distribution oftrip distances of taxi cab rides in New York City. Please give a summary statistics of trip distances for each day of the year 2015.
+
+Solution:
+
+First, in bash, we concatenate all of the 2015 taxi cab data into one large file, which has the dates and the trip distances:
+
+`cat yellow_tripdata_2015-*.csv | grep -v VendorID | awk -F[,\ ] '{print $2","$7}' >2015.csv`
+
+Now we import the data:
+
+[source,r]
+----
+myDF <- read.csv("2015.csv")
+names(myDF) <- c("date","distance")
+tapply(myDF$distance, myDF$date, summary)
+----
+
+Question 10.
+
+Same question as 9, but for the summary statistics of flights distances for each day of the year 2008.
+
+Solution:
+
+First we read in the 2008 airline data:
+
+`myDF <- read.csv("2008.csv")`
+
+Then we extract the dates and distances
+
+[source,r]
+----
+mydates <- paste(myDF$Year, myDF$Month, myDF$DayofMonth, sep="-")
+mydistances <- myDF$Distance
+----
+
+and finally we use the tapply function
+
+`tapply(mydistances, mydates, summary)`
+
+
+== Project 4
+
+Question 1.
+
+Consider the data available from:
+
+https://bikeshare.metro.net/about/data/
+
+a. Download the 2017 Q2 data using the wget command in the bash shell (i.e., in the terminal).
+
+b. Use the `unzip` command in the bash shell (i.e., in the terminal) to extract the csv file.
+
+c. Import the data into R using the read.csv command.
+
+`myDF <- read.csv("la_metro_gbfs_trips_Q2_2017.csv")`
+
+d. How many unique bike ID’s are found in this file?
+
+e. Which bike was used for the largest number of trips?
+
+`length(table(myDF$bike_id))`
+
+f. Which type of passholder is the most common?
+
+`table(myDF$passholder_type)`
+
+Solution:
+
+a. We use:
+
+`wget https://11ka1d3b35pv1aah0c3m9ced-wpengine.netdna-ssl.com/wp-content/uploads/2017/07/la_metro_gbfs_trips_Q2_2017.csv.zip`
+
+in the bash shell (i.e., at the terminal) to download the data
+
+b. We use:
+
+`unzip la_metro_gbfs_trips_Q2_2017.csv.zip`
+
+again in bash, to unzip the file.
+
+c. Now we import the data into R:
+
+`myDF <- read.csv("la_metro_gbfs_trips_Q2_2017.csv")`
+
+d. There are 738 bike ID's.
+
+`length(table(myDF$bike_id))`
+
+e. Bike 4727 was used for 139 trips.
+
+`sort(table(myDF$bike_id),decreasing=T)[1]`
+
+f. The Monthly Pass is most common. There are 35737 Monthly Passes.
+
+`sort(table(myDF$passholder_type), decreasing=T)[1]`
+
+Question 2.
+
+The starting and ending times are given, but they are easier to work with in R, if we put them into a date context, for instance, using the `as.POSIXlt` function. This allows us, for instance, to subtract the times to find the differences.
+
+a. Compare the duration column to the difference of the end time minus the start time (where we use the `as.POSIXlt` command on each of the end time and start time columns beforehand). Why is the duration not always equal to the end time minus the start time?
+
+b. How many times are the duraction values in 2a different from the end time minus the start time?
+
+c. Create a new column in the data.frame that contains the end time minus the start time.
+
+d. Find an average of the values in this new column, for each of the bike ID’s.
+
+Solution:
+
+a.  Here are the computed end_time minus start_time values:
+
+[source,r]
+----
+mytimes <- as.POSIXlt(myDF$end_time) - as.POSIXlt(myDF$start_time)
+mytimes
+----
+
+Here are the actual values:
+
+`myDF$duration`
+
+On these trips, when the computed and the given times do not agree, the duration was longer than 1440 minutes (i.e., longer than 1 day):
+
+`mytimes[mytimes != myDF$duration]`
+
+but the saved values are always truncated to 1440 minutes on such trips:
+
+`myDF$duration[mytimes != myDF$duration]`
+
+So, basically, the bike company does not record durations that are longer than 1 day.
+
+b. These are unequal for only 78 trips.
+
+`sum(mytimes != myDF$duration)`
+
+c. We can build a new column in the data frame, containing the calculated duration (end_time minus start_time)
+
+`myDF$calcduration <- as.POSIXlt(myDF$end_time) - as.POSIXlt(myDF$start_time)`
+
+d. Here are the averages of the values in this new column, for each of the bike ID's.
+
+`tapply(myDF$calcduration, myDF$bike_id, mean)`
+
+
+
+Question 3.
+
+Make a map that displays the locations of the stations. (You can use either the starting or the ending locations, or both.)
+
+Solution:
+
+We build a data frame with all of the starting and ending latitudes and longitudes.
+
+[source,r]
+----
+library(ggmap)
+mylons <- c(myDF$start_lon,myDF$end_lon)
+mylats <- c(myDF$start_lat,myDF$end_lat)
+
+goodlons <- mylons[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+goodlats <- mylats[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+
+mypointsDF <- data.frame(lon=goodlons,lat=goodlats)
+
+map_center = as.numeric(geocode("Los Angeles"))
+----
+
+Then we build a map of Los Angeles
+
+`LAmap = ggmap(get_googlemap(center=map_center,zoom=11), extent="normal")`
+
+and we display it.
+
+`LAmap`
+
+Finally, we add the points to the map
+
+`LAmap <- LAmap + geom_point(data=mypointsDF)`
+
+and we display the map again.
+
+`LAmap`
+
+Questions 4, 5, 6.
+
+Please solve questions 1, 2, 3 again, but this time use the Q1 2017 data, and then the Q4 2016 data, and then the Q3 2016 data.
+
+Please note that for these three data sets, the seconds are missing, and the data is given in a nonstandard format, so you will need to use the option `format='%m/%d/%Y %H:%M'` inside each of your functions calls to the `as.POSIXlt` function. Also please be careful, when comparing the duration to the end time minus the start time, whether the times are given in minutes or seconds.
+
+Solution:
+
+Solving #1, #2, #3 again for the Q1 2017 data
+
+1a.
+
+`wget https://11ka1d3b35pv1aah0c3m9ced-wpengine.netdna-ssl.com/wp-content/uploads/2017/04/la_metro_gbfs_trips_Q1_2017.zip`
+
+1b.
+
+`unzip la_metro_gbfs_trips_Q1_2017.zip`
+
+1c. Now we import the data into R:
+
+`myDF <- read.csv("la_metro_gbfs_trips_Q1_2017.csv")`
+
+1d. There are 751 bike ID's.
+
+`length(table(myDF$bike_id))`
+
+1e. Bike 6344 was used for 98 trips.
+
+`sort(table(myDF$bike_id),decreasing=T)[1]`
+
+1f. The Monthly Pass is most common. There are 21007 Monthly Passes.
+
+`sort(table(myDF$passholder_type), decreasing=T)[1]`
+
+2a.  Here are the computed end_time minus start_time values:
+
+`mytimes <- as.POSIXlt(myDF$end_time,format='%m/%d/%Y %H:%M') - as.POSIXlt(myDF$start_time,format='%m/%d/%Y %H:%M')`
+
+Here are the actual values:
+
+`myDF$duration`
+
+2b. These are unequal for only 89 trips. IN THIS DATA, we need to multiply the calculated times by 60.
+
+`sum(60*mytimes != myDF$duration)`
+
+2c. 
+
+`myDF$calcduration <- 60*(as.POSIXlt(myDF$end_time,format='%m/%d/%Y %H:%M') - as.POSIXlt(myDF$start_time,format='%m/%d/%Y %H:%M'))`
+
+2d. Here are the averages of the values for each bike ID's.
+
+`tapply(myDF$calcduration, myDF$bike_id, mean)`
+
+3.  We build the map.
+
+[source,r]
+----
+mylons <- c(myDF$start_lon,myDF$end_lon)
+mylats <- c(myDF$start_lat,myDF$end_lat)
+goodlons <- mylons[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+goodlats <- mylats[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+mypointsDF <- data.frame(lon=goodlons,lat=goodlats)
+map_center = as.numeric(geocode("Los Angeles"))
+LAmap = ggmap(get_googlemap(center=map_center,zoom=11), extent="normal")
+LAmap
+LAmap <- LAmap + geom_point(data=mypointsDF)
+LAmap
+----
+
+Solving #1, #2, #3 again for the Q4 2016 data
+
+1a.
+
+`wget https://11ka1d3b35pv1aah0c3m9ced-wpengine.netdna-ssl.com/wp-content/uploads/2017/01/Metro_trips_Q4_2016.zip`
+
+1b.
+
+`unzip Metro_trips_Q4_2016.zip`
+
+1c. Now we import the data into R:
+
+`myDF <- read.csv("Metro_trips_Q4_2016.csv")`
+
+1d. There are 730 bike ID's.
+
+`length(table(myDF$bike_id))`
+
+1e. Bike 5932 was used for 115 trips.
+
+`sort(table(myDF$bike_id),decreasing=T)[1]`
+
+1f. The Monthly Pass is most common. There are 27081 Monthly Passes.
+
+`sort(table(myDF$passholder_type), decreasing=T)[1]`
+
+2a.  Here are the computed end_time minus start_time values:
+
+`mytimes <- as.POSIXlt(myDF$end_time,format='%m/%d/%Y %H:%M') - as.POSIXlt(myDF$start_time,format='%m/%d/%Y %H:%M')`
+
+Here are the actual values:
+
+`myDF$duration`
+
+2b. These are unequal for only 107 trips. IN THIS DATA, we need to multiply the calculated times by 60.
+
+`sum(60*mytimes != myDF$duration)`
+
+2c. 
+
+`myDF$calcduration <- 60*(as.POSIXlt(myDF$end_time,format='%m/%d/%Y %H:%M') - as.POSIXlt(myDF$start_time,format='%m/%d/%Y %H:%M'))`
+
+2d. Here are the averages of the values for each bike ID's.
+
+`tapply(myDF$calcduration, myDF$bike_id, mean)`
+
+3.  We build the map.
+
+[source,r]
+----
+mylons <- c(myDF$start_lon,myDF$end_lon)
+mylats <- c(myDF$start_lat,myDF$end_lat)
+goodlons <- mylons[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+goodlats <- mylats[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+mypointsDF <- data.frame(lon=goodlons,lat=goodlats)
+map_center = as.numeric(geocode("Los Angeles"))
+LAmap = ggmap(get_googlemap(center=map_center,zoom=11), extent="normal")
+LAmap
+LAmap <- LAmap + geom_point(data=mypointsDF)
+LAmap
+----
+
+Solving #1, #2, #3 again for the Q3 2016 data
+
+1a.
+
+`wget https://11ka1d3b35pv1aah0c3m9ced-wpengine.netdna-ssl.com/wp-content/uploads/2016/10/MetroBikeShare_2016_Q3_trips.zip`
+
+1b.
+
+`unzip MetroBikeShare_2016_Q3_trips.zip`
+
+1c. Now we import the data into R:
+
+`myDF <- read.csv("MetroBikeShare_2016_Q3_trips.csv")`
+
+1d. There are 761 bike ID's.
+
+`length(table(myDF$bike_id))`
+
+1e. Bike 6373 was used for 135 trips.
+
+`sort(table(myDF$bike_id),decreasing=T)[1]`
+
+1f. The Monthly Pass is most common. There are 33216 Monthly Passes.
+
+`sort(table(myDF$passholder_type), decreasing=T)[1]`
+
+2a.  Here are the computed end_time minus start_time values:
+
+`mytimes <- as.POSIXlt(myDF$end_time,format='%m/%d/%Y %H:%M') - as.POSIXlt(myDF$start_time,format='%m/%d/%Y %H:%M')`
+
+Here are the actual values:
+
+`myDF$duration`
+
+2b. These are unequal for only 89 trips.IN THIS DATA, we need to multiply the calculated times by 60.
+
+`sum(60*mytimes != myDF$duration)`
+
+2c. 
+
+`myDF$calcduration <- 60*(as.POSIXlt(myDF$end_time,format='%m/%d/%Y %H:%M') - as.POSIXlt(myDF$start_time,format='%m/%d/%Y %H:%M'))`
+
+2d. Here are the averages of the values for each bike ID's.
+
+`tapply(myDF$calcduration, myDF$bike_id, mean)`
+
+3.  We build the map.
+
+[source,r]
+----
+mylons <- c(myDF$start_lon,myDF$end_lon)
+mylats <- c(myDF$start_lat,myDF$end_lat)
+goodlons <- mylons[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+goodlats <- mylats[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+mypointsDF <- data.frame(lon=goodlons,lat=goodlats)
+map_center = as.numeric(geocode("Los Angeles"))
+LAmap = ggmap(get_googlemap(center=map_center,zoom=11), extent="normal")
+LAmap
+LAmap <- LAmap + geom_point(data=mypointsDF)
+LAmap
+----
+
+
+Question 7.
+
+a. In each of the 4 data frames, carefully give a new defintion to the `start_time` and `end_time` columns (but keep the same column names), by converting each of these columns using the `as.POSIXlt` function. After doing so, then the dates and times for all four data frames should be in the same format.
+
+b. Rename the 5th and 8th columns of the 2017 Q2 `data.frame` to be `"start_station_id"` and `"end_station_id"` respectively. You can use `names(myDF)[5]` and `names(myDF)[8]` to access and change these names.
+
+c. Convert the duration column of the other three data frames (i.e., 2017 Q1, 2016 Q4, and 2016 Q3) from seconds into minutes by dividing by 60 and saving the new values into the duration column.
+
+d. Build a new data.frame, using the `rbind` function, which contains all of the data from all four data frames.
+
+Solution:
+
+a.  We read in the data again:
+
+[source,r]
+----
+myDF1 <- read.csv("la_metro_gbfs_trips_Q2_2017.csv")
+myDF2 <- read.csv("la_metro_gbfs_trips_Q1_2017.csv")
+myDF3 <- read.csv("Metro_trips_Q4_2016.csv")
+myDF4 <- read.csv("MetroBikeShare_2016_Q3_trips.csv")
+----
+
+Now we normalize the times:
+
+[source,r]
+----
+myDF1$end_time <- as.POSIXlt(myDF1$end_time)
+myDF2$end_time <- as.POSIXlt(myDF2$end_time,format='%m/%d/%Y %H:%M')
+myDF3$end_time <- as.POSIXlt(myDF3$end_time,format='%m/%d/%Y %H:%M')
+myDF4$end_time <- as.POSIXlt(myDF4$end_time,format='%m/%d/%Y %H:%M')
+myDF1$start_time <- as.POSIXlt(myDF1$start_time)
+myDF2$start_time <- as.POSIXlt(myDF2$start_time,format='%m/%d/%Y %H:%M')
+myDF3$start_time <- as.POSIXlt(myDF3$start_time,format='%m/%d/%Y %H:%M')
+myDF4$start_time <- as.POSIXlt(myDF4$start_time,format='%m/%d/%Y %H:%M')
+----
+
+b. We ename the 5th and 8th columns of the 2017 Q2 data.frame.
+
+[source,r]
+----
+names(myDF1)[5] <- "start_station_id"
+names(myDF1)[8] <- "end_station_id"
+----
+
+c.  We convert the duration column of the other three data.frames
+
+[source,r]
+----
+myDF2$duration <- myDF2$duration/60
+myDF3$duration <- myDF3$duration/60
+myDF4$duration <- myDF4$duration/60
+----
+
+d.  We build a new data.frame now:
+
+`myDF <- rbind(myDF1, myDF2, myDF3, myDF4)`
+
+
+Question 8.
+
+Now repeat questions 1, 2, 3 using the new `data.frame` that was created in 7d.
+
+Solution:
+
+Now we repeat questions 1, 2, 3 using the new data.frame that was created in 7d.
+
+1d. There are 766 bike ID's.
+
+`length(table(myDF$bike_id))`
+
+1e. Bike 4727 was used for 451 trips.
+
+`sort(table(myDF$bike_id),decreasing=T)[1]`
+
+1f. The Monthly Pass is most common. There are 117041 Monthly Passes.
+
+`sort(table(myDF$passholder_type), decreasing=T)[1]`
+
+2a.  Here are the computed end_time minus start_time values:
+
+[source,r]
+----
+mytimes <- as.POSIXlt(myDF$end_time) - as.POSIXlt(myDF$start_time)
+mytimes
+----
+
+Here are the actual values:
+
+`myDF$duration`
+
+2b. These are unequal for only 363 trips.
+
+`sum(mytimes != myDF$duration)`
+
+2c. We can build a new column in the data frame, containing the calculated duration (end_time minus start_time)
+
+`myDF$calcduration <- as.POSIXlt(myDF$end_time) - as.POSIXlt(myDF$start_time)`
+
+2d. Here are the averages of the values in this new column, for each of the bike ID's.
+
+`tapply(myDF$calcduration, myDF$bike_id, mean)`
+
+3.  We build a data frame with all of the starting and ending latitudes and longitudes.
+
+[source,r]
+----
+library(ggmap)
+mylons <- c(myDF$start_lon,myDF$end_lon)
+mylats <- c(myDF$start_lat,myDF$end_lat)
+
+goodlons <- mylons[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+goodlats <- mylats[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+
+mypointsDF <- data.frame(lon=goodlons,lat=goodlats)
+
+map_center = as.numeric(geocode("Los Angeles"))
+----
+
+Then we build a map of Los Angeles
+
+`LAmap = ggmap(get_googlemap(center=map_center,zoom=11), extent="normal")`
+
+and we display it.
+
+`LAmap`
+
+Finally, we add the points to the map
+
+`LAmap <- LAmap + geom_point(data=mypointsDF)`
+
+and we display the map again.
+
+`LAmap`
+
+
+
+== Project 5
+
+Question 1.
+
+Read the selection of The Elements of Graphing Data by William Cleveland, and the selection of Creating More Effective Graphs by Naomi Robbins, placed into your Project 5 folders on the scholar server.
+
+Also read the classic article "How to Display Data Badly" by Howard Wainer:
+http://www.jstor.org.ezproxy.lib.purdue.edu/stable/2683253
+
+Question 2.
+
+Find 6 visualizations from http://www.informationisbeautiful.net/[the Information Is Beautiful website] that do a bad job of portraying data, according to the best practices in the selections from question 1.  Write 1/3 of a page (for each such visualization) about what is done poorly.
+
+Question 3.
+
+Identify 3 excellent visualizations of data from the site in question 2.  Write 1/3 of a page (for each such visualization) about what is done well.
+
+Question 4.
+
+The Gapminder comparison of life expectancy and income per person, plotted from 1800 to 2015, is eye-catching but does not necessary follow the best practices for data visualization.  (See www.gapminder.org/tools/)  Write half a page about things that this visualization does poorly, and half a page about ways that this visualization could be re-created and re-designed, if you were to recreate this website yourself.
+
+Question 5.
+
+Consider the poster winner "Congestion in the Sky", from the 2009 Data Expo:
+
+http://stat-computing.org/dataexpo/2009/posters/
+
+Describe at least 3 significant ways that this poster could be improved.  For each of these 3 ways, write a 1/3 of a page constructive criticism, specifying what could be improved and how that aspect of the visualization could be done better.
+
+Question 6.
+
+Choose a different poster from the 2009 Data Expo, and construct a similar analysis to question 5, i.e., give a constructive criticism of at least 3 significant ways that this poster could be improved, with 1/3 of a page writeup for each such significant need for improvement.
+
+Question 7.
+
+Which of the posters in the Data Expo 2009 do you think should be the winner? Why? (It is OK if you choose the poster that actually won, or any of the other posters.) Thoroughly justify your answer, using the techniques of effective data visualization, to justify your answer, with an explanation that is at least 1 page long altogether.
+
+Questions 8, 9, 10.
+
+Imagine that you are going to enter the Data Expo 2009. Rather than having to organize your information into a poster, prepare 3 pages of analysis, exploring some aspects of the airline data set that are interesting to you, and which you think might be of broad interest to potential readers too. Your discussion and plots should be at least 3 pages long.
+
+
+== Project 6
+
+Question 1.
+
+Plot number of wins from Astros, Dodgers, Cubs, Yankees since 2006 on the same graph.  Can you do this with only one SQL call altogether?
+
+Solution:
+
+[source,r]
+----
+install.packages("RMySQL")
+library("RMySQL")
+m <- dbDriver("MySQL")
+----
+
+The following will set up a connection to the Purdue database server. You will need to change the username and the dbname to match your own username.
+
+[source,r]
+----
+`con <- dbConnect(m, host="mydb.ics.purdue.edu", username="mdw", dbname="mdw")`
+res <- dbSendQuery(con, "SELECT t.name, t.yearID, t.W FROM Teams t WHERE t.yearID >= 2006 AND
+                   ((t.teamID = \'HOU\') OR (t.teamID = \'LAN\')
+                   OR (t.teamID = \'CHN\') OR (t.teamID = \'NYA\'))")
+myDF <- fetch(res, n=-1)
+myDF
+M <- matrix(myDF$W,nrow=11)
+rownames(M) <- 2006:2016
+colnames(M) <- c("Cubs","Astros","Dodgers","Yankees")
+----
+
+Here is the number of wins, grouped by team.
+
+`dotchart(M)`
+
+Or we can see the number of wins, grouped by year.
+
+`dotchart(t(M))`
+
+Question 2.
+
+Plot the number of strikeouts by Kershaw in each year since 2006.
+
+Solution:
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT p.yearID, p.W, m.nameFirst, m.nameLast 
+                   FROM Pitching p 
+                   JOIN Master m ON p.playerID = m.playerID
+                   WHERE p.yearID >= 2006
+                   AND m.nameLast = \'Kershaw\'")
+myDF <- fetch(res, n=-1)
+myDF
+v <- myDF$W
+names(v) <- myDF$yearID
+# We plot the result using a dotchart.
+dotchart(v)
+----
+
+
+Question 3.
+
+During which years was Jackie Robinson active in baseball?  Check your solution by comparing the results from the SQL database with a resource online.
+
+Solution:
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast,
+                   b.yearID FROM Batting b JOIN Master m
+                   ON b.playerID = m.playerID
+                   WHERE m.nameFirst = \'Jackie\'
+                   AND m.nameLast = \'Robinson\';")
+myDF <- fetch(res, n=-1)
+myDF
+----
+
+Question 4.
+
+a.  Extract a data.frame for which each row has a player, a year, and the number of bases he stole during that year.
+
+b.  Extract the maximum number of stolen bases for each year.
+
+c.  Plot the results on a graph.  Has the maximum number of stolen bases changed significantly over time?
+
+Solution:
+
+a.  
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast,
+                         b.SB, b.yearID FROM Batting b
+                         JOIN Master m ON b.playerID = m.playerID
+                         GROUP BY b.playerID, b.yearID;")
+myDF <- fetch(res, n=-1)
+myDF
+----
+
+b.
+
+`v <- tapply(myDF$SB, myDF$yearID, max)`
+
+c.
+
+[source,r]
+----
+plot(names(v),v)  
+# Yes, the maximum number of stoen bases 
+# has fluctuated from year to year.
+----
+
+Question 5.
+
+For each year, which teams had the highest number of losses?
+(Think about how to take ties among the highest number of losses into account, e.g., be sure to print more than one team, if two teams had the same record.)
+
+Solution:
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT t.name, t.yearID, t.L FROM Teams t;")
+myDF <- fetch(res, n=-1)
+myDF
+
+v <- tapply(myDF$L, myDF$yearID, max)
+
+myDF[v[as.character(myDF$yearID)] == myDF$L, ]
+----
+
+Question 6.
+
+a.  Make a list of the batter(s) who are the home run leader(s) in each year.
+
+b.  Make a list of the pitcher(s) who are the strikeout leader(s) in each year.
+
+Solution:
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast,
+                   b.HR, b.yearID FROM Batting b
+                   JOIN Master m ON b.playerID = m.playerID
+                   GROUP BY b.playerID, b.yearID;")
+myDF <- fetch(res, n=-1)
+myDF
+
+v <- tapply(myDF$HR, myDF$yearID, max)
+HRleaders <- myDF[v[as.character(myDF$yearID)] == myDF$HR, ]
+HRleaders[order(HRleaders$yearID), ]
+----
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast,
+                   p.SO, p.yearID FROM Pitching p
+                   JOIN Master m ON p.playerID = m.playerID
+                   GROUP BY p.playerID, p.yearID;")
+myDF <- fetch(res, n=-1)
+myDF
+
+v <- tapply(myDF$SO, myDF$yearID, max)
+SOleaders <- myDF[v[as.character(myDF$yearID)] == myDF$SO, ]
+SOleaders[order(SOleaders$yearID), ]
+----
+
+Question 7.
+
+a.  How many times in baseball history has a player served in seven unique positions during the same season?
+
+b.  Who has achieved this feat twice in his career?
+
+Solution:
+
+a.
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast, m.playerID,
+                         f.Pos, f.yearID FROM Master m
+                         JOIN Fielding f
+                         ON m.playerID = f.playerID
+                         GROUP BY m.playerID, f.Pos, f.yearID")
+myDF <- fetch(res, n=-1)
+myDF
+mynames <- paste(myDF$playerID, myDF$nameFirst, myDF$nameLast)
+myresults <- tapply(myDF$Pos, list(mynames, myDF$yearID), length)
+dim(which(myresults==7,arr.ind=T))
+sort(rownames(which(myresults==7,arr.ind=T)))
+----
+
+This has happened 19 times.
+
+b. It happened twice for King Kelly.
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast, m.playerID,
+                         f.Pos, f.yearID FROM Master m
+                   JOIN Fielding f
+                   ON m.playerID = f.playerID
+                   WHERE m.nameFirst = \'King\'
+                   AND m.nameLast = \'Kelly\'
+                   GROUP BY m.playerID, f.Pos, f.yearID")
+myDF <- fetch(res, n=-1)
+myDF
+table(myDF$yearID)
+----
+
+Question 8.
+
+Make a list of all of the players who have hit 200 or more triples during their careers. For each such player, give his first name, last name, and his total number of triples.
+
+Solution:
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast,
+                   SUM(b.3B) FROM Batting b
+                   JOIN Master m ON b.playerID = m.playerID
+                   GROUP BY b.playerID;")
+myDF <- fetch(res, n=-1)
+myDF
+----
+
+We change the headers of the data frame, since the third column has an awkward name:
+
+[source,r]
+----
+names(myDF) <- c("nameFirst", "nameLast", "total3B")
+myDF[myDF$total3B>=200, ]
+----
+
+
+Question 9.
+
+Make a list of all of the players who have pitched 350 or more Wins during their careers.
+For each such player, give his first name, last name, and his total number of Wins.
+
+Solution:
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast,
+                   SUM(p.W) FROM Pitching p
+                   JOIN Master m ON p.playerID = m.playerID
+                   GROUP BY p.playerID;")
+myDF <- fetch(res, n=-1)
+myDF
+----
+
+We change the headers of the data frame, since the third column has an awkward name:
+
+[source,r]
+----
+names(myDF) <- c("nameFirst", "nameLast", "totalW")
+myDF[myDF$totalW>=350, ]
+----
+
+
+Question 10.
+
+a.  Make a plot with one point per pitcher.  The x-axis should have the pitcher's lifetime number of wins, and the y-axis should have the pitcher's lifetime number of loses.
+
+b.  Who is the outlier?
+
+Solution:
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast, m.playerID,
+                         SUM(p.W), SUM(p.L) FROM Master m
+                   JOIN Pitching p
+                   ON m.playerID = p.playerID
+                   GROUP BY m.playerID")
+myDF <- fetch(res, n=-1)
+myDF
+names(myDF) <- c("nameFirst", "nameLast", "playerID","sumw","suml")
+plot(myDF$sumw, myDF$suml)
+----
+
+b. The outlier is Cy Young.
+
+`myDF[myDF$sumw > 500, ]`
+
+Question 11.
+
+a.  Lookup the names and school IDs of the 16 current Big 10 universities from the Schools table.
+
+b.  How many players are known to have attended each of the 16 current Big 10 universities?
+
+Solution:
+
+a.
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT s.schoolID, s.name_full
+                   FROM Schools s")
+myDF <- fetch(res, n=-1)
+myDF
+----
+
+For instance, if we want to search for a university to get the name:
+
+[source,r]
+----
+grep("Indiana University", myDF$name_full)
+myDF$name_full[474]
+
+v <- c("Johns Hopkins University",
+  "Indiana University-Bloomington",
+  "Michigan State University",
+  "Northwestern University",
+  "University of Notre Dame",
+  "The Ohio State University",
+  "Pennsylvania State University",
+  "Purdue University",
+  "Rutgers, the State University of New Jersey",
+  "University of Illinois at Urbana-Champaign",
+  "University of Iowa",
+  "University of Maryland",
+  "University of Michigan",
+  "University of Minnesota",
+  "University of Nebraska at Lincoln",
+  "University of Wisconsin at Madison"
+)
+myresults <- myDF[myDF$name_full %in% v, ]
+----
+
+The school IDs we need are:
+
+`myresults$schoolID`
+
+b.  It is possible to manually paste the IDs into a vector, but we do somethign slightly fancy. We first put a single quote around each school name:
+
+`mystring <- paste("\'", myresults$schoolID, "\'", sep="")`
+
+and then we collapse the vector into one long string, with a comma between each entry:
+
+`mystring2 <- paste(mystring, collapse=",")`
+
+and then we use mystring2 in our query directly:
+
+[source,r]
+----
+res <- dbSendQuery(con, paste("SELECT c.playerID, c.schoolID FROM CollegePlaying c WHERE c.schoolID in (", mystring2, ") GROUP BY c.playerID", sep=""))
+myDF <- fetch(res, n=-1)
+myDF
+table(myDF$schoolID)
+----
+
+
+== Project 7
+
+Question 1.
+
+a. In the Q2 2017 bike data:
+
+https://bikeshare.metro.net/about/data/
+
+how many unique start_station to end_station pairs are there?
+
+b. Which is the most popular?
+
+c. How many such pairs are only used one time?
+
+Question 2.
+
+a. In the built-in co2 data set, use the apply function to find the average co2 per year.
+
+b. In the co2 data set, find the average co2 per month (across all years)
+
+Question 3.
+
+a.  In the 2008 airline data (from the DataExpo 2009), paste the Year, Month, and DayofMonth into a new column of the data.frame.
+
+b.  Use this new column to discover which day of the year 2008 had the longest average Departure Delays.
+
+Question 4.
+
+4.   For each day of the year 2015, in New York City, find the average number of passengers per taxi cab on that day.
+
+Question 5.
+
+a.   Download the individual campaign contributions from here:
+
+ftp://ftp.fec.gov/FEC/2016/indiv16.zip
+
+Some metadata is available here:
+
+http://classic.fec.gov/finance/disclosure/metadata/DataDictionaryContributionsbyIndividuals.shtml
+
+When you unzip the file, there are several data files.
+
+Consider this one:  itcont_2016_20161214_92060702.txt
+
+b.   Use `read.delim` to read the data into R.
+
+Hint:  It does not have a header, and the delimiter is the | symbol.
+
+c.   Use R to determine which state's individuals contributed the most funding. How much funding did they contribute?
+
+d.   Double-check your solution by using bash and awk.
+
+Question 6.
+
+a.   Get the number of H, 2B, 3B, and HR that Hank Aaron hit in each year of his career.
+
+b.   Build a matrix with 4 columns and 23 rows (one row per year, 1954 through 1976)
+
+c.   Find the maximum number of H that he ever hit in one season.
+
+Find the maximum number of 2B that he ever hit in one season.
+
+Find the maximum number of 3B that he ever hit in one season.
+
+Find the maximum number of HR that he ever hit in one season.
+
+Hint: If you use an apply command, you can do Q6c in one line of R code.
+
+Another hint:  Instead of myDF$2B, it will be necessary to use `myDF$"2B"` since R gets confused when a column name starts with a number.
+
+Question 7.
+
+7.    Consider the metadata given here:
+
+ftp://ftp.cmdl.noaa.gov/data/meteorology/in-situ/sum/README
+
+We will examine the data from 2016:
+
+ftp://ftp.cmdl.noaa.gov/data/meteorology/in-situ/sum/met_sum_insitu_1_obop_hour_2016.txt
+
+a.   Read this data into R using `read.table`. Please note that the file does not have a header.
+
+b.   Convert any values that are equal to 99 to instead be NA.
+
+Question 8.
+
+a.   Perform the summary function on each of the columns 6 through 14.
+
+Hint:  You could use sapply to perform the summary function column-by-column.
+
+Alternatively, you can use the data.matrix function to convert columns 6 through 14 of the `data.frame` into a `matrix` (see the help for data.matrix) and then use the `apply` function to perform the `summary` function, on each column.
+
+b.   What are the maximum values in each of the columns 6 through 14?
+
+c.   Column 7 is the wind speed. Find the average wind speed in each of the 12 months in 2016.
+
+Question 9.
+
+a.   Use the `seq` and `as.Date` commands to build a list of dates, one per week, starting at "1958-08-04" and ending at "1961-12-25". Save these dates into a vector.
+
+b.   Use the `seq` and `as.Date` commands to build a list of dates, one per week, starting at "1962-01-06" and ending at "2017-11-11". Save these dates into a vector.
+
+c.   Use the vector from 9a, along with the `paste` command, to build another vector whose first entry is:
+
+`wget billboard.com/charts/hot-100/1958-08-04`
+
+and whose last entry is:
+
+`wget billboard.com/charts/hot-100/1961-12-25`
+
+and everything in between is what you would expect.
+
+d.   Use the vector from 9b, along with the `paste` command, to build another vector whose first entry is:
+
+`wget billboard.com/charts/hot-100/1962-01-06`
+
+and whose last entry is:
+
+`wget billboard.com/charts/hot-100/2017-11-11`
+
+and everything in between is what you would expect.
+
+10.   Run the system command on every element of the vector in 9c, using the `sapply` function.  Before doing this, be sure to use the Session menu, "Set Working Directory", to set your current working directory to your scratch space. This will take awhile to complete, but it will also help prepare us for the questions in Project 8. Then run the system command on every element of the vector in 9d.
+
+
+== Project 8
+
+Question 1.
+
+During Project 7, you scraped the data from the BillBoard Hot 100 charts. In this project, you can have freedom to explore questions about the data. (There are 3094 Hot 100 charts.)
+
+You can also explore the Top 200 album charts. (There are 2832 Top 200 album charts.)
+
+For consistency, the data for both sets of charts is in your project 8 scratch folder already. You merely need to unzip both files that you will find there.
+
+To scrape the information from the first Hot 100 chart, you can use XPath. First it is necessary to install XPath.
+
+[source,r]
+----
+install.packages("XML",repos="http://cran.us.r-project.org")
+library("XML")
+----
+
+Then it is necessary to parse the XML source.
+
+`mydoc <- htmlParse("/scratch/scholar/m/mdw/proj8/billboardhot100/1958-08-04")`
+
+Now you are able to make queries about the XML content in a page. For instance,
+
+[source,r]
+----
+mysongs <- xpathSApply(mydoc, "//*/div[@class='chart-row__title']/h2[@class='chart-row__song']", xmlValue)
+mysongs
+  [1] "Poor Little Fool"                                        
+  [2] "Patricia"                                                
+  [3] "Splish Splash"                                           
+  [4] "Hard Headed Woman"                                       
+  [5] "When"                                                    
+  [6] "Rebel-'rouser"                                           
+  [7] "Yakety Yak"                                              
+  [8] "My True Love"                                            
+  [9] "Willie And The Hand Jive"                                
+ [10] "Fever"                                                   
+ [11] "Ginger Bread"                                            
+ [12] "Just A Dream"                                            
+ [13] "Left Right Out Of Your Heart (Hi Lee Hi Lo Hi Lup Up Up)"
+ [14] "If Dreams Came True"                                     
+ [15] "For Your Precious Love"                                  
+ [16] "One Summer Night"                                        
+ [17] "Endless Sleep"                                           
+ [18] "Little Star"                                             
+ [19] "Everybody Loves A Lover"                                 
+ [20] "Do You Want To Dance"                                    
+ [21] "Guess Things Happen That Way"                            
+ [22] "A Certain Smile"                                         
+ [23] "Western Movies"                                          
+ [24] "The Purple People Eater"                                 
+ [25] "What Am I Living For"                                    
+ [26] "Born Too Late"                                           
+ [27] "Think It Over"                                           
+ [28] "Secretly"                                                
+ [29] "Enchanted Island"                                        
+ [30] "Angel Baby"                                              
+ [31] "Chantilly Lace"                                          
+ [32] "Blue Blue Day"                                           
+ [33] "The Freeze"                                              
+ [34] "Don't Ask Me Why"                                        
+ [35] "Rock-in Robin"                                           
+ [36] "No Chemise, Please"                                      
+ [37] "Moon Talk"                                               
+ [38] "Somebody Touched Me"                                     
+ [39] "That's How Much I Love You"                              
+ [40] "Crazy Eyes For You"                                      
+ [41] "Early In The Morning"                                    
+ [42] "You Cheated"                                             
+ [43] "Come What May"                                           
+ [44] "Jennie Lee"                                              
+ [45] "Kathy-O"                                                 
+ [46] "(It's Been A Long Time) Pretty Baby"                     
+ [47] "I Wonder Why"                                            
+ [48] "Return To Me"                                            
+ [49] "All I Have To Do Is Dream"                               
+ [50] "By The Light Of The Silvery Moon"                        
+ [51] "Baubles, Bangles And Beads"                              
+ [52] "Early In The Morning"                                    
+ [53] "Come Closer To Me (Acercate Mas)"                        
+ [54] "Nel Blu Dipinto Di Blu (VolarÃ©)"                        
+ [55] "Let's Go Steady For The Summer"                          
+ [56] "Leroy"                                                   
+ [57] "You Need Hands"                                          
+ [58] "Fool's Paradise"                                         
+ [59] "Young And Warm And Wonderful"                            
+ [60] "Over And Over"                                           
+ [61] "Itchy Twitchy Feeling"                                   
+ [62] "For Your Love"                                           
+ [63] "Padre"                                                   
+ [64] "High School Confidential"                                
+ [65] "You're Making A Mistake"                                 
+ [66] "Delicious!"                                              
+ [67] "Big Man"                                                 
+ [68] "Volare (Nel Blu Dipinto Di Blu)"                         
+ [69] "Op"                                                      
+ [70] "Don't Go Home"                                           
+ [71] "Got A Match?"                                            
+ [72] "Stupid Cupid"                                            
+ [73] "Hey Girl - Hey Boy"                                      
+ [74] "Win Your Love For Me"                                    
+ [75] "Gotta Have Rain"                                         
+ [76] "Midnight"                                                
+ [77] "Happy Years"                                             
+ [78] "Betty Lou Got A New Pair Of Shoes"                       
+ [79] "The Bird On My Head"                                     
+ [80] "Johnny B. Goode"                                         
+ [81] "Beautiful Delilah"                                       
+ [82] "Blip Blop"                                               
+ [83] "Try The Impossible"                                      
+ [84] "Summertime Blues"                                        
+ [85] "Got A Match?"                                            
+ [86] "To Be Loved"                                             
+ [87] "Jealousy"                                                
+ [88] "Just Like In The Movies"                                 
+ [89] "Blue Boy"                                                
+ [90] "Stay"                                                    
+ [91] "The Purple People Eater Meets The Witch Doctor"          
+ [92] "Bird Dog"                                                
+ [93] "Are You Really Mine"                                     
+ [94] "She Was Only Seventeen (He Was One Year More)"           
+ [95] "Little Mary"                                             
+ [96] "Over And Over"                                           
+ [97] "I Believe In You"                                        
+ [98] "Little Serenade"                                         
+ [99] "I'll Get By (As Long As I Have You)"                     
+[100] "Judy"</code></pre>
+----
+
+or like this
+
+[source,r]
+----
+myartists <- xpathSApply(mydoc, "//*/div[@class='chart-row__title']/span[@class='chart-row__artist']|//*/div[@class='chart-row__title']/a[@class='chart-row__artist']", xmlValue)
+myartists
+  [1] "\nRicky Nelson\n"                               
+  [2] "\nPerez Prado And His Orchestra\n"              
+  [3] "\nBobby Darin\n"                                
+  [4] "\nElvis Presley With The Jordanaires\n"         
+  [5] "\nKalin Twins\n"                                
+  [6] "\nDuane Eddy His Twangy Guitar And The Rebels\n"
+  [7] "\nThe Coasters\n"                               
+  [8] "\nJack Scott\n"                                 
+  [9] "\nThe Johnny Otis Show\n"                       
+ [10] "\nPeggy Lee\n"                                  
+ [11] "\nFrankie Avalon\n"                             
+ [12] "\n Jimmy Clanton And His Rockets\n"             
+ [13] "\nPatti Page\n"                                 
+ [14] "\nPat Boone\n"                                  
+ [15] "\nJerry Butler and The Impressions\n"           
+ [16] "\nThe Danleers\n"                               
+ [17] "\nJody Reynolds\n"                              
+ [18] "\nThe Elegants\n"                               
+ [19] "\nDoris Day\n"                                  
+ [20] "\nBobby Freeman\n"                              
+ [21] "\nJohnny Cash And The Tennessee Two\n"          
+ [22] "\nJohnny Mathis\n"                              
+ [23] "\nThe Olympics\n"                               
+ [24] "\nSheb Wooley\n"                                
+ [25] "\nChuck Willis\n"                               
+ [26] "\nPoni-Tails\n"                                 
+ [27] "\nThe Crickets\n"                               
+ [28] "\nJimmie Rodgers\n"                             
+ [29] "\nThe Four Lads\n"                              
+ [30] "\nDean Martin\n"                                
+ [31] "\nBig Bopper\n"                                 
+ [32] "\nDon Gibson\n"                                 
+ [33] "\nTony And Joe\n"                               
+ [34] "\nElvis Presley With The Jordanaires\n"         
+ [35] "\nBobby Day\n"                                  
+ [36] "\nGerry Granahan\n"                             
+ [37] "\nPerry Como\n"                                 
+ [38] "\nBuddy Knox with the Rhythm Orchids\n"         
+ [39] "\nPat Boone\n"                                  
+ [40] "\nBobby Hamilton\n"                             
+ [41] "\nBuddy Holly\n"                                
+ [42] "\nThe Slades\n"                                 
+ [43] "\nClyde McPhatter\n"                            
+ [44] "\nJan &amp; Arnie\n"                                
+ [45] "\nThe Diamonds\n"                               
+ [46] "\nGino &amp; Gina\n"                                
+ [47] "\nDion &amp; The Belmonts\n"                        
+ [48] "\nDean Martin\n"                                
+ [49] "\nThe Everly Brothers\n"                        
+ [50] "\nJimmy Bowen with the Rhythm Orchids\n"        
+ [51] "\nThe Kirby Stone Four\n"                       
+ [52] "\nThe Rinky-Dinks\n"                            
+ [53] "\nNat King Cole\n"                              
+ [54] "\nDomenico Modugno\n"                           
+ [55] "\nThe Three G's\n"                              
+ [56] "\nJack Scott\n"                                 
+ [57] "\nEydie Gorme\n"                                
+ [58] "\nThe Crickets\n"                               
+ [59] "\nTony Bennett\n"                               
+ [60] "\nBobby Day\n"                                  
+ [61] "\nBobby Hendricks\n"                            
+ [62] "\nEd Townsend\n"                                
+ [63] "\nToni Arden\n"                                 
+ [64] "\nJerry Lee Lewis And His Pumping Piano\n"      
+ [65] "\nThe Platters\n"                               
+ [66] "\nJim Backus &amp; Friend\n"                        
+ [67] "\nThe Four Preps\n"                             
+ [68] "\nDean Martin\n"                                
+ [69] "\nThe Honeycones\n"                             
+ [70] "\nThe Playmates\n"                              
+ [71] "\nFrank Gallup\n"                               
+ [72] "\nConnie Francis\n"                             
+ [73] "\nOscar McLollie and Jeanette Baker\n"          
+ [74] "\nSam Cooke\n"                                  
+ [75] "\nEydie Gorme\n"                                
+ [76] "\nPaul Anka\n"                                  
+ [77] "\nThe Diamonds\n"                               
+ [78] "\nBobby Freeman\n"                              
+ [79] "\nDavid Seville\n"                              
+ [80] "\nChuck Berry\n"                                
+ [81] "\nChuck Berry\n"                                
+ [82] "\nBill Doggett\n"                               
+ [83] "\nLee Andrews And The Hearts\n"                 
+ [84] "\nEddie Cochran\n"                              
+ [85] "\nThe Daddy-O's\n"                              
+ [86] "\nJackie Wilson\n"                              
+ [87] "\nKitty Wells\n"                                
+ [88] "\nThe Upbeats\n"                                
+ [89] "\nJim Reeves\n"                                 
+ [90] "\nThe Ames Brothers\n"                          
+ [91] "\nJoe South\n"                                  
+ [92] "\nThe Everly Brothers\n"                        
+ [93] "\nJimmie Rodgers\n"                             
+ [94] "\nMarty Robbins\n"                              
+ [95] "\nFats Domino\n"                                
+ [96] "\nThurston Harris\n"                            
+ [97] "\nRobert &amp; Johnny\n"                            
+ [98] "\nThe Ames Brothers\n"                          
+ [99] "\nBilly Williams\n"                             
+[100] "\nFrankie Vaughan\n"</code></pre>
+myartists <- sub("^\\s+", "", myartists)
+myartists <- sub("\\s+$", "", myartists)
+myartists
+  [1] "Ricky Nelson"                               
+  [2] "Perez Prado And His Orchestra"              
+  [3] "Bobby Darin"                                
+  [4] "Elvis Presley With The Jordanaires"         
+  [5] "Kalin Twins"                                
+  [6] "Duane Eddy His Twangy Guitar And The Rebels"
+  [7] "The Coasters"                               
+  [8] "Jack Scott"                                 
+  [9] "The Johnny Otis Show"                       
+ [10] "Peggy Lee"                                  
+ [11] "Frankie Avalon"                             
+ [12] "Jimmy Clanton And His Rockets"              
+ [13] "Patti Page"                                 
+ [14] "Pat Boone"                                  
+ [15] "Jerry Butler and The Impressions"           
+ [16] "The Danleers"                               
+ [17] "Jody Reynolds"                              
+ [18] "The Elegants"                               
+ [19] "Doris Day"                                  
+ [20] "Bobby Freeman"                              
+ [21] "Johnny Cash And The Tennessee Two"          
+ [22] "Johnny Mathis"                              
+ [23] "The Olympics"                               
+ [24] "Sheb Wooley"                                
+ [25] "Chuck Willis"                               
+ [26] "Poni-Tails"                                 
+ [27] "The Crickets"                               
+ [28] "Jimmie Rodgers"                             
+ [29] "The Four Lads"                              
+ [30] "Dean Martin"                                
+ [31] "Big Bopper"                                 
+ [32] "Don Gibson"                                 
+ [33] "Tony And Joe"                               
+ [34] "Elvis Presley With The Jordanaires"         
+ [35] "Bobby Day"                                  
+ [36] "Gerry Granahan"                             
+ [37] "Perry Como"                                 
+ [38] "Buddy Knox with the Rhythm Orchids"         
+ [39] "Pat Boone"                                  
+ [40] "Bobby Hamilton"                             
+ [41] "Buddy Holly"                                
+ [42] "The Slades"                                 
+ [43] "Clyde McPhatter"                            
+ [44] "Jan &amp; Arnie"                                
+ [45] "The Diamonds"                               
+ [46] "Gino &amp; Gina"                                
+ [47] "Dion &amp; The Belmonts"                        
+ [48] "Dean Martin"                                
+ [49] "The Everly Brothers"                        
+ [50] "Jimmy Bowen with the Rhythm Orchids"        
+ [51] "The Kirby Stone Four"                       
+ [52] "The Rinky-Dinks"                            
+ [53] "Nat King Cole"                              
+ [54] "Domenico Modugno"                           
+ [55] "The Three G's"                              
+ [56] "Jack Scott"                                 
+ [57] "Eydie Gorme"                                
+ [58] "The Crickets"                               
+ [59] "Tony Bennett"                               
+ [60] "Bobby Day"                                  
+ [61] "Bobby Hendricks"                            
+ [62] "Ed Townsend"                                
+ [63] "Toni Arden"                                 
+ [64] "Jerry Lee Lewis And His Pumping Piano"      
+ [65] "The Platters"                               
+ [66] "Jim Backus &amp; Friend"                        
+ [67] "The Four Preps"                             
+ [68] "Dean Martin"                                
+ [69] "The Honeycones"                             
+ [70] "The Playmates"                              
+ [71] "Frank Gallup"                               
+ [72] "Connie Francis"                             
+ [73] "Oscar McLollie and Jeanette Baker"          
+ [74] "Sam Cooke"                                  
+ [75] "Eydie Gorme"                                
+ [76] "Paul Anka"                                  
+ [77] "The Diamonds"                               
+ [78] "Bobby Freeman"                              
+ [79] "David Seville"                              
+ [80] "Chuck Berry"                                
+ [81] "Chuck Berry"                                
+ [82] "Bill Doggett"                               
+ [83] "Lee Andrews And The Hearts"                 
+ [84] "Eddie Cochran"                              
+ [85] "The Daddy-O's"                              
+ [86] "Jackie Wilson"                              
+ [87] "Kitty Wells"                                
+ [88] "The Upbeats"                                
+ [89] "Jim Reeves"                                 
+ [90] "The Ames Brothers"                          
+ [91] "Joe South"                                  
+ [92] "The Everly Brothers"                        
+ [93] "Jimmie Rodgers"                             
+ [94] "Marty Robbins"                              
+ [95] "Fats Domino"                                
+ [96] "Thurston Harris"                            
+ [97] "Robert &amp; Johnny"                            
+ [98] "The Ames Brothers"                          
+ [99] "Billy Williams"                             
+[100] "Frankie Vaughan"</code></pre>
+----
+
+Did it work?
+
+[source,r]
+----
+length(mysongs)
+[1] 100
+length(myartists)
+[1] 100
+----
+
+Yes, that works!
+
+Question 1.
+
+a. Write a function that takes one date as input, and it extracts the song titles for that week.
+
+b. Use `sapply` to utilize the function that you wrote, on each of the data files. You might choose to use the `simplify=F` option with `sapply`, or you might prefer to keep the `simplify=T` option (which is the default). Then reshape the data, e.g., by using the `unlist` function, or the `matrix` function (or any similar method that you like), to extract all of the song titles for all of the weeks.
+
+c. In a similar way, write a function that takes one date as input, and it extracts the artists for that week.
+
+d. Use `sapply` to extract all of the artists for all of the weeks.
+
+Question 2.
+
+Take your data from Question 1 and build a data.frame with four columns about the Hot 100: the artists, the songs, the weeks, and the rank within the week.
+
+Question 3.
+
+Re-work Questions 1 and 2 for the Top 200 Albums charts. If necessary, you are allowed to ignore the first 214 weeks of the Top 200 Albums charts, since they do not have all 200 results. Build a data.frame with four columns about the Top 200 Albums: the artists, the albums, the weeks, and the rank within the week.
+
+Questions 4-12.
+
+Ask 9 questions about the Billboard data, and answer each question, using the data.frame that you have built. It would be nice to make some visualizations about the data, for some of your questions. Have fun!
+
+Each student in the group should design three questions individually, OR students should work together on designing these questions, BUT the contributions from each student should be made clear in the project solutions.
+
+
+== Project 9
+
+Summarize what you have learned in the course, as follows:
+
+Please find some data on the web that you are interested in (as a group; this will take some initial discussion and agreement).
+
+Scrape data for this project from the web in XML format, and then parse the data using XML tools, and finally design 6 questions about the data, and answer all 6 of your questions.
+
+Since we are focusing on large data, I would like you to (please) have at least 2 million pieces of data in the set that you scrape.  You are certainly welcome to have more than 2 million pieces of data.
+
+You can handle this, I know it for sure!  (For comparison, the airline data set had about 120 million pieces of data.)
+
+I would also request (please) that, once you identify your website with your 2 million (or more) pieces of data, you run your project idea by me.  OK?
+
+Once you have identified your website, and you run your project idea by me, I will ask you to scrape the data from the web, and parse it.  Then you should design 6 or more interesting questions about the data, and answer each of the 6 questions.
+
+At the end, your group will submit the following:
+
+The code for scraping the data from the web, and the code for parsing the data, and the 6 questions you designed about the data, and the answers to the 6 questions.
+
+The due date for Project 10 is the end of the final week of classes, i.e., by the end of the day on Friday, December 8.  (We don't have a final exam, of course.)  I just want you to be done with this project before the final exams start, so that it doesn't get in the way of your exams.
+
+If you have any questions, please let me know.  Enjoy! 
+
+
