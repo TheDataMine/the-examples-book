@@ -1,0 +1,442 @@
+= REEU: Day 2 Notes -- 2023
+
+== Loading the database
+
+[source,sql]
+----
+%sql sqlite:////anvil/projects/tdm/data/movies_and_tv/imdb.db
+----
+
+
+== Find and print the `title_id`, `rating`, and number of votes (`votes`) for all movies that received at least 2 million votes.
+In a second query (and new cell), use the information you found in the previous query to identify the `primary_title` of these movies.
+
+These are the movies with at least 2 million votes:
+
+[source,sql]
+----
+%%sql
+SELECT * FROM ratings WHERE votes >= 2000000 LIMIT 5;
+----
+
+and then we can lookup their titles:
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles WHERE title_id = 'tt0111161' OR title_id = 'tt0468569' OR title_id = 'tt1375666' LIMIT 5;
+----
+
+Later today, we will learn an easier way to find the titles of the movies, by learning how to `JOIN` the information in two or more tables.
+
+
+
+== How many actors have lived to be more than 115 years old? Find the names, birth years, and death years for all actors and actresses who lived more than 115 years.
+
+We use the condition that `died-born` is bigger than 115
+
+[source,sql]
+----
+%%sql
+SELECT *, died-born FROM people WHERE died-born > 115 LIMIT 10;
+----
+
+Now we can use the `COUNT` function to see that there are 7 such actors who lived more than 115 years.
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(died-born) FROM people WHERE died-born > 115 LIMIT 5;
+----
+
+
+== Use the `ratings` table to discover how many films have a rating of at least 8 and at least 50000 votes.  In a separate cell, show 15 rows with this property.
+
+We can use conditions to ensure that rating and votes are large enough,
+and then we can display 15 such results.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM ratings WHERE (rating >= 8) AND (votes >= 50000) LIMIT 15;
+----
+
+Then we can use the `COUNT` function to see that there are 670 such titles altogether.
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*) FROM ratings WHERE (rating >= 8) AND (votes >= 50000) LIMIT 15;
+----
+
+
+
+
+== Find the `primary_title` of every _movie_ that is over 2 hours long or that premiered after 1990. Order the result from newest premiered year to oldest, and limit the output to 15 movies. Make sure `premiered` and `runtime_minutes` are not `NULL`.  After displaying these 15 movies, run the query again in a second cell, but this time only display the number of such movies.
+
+We just add the conditions to the query about the titles table.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles WHERE (type == 'movie') AND (runtime_minutes IS NOT NULL) AND (premiered IS NOT NULL) AND ((runtime_minutes > 120) OR (premiered > 1990)) ORDER BY premiered DESC LIMIT 15;
+----
+
+Now we can find the total number of such movies, using the `COUNT`:
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*) FROM titles WHERE (type == 'movie') AND (runtime_minutes IS NOT NULL) AND (premiered IS NOT NULL) AND ((runtime_minutes > 120) OR (premiered > 1990)) ORDER BY premiered DESC LIMIT 15;
+----
+
+This can be a helpful time to mention the concept of https://stackoverflow.com/questions/45231487/order-of-operation-for-and-and-or-in-sql-server-queries[order of operations]
+
+== What movie has the longest primary title? Answer this question using just SQL.
+
+You can read more about https://www.w3resource.com/sqlite/core-functions-length.php[SQLite length]
+
+We can use the `length` function, as follows:
+
+[source,sql]
+----
+%%sql
+SELECT *, length(primary_title) FROM titles ORDER BY length(primary_title) DESC LIMIT 5;
+----
+
+== What actor has the longest name? Answer this question using just SQL.
+
+[source,sql]
+----
+%%sql
+SELECT *, length(name) FROM people ORDER BY length(name) DESC LIMIT 5;
+----
+
+
+
+
+
+== We already mentioned that there are six tables in the database:  `akas`, `crew`, `episodes`, `people`, `ratings`, `titles`
+
+Normally, when using SQLite, the easiest way to display the tables in the database is by running `.table` or `.tables`. This is SQLite-specific behavior and therefore cannot be used in our Jupyter Lab environment. Instead, to show the tables using an R cell, we can run the following.
+
+[source, sql]
+----
+%%sql
+SELECT
+    name
+FROM
+    sqlite_master
+WHERE
+    TYPE IN('table', 'view')
+    AND name NOT LIKE 'sqlite_%'
+ORDER BY
+    1;
+----
+
+Once we learn to use R to connect to the database, if `conn` is a database connection, we can just use the `dbListTables` command, to do the same thing.
+
+[source,r]
+----
+%%R
+library(RSQLite)
+conn <- dbConnect(RSQLite::SQLite(), "/anvil/projects/tdm/data/movies_and_tv/imdb.db")
+dbListTables(conn)
+----
+
+We also have xref:programming-languages:SQL:introduction.adoc[some additional information about SQL] posted in our book pages.
+
+
+== Avoiding `NULL` values, and making calculations within our SQL queries
+
+We can start by loading the `titles` table.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles LIMIT 5;
+----
+
+and then making sure that we avoid rows in which `premiered` is `NULL` and the rows in which `ended` is `NULL`.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles WHERE (premiered IS NOT NULL) 
+   AND (ended IS NOT NULL) LIMIT 5;
+----
+
+Then we can calculate the difference between the year that the show `ended` and the year that the show `premiered`.
+
+[source,sql]
+----
+%%sql
+SELECT *, ended-premiered FROM titles WHERE (premiered IS NOT NULL) 
+   AND (ended IS NOT NULL) LIMIT 5;
+----
+
+We can given this new variable a name.  For instance, we might use `mylength` to refer to the show's run on TV (in years).  Then we can order the results by `mylength` in years, given in `DESC` (descending) order.
+
+[source,sql]
+----
+%%sql
+SELECT *, ended-premiered AS mylength FROM titles WHERE (premiered IS NOT NULL) 
+   AND (ended IS NOT NULL) ORDER BY mylength DESC LIMIT 5;
+----
+
+For instance, this allows us to see that the show `Allen and Kendal` was running from 1940 to 2015, for a total of 75 years.
+
+== How long was Friends on TV?
+
+We can use the query above as a starting point, just looking up `Friends` as the title, and seeing which shows with that title were on TV after 1993.  We see that `Friends` was on TV for 10 years.
+
+[source,sql]
+----
+%%sql
+SELECT *, ended-premiered AS mylength FROM titles
+WHERE (premiered IS NOT NULL) AND (ended IS NOT NULL)
+AND (primary_title = 'Friends') AND (premiered > 1993) LIMIT 5;
+----
+
+== How many types of titles are there?
+
+Here are a few of the types of titles
+
+[source,sql]
+----
+%%sql
+SELECT type FROM titles LIMIT 5;
+----
+
+There are lots of repeats, so we ask for `DISTINCT` types, i.e., removing the repetitions.
+
+[source,sql]
+----
+%%sql
+SELECT DISTINCT type FROM titles LIMIT 5;
+----
+
+and now we can ask for a few more, i.e., we can increase the limit.
+
+[source,sql]
+----
+%%sql
+SELECT DISTINCT type FROM titles LIMIT 100;
+----
+
+Looks like there are 12 types altogether: `short`, `movie`, `tvShort`, `tvMovie`, `tvSeries`, `tvEpisode`, `tvMiniSeries`, `tvSpecial`, `video`, `videoGame` `radioSeries`, `radioEpisode`
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(DISTINCT type) FROM titles LIMIT 100;
+----
+
+== How many times did each type occur?
+
+We can group the types and count each of them.  For instance, there are 5897385 tvEpisodes and there are 581731 movies.
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*), type FROM titles GROUP BY type LIMIT 100;
+----
+
+== How many times did each genre occur?
+
+At first, we view the genres as tuples, for instance, `Action,Adult` is a genre (separated by commas).  We can do this the same as we did above, just changing the variable type to the variable genres.
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*), genres FROM titles GROUP BY genres LIMIT 100;
+----
+
+Now we see that there are 2283 such genres:
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(DISTINCT genres) FROM titles LIMIT 5;
+----
+
+[TIP]
+====
+We will come back to the question above, about the total number of genres, when we learn how to import SQL queries into R dataframes.
+====
+
+
+== How many times has The Awakening been used as a title?
+
+The Awakening has been used 131 times as a title
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*) FROM titles WHERE primary_title = 'The Awakening' LIMIT 5;
+----
+
+
+
+
+
+== Now we can learn about how to `JOIN` the results of queries from two or more tables.  Using a `JOIN` is a powerful way to leverage lots of information from a database, but it takes a little time to set things up properly.  First, we revisit a question from yesterday, about the movies that received at least 2 million votes.  We want to find the titles of those movies.
+
+We will need the `titles` table and the `ratings` table.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles LIMIT 5;
+----
+
+[source,sql]
+----
+%%sql
+SELECT * FROM ratings LIMIT 5;
+----
+
+Now we join these two tables, and restrict the results to those movies with at least 2000000 votes.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles AS t JOIN ratings AS r 
+ON t.title_id = r.title_id WHERE votes > 2000000 LIMIT 5;
+----
+
+== What was the most popular movie (highest rating) in the year your Mom or Dad or aunt, etc., was born?
+
+The most popular movie that premiered in 1940 was The Great Dictator, with a rating of 8.4.  It is a Charlie Chaplin movie that criticizes the dictators of the time, who were becoming very powerful in Europe.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles AS t JOIN ratings AS r ON t.title_id = r.title_id
+ WHERE (t.premiered = 1940) AND (t.type = 'movie') ORDER BY r.rating DESC LIMIT 5;
+----
+
+
+
+
+== How many episodes of Friends were there?
+
+We start by finding the `title_id` for Friends.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles WHERE (primary_title = 'Friends') AND (premiered > 1992) LIMIT 5;
+----
+
+So now we know that `tt0108778` is the `show_title_id` for Friends.
+
+Now we find the number of episodes per season.  To do this, we first find the episodes for Friends.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM episodes WHERE show_title_id = 'tt0108778' LIMIT 5;
+----
+
+and then we group them by `season_number`, to make sure that our results make sense.
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*), season_number FROM episodes WHERE show_title_id = 'tt0108778' GROUP BY season_number;
+----
+
+Season 10 differs from what I expected (I was guessing that there would be 18 episodes), so I checked further on this.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM episodes AS e JOIN titles AS t ON e.episode_title_id = t.title_id WHERE show_title_id = 'tt0108778' AND season_number = 10 ORDER BY episode_number;
+----
+
+OK so they combined The Last One, which is two episodes, into just one listing.
+
+So there are 235 episodes listed, although there were actually 236 episodes in the show altogether!
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*) FROM episodes WHERE show_title_id = 'tt0108778';
+----
+
+
+
+
+== Who are the actors and actresses in the TV show Friends?
+
+We will need the `people` table and the `crew` table.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM people LIMIT 5;
+----
+
+[source,sql]
+----
+%%sql
+SELECT * FROM crew LIMIT 5;
+----
+
+Now we join these two tables together.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM crew AS c JOIN people AS p ON c.person_id = p.person_id LIMIT 5;
+----
+
+and now we also join with the `titles` table, and we focus on the `title_id` for Friends, which is `tt0108778`.  There are 10 people listed, from the Friends TV show.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles AS t JOIN crew AS c ON t.title_id = c.title_id
+JOIN people AS p ON c.person_id = p.person_id
+WHERE t.title_id = 'tt0108778' LIMIT 50;
+----
+
+and 8 of them are actors or actresses
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles AS t JOIN crew AS c ON t.title_id = c.title_id
+JOIN people AS p ON c.person_id = p.person_id
+WHERE (t.title_id = 'tt0108778')
+AND ((c.category = 'actress') OR (c.category = 'actor')) LIMIT 50;
+----
+
+== How many movies has Emma Watson appeared in?
+
+She has appeared in a total of 18 movies.
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*) FROM titles AS t JOIN crew AS c ON t.title_id = c.title_id
+ JOIN people AS p ON c.person_id = p.person_id 
+ WHERE (p.name = 'Emma Watson') AND (t.type = 'movie');
+----
+
+
+
+== James Caan died in 2022.  You can read his https://en.wikipedia.org/wiki/James_Caan[Wikipedia page] or his https://www.imdb.com/name/nm0001001/[IMDB page].  What was his highest rated movie?
+
+He appeared in The Godfather, which has a rating of 9.2
+
+[source,sql]
+----
+%%sql
+SELECT * FROM titles AS t JOIN crew AS c ON t.title_id = c.title_id
+ JOIN people AS p ON c.person_id = p.person_id 
+ JOIN ratings AS r ON t.title_id = r.title_id
+ WHERE (p.name = 'James Caan') AND (t.type = 'movie') ORDER BY r.rating DESC LIMIT 5;
+----
+
