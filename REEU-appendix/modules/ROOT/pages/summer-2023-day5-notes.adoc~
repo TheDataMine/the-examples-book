@@ -1,0 +1,209 @@
+= REEU: Day 4 Notes -- 2023
+
+We always need to re-load the libraries, if our kernel dies or if we start an all-new session.
+
+Loading the R `data.table` library
+
+[source,R]
+----
+%%R
+library(data.table)
+----
+
+== Loading the R library for SQL, and loading the database
+
+We need to run this, to make a connection to the database at the start.  If something goes wrong with our database queries, we can always come back and run these two lines again.  Ideally, we should only need to run these once per session, but sometimes we make mistakes, and our kernel dies, and we need to run these lines again.
+
+[source,R]
+----
+%%R
+library(RSQLite)
+conn <- dbConnect(RSQLite::SQLite(), "/anvil/projects/tdm/data/movies_and_tv/imdb.db")
+----
+
+== Importing data from SQL to R
+
+For example, we can import the number of `titles` per year from SQL into R.  (We are doing the work in SQL of finding out how many titles occurred in each year.)
+
+[source,R]
+----
+%%R
+myDF <- dbGetQuery(conn, "SELECT COUNT(*), premiered FROM titles GROUP BY premiered;")
+----
+
+Let's first look at the `head` of the result:
+
+[source,R]
+----
+%%R
+head(myDF)
+----
+
+We can assign names to the columns of the data frame:
+
+[source,R]
+----
+%%R
+names(myDF) <- c("mycounts", "myyears")
+----
+
+and now the `head` of the data frame looks like this:
+
+[source,R]
+----
+%%R
+head(myDF)
+----
+
+Finally, we are prepared to plot the number of titles per year.  We plot the years on the x-axis and the counts on the y-axis:
+
+[source,R]
+----
+%%R
+plot(myDF$myyears, myDF$mycounts)
+----
+
+Another way to do this is to import all of the years that titles premiered, and then make a table in `R` and plot the table.  (This time, we are doing the work in R of finding out how many titles occurred in each year.)
+
+[source,R]
+----
+%%R
+myDF <- dbGetQuery(conn, "SELECT premiered FROM titles;")
+----
+
+[source,R]
+----
+%%R
+head(myDF)
+----
+
+[source,R]
+----
+%%R
+tail(myDF)
+----
+
+Now we make a table of the results:
+
+[source,R]
+----
+%%R
+table(myDF$premiered)
+----
+
+and we can plot the results:
+
+[source,R]
+----
+%%R
+plot(table(myDF$premiered))
+----
+
+== How many genres are in the titles table?
+
+Here are the first few genres from the genres column:
+
+[source,R]
+----
+%%R
+myDF <- dbGetQuery(conn, "SELECT genres FROM titles;")
+head(myDF$genres)
+----
+
+We use the `head` so that we can keep the output relatively small and manageable.  Now we can remove duplicates:
+
+[source,R]
+----
+%%R
+unique(head(myDF$genres))
+----
+
+and see how many `unique` values there are, in the `head`:
+
+[source,R]
+----
+%%R
+length(unique(head(myDF$genres)))
+----
+
+Now that this works well, we can remove the `head` restriction, and see that there are 2283 unique genres in the table altogether.  Remember that each genre is actually a tuple of genres, for instance, 
+
+[source,R]
+----
+%%R
+length(unique(myDF$genres))
+----
+
+By the way, as a side note, we could verify this directly in SQL this way:
+
+[source,R]
+----
+%%R
+dbGetQuery(conn, "SELECT COUNT(DISTINCT genres) FROM titles;")
+----
+
+Now we can focus on separating the genres into their individual genres.  Remember that they are combined, using commas, in the format that we originally have.  Here are the first few genres:
+
+[source,R]
+----
+%%R
+head(myDF$genres)
+----
+
+Now we split them according to the commas in each:
+
+[source,R]
+----
+%%R
+strsplit(head(myDF$genres), ",")
+----
+
+This will be new for many/most of you, but we can `unlist` them in R, so that they are not listed separately anymore, but instead, they are in one big vector.
+
+[source,R]
+----
+%%R
+unlist(strsplit(head(myDF$genres), ","))
+----
+
+and now we can use `unique` to see a list of the genres, removing any duplications:
+
+[source,R]
+----
+%%R
+unique(unlist(strsplit(head(myDF$genres), ",")))
+----
+
+Since this works on the `head`, we can remove the `head` now, and see the 29 such genres.  Notice that the 21st such genre is missing, i.e., it is empty, so we do not know the genres for some of the titles.
+
+[source,R]
+----
+%%R
+unique(unlist(strsplit(myDF$genres, ",")))
+----
+
+If we want to know how many times each genre appears, we can use the `table` function instead of the `unique` function.
+
+[source,R]
+----
+%%R
+table(unlist(strsplit(myDF$genres, ",")))
+----
+
+We can make a dotchart of those results
+
+[source,R]
+----
+%%R
+dotchart(table(unlist(strsplit(myDF$genres, ","))))
+----
+
+and it would likely help to put the results in the dotchart into sorted order
+
+[source,R]
+----
+%%R
+dotchart(sort(table(unlist(strsplit(myDF$genres, ",")))))
+----
+
+
