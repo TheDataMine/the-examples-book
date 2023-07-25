@@ -16,16 +16,16 @@
 
 Supplementary material for solving projects assigned in [The Data Mine](https://datamine.purdue.edu/), Purdue University's integrative data science initiative. The "core" book can be found at [https://the-examples-book.com](https://the-examples-book.com). Complementary materials are available as appendices at the following URLs:
 
-- Containerization and Kubernetes Deployment: https://the-examples-book.com/data-science/data-engineering/containers/intro-to-containers
-- Prodigy Annotation Tool: https://the-examples-book.com/data-science/data-analysis/nlp/prodigy
-- Geospatial Analytics: https://the-examples-book.com/data-science/data-analysis/gis
-- Data Visualization: https://the-examples-book.com/data-science/data-visualiation/introduction-data-visualization
-- Natural Language Processing: https://the-examples-book.com/data-science/data-analysis/nlp/introduction-nlp
-- MATLAB: https://the-examples-book.com/data-science/tools-and-standards/matlab/introduction-matlab
-- Time Series: https://the-examples-book.com/data-science/data-analysis/time-series
+- Containerization and Kubernetes Deployment: https://the-examples-book.com/starter-guides/data-engineering/containers/intro-to-containers
+- Prodigy Annotation Tool: https://the-examples-book.com/starter-guides/data-science/data-analysis/nlp/prodigy
+- Geospatial Analytics: https://the-examples-book.com/starter-guides/data-science/data-analysis/gis
+- Data Visualization: https://the-examples-book.com/starter-guides/data-visualiation/introduction-data-visualization
+- Natural Language Processing: https://the-examples-book.com/starter-guides/data-science/data-analysis/nlp/introduction-nlp
+- MATLAB: https://the-examples-book.com/starter-guides/tools-and-standards/matlab/introduction-matlab
+- Time Series: https://the-examples-book.com/starter-guides/data-science/data-analysis/time-series
 - Projects Archive: https://the-examples-book.com/projects
 - Corporate Partners Information: https://the-examples-book.com/crp/introduction
-- RCAC Resources & Guides: https://the-examples-book.com/data-science/data-engineering/rcac/introduction-rcac
+- RCAC Resources & Guides: https://the-examples-book.com/starter-guides/data-engineering/rcac/introduction-rcac
 - Registration: https://the-examples-book.com/registration
 - Think Summer: https://the-examples-book.com/think-summer
 
