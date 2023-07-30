@@ -1,0 +1,67 @@
+= Fatality Analysis Reporting System (FARS)
+
+== Source
+
+The Fatality Analysis Reporting System (FARS) data is provided by the National Highway Traffic Safety Administration (NHTSA)
+
+This data is available for download here:
+
+https://www.nhtsa.gov/file-downloads?p=nhtsa/downloads/FARS/
+
+Documention about this data is provided in the "Fatality Analysis Reporting System Analytical User’s Manual, 1975-2021"
+
+(including, in particular, the ability to lookup state codes)
+
+https://crashstats.nhtsa.dot.gov/Api/Public/ViewPublication/813417
+
+== Description of the Data
+
+According to the NHTSA website (see) https://www.nhtsa.gov/resources-guide/glossary-highway-safety-terms-and-definitions
+
+this is (quote) "The nationwide census providing public yearly data regarding fatal injuries suffered in motor vehicle traffic crashes, as published by NHTSA."
+
+We can download the files as follows:
+
+for ((i=1975; i<=2021; i++)); do wget https://static.nhtsa.gov/nhtsa/downloads/FARS/${i}/National/FARS${i}NationalCSV.zip; done
+
+for ((i=1982; i<=2021; i++)); do wget https://static.nhtsa.gov/nhtsa/downloads/FARS/${i}/National/FARS${i}NationalAuxiliaryCSV.zip; done
+
+The 1996 Auxiliary file is named incorrectly (CVS instead of CSV), so we need to download it separately:
+
+wget https://static.nhtsa.gov/nhtsa/downloads/FARS/1996/National/FARS1996NationalAuxiliaryCVS.zip
+
+(Dr Ward reported this to the NHTSA)
+
+Now we can unzip the files and put them into directories:
+
+for ((i=1975; i<=2005; i++)); do unzip FARS${i}NationalCSV.zip; mkdir ${i}; mv *.[Cc][Ss][Vv] ${i}; done
+
+for ((i=2006; i<=2015; i++)); do unzip FARS${i}NationalCSV.zip; mkdir ${i}; mv FARS${i}NationalCSV/*.[Cc][Ss][Vv] ${i}; rmdir FARS${i}NationalCSV; done
+
+for ((i=2016; i<=2019; i++)); do unzip FARS${i}NationalCSV.zip; mkdir ${i}; mv *.[Cc][Ss][Vv] ${i}; done
+
+for ((i=2020; i<=2021; i++)); do unzip FARS${i}NationalCSV.zip; mkdir ${i}; mv FARS${i}NationalCSV/*.[Cc][Ss][Vv] ${i}; rmdir FARS${i}NationalCSV; done
+
+for ((i=1982; i<=2019; i++)); do unzip FARS${i}NationalAuxiliary*.zip; mv *.[Cc][Ss][Vv] ${i}; done
+
+for ((i=2020; i<=2021; i++)); do unzip FARS${i}NationalAuxiliaryCSV.zip; mv FARS${i}NationalAuxiliaryCSV/*.[Cc][Ss][Vv] ${i}; rmdir FARS${i}NationalAuxiliaryCSV; done
+
+rm FARS*.zip
+
+Now we build the 7581.csv file:
+
+head -n1 1975/ACCIDENT.CSV >7581.csv
+for ((i=1975;i<=1981;i++)); do sed -e 1d ${i}/ACCIDENT.CSV; done >>7581.csv
+
+and we build the states.csv file manually from the pdf file:
+
+https://crashstats.nhtsa.dot.gov/Api/Public/ViewPublication/813417
+
+If the pdf file is not available, it is in the Wayback Machine:
+
+https://web.archive.org/web/20230525220726/https://crashstats.nhtsa.dot.gov/Api/Public/ViewPublication/813417
+
+== Transformations to the original data source
+
+None.
+
