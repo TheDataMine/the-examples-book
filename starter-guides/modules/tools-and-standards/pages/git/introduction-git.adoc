@@ -1,0 +1,321 @@
+= git
+
+`git` is a powerful version control software written by Linus Torvalds, the inventor of the Linux kernel. `git` has a reputation for being complicated and confusing. While there may be some truth to this, `git` is used extensively in industry, and is relied upon by many of the applications being developed today.
+
+While there are certainly advantages to understanding `git` in detail, it is unnecessary for many projects. It is possible to get the "gist" of `git` by learning some basic terminology, workflows, and how `git` fits into a regular data science or software project. For this book, this is our goal. We want to provide you with the smallest amount of information that allows you to incorporate `git` into your project, or helps you feel comfortable using `git` in an already established project. If you want to take a deeper dive into `git`, check out the <<resources, resources section>> below.
+
+== git vs. GitHub
+
+While `git` may be largely synonymous with GitHub, they are distinct _things_. `git` is a piece of software running on your computer -- your **local** system. You can use `git` without using GitHub (or another host like GitLab). `git` works just like other familiar programs like `grep` or `sed`. Like `grep` or `sed`, you can read about the commands and options by reading the `man` (short for manual) pages.
+
+[source, bash]
+----
+man git
+----
+
+https://github.com[Microsoft's GitHub], however, is a software development and version control platform, hosted online. `git` is a complicated tool, and platforms like GitHub aim to make using `git` as pain-free as possible. It is free and easy to create a GitHub account. Other competing platforms include: https://gitlab.com[GitLab], https://sr.ht/[sourcehut], https://gitea.io[Gitea], and https://bitbucket.org[Bitbucket]. Each platform has their advantages and disadvantages, but all largely serve the same purpose.
+
+== Setup
+
+. https://git-scm.com/downloads[Download and install git].
+. Setup your user name and email.
++
+[source,bash]
+----
+git config --global user.name "John Smith"
+git config --global user.email "john@example.com"
+----
+. Setup your default text editor.
++
+[source,bash]
+----
+git config --global core.editor vim
+----
++
+[IMPORTANT]
+====
+At this stage, if you were to commit to a project, there would be no way to tell if you are _really_ John Smith. In fact, you could be anybody claiming to be John Smith. In the same way that online document signing applications allow you to verify you are _you_, you can create a GPG key, upload it to GitHub, and automatically _sign_ your commits so creators _know_ it comes from you. To do so, continue on.
+====
++
+. Install https://brew.sh/[Homebrew].
+. Install `gpg2` by running: `brew install gpg2`.
+. Install gpgtools from https://gpgtools.org/[GPGTools].
++
+. Open a terminal and type the following.
++
+[source,bash]
+----
+gpg --full-generate-key --expert
+----
++
+. Select `ECC (sign only)` in the first prompt, and `Curve 25519` for the second. Choose how many years you'd like your key to be valid for, and enter the information as you are prompted.
++
+[NOTE]
+====
+It is recommended to _not_ use a passphrase if you want to have your commits automatically signed when using GitHub Desktop. Otherwise, you will need to run the following in a terminal before you can commit to the project.
+
+[source,bash]
+----
+export GPG_TTY=$(tty)
+----
+====
++
+. When complete, you can print the public key by running the following.
++
+[source,bash]
+----
+gpg --export -a "John Smith"
+----
++
+[IMPORTANT]
+====
+Make sure your replace "John Smith" with the user name you provided when creating the key.
+====
++
+. Copy the public key to your clipboard, navigate to https://github.com, and sign in. Click on your profile in the upper right-hand corner of the screen and navigate to btn:[Settings]. On the left-hand menu, click btn:[SSH and GPG keys] and then btn:[New GPG key]. Paste your public key in the provided text area and click btn:[Add GPG key].
++
+. Lastly, in order to sign commits using the newly created key, open up a text editor and modify `$HOME/.gitconfig` to use your key. 
++
+[source,toml]
+----
+[user]
+    name = John Smith
+    email = john@example.com
+    signingkey = ABCDEFGHIJKLMNOP
+[gpg]
+    program = /usr/local/bin/gpg (or other path to `gpg` executable)
+[commit]
+    gpgsign = true
+----
++
+[TIP]
+====
+To get your signing key, run the following.
+
+[source,bash]
+----
+gpg --list-secret-keys --keyid-format=long
+----
+
+Your signing key is the 16 character value following `ed25519/` on the `sec` line.
+====
+
+== Terminology
+
+=== Repository
+
+You can think of a repository (repo) as a version controlled directory for one or more projects. A repo contains all of the projects files, code, documentation, etc., along with the project's entire revision history. When a single repo contains the code and project files for many projects, it can sometimes be referred to as a monorepo. Repos are typically either `public` or `private`. `public` repos are open to anyone who can access the website. `private` repos are only open to those who have been explicitly given permissions to the repo.
+
+It is obvious when looking at a project on GitHub what a repo is, but what about on your own computer? What makes a folder a repo? Where are all of the version control components located? The answer is in the hidden `.git` folder in your project directory. For example, `my_project` is a repo, with all of the commits, repo addresses, etc., placed in the `.git` folder. If you were to remove the `.git` folder, the `my_project` directory would no longer be a repository, but rather a normal directory.
+
+.Repository example
+----
+my_project
+├── .git
+│   ├── HEAD
+│   ├── config
+│   ├── description
+│   ├── hooks
+│   │   └── README.sample
+│   ├── info
+│   │   └── exclude
+│   ├── objects
+│   │   ├── info
+│   │   └── pack
+│   └── refs
+│       ├── heads
+│       └── tags
+├── .gitignore
+├── Cargo.toml
+├── LICENSE
+├── README.md
+├── docs
+├── scripts
+├── src
+│   └── main.rs
+└── tests
+
+13 directories, 10 files
+----
+
+To initialize a new repository from a currently existing project directory, there are a few commands to learn. 
+
+[source, bash]
+----
+cd my_project <1>
+git init <2>
+git remote add origin git@github.com:exampleuser/my_project.git <3>
+git branch -M main <4>
+git push -u origin main <5>
+----
+
+<1> Navigate to the _root_ of the project directory.
+<2> Initialize the repository, this is the command that creates the `.git` directory.
+<3> Essentially links the **local** repo (on your computer) to the **remote** repo (on GitHub). When we run commands like `git fetch` or `git pull` `git` now knows _where_ to fetch or pull the data from.
+<4> By default `git` names the default branch of a repository `master` (repos created on GitHub are named `main` by default). `git branch -M main` is the command to move or rename the default `master` branch to be named `main`.
+<5> This command sets the upstream branch for the `main` branch. Once the upstream is set, rather than running `git pull origin main` every time you want to pull down changes to your local repo, you can just run `git pull` because `git` now knows what the upstream branch is. https://stackoverflow.com/questions/37770467/why-do-i-have-to-git-push-set-upstream-origin-branch[here] is a stackoverflow post that goes into more detail.
+
+=== Clone
+
+Typically heard in reference to "cloning a repo". Cloning a repo is the act of downloading and copying a repository to your local machine, usually from a hosting platform like GitHub. 
+
+To clone a GitHub repo, you will need `Read` access to the repository. If you've setup `git` to use SSH keys, you can clone a repository as follows.
+
+[source,bash]
+----
+git clone git@github.com:TheDataMine/the-examples-book.git
+----
+
+If you setup `git` using a credential helper and HTTPS, you can clone a repository as follows.
+
+[source,bash]
+----
+git clone https://github.com/TheDataMine/the-examples-book.git
+----
+
+Both commands will copy the entirety of the repository in your current working directory (including the `.git` folder).
+
+=== Add
+
+New files added to a repo are not automatically tracked. If you modify an untracked file, those changes are not recorded in the `.git` folder. If you modify a tracked file, any changes saved to disk are tracked and noted by `git`, and automatically added to the staging area, ready to be committed.
+
+`git add` adds a file or folder to the staging area, and begins tracking. To add a new file to the staging area, run the following.
+
+[source,bash]
+----
+git add my_file.txt
+----
+
+To add everything in the root directory to staging, run the following.
+
+[source,bash]
+----
+git add .
+----
+
+`git add` respects the `.gitignore` file in the root of the repo. The `.gitignore` is a specially named file with a pattern on each line that tells `git` which files to ignore and not track. A common example of a file that should _not_ be tracked is a `.env` file with sensitive credentials.
+
+=== Commit
+
+A single unit of change, which could be to a single file, or multiple files. Commits allow users to track changes made to the project throughout time. In an ideal world, commits should be accompanied by a succinct message with a description of what changes were made and why.
+
+To commit a change to the local repository, simply modify the file or files and save them to disk as you normally would. If the files are currently being tracked, `git` will "see" the changes and mark the file(s) as modified. Then, just commit the changes.
+
+[source,bash]
+----
+git commit -m "My succinct commit message."
+----
+
+=== Diff
+
+To get a list of changes between the current, staged changes and the most recent commit, simply run.
+
+[source,bash]
+----
+git diff
+----
+
+=== Pull
+
+`git pull` "pulls down" the changes made to the **remote** repo to your **local** repo. For example, let's say we have Alice and Bob working on a project together. Alice made a change to the project and updated GitHub with all of the changes she made. Bob wants to update his **local** repo on his computer to be up-to-date. In order to do so, Bob runs `git pull`, and assuming Bob hasn't made any conflicting changes locally, the changes Alice made will get merged into Bob's local repo.
+
+In order to use `git pull`, your current working directory should be inside of the **local** repo.
+
+=== Push
+
+`git push` is the symbolic opposite of `git pull`. `git push` takes your **local** commits and updates the **remote** repo so the rest of the team can work with the latest and greatest.
+
+In order to use `git push`, your current working directory should be inside of the **local** repo.
+
+=== Branch
+
+A branch is just a copy of the repository within the repository. Branches enable a logical separation from the live version (usually `main` or `master`), to enable freedom of work without fear of messing something up. Typically your default branch is named `master` or `main`. You can create as many branches as you want within a repository, and switch between them using `git checkout`. When creating a new branch, you will be making a copy of a currently existing branch -- often times this will be the `main` branch.
+
+One common example of using branches would be what are sometimes referred to as "feature" branches. A feature branch is a branch created with the specific purpose of developing a feature on it, which can later be merged into the `main` branch.
+
+To create a new branch called `my-branch`, first, checkout the branch from which you'd like to branch off of, for example, `main`.
+
+[source,bash]
+----
+git checkout main
+----
+
+You can confirm which branch is live by looking for the asterisk after running the following.
+
+[source,bash]
+----
+git branch
+----
+
+Next, create the branch.
+
+[source,bash]
+----
+git branch my-branch
+----
+
+Once the branch is created, you can switch to it.
+
+[source,bash]
+----
+git checkout my-branch
+----
+
+It is very common to need to create a new branch and immediately switch to that branch. To do so, you can run.
+
+[source,bash]
+----
+git checkout -b my-new-branch
+----
+
+=== Checkout
+
+`git checkout` is the command that allows you to switch between different branches. To switch to a branch called "my-branch" simply run the following.
+
+[source,bash]
+----
+git checkout my-branch
+----
+
+Upon switching to my-branch, all of the files and folders on your local machine will change to match the code and files on that branch. If my-branch had a drastically different file/folder structure than my-other-branch, upon switching branches the files and folders will appear and disappear on your **local** machine.
+
+=== Merge
+
+Merging is the process of combining the changes and commits from one branch or fork to another. Ultimately, all accepted modifications made on other (non-live) branches need to be merged into the live branch.
+
+To merge a branch called `my-branch` into the `main` branch, you must first switch the branch you want to merge _into_. In this case that is the `main` branch.
+
+[source,bash]
+----
+git checkout main
+----
+
+Then, it is as straightforward as running the merge command.
+
+[source,bash]
+----
+git merge my-branch
+----
+
+[NOTE]
+When there is a conflict, this will not be so straightforward. Please see the an example of resolving a conflict in the GitHub Desktop section.
+
+== Resources
+
+https://docs.github.com/en/github/getting-started-with-github/quickstart/github-glossary[GitHub Glossary]
+
+A glossary with common `git` and GitHub-related terminology.
+
+https://learngitbranching.js.org/[Learn Git Branching]
+
+An interactive in-browser game to help learn about `git` and `git` branching.
+
+=== Books
+
+https://purdue.primo.exlibrisgroup.com/permalink/01PURDUE_PUWL/uc5e95/alma99170207244401081[Learn Git in a Month of Lunches (2015)]
+
+https://purdue.primo.exlibrisgroup.com/permalink/01PURDUE_PUWL/uc5e95/alma99170207203301081[Building Tools With Github (2016)]
+
+https://gitforteams.com[Git For Teams (2016)]
+
+https://purdue.primo.exlibrisgroup.com/permalink/01PURDUE_PUWL/uc5e95/alma99170340889501081[Version Control With Git, 3rd Edition (2022)]

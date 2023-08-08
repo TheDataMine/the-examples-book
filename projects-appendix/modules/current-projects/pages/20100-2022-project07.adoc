@@ -19,7 +19,7 @@ Make sure to read about, and use the template found xref:templates.adoc[here], a
 
 The following questions will use the following dataset(s):
 
-- `/anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.csv`
+- `/anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt`
 
 == Questions
 
@@ -34,10 +34,16 @@ Take a look at the dataset. You may have noticed that the "Store Location" colum
 The data will look something like the following:
 
 ----
-1013 MAINKEOKUK 52632(40.39978, -91.387531)
-900 E WASHINGTONCLARINDA 51632(40.739238, -95.02756)
-1414 48TH STFORT MADISON 52627(40.624226, -91.373211)
-812 S 1ST AVEIOWA CITY 52240
+Store Location
+POINT (-91.716615 41.963516)
+POINT (-91.6537 41.987286)
+POINT (-91.52888 40.962331000000006)
+POINT (-93.596755 41.5464)
+POINT (-91.658105 42.010971)
+POINT (-91.494611 41.807199)
+
+POINT (-91.796988 43.307662)
+POINT (-91.358467 41.280183)
 ----
 
 What this means is that you can't just parse out the latitude and longitude coordinates and call it a day -- you need to use `awk` functions like `gsub` and `split` to extract the latitude and longitude coordinates.
@@ -54,11 +60,16 @@ lat;lon
 Make sure to take care of rows that don't have latitude and longitude coordinates -- just skip them. So if your results look like this, you need to add logic to skip the "empty" rows:
 
 ----
-40.39978, -91.387531
-40.739238, -95.02756
-40.624226, -91.373211
-,
-41.985887, -92.579244
+
+-91.716615 41.963516
+-91.6537 41.987286
+-91.52888 40.962331000000006
+-93.596755 41.5464
+-91.658105 42.010971
+-91.494611 41.807199
+
+-91.796988 43.307662
+-91.358467 41.280183
 ----
 
 To do this, just go ahead and wrap your print in an if statement similar to:
@@ -81,7 +92,7 @@ if (length(coords[1]) > ) {
 If we have a bunch of data formatted like the following:
 
 ----
-1013 MAINKEOKUK 52632(40.39978, -91.387531)
+POINT (-91.716615 41.963516)
 ----
 
 If we first used `split` to split on "(", for example like:
@@ -94,7 +105,7 @@ split($8, coords, "(");
 `coords[2]` would be:
 
 ----
-40.39978, -91.387531)
+-91.716615 41.963516)
 ----
 
 Then, you could use `gsub` to remove any ")" characters from `coords[2]` like:
@@ -107,7 +118,7 @@ gsub(/\)/, "", coords[2]);
 `coords[2]` would be:
 
 ----
-40.39978, -91.387531
+-91.716615 41.963516
 ----
 
 At this point I'm sure you can see how to use `awk` to extract and print the rest!
@@ -126,18 +137,19 @@ To verify your `awk` command is correct, pipe the first 10 rows to your `awk` co
 ----
 %%bash
 
-head -n 10 /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.csv | awk -F';' '{}'
+head -n 10 /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt | awk -F';' '{}'
 ----
 
 .output
 ----
-40.39978;-91.387531
-40.739238;-95.02756
-40.624226;-91.373211
-41.985887;-92.579244
-42.490073;-95.544793
-42.459938;-92.327917
-41.985887;-92.579244
+41.963516;-91.716615
+41.987286;-91.6537
+40.962331000000006;-91.52888
+41.5464;-93.596755
+42.010971;-91.658105
+41.807199;-91.494611
+43.307662;-91.796988
+41.280183;-91.358467
 ----
 ====
 
@@ -170,7 +182,7 @@ You can output the results of the `awk` command to a new file called `sales_by_s
 ----
 %%bash
 
-awk -F';' {} /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.csv > $HOME/sales_by_store.csv
+awk -F';' {} /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt > $HOME/sales_by_store.csv
 ----
 
 The `>` part is a _redirect_. You are redirecting the output from the `awk` command to a new file called `sales_by_store.csv`. If you were to replace `>` by `>>` it would _append_ instead of _replace_. In other words, if you use a single `>` it will first erase the `sales_by_store.csv` file before adding the results of the `awk` command to the file. If you use `>>`, it will append the results. If you use `>>` and append results -- if you were to run the command more than once, the `sales_by_store.csv` file would continue to grow.
@@ -184,19 +196,20 @@ To verify your output, the results from piping the first 10 lines of our dataset
 ----
 %%bash
 
-head -n 10 /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.csv | awk -F';' '{}'
+head -n 10 /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt | awk -F';' '{}'
 ----
 
 .output
 ----
 store_name;date;sold_usd;volume_sold;lat;lon
-Keokuk Spirits;11/20/2015;162.84;4.5;40.39978;-91.387531
-Ding's Honk And Holler;11/21/2015;325.68;9.0;40.739238;-95.02756
-Quicker Liquor Store;11/16/2015;19.20;0.3;40.624226;-91.373211
-Twin Town Liquor;11/17/2015;19.20;0.3;41.985887;-92.579244
-Spirits, Stogies and Stuff;11/11/2015;53.34;1.75;42.490073;-95.544793
-Hy-Vee Food Store #3 / Waterloo;11/09/2015;104.58;9.0;42.459938;-92.327917
-Twin Town Liquor;11/10/2015;106.68;3.5;41.985887;-92.579244
+CVS PHARMACY #8443 / CEDAR RAPIDS;08/16/2012;5.25;41.963516;-91.716615 
+SMOKIN' JOE'S #6 TOBACCO AND LIQUOR;09/10/2014;9;41.987286;-91.6537
+HY-VEE FOOD STORE / MOUNT PLEASANT;04/10/2013;1.5;40.962331000000006;-91.52888
+AFAL FOOD & LIQUOR / DES MOINES;08/30/2012;1.12;41.5464;-93.596755
+HY-VEE FOOD STORE #5 / CEDAR RAPIDS;01/26/2015;3;42.010971;-91.658105
+SAM'S MAINSTREET MARKET / SOLON;07/19/2012;12;41.807199;-91.494611
+DECORAH MART;10/23/2013;9;43.307662;-91.796988
+ECON-O-MART / COLUMBUS JUNCTION;05/02/2012;2.25;41.280183;-91.358467
 ----
 ====
 
@@ -305,7 +318,7 @@ chmod +x $HOME/question3.sh
 
 [TIP]
 ====
-Read the https://the-examples-book.com/data-science/unix/scripts#shebang[shebang] and https://the-examples-book.com/data-science/unix/scripts#arguments[arguments] sections in the book.
+Read the https://the-examples-book.com/starter-guides/unix/scripts#shebang[shebang] and https://the-examples-book.com/starter-guides/unix/scripts#arguments[arguments] sections in the book.
 ====
 
 .Items to submit

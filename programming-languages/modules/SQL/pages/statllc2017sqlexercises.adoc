@@ -1,0 +1,354 @@
+= STAT-LLC 2017 SQL Exercises
+
+== Project 6
+
+Question 1.
+
+Plot number of wins from Astros, Dodgers, Cubs, Yankees since 2006 on the same graph.  Can you do this with only one SQL call altogether?
+
+Solution:
+
+[source,r]
+----
+install.packages("RMySQL")
+library("RMySQL")
+m <- dbDriver("MySQL")
+----
+
+The following will set up a connection to the Purdue database server. You will need to change the username and the dbname to match your own username.
+
+[source,r]
+----
+`con <- dbConnect(m, host="mydb.ics.purdue.edu", username="mdw", dbname="mdw")`
+res <- dbSendQuery(con, "SELECT t.name, t.yearID, t.W FROM Teams t WHERE t.yearID >= 2006 AND
+                   ((t.teamID = \'HOU\') OR (t.teamID = \'LAN\')
+                   OR (t.teamID = \'CHN\') OR (t.teamID = \'NYA\'))")
+myDF <- fetch(res, n=-1)
+myDF
+M <- matrix(myDF$W,nrow=11)
+rownames(M) <- 2006:2016
+colnames(M) <- c("Cubs","Astros","Dodgers","Yankees")
+----
+
+Here is the number of wins, grouped by team.
+
+`dotchart(M)`
+
+Or we can see the number of wins, grouped by year.
+
+`dotchart(t(M))`
+
+Question 2.
+
+Plot the number of strikeouts by Kershaw in each year since 2006.
+
+Solution:
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT p.yearID, p.W, m.nameFirst, m.nameLast 
+                   FROM Pitching p 
+                   JOIN Master m ON p.playerID = m.playerID
+                   WHERE p.yearID >= 2006
+                   AND m.nameLast = \'Kershaw\'")
+myDF <- fetch(res, n=-1)
+myDF
+v <- myDF$W
+names(v) <- myDF$yearID
+# We plot the result using a dotchart.
+dotchart(v)
+----
+
+
+Question 3.
+
+During which years was Jackie Robinson active in baseball?  Check your solution by comparing the results from the SQL database with a resource online.
+
+Solution:
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast,
+                   b.yearID FROM Batting b JOIN Master m
+                   ON b.playerID = m.playerID
+                   WHERE m.nameFirst = \'Jackie\'
+                   AND m.nameLast = \'Robinson\';")
+myDF <- fetch(res, n=-1)
+myDF
+----
+
+Question 4.
+
+a.  Extract a data.frame for which each row has a player, a year, and the number of bases he stole during that year.
+
+b.  Extract the maximum number of stolen bases for each year.
+
+c.  Plot the results on a graph.  Has the maximum number of stolen bases changed significantly over time?
+
+Solution:
+
+a.  
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast,
+                         b.SB, b.yearID FROM Batting b
+                         JOIN Master m ON b.playerID = m.playerID
+                         GROUP BY b.playerID, b.yearID;")
+myDF <- fetch(res, n=-1)
+myDF
+----
+
+b.
+
+`v <- tapply(myDF$SB, myDF$yearID, max)`
+
+c.
+
+[source,r]
+----
+plot(names(v),v)  
+# Yes, the maximum number of stoen bases 
+# has fluctuated from year to year.
+----
+
+Question 5.
+
+For each year, which teams had the highest number of losses?
+(Think about how to take ties among the highest number of losses into account, e.g., be sure to print more than one team, if two teams had the same record.)
+
+Solution:
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT t.name, t.yearID, t.L FROM Teams t;")
+myDF <- fetch(res, n=-1)
+myDF
+
+v <- tapply(myDF$L, myDF$yearID, max)
+
+myDF[v[as.character(myDF$yearID)] == myDF$L, ]
+----
+
+Question 6.
+
+a.  Make a list of the batter(s) who are the home run leader(s) in each year.
+
+b.  Make a list of the pitcher(s) who are the strikeout leader(s) in each year.
+
+Solution:
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast,
+                   b.HR, b.yearID FROM Batting b
+                   JOIN Master m ON b.playerID = m.playerID
+                   GROUP BY b.playerID, b.yearID;")
+myDF <- fetch(res, n=-1)
+myDF
+
+v <- tapply(myDF$HR, myDF$yearID, max)
+HRleaders <- myDF[v[as.character(myDF$yearID)] == myDF$HR, ]
+HRleaders[order(HRleaders$yearID), ]
+----
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast,
+                   p.SO, p.yearID FROM Pitching p
+                   JOIN Master m ON p.playerID = m.playerID
+                   GROUP BY p.playerID, p.yearID;")
+myDF <- fetch(res, n=-1)
+myDF
+
+v <- tapply(myDF$SO, myDF$yearID, max)
+SOleaders <- myDF[v[as.character(myDF$yearID)] == myDF$SO, ]
+SOleaders[order(SOleaders$yearID), ]
+----
+
+Question 7.
+
+a.  How many times in baseball history has a player served in seven unique positions during the same season?
+
+b.  Who has achieved this feat twice in his career?
+
+Solution:
+
+a.
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast, m.playerID,
+                         f.Pos, f.yearID FROM Master m
+                         JOIN Fielding f
+                         ON m.playerID = f.playerID
+                         GROUP BY m.playerID, f.Pos, f.yearID")
+myDF <- fetch(res, n=-1)
+myDF
+mynames <- paste(myDF$playerID, myDF$nameFirst, myDF$nameLast)
+myresults <- tapply(myDF$Pos, list(mynames, myDF$yearID), length)
+dim(which(myresults==7,arr.ind=T))
+sort(rownames(which(myresults==7,arr.ind=T)))
+----
+
+This has happened 19 times.
+
+b. It happened twice for King Kelly.
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast, m.playerID,
+                         f.Pos, f.yearID FROM Master m
+                   JOIN Fielding f
+                   ON m.playerID = f.playerID
+                   WHERE m.nameFirst = \'King\'
+                   AND m.nameLast = \'Kelly\'
+                   GROUP BY m.playerID, f.Pos, f.yearID")
+myDF <- fetch(res, n=-1)
+myDF
+table(myDF$yearID)
+----
+
+Question 8.
+
+Make a list of all of the players who have hit 200 or more triples during their careers. For each such player, give his first name, last name, and his total number of triples.
+
+Solution:
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast,
+                   SUM(b.3B) FROM Batting b
+                   JOIN Master m ON b.playerID = m.playerID
+                   GROUP BY b.playerID;")
+myDF <- fetch(res, n=-1)
+myDF
+----
+
+We change the headers of the data frame, since the third column has an awkward name:
+
+[source,r]
+----
+names(myDF) <- c("nameFirst", "nameLast", "total3B")
+myDF[myDF$total3B>=200, ]
+----
+
+
+Question 9.
+
+Make a list of all of the players who have pitched 350 or more Wins during their careers.
+For each such player, give his first name, last name, and his total number of Wins.
+
+Solution:
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast,
+                   SUM(p.W) FROM Pitching p
+                   JOIN Master m ON p.playerID = m.playerID
+                   GROUP BY p.playerID;")
+myDF <- fetch(res, n=-1)
+myDF
+----
+
+We change the headers of the data frame, since the third column has an awkward name:
+
+[source,r]
+----
+names(myDF) <- c("nameFirst", "nameLast", "totalW")
+myDF[myDF$totalW>=350, ]
+----
+
+
+Question 10.
+
+a.  Make a plot with one point per pitcher.  The x-axis should have the pitcher's lifetime number of wins, and the y-axis should have the pitcher's lifetime number of loses.
+
+b.  Who is the outlier?
+
+Solution:
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT m.nameFirst, m.nameLast, m.playerID,
+                         SUM(p.W), SUM(p.L) FROM Master m
+                   JOIN Pitching p
+                   ON m.playerID = p.playerID
+                   GROUP BY m.playerID")
+myDF <- fetch(res, n=-1)
+myDF
+names(myDF) <- c("nameFirst", "nameLast", "playerID","sumw","suml")
+plot(myDF$sumw, myDF$suml)
+----
+
+b. The outlier is Cy Young.
+
+`myDF[myDF$sumw > 500, ]`
+
+Question 11.
+
+a.  Lookup the names and school IDs of the 16 current Big 10 universities from the Schools table.
+
+b.  How many players are known to have attended each of the 16 current Big 10 universities?
+
+Solution:
+
+a.
+
+[source,r]
+----
+res <- dbSendQuery(con, "SELECT s.schoolID, s.name_full
+                   FROM Schools s")
+myDF <- fetch(res, n=-1)
+myDF
+----
+
+For instance, if we want to search for a university to get the name:
+
+[source,r]
+----
+grep("Indiana University", myDF$name_full)
+myDF$name_full[474]
+
+v <- c("Johns Hopkins University",
+  "Indiana University-Bloomington",
+  "Michigan State University",
+  "Northwestern University",
+  "University of Notre Dame",
+  "The Ohio State University",
+  "Pennsylvania State University",
+  "Purdue University",
+  "Rutgers, the State University of New Jersey",
+  "University of Illinois at Urbana-Champaign",
+  "University of Iowa",
+  "University of Maryland",
+  "University of Michigan",
+  "University of Minnesota",
+  "University of Nebraska at Lincoln",
+  "University of Wisconsin at Madison"
+)
+myresults <- myDF[myDF$name_full %in% v, ]
+----
+
+The school IDs we need are:
+
+`myresults$schoolID`
+
+b.  It is possible to manually paste the IDs into a vector, but we do somethign slightly fancy. We first put a single quote around each school name:
+
+`mystring <- paste("\'", myresults$schoolID, "\'", sep="")`
+
+and then we collapse the vector into one long string, with a comma between each entry:
+
+`mystring2 <- paste(mystring, collapse=",")`
+
+and then we use mystring2 in our query directly:
+
+[source,r]
+----
+res <- dbSendQuery(con, paste("SELECT c.playerID, c.schoolID FROM CollegePlaying c WHERE c.schoolID in (", mystring2, ") GROUP BY c.playerID", sep=""))
+myDF <- fetch(res, n=-1)
+myDF
+table(myDF$schoolID)
+----
+
