@@ -1,0 +1,387 @@
+= TDM 40100: Project 2 -- 2023
+
+**Motivation:** The ability to use SQL to query data in a relational database is an extremely useful skill. What is even more useful is the ability to build a `sqlite3` database, design a schema, insert data, create indexes, etc. This series of projects is focused around SQL, `sqlite3`, with the opportunity to use other skills you've built throughout the previous years.
+
+**Context:** In TDM 20100, you had the opportunity to learn some basics of SQL, and likely worked (at least partially) with `sqlite3` -- a powerful database engine. In this project (and following projects), we will branch into SQL and `sqlite3`-specific topics and techniques that you haven't yet had exposure to in The Data Mine.
+
+**Scope:** `sqlite3`, lmod, SQL
+
+.Learning Objectives
+****
+- Create your own `sqlite3` database file.
+- Analyze a large dataset and formulate `CREATE TABLE` statements designed to store the data.
+- Insert data into your database.
+- Run one or more queries to test out the end result.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_book_authors.json`
+- `/anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_book_series.json`
+- `/anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_books.json`
+- `/anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_reviews_dedup.json`
+
+== Questions
+
+=== Question 1 (1 pt)
+[upperalpha]
+.. Write a function to determine how big our 4 files are, given a size to return in. (i.e. bytes, megabytes, etc.)
+.. Run your function given bytes, kilobytes, megabytes, and gigabytes in turn.
+.. Approximately how many books, reviews, and authors are included in the datasets?
+.. Write code to get the size of one of the images in our dataset in bytes, without downloading the image.
+
+The goodreads dataset contains a variety of files. With that being said there are 4 files which hold the bulk of the data. The rest is _mostly_ derivatives of those 4 files.
+
+- `/anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_book_authors.json`
+- `/anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_book_series.json`
+- `/anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_books.json`
+- `/anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_reviews_dedup.json`
+
+Write a `bash` function that takes an argument that indicates the size unit to return in, and returns the size of a file in that unit by running `du`. For example, if I wanted to know how many **bytes** the `goodreads_books.json` file takes up using your function, I could run the following:
+
+[source,bash]
+----
+get_size b
+----
+
+[NOTE]
+====
+In the kernel on Anvil that we are using, "shells" do not persist across different cells. What this means practically is that any bash function you define is only defined in that cell. When running a function, it must be defined in the same cell that you are running it in.
+====
+
+[TIP]
+====
+`du` is a `bash` command that returns the size of files or directories on the filesystem. If I wanted to, for example, know how many megabytes the 'Summer23' directory is taking up on my filesystem, I could run the following: 
+[source,bash]
+----
+du -BMB $HOME/Summer23
+----
+====
+
+Run your function 4 times, passing in bytes, kilobytes, megabytes, and gigabytes in turn. Does your output make sense for each size? If not, double check your function to make sure you are using the correct unit of size for each `du` command. Don't forget to try `du --help` if you are having trouble.
+
+[NOTE]
+====
+For this project we will be using the convention that 1MB is 1,000,000 bytes, and 1GB is 1,000,000,000 bytes. We understand that historically this may have differed, but we will be operating off this convention for this project.
+====
+
+_Approximately_ how many books, reviews, and authors are included in the datasets?
+
+For this part of the question, I would recommend first looking at the head of each file using `head -n10 filename`, replacing filename with your file. How many books are on each line of the file on average? Once you know this, you can count how many lines are in the file (using `wc`) and extrapolate to find your solution.
+
+Finally, let's take a look at the first book. 
+
+----
+{"isbn": "0312853122", "text_reviews_count": "1", "series": [], "country_code": "US", "language_code": "", "popular_shelves": [{"count": "3", "name": "to-read"}, {"count": "1", "name": "p"}, {"count": "1", "name": "collection"}, {"count": "1", "name": "w-c-fields"}, {"count": "1", "name": "biography"}], "asin": "", "is_ebook": "false", "average_rating": "4.00", "kindle_asin": "", "similar_books": [], "description": "", "format": "Paperback", "link": "https://www.goodreads.com/book/show/5333265-w-c-fields", "authors": [{"author_id": "604031", "role": ""}], "publisher": "St. Martin's Press", "num_pages": "256", "publication_day": "1", "isbn13": "9780312853129", "publication_month": "9", "edition_information": "", "publication_year": "1984", "url": "https://www.goodreads.com/book/show/5333265-w-c-fields", "image_url": "https://images.gr-assets.com/books/1310220028m/5333265.jpg", "book_id": "5333265", "ratings_count": "3", "work_id": "5400751", "title": "W.C. Fields: A Life on Film", "title_without_series": "W.C. Fields: A Life on Film"}
+----
+
+If we want to find the size of the image for this book (given by the `image_url` field), we could just download it and run `du`. However, if we wanted to do this on a whole bunch of images it would be extremely slow and take up an enormous amount of space on our filesystem, which is extremely unideal for large datasets.
+
+Instead, use `curl` in order to get the headers of the image, and `grep` to isolate the `Content-Length` portion of the header. Take the time to figure out how this works and make your solution clean, as we will be building on this idea in the next question and it will be tough if you don't understand it or have a very convoluted solution.
+
+[TIP]
+====
+`curl -ILs <url>` will return the headers for a given url.
+====
+
+[NOTE]
+====
+It is okay to manually copy/paste the link from the json.
+====
+
+.Items to submit
+====
+- A function to calculate the size of a file in a given size.
+- The size of each of the four files listed in bytes, kilobytes, megabytes, and gigabytes.
+- The approximate number of books and reviews in the dataset.
+- The size of the image for the first book, in bytes.
+====
+
+=== Question 2 (2 pts)
+[upperalpha]
+.. Write a `bash` function to return the average size of _n_ random images from our data.
+.. Run your function 4 times, passing in 25, 50, 100, and 1000 in turn.
+.. Write 2-3 sentences to determine which average is likely closest to the true average of the dataset, and why. Include an explanations for why the values you got may not match the theoretical expectation.
+
+In the last question, we got the size of a single image from our data. However, more often than not we will want to do this with many images in order to approximate how much space the images take on average, or to get any other sorts of summary statistics about the images in our data.
+
+[IMPORTANT]
+====
+In the previous question we said it was okay to manually copy/paste the `image_url` -- this time, you _probably_ won't want to do that. You can use a `bash` tool called `jq` to extract the links automatically. I would recommend you don't use `jq` within the body of your function as this will greatly slow down runtime. Run `jq` once to extract the links to a text file, then use that text file in your function.
+
+The `--raw-output` option to `jq` _may be_ useful as well.
+
+`shuf` can return a random subset of _n_ lines from a file, which will help you get a random subset of images to average.
+====
+
+Write a function that takes an argument _n_ that indicates the number of images to download, and returns the average size of _n_ random images from our data. An example general outline of this function is included below to push you in the right direction.
+
+[source,bash]
+----
+avg_img_size () {
+    # Record start time
+    start_time=$(date +%s.%N)  
+
+    # set helper variables
+    books_file="/anvil/projects/tdm/data/goodreads/goodreads_samples/goodreads_books.json"
+
+    # get a subset of _n_ image links
+
+    # initialize accumulating variables
+    let total_size=0 count=0
+
+    # get size of each image, then average all sizes
+    # THIS IS THE BIG SECTION YOU WILL NEED TO FILL IN
+
+    # print output
+    echo "Total Size: $total_size bytes"
+    echo "Num Files: $count"
+    echo "Average Size (N=$1): $average_size bytes"
+    
+    # remove temp files
+    
+    # Record end time, calculate elapsed time
+    end_time=$(date +%s.%N)  
+    elapsed_time=$(echo "$end_time - $start_time" | bc)
+    echo "$elapsed_time sec runtime"
+} 
+----
+
+Your function can be tested as follows:
+
+[source, bash]
+----
+avg_img_size 25
+echo " "
+avg_img_size 50
+echo " "
+avg_img_size 100
+echo " "
+avg_img_size 1000
+----
+
+[TIP]
+====
+While retrieving the size of each image, you may notice that addition of the sizes is not working. If this is the case, try running `od -c` on the size to see if there are any hidden characters that could be causing problems. If so, you can use `tr` to remove them.
+====
+
+[NOTE]
+====
+The `start_time` and `end_time` code that you see will print the time it takes your function to run. This can be a helpful tool while trying to improve runtime, as inefficient functions will really start to slow down as we increase the number of images we want to average.
+====
+
+Run your function using the testing code provided above, which returns the average size of images given a subset of 25, 50, 100, and 1000 images. In a markdown cell, write 2-3 sentences explaining which average you received is theoretically closest to the 'true average' size of an image in the dataset, and why.
+
+[NOTE]
+====
+1000 images is a pretty large amount, so don't expect your function to finish running instantly. My solution to this question took 86 seconds for 1000 images! If you are having a hard time getting your 1000 image test to run in a reasonable amount of time, go back to the 25 or 50 image tests and try and speed that one up first.
+====
+
+.Items to submit
+====
+- Function to calculate the average of _n_ random images from our data.
+- Results of running functions on subsets of 25, 50, 100, and 1000 images.
+- 2-3+ sentences explaining which subset theoretically produces the most accurate average to the whole dataset, why, and why your results may differ from the theoretical expectation.
+====
+
+=== Question 3 (2 pts)
+[upperalpha]
+.. Create a directory called `goodreads_samples` somewhere in your `$HOME` directory.
+.. Create ~100mb random subsets of our 4 main files in your `goodreads_samples` directory. 
+.. Double check that your subset files are an appropriate size with `du`.
+
+Okay, so _roughly_, in total we are looking at around 27 gb of data. With that size it will _definitely_ be useful for us to create a database. After all, answering questions like:
+
+- What is the average rating of Brandon Sandersons books?
+- What are the titles of the 5 books with the most number of ratings?
+
+would be quite difficult with the data in its current form.
+
+Realistically, things are not very straightforward if we hand you this data and say "get that info please". _However_, if we had a nice `sqlite` database the same tasks would be trivial! In the rest of this project, we will set up a `sqlite` database, and populate it with the data from the `goodreads` dataset with the end goal of creating a small database that make it easy to answer questions like the ones above.
+
+First, before we do that, it would make sense to get a sample of each of the datasets. Working with samples just makes it a lot easier to load the data up and parse through it.
+
+Use `shuf` to get a random sample of the `goodreads_books.json` and `goodreads_reviews_dedup.json` datasets. Approximate how many rows you'd need in order to get the datasets down to around 100 mb each, and do so. Put the samples, and copies of `goodreads_book_authors.json` and `goodreads_book_series.json` in a directory called `goodreads_samples` anywhere inside your $HOME directory.
+
+[WARNING]
+====
+Do **NOT** use the `goodreads_samples` directory in the `goodreads` directory. This data is out of date and your results will not match ours, almost certainly causing you to lose points.
+====
+
+[NOTE]
+====
+It just needs to be approximately 100mb -- no need to fuss, as long as it is within a 50mb margin it should be fine.
+====
+
+.Items to submit
+====
+- `goodreads_samples` directory containing our 4 subset files.
+- Code to check the size of our 4 subset files.
+====
+
+=== Question 4 (1 pt)
+[upperalpha]
+.. Write out the keys in each of the json files (excluding `goodreads_reviews_dedup.json`), and list the appropriate storage class to use.
+
+Check out the 5 storage classes (which you can think of as 'data types' in languages like Python, C, and R) that `sqlite3` uses: https://www.sqlite.org/datatype3.html
+
+When we are looking into constructing a database, we need to think about what types of data we need to be storing. For example, if we wanted to store a bunch of values of a structure like `12349234`, an INTEGER would likely work well. However, if we are trying to store values like `0012349234`, storing as an INTEGER will lose us our 2 leading zeroes. In this case, TEXT may be more appropriate. These sort of small technicalities can make a big difference in how well our data is stored in our database, so be sure to look at the different values in each field before assigning them a type appropriate to store those values.
+
+In a markdown cell, write out each of the keys in each of the json files (excluding `goodreads_reviews_dedup.json`), and list the appropriate storage class to use. For example, I've provided an example solution for `goodreads_reviews_dedup.json`.
+
+- user_id: TEXT
+- book_id: INTEGER
+- review_id: TEXT
+- rating: INTEGER
+- review_text: TEXT
+- date_added: TEXT
+- date_updated: TEXT
+- read_at: TEXT
+- started_at: TEXT
+- n_votes: INTEGER
+- n_comments: INTEGER
+
+[NOTE]
+====
+You don't need to copy/paste the solution for `goodreads_reviews_dedup.json` since we provided it for you.
+====
+
+[IMPORTANT]
+====
+You do not need to assign a type to the following keys in `goodreads_books.json`: `series`, `popular_shelves`, `similar_books`, and `authors`.
+====
+
+[TIP]
+====
+- Assume `isbn`, `asin`, `kindle_asin`, `isbn13` columns _could_ start with a leading 0.
+- Assume any column ending in `_id` could _not_ start with a leading 0.
+====
+
+.Items to submit
+====
+- List of the keys in the json files and the appropriate storage class to use.
+====
+
+=== Question 5 (2 pts)
+[upperalpha]
+.. ba
+.. ba
+.. ba
+
+We have done a lot of setup in the previous questions, and now we are finally ready to create our mini-database! We will do this using `CREATE TABLE` statements in `sqlite3`, while sourcing data from the `goodreads_sample` directory we created in the previous question. While you will have to run your `CREATE TABLE` statements in a terminal with `sqlite3` launched in order for them to work, please paste them into your notebook as well in order to recieve points for this question.
+
+Let's start by launching `sqlite3` like so:
+[source,bash]
+----
+module use /anvil/projects/tdm/opt/core
+module load tdm
+module load sqlite/3.39.2
+
+sqlite3 my.db # this will create an empty database
+----
+
+This will put us inside our `sqlite3` session, and we can start running our commands, `sqlite3`-specific dot functions, and SQL queries. While you work on the next portion of this question, feel free to use the following code to validate that your `CREATE TABLE` statements are working as expected. Additionally, https://www.sqlitetutorial.net[this website] has more information about sqlite for you to read up on in your extra time.
+
+[source,sql]
+----
+.tables
+----
+
+[TIP]
+====
+Running `.help` once you start your `sqlite3` session will give you a list of all the `sqlite3`-specific dot functions you can use. For example, `.tables` will list all the tables in your database.
+====
+
+For now, we will only worry about creating tables with the columns that we identified in the previous question. This means that we will be leaving out the `series`, `popular_shelves`, `similar_books`, and `authors` columns in the `goodreads_books.json` file.
+
+Now that we have our `sqlite3` session launched, let's create our first table. In Question 4, we essentially created an outline of what each table's columns would contain. Translate each of the lists of keys and storage classes you made into a `CREATE TABLE` statement, and run it in your `bash` shell. **Don't** forget to paste your statements into your Jupyter notebook so we can see them! As an example, I have provided the `CREATE TABLE` statement for the `goodreads_reviews_dedup.json` file below. You should still run this statement as you want to create this table as well.
+
+[source,sql]
+----
+CREATE TABLE reviews (
+    user_id TEXT,
+    book_id INTEGER,
+    review_id TEXT,
+    rating INTEGER,
+    review_text TEXT,
+    date_added TEXT,
+    date_updated TEXT,
+    read_at TEXT,
+    started_at TEXT,
+    n_votes INTEGER,
+    n_comments INTEGER
+);
+----
+
+[NOTE]
+====
+While concepts like primary and foreign keys are extremely important and useful, we will not be covering them in this project. For now, just focus on building the four tables we outlined in Question 4, ensuring you are using the correct types. We will also cover restrictions like `UNIQUE` or `NOT NULL` in future projects, so feel free to just make the basic table for now.
+====
+
+Finally, run all of the below statements in your Jupyter notebook to verify (and show us) that your tables were created correctly.
+
+[source,ipython]
+----
+%sql sqlite:////home/x-jaxmattfair/my.db # change x-jaxmattfair to your username
+----
+
+[source,ipython]
+----
+%%sql
+
+SELECT sql FROM sqlite_master WHERE name='reviews';
+----
+
+[source,ipython]
+----
+%%sql
+
+SELECT sql FROM sqlite_master WHERE name='books';
+----
+
+[source,ipython]
+----
+%%sql
+
+SELECT sql FROM sqlite_master WHERE name='series';
+----
+
+[source,ipython]
+----
+%%sql
+
+SELECT sql FROM sqlite_master WHERE name='authors';
+----
+
+.Items to submit
+====
+- SQL `CREATE TABLE` statements for each of the 4 tables, and to create your database.
+- Code snippets above and the results of running those code snippets.
+====
+
+=== Submitting your Work
+
+Well done, you've finished your second project for this class and created your first database in `sqlite3`! Make sure to save your work and submit it to Gradescope in the correct format.
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output, when in fact it does not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/current-projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or it does not render properly in gradescope. Please ask a TA if you need help with this.
+====
+
+.Items to submit
+====
+- `firstname-lastname-project02.ipynb`.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====
