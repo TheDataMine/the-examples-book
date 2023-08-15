@@ -1,0 +1,372 @@
+= TDM 40100: Project 3 -- 2023
+
+**Motivation:** The ability to use SQL to query data in a relational database is an extremely useful skill. What is even more useful is the ability to build a `sqlite3` database, design a schema, insert data, create indexes, etc. This series of projects is focused around SQL, `sqlite3`, with the opportunity to use other skills you've built throughout the previous years.
+
+**Context:** In TDM 20100 you had the opportunity to learn some basics of SQL, and likely worked (at least partially) with `sqlite3` -- a powerful database engine. In this project (and following projects), we will branch into SQL and `sqlite3`-specific topics and techniques that you haven't yet had exposure to in The Data Mine.
+
+**Scope:** `sqlite3`, lmod, SQL
+ 
+.Learning Objectives
+****
+- Create your own `sqlite3` database file.
+- Analyze a large dataset and formulate `CREATE TABLE` statements designed to store the data.
+- Run one or more queries to test out the end result.
+- Demonstrate the ability to normalize a series of database tables.
+- Wrangle and insert data into database.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_book_authors.json`
+- `/anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_book_series.json`
+- `/anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_books.json`
+- `/anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_reviews_dedup.json`
+
+== Questions
+
+If for whatever reason you didn't do the previous project, please run the following code in a Jupyter notebook to craete a `sqlite3` database called `my.db` in your `$HOME` directory (this is the code you wrote in the previous project, so you can skip this if you already did it). Feel free to move it into a subdirectory if you would like.
+
+[source,ipython]
+----
+%%bash
+
+rm $HOME/my.db
+sqlite3 $HOME/my.db "CREATE TABLE reviews (
+	user_id TEXT, 
+	book_id INTEGER,
+	review_id TEXT,
+	rating INTEGER,
+	review_text TEXT,
+    date_added TEXT,
+    date_updated TEXT,
+    read_at TEXT,
+    started_at TEXT,
+    n_votes INTEGER,
+    n_comments INTEGER
+);"
+
+sqlite3 $HOME/my.db "CREATE TABLE books (
+	isbn TEXT,
+    text_reviews_count INTEGER,
+    country_code TEXT,
+    language_code TEXT,
+    asin TEXT,
+    is_ebook INTEGER,
+    average_rating REAL,
+    kindle_asin TEXT,
+    description TEXT,
+    format TEXT,
+    link TEXT,
+    publisher TEXT,
+    num_pages INTEGER,
+    publication_day INTEGER,
+    isbn13 TEXT,
+    publication_month INTEGER,
+    edition_information TEXT,
+    publication_year INTEGER,
+    url TEXT,
+    image_url TEXT,
+    book_id TEXT,
+    ratings_count INTEGER,
+    work_id TEXT,
+    title TEXT,
+    title_without_series TEXT
+);"
+
+sqlite3 $HOME/my.db "CREATE TABLE authors (
+	average_rating REAL,
+    author_id INTEGER,
+    text_reviews_count INTEGER,
+    name TEXT,
+    ratings_count INTEGER
+);"
+
+sqlite3 $HOME/my.db "CREATE TABLE series (
+	numbered INTEGER,
+    note TEXT,
+    description TEXT,
+    title TEXT,
+    series_works_count INTEGER,
+    series_id INTEGER,
+    primary_work_count INTEGER
+);"
+----
+
+[source,ipython]
+----
+%sql sqlite:////home/x-myalias/my.db
+----
+
+[source,ipython]
+----
+%%sql
+
+SELECT * FROM reviews limit 5;
+----
+
+[source,ipython]
+----
+%%sql
+
+SELECT * FROM books limit 5;
+----
+
+[source,ipython]
+----
+%%sql
+
+SELECT * FROM authors limit 5;
+----
+
+[source,ipython]
+----
+%%sql
+
+SELECT * FROM series limit 5;
+----
+
+[source,ipython]
+----
+%%bash
+
+rm -rf $HOME/goodreads_samples
+mkdir $HOME/goodreads_samples
+cp /anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_book_authors.json $HOME/goodreads_samples/
+cp /anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_book_series.json $HOME/goodreads_samples/
+shuf -n 25600 /anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_books.json > $HOME/goodreads_samples/goodreads_books.json
+shuf -n 94200 /anvil/projects/tdm/data/goodreads/datadownloadsAugust2023/goodreads_reviews_dedup.json > $HOME/goodreads_samples/goodreads_reviews_dedup.json
+----
+
+=== Question 1 (1 pt)
+[upperalpha]
+.. Rename the `image_url` column from the `books` table to `book_cover`.
+.. Show via a Before/After query that the column was renamed successfully.
+
+In the last project, we created a whole bunch of tables and columns to store our data. As of yet, however, they are still quite empty. Before we start populating them with data, we should always double check our field names and make sure they are as concise and descriptive as possible. As you will likely see in the future, tables with data in them are much more tricky to modify than empty tables.
+
+Before we start, let's get a quick look at `books` by running the below command to show all the current column names in our table.
+
+[source,ipython]
+----
+%%sql
+SELECT * FROM books LIMIT 0;
+----
+
+[TIP]
+====
+If running the above code gives you an error relating to 'DATABASE_URL variable not set', make sure you are running the line of code that establishes a connection to your database first. This snippet is provided above, and is succinctly equivalent to `%sql sqlite:////filepath/to/database/my.db`.
+====
+
+First, let's rename the `image_url` column from the `books` table. This name doesn't tell us what the image even has to do with. Instead, let's name the column `book_cover`, which tells us that this column contains all the image URLs for the covers of the books.
+
+Remember, there is a wealth of online resources related to SQL that you can use to help you solve this problem. However, if you are having trouble figuring out where to start, the SQL `RENAME` command will be a good direction to start moving in.
+
+After renaming our column, let's verify our change by again querying all the columns in `books`.
+
+.Items to submit
+====
+- Code to rename the column `image_url` to `book_cover`.
+- Before and After query to show successful rename.
+====
+
+=== Question 2 (1 pt)
+[upperalpha]
+.. For each table, make the listed changes below through your Jupyter notebook as necessary to normalize the database.
+
+Check out a line of the `goodreads_books.json` data:
+
+[source,ipython]
+----
+%%bash
+
+head -n 1 $HOME/goodreads_samples/goodreads_books.json
+----
+
+[TIP]
+====
+Don't have a `goodreads_samples` directory? Run the last snippet of code above Question 1 (it starts with `rm -rf`) to create it. This directory is covered in more detail in the previous project, so it would be a good idea (although not strictly necessary) to reread that project before continuing.
+====
+
+Recall that in the previous project, we just ignored the following fields from the `books` table: `series`, `similar_books`, `popular_shelves`, and `authors`. We did this because those fields are more complicated to deal with.
+
+Read https://docs.microsoft.com/en-us/office/troubleshoot/access/database-normalization-description[this] article on database normalization from Microsoft. We are going to do our best to _normalize_ our tables with these previously ignored fields taken into consideration. Write 2-3 sentences in a markdown cell on the differences between 1st, 2nd, and 3rd normal forms, and the importance of normalizing our database.
+
+To elaborate on the provided reading material, let's briefly discuss primary and foreign keys. 
+
+A 'primary key' can be thought of as a unique piece of information that all of the data in that row is tied to. For example, if I have an `employees` table with salary information, names, emails, phone numbers, and employee ids, the primary key would likely be the `employee_id` as it is unique to each employee. 
+
+A 'foreign key' is a piece of information that is a primary key in another table. For example, if I have a `departments` table with department names and department ids, the primary key for that table, `department_id`, could be used as a foreign key in the `employees` table in order to indicate what department an employee is in. 
+
+Let's begin getting into 1st form by setting some practical naming conventions. Note that these are not critical by any stretch, but can help remove some guesswork when navigating a database with many tables and ids.
+
+Remember, we created 4 tables: +
+- `reviews` +
+- `books` +
+- `authors` +
+- `series` +
+
+Go through each of these tables and make the following changes: +
+[numeric]
+. Every table's primary key should be named `id`, unless it is a composite key (more on these later). For example, instead of `book_id` in the `books` table, it would make sense to call that column `id` because `book` is implied from the table name. +
+. Every table's foreign key should reference the `id` column of the foreign table and be named "foreign_table_name_id". For example, if we had a foreign key in the `books` table that referenced an author in the `authors` table, we should name that column `author_id`. +
+. Other than the primary and foreign keys for a table, do not include `id` in a column name wherever possible. An example of this would be `work_id` in `books`, which could be renamed to `work_num`, for example. +
+. Keep table names plural, when possible -- for example, not the `book` table, but the `books` table. +
+. Keep column names singular, when appropriate -- for example, not the `authors` column, but the `author` column. +
+
+[TIP]
+====
+You should change the following number of columns in each table: +
+- `books`: 2 +
+- `reviews`: 2 +
+- `authors`: 1 +
+- `series`: 1 +
+====
+
+.Items to submit
+====
+- All code to modify tables to normalize our naming conventions.
+====
+
+=== Question 3 (1 pt)
+[upperalpha]
+.. Create a junction table between `authors` and `books` called `books_authors`.
+.. Write an SQL query to find every book by author with id `12345`.
+
+Things so far have been pretty simple. Renaming columns and deciding types is a good starting point for normalizing our database, but now we need to start working on the more challenging bits.
+
+First off, take a look at https://stackoverflow.com/questions/70609439/what-is-the-point-of-a-junction-table[this stack overflow post] to get a basic idea for why junction tables are useful, and start thinking on your own about how they might fit into our database organization.
+
+For a more concrete example in our data, consider this: + 
+A book can have many authors, and an author can have many books. This is an example of a many-to-many relationship. While we could have `author1`, `author2`, `author3` columns, this would be very bad practice. How do we delegate authorship consistently between the columns? What if we have a book with 4 authors? 5? 10? 100? 1000? You can see how this approach quickly becomes unmanageable.
+
+Instead, we should create a junction table! Junction tables contain their own primary key, along with foreign keys to the tables they connect. In this case, we would have a `books_authors` table with a primary key, a `book_id` foreign key, and an `author_id` foreign key. This way, we can have as many authors as we want for a book, and as many books as we want for an author!
+
+Now that you (hopefully) have a good understanding of _junction tables_, create a _junction_ table (using a single `CREATE TABLE` statement) that effectively _normalizes_ the `authors` field in the `books` table. Call this new table `books_authors` (see point 4 in Question 2 -- this is the naming convention we want).
+
+Make sure to include your `CREATE TABLE` statement in your notebook after you create the table (remember, you will need to create the table in an sqlite3 session in a terminal).
+
+[TIP]
+====
+There should be 3 columns in the `authors_books` table, a primary key field and two foreign key fields.
+====
+
+[IMPORTANT]
+====
+Make sure to properly apply the https://www.sqlitetutorial.net/sqlite-primary-key/[primary key] and https://www.sqlitetutorial.net/sqlite-foreign-key/[foreign key] keywords.
+====
+
+Write an SQL query to find every book by author with id 12345. While you won't have any way to test results yet (as our database is still empty!), but you should still write out a query that at the least _looks_ roughly correct and returns a join of the 3 tables (which will return no data because all three tables are empty).
+
+[TIP]
+====
+You will need to use _joins_ and our junction table to perform this query.
+====
+
+Make sure that all the work you did for this question is copied into your Jupyter notebook, and run when appropriate.
+
+.Items to submit
+====
+- Your `CREATE TABLE` statement for the junction table.
+- A draft SQL query to find every book by author with id 12345.
+====
+
+=== Question 4 (1 pt)
+[upperalpha]
+.. Create a junction table between `books` and `series` called `books_series`.
+.. Write a list of each column in the `books_series` table, their data type, and a brief description of what they contain.
+.. Write an SQL query to find every book in a series with `series_id` 12345.
+
+Assume that a series can have many books and a book can be a part of many series. Following a similar process as in question 3, create another junction table called `books_series`.
+
+In a markdown cell, list the columns in the `books_series` table, their data type, and a brief description of what they represent.
+
+Finally, write an SQL query to find every book in a series with `series id` 12345.
+
+.Items to submit
+====
+- `CREATE TABLE` statement for `books_series`.
+- List of columns in `books_series` with descriptions.
+- SQL query to find every book in a series with `series id` 12345.
+====
+
+=== Question 5 (2 pts)
+[upperalpha]
+.. Create a new database called `my_goodreads.db` that is the same as our `my.db` database (after normalization), but with primary and foreign key constraints set.
+
+As you may have noticed, we have determined the primary and foreign keys for our tables, but haven't actually set them in the database yet. Unfortunately, sqlite3 has no way of setting these constraints after creating the able, so we will be rewriting our `CREATE TABLE` statements inside a new database labeled `my_goodreads.db`.
+
+Going through your Jupyter notebooks from the previous project (or the beginning of this project) recreate the existing database we have made, but this time with primary and foreign key constraints set.
+
+While doing this, remember to stick to the naming conventions and normalization we established in this project, and don't forget to create your junction tables. It is particularly important to set primary and foreign key constraints in junction tables, as this gives us an added layer of data integrity when we are trying to modify data in our database.
+
+[TIP]
+====
+If you are struggling or need a sanity check on your work, below is the number of constraints you will need to set for each table.
+
+- `books`  : 1 primary key
+- `reviews`: 1 primary key
+- `authors`: 1 primary key
+- `series` : 1 primary key
+- `authors_books` : 1 primary key, 2 foreign keys
+- `books_series` : 1 primary key, 2 foreign keys
+
+You can check the constraints on a table by running `.schema table_name` in a sqlite3 session.
+====
+
+.Items to submit
+====
+- Modified `CREATE TABLE` statements for our new database, with proper constraints set.
+====
+
+=== Question 6 (2 pts)
+[upperalpha]
+.. Create a new junction table to handle `similar_books`.
+.. Create a new table and accompanying junction table to handle `popular_shelves`.
+.. Write 2+ sentences detailing an alternative approach to handling `popular_shelves`, and any benefits your approach has over the one provided.
+.. Write two queries that use all of the new tables created during this question.
+
+The remaining two fields that need to be dealt with are `similar_books` and `popular_shelves`. These fields are a bit more complicated than the others, so you will need to think a bit more before implementing a solution. Remember to keep normalization in mind. 
+
+Firstly, for **similar_books**, I would recommend another junction table. As there is nothing to stop you from linking a table to itself, you can simply create a junction table that links books to each other. Write (and run) a `CREATE TABLE` statement that creates a junction table between `books` and `books` called `similar_books`. Paste your `CREATE TABLE` statement into your Jupyter notebook for reference.
+
+Next, for **popular_shelves**, let's create two more tables. First, create a `shelves` table with `id` and `name` columns. Choose data types appropriately. Next, create a junction table between `shelves` and `books` called `books_shelves` with the appropriate column names and types. Be sure to normalize everything, as we have been doing throughout this project.
+
+Now that we've created some rather straightforward approaches to handling these two data fields, do some more thinking on your own. Write at least two sentences in a markdown cell detaining a different approach to handling **popular_shelves**, and any benefits your approach has over this one. (Hint: _composite keys_!)
+
+Finally, write two queries that use all of the new tables we created (one for `similar_books` and one for `popular_shelves`).
+
+Ensure that all of your work is visible in your Jupyter notebook prior to submitting!
+
+.Items to submit
+====
+- 3 `CREATE TABLE` statements for the new tables and junction tables.
+- 2+ sentences in a markdown cell detailing your alternative approach and its benefits over the provided approach.
+- 2 queries that use all of the new tables created during this question.
+====
+
+=== Submitting your Work
+
+Good work, you've made it to the end of your third project for TDM 401 and finished preparing your database for data entry! In the next project, we will begin populating our database with data! As always, ensure that all your work is visible as you expect in your submission to ensure you get the full points you deserve.
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output, when in fact it does not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/current-projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or it does not render properly in gradescope. Please ask a TA if you need help with this.
+====
+
+.Items to submit
+====
+- `firstname-lastname-project03.ipynb`.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====
