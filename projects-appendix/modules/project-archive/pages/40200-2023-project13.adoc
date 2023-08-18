@@ -1,0 +1,475 @@
+= TDM 40200: Project 13 -- 2023
+
+**Motivation:** Containers are everywhere and a very popular method of packaging an application with all of the requisite dependencies. In the previous series of projects you've built a web application. While right now it may be easy to share and run your application with another individual, as time goes on and packages are updated, this is less and less likely to be the case. Containerizing your application ensures that the application will have the proper versions of the proper packages available in the proper location to run.
+
+**Context:** This is a third of a series of projects focused on containers. The end goal of this series is to solidify the concept of a container, and enable you to "containerize" the application you've spent the semester building. You will even get the opportunity to deploy your containerized application!
+
+**Scope:** Python, containers, UNIX
+
+.Learning Objectives
+****
+- Improve your mental model of what a container is and why it is useful.
+- Use `docker` to build a container image.
+- Understand the difference between the `ENTRYPOINT` and `CMD` commands in a `Dockerfile`.
+- Use `docker` to run a container.
+- Use `docker` to run a shell inside of a container.
+- Use `docker` to containerize your dashboard application.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Questions
+
+=== Question 1
+
+The end goal of this project is to containerize your frontend and backend (into two different containers), and make sure that they can communicate with each other. The following is a rough sketch of the steps involved in this process, so you have a general idea what is next at each step.
+
+. On Anvil, launch and connect to your VM with Docker pre-installed.
+. Copy the frontend and backend code from Anvil to your VM.
+. Create a `Dockerfile` (or, what can more generically be referred to as a `Containerfile`) for each of the frontend and backend.
+. Use `Docker` to build a container image for each of the frontend and backend.
+. Run the containers and make sure they can communicate with each other.
+
+Ultimately, in the next project, you will be _deploying_ your frontend and backend on a Kubernetes cluster, https://www.rcac.purdue.edu/compute/geddes[Geddes], behind a URL! So, at the very end of this project, we will ask you to verify your access to Geddes (which you've _hopefully_ already been granted).
+
+For this question, simply prep your working environment. Launch a SLURM job, prop up your VM, and ensure you can connect to it. The only thing you need to submit is a screenshot showing that you can connect to your VM.
+
+. Get a terminal on Anvil -- you may complete this part however you like. I like to use `ssh` to connect to Anvil from my local machine, however, you may also use https://ondemand.anvil.rcac.purdue.edu, launch a Jupyter Lab session, and launch a terminal from within Jupyter Lab. Either works equally as well as the other.
+. Clear out any potential SLURM environment variables:
++
+[source,bash]
+----
+for i in $(env | awk -F= '/SLURM/ {print $1}'); do unset $i; done;
+----
++
+. Launch SLURM job with 8 cores and about 16 GB of memory and get a shell into the given backend node:
++
+[source,bash]
+----
+salloc -A cis220051 -p shared -n 8 -c 1 -t 04:00:00
+----
++
+[NOTE]
+====
+This job will only buy you 4 hours of time on the backend node. If you need more time, you will need to re-launch the job and change the arguments to `salloc` to request more time.
+====
++
+. Once you have a shell on the backend node, you will need to load the `qemu` module:
++
+[source,bash]
+----
+module load qemu
+----
++
+. Next, copy over a fresh VM image to use for this project:
++
+[source,bash]
+----
+cp /anvil/projects/tdm/apps/qemu/images/alpine.qcow2 $SCRATCH
+----
++
+[NOTE]
+====
+If at any time you want to start fresh, you can simply copy over a new VM image from `/anvil/projects/tdm/apps/qemu/images/alpine.qcow2` to your `$SCRATCH` directory. Any changes you made to the previous image will be lost. This is good to know in case you want to try something crazy but are worried about breaking something! No need to worry, you can simply re-copy the VM image and start fresh anytime!
+====
++
+. The previous command will result in a new file called `alpinel.qcow2` in your `$SCRATCH` directory. This is the VM image you will be using for this project. Now, you will need to launch the VM:
++
+[source,bash]
+----
+qemu-system-x86_64 -vnc none,ipv4 -hda $SCRATCH/alpine.qcow2 -m 8G -smp 4 -enable-kvm -net nic -net user,hostfwd=tcp::2200-:22 &
+----
++
+[NOTE]
+====
+The last part of the previous command forwards traffic from port 2200 on Anvil to port 22 on the VM. If you receive an error about port 2200 being used, you can change this number to be any other unused port number. To find an unused port you can use a utility we have available to you.
+
+[source,bash]
+----
+module use /anvil/projects/tdm/opt/core
+module load tdm
+find_port
+----
+
+The `find_port` command will output an unused port for you to use. If, for example, it output `12345`, then you would change the `qemu` command to the following.
+
+[source,bash]
+----
+qemu-system-x86_64 -vnc none,ipv4 -hda $SCRATCH/alpine.qcow2 -m 8G -smp 4 -enable-kvm -net nic -net user,hostfwd=tcp::12345-:22 &
+----
+====
++
+. After launching the VM, it will be running in the background as a process (this is what the `&` at the end of the command does). After about 15-30 seconds, the VM will be fully booted and you can connect to the VM from Anvil using the `ssh` command. 
++
+[source,bash]
+----
+ssh -p 2200 tdm@localhost -o StrictHostKeyChecking=no
+----
++ 
+You may be prompted for a password for the user `tdm`. The password is simply `purdue`.
++
+[IMPORTANT]
+====
+If in a previous step you changed the port from say `2200` to something like `12345`, you would change the `ssh` command accordingly.
+====
+. Finally, you should be connected to the VM and have a new shell running _inside_ the VM, great! If you were successful, contents of the terminal should look very similar to the following.
+
+image::figure51.webp[Successfully connected to the VM, width=792, height=500, loading=lazy, title="Successfully connected to the VM"]
+
+[IMPORTANT]
+====
+If at any time you would like to "save" your progress and restart the project at a later date or time, you can do this by exiting the VM by running the `exit` command. Next, type `jobs` to find the `qemu` job number (probably 1). Finally, bring the `qemu` command to the foreground by typing either `fg 1` or `fg %1` followed by Ctrl+c. This will kill the VM and you can restart the project at a later date or time by simply using the same `alpine.qcow2` image you used previously.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+The next step is to copy the application `/anvil/projects/tdm/etc/project13` _and_ the database `/anvil/projects/tdm/data/movies_and_tv/imdb.db` to the VM (the database belongs in `/home/tdm` for this project). You can do this by using the `scp` command. `scp` uses `ssh` to securely transfer files between hosts. Remember, your VM is essentially another machine with open port 2200 for `ssh` (and `scp`). Figure out how to accomplish this task and then copy the application to the VM.
+
+For this question, submit a screenshot of the following on the VM.
+
+[source,bash]
+----
+ls -la /home/tdm/project13/frontend
+ls -la /home/tdm/project13/frontend/templates
+ls -la /home/tdm/project13/backend/api
+----
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+Create two `Dockerfile` files:
+
+- `/home/tdm/project13/frontend/Dockerfile`
+- `/home/tdm/project13/backend/Dockerfile`
+
+As long as your images build and work correctly, you can use any base image you want. However, if you want the potential to get better/faster help (via Piazza), you should use the following base image: `python:3.11.3-slim-bullseye` (https://hub.docker.com/_/python/tags?page=1&name=3.11).
+
+Here are some general guidelines for your `Dockerfile` files.
+
+**Frontend**
+
+. Use the `python:3.11.3-slim-bullseye` base image.
+. Optionally use the `WORKDIR` command to set an internal (to the container) working directory `/app`.
+. Copy the `project13/frontend` directory to the container, maybe in the `/app` workdir.
++
+[TIP]
+====
+You can use `COPY . /app/` to copy the contents of the current directory (the directory where your `Dockerfile` lives) to the `/app` directory in the container.
+====
++
+. Install the required Python packages using `pip`.
++
+[TIP]
+====
+The following are the required Python packages: `httpx` and `"fastapi[all]"` (the double quotes are needed).
+====
++
+. Use `EXPOSE` to mark port 8888 as being used by the container.
+. Use `CMD` or `ENTRYPOINT` to start the application.
++
+[TIP]
+====
+Use the `--host` argument to `uvicorn` and specify `0.0.0.0` to broadcast on all network interfaces.
+====
++
+[TIP]
+====
+Since you are running your application from a different perspective than before, you will need to modify `backend.endpoints:app` to `endpoints:app`.
+====
+
+[TIP]
+====
+To build the image, you can use the following command.
+
+[source,bash]
+----
+cd /home/tdm/project13/frontend
+docker build -t client .
+----
+====
+
+**Backend**
+
+. Use the `python:3.11.3-slim-bullseye` base image.
+. Optionally use the `WORKDIR` command to set an internal (to the container) working directory `/app`.
+. Copy the `project13/backend` directory to the container, maybe in the `/app` workdir.
++
+[TIP]
+====
+You can use `COPY . /app/` to copy the contents of the current directory (the directory where your `Dockerfile` lives) to the `/app` directory in the container.
+====
++
+. Install the required Python packages using `pip`.
++
+[TIP]
+====
+The following are the required Python packages: `httpx`, `"fastapi[all]"`, `aiosql==7.2`, and `pydantic` (the double quotes are needed).
+====
++
+. Use `EXPOSE` to mark port 7777 as being used by the container.
+. Use `VOLUME` to specify a mount point _inside_ the container. This will be where we will mount `imdb.db` so that our application can access the databse _outside_ of the container. You should use the location `/data`.
+. Use `CMD` or `ENTRYPOINT` to start the application.
++
+[TIP]
+====
+Use the `--host` argument to `uvicorn` and specify `0.0.0.0` to broadcast on all network interfaces.
+====
++
+[TIP]
+====
+Since you are running your application from a different perspective than before, you will need to modify `frontend.api.api:app` to `api.api:app`.
+====
+
+[TIP]
+====
+To build the image, you can use the following command.
+
+[source,bash]
+----
+cd /home/tdm/project13/backend
+docker build -t server .
+----
+====
+
+For this question, include the contents of both of your `Dockerfile` files in your submission. If you make mistakes and need to modify your `Dockerfile` files in future questions, please update your submission for this question to be the functioning `Dockerfile` files.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+Okay, awesome! You now have a couple of container images built and available on your VM, named `client` and `server`. You should be able to see these images by running the following command.
+
+[source,bash]
+----
+docker images
+----
+
+Okay, the next step is to _run_ both of the containers, making sure that they can communicate. Our ultimate goal here is to run the following command and get the following results.
+
+[source,bash]
+----
+curl localhost:8888/people/nm0000148
+----
+
+.results
+----
+<html>
+    <head>
+        <title>Harrison Ford</title>
+        <script src="https://unpkg.com/htmx.org@1.8.6"></script>
+    </head>
+    <body>
+        <div hx-target="this" hx-swap="outerHTML">
+            <div>
+                <label for="person_id">Person ID:</label> nm0000148
+            </div>
+            <div>
+                <label for="name">Name:</label> Harrison Ford
+            </div>
+            <div>
+                <label for="born">Born:</label> 1942
+            </div>
+            <div>
+                <label for="died">Died:</label> None
+            </div>
+            <button hx-get="http://localhost:8888/people/nm0000148/update">Click to update</button>
+        </div>
+    </body>
+</html>
+----
+
+We want those results because it demonstrates, in a single command, a variety of important things:
+
+. We can access the frontend from the host machine (our VM).
+. The frontend can access the backend.
+. The backend can access the database.
+
+This is enough evidence for us to say that our containers are communicating properly and are good enough to deploy (in the next project).
+
+First thing is first. By default, Docker will add any running container to the `bridge` network. You can see this network listed by running the following.
+
+[source,bash]
+----
+docker network ls
+----
+
+.output
+----
+NETWORK ID     NAME      DRIVER    SCOPE
+6c21df067202   bridge    bridge    local
+8acdd7457852   host      host      local
+78e8c707cf0c   none      null      local
+----
+
+In theory, if you ran our frontend on the network on 0.0.0.0:8888 and the server on the same network at 0.0.0.0:7777, they should be able to communicate. However, with the way we have our frontend configured in `endpoints.py`, it will not work. We can't just specify `localhost` and move on, instead, we would need to specify the actual IP address that the server is assigned on the `bridge` network. This is a bit of a pain, so we are going to create a new user network and run our containers on that network. This way, we can refer to other containers on the same network by their _name_ rather than their IP address.
+
+Let's create this network. We can call it anything, however, we will call it `tdm-net`.
+
+[source,bash]
+----
+docker network create tdm-net
+----
+
+Upon success, you should see the network in your list of networks.
+
+[source,bash]
+----
+docker network ls
+----
+
+.output
+----
+NETWORK ID     NAME      DRIVER    SCOPE
+6c21df067202   bridge    bridge    local
+8acdd7457852   host      host      local
+78e8c707cf0c   none      null      local
+40574054296e   tdm-net   bridge    local
+----
+
+Now, in order to run our client (frontend) and server (backend) on the `tdm-net` network, we just need to add `--net tdm-net` to our `docker run` commands. Great!
+
+**Frontend**
+
+[TIP]
+====
+The `-p` flag is used to specify port mappings. The format is `host_port:container_port`. In this case, we are mapping port 8888 on the host to port 8888 on the container.
+====
+
+[TIP]
+====
+It would be best to run this container using `-dit`, liked discussed in the previous project.
+====
+
+[TIP]
+====
+Don't forget to run this container on the `tdm-net` network!
+====
+
+**Backend**
+
+[TIP]
+====
+By default, we have `endpoints.py` setup to target our host with name `server` and port `7777`. For this to continue to work, you will want to specify the _name_ (which should be "server") of the server container using the `--name` argument with `docker run`.
+====
+
+[TIP]
+====
+The `-p` flag is used to specify port mappings. The format is `host_port:container_port`. In this case, we are mapping port 7777 on the host to port 7777 on the container.
+====
+
+[TIP]
+====
+It would be best to run this container using `-dit`, liked discussed in the previous project.
+====
+
+[TIP]
+====
+Use the `--mount` argument to mount the `/home/tdm/imdb.db` database _outside_ of the container to `/data/imdb.db` _inside_ of the container. Remember, in the `Dockerfile` for the server we specified this location, `/data`, as a mount point for the database. The `type` of the mount is `bind`. See https://docs.docker.com/engine/reference/commandline/run/#mount[here] for more help.
+====
+
+[TIP]
+====
+Don't forget to run this container on the `tdm-net` network!
+====
+
+**General tips**
+
+[TIP]
+====
+You can see if your containers are running properly by running `docker ps`. You should see both containers running.
+====
+
+[TIP]
+====
+If you need to tear down a running container _named_ `server`, in order to run a newer version of the container, you can run the following.
+
+[source,bash]
+----
+docker kill server # when you use the --name server argument, this name replaces the automatically created names
+docker rm server # otherwise, when trying to run a new container with the name server, you will get an error
+----
+====
+
+[TIP]
+====
+If `curl http://localhost:8888/people/nm0000148` does not return what you expect -- you can figure out what is going on by peeking at the _frontend_ logs. You can do this by running the following.
+
+[source,bash]
+----
+docker logs client # this assumes that you used the --name client argument
+----
+====
+
+[TIP]
+====
+If you want to "pop into" a running container, for example, the client, you can do so by running the following.
+
+[source,bash]
+----
+docker exec -it client /bin/bash
+----
+====
+
+[NOTE]
+====
+You may be wondering _why_ we are using `VOLUME` and the `--mount` arguments. The reason why is that, if we were to include `imdb.db` _inside_ the container, via something like `COPY imdb.db /data/imdb.db`, then the database would _not_ be persisted in the case where the container is stopped or restarted. This is a _bad_ situation. To avoid this, we simply mount the `imdb.db` database file _outside_ of the container, on our persistent file system, to be available _inside_ our container. Although inside the container the database appears to be located at `/data/imdb.db`, it _actually_ lives `/home/tdm/imdb.db` on our host, the VM.
+
+It is very common to have a need to persist some type of data. When this is needed, look towards using `VOLUME` and `--mount`.
+====
+
+For this question, simply include a screenshot showing the successful `curl` command and output.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+Finally, please verify that you have access to two resources for the next project (even if you don't plan on doing it). On the Purdue VPN or on a Purdue network, please visit the following links:
+
+- https://geddes.rcac.purdue.edu
+- https://geddes-registry.rcac.purdue.edu
+
+**https://geddes.rcac.purdue.edu**
+
+. Login using your 2-factor authentication (Purdue Login on Duo Mobile).
+. Click on the "geddes" name under the "Clusters" section.
+. Click on the `Projects/Namespaces` under the "Cluster" tab on the left-hand side.
+. Make sure you can see something like "The Data Mine - Students (tdm-students)". If you can, take a screenshot and you are done with this part. If you cannot, please email post in Piazza with your Purdue username and specify that you could _not_ see the Geddes project.
+
+**https://geddes-registry.rcac.purdue.edu**
+
+. Login using your Purdue alias and regular password.
+. If you get logged in successfully, take a screenshot and you are done with this part. If you cannot, please post in Piazza with your Purdue username and specify that you could _not_ login to the Geddes registry.
+
+Include both screenshots for this question. If you failed on one or more of the steps, please just specify that you posted in Piazza and you will receive full credit.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+
+In addition, please review our xref:projects:current-projects:submissions.adoc[submission guidelines] before submitting your project.
+====
