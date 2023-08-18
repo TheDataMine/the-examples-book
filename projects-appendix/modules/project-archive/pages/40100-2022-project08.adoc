@@ -1,0 +1,228 @@
+= TDM 40100: Project 8 -- 2022
+
+**Motivation:** Images are everywhere, and images are data! We will take some time to dig more into working with images as data in this series of projects.
+
+**Context:** In the previous project, we worked with images and implemented edge detection, with some pretty cool results! In these next couple of projects, we will continue to work with images as we learn how to compress images from scratch. This is the first in a series of 2 projects where we will implement a variation of jpeg image compression!
+
+**Scope:** Python, images, JAX
+
+.Learning Objectives
+****
+- Process images using `numpy`, `skimage`, and `JAX`. 
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/anvil/projects/tdm/data/images/drward.jpg`
+- `/anvil/projects/tdm/data/images/barn.jpg`
+
+== Questions
+
+=== Question 1
+
+JPEG is a _lossy_ compression format and an example of transform based compression. Lossy compression means that you can't retrieve the information that was lost during the compression process. In a nutshell, these methods use statistics to identify and discard redundant data.
+
+For this project, we will start by reading in a larger image (than our previously used apple image): `/anvil/projects/tdm/data/images/drward.jpg`. 
+
+[source,python]
+----
+from skimage import io, color
+from matplotlib.pyplot import imshow
+import numpy as np
+import jax
+import jax.numpy as jnp
+import hashlib
+from IPython import display
+
+img = io.imread("/anvil/projects/tdm/data/images/drward.jpg")
+----
+
+By default, our image is read in as an RGB image, where each pixel is represented as a value between 0 and 255, where the first value represents "red", the second "green", and the third "blue".
+
+In order to implement our compression algorithm, we need to change the representation of the image to the https://en.wikipedia.org/wiki/YCbCr[YCbCr] color space. Use the https://scikit-image.org/docs/stable/api/skimage.color.html[scikit-image] library we've used in previous projects to convert to the new color space. What are the dimensions now?
+
+Check out the 3-image example https://en.wikipedia.org/wiki/YCbCr[here] (the barn). Replicate this image by splitting `/anvil/projects/tdm/data/images/barn.jpg` into its YCbCr components and display them. Do the same for our `drward.jpg`. 
+
+[TIP]
+====
+To display the YCbCr Y component, you will need to set the Cb and Cr components to 127. To display the Cb component, you will need to set the Cr and Y components to 127, etc. You can confirm the results by looking at your `barn.jpg` components and seeing if they look the same as the wikipedia page we linked above.
+====
+
+.Items to submit
+====
+- Display containing the 3 Y, Cb, and Cr components for both `drward.jpg` and `barn.jpg`, for a total of 6 images.
+====
+
+=== Question 2
+
+Our eyes are more sensitive to luminance than to color. As you can tell from the previous question, the Y component captures the luminance, and contains the majority of the image detail that is so important to our vision. The other Cb and Cr components are essentially just color components, and our eyes aren't as sensitive to changes in those components. Since our eyes aren't as sensitive, we don't need to capture that data as accurately, and is an opportunity to reduce what we store!
+
+Let's perform an experiment that makes this explicitly clear, as well as takes us 1 more step in the direction of having a compressed image.
+
+Downsample the Cb and Cr components and display the resulting image. There are a variety of ways to do this, but the one we will use right now is essentially to just round the values to the nearest rounded value of a certain factor. For instance, maybe we only want to represent values between 150 and 160 as 150 _or_ 160. So 151.111 becomes 150. 155.555 becomes 160. This could be done as follows.
+
+[source,python]
+----
+10*np.round(img/10)
+----
+
+Or, if you wanted more granularity, you could do.
+
+[source,python]
+----
+2*np.round(img/2)
+----
+
+Ultimately, let's refer to this as our _factor_.
+
+[source,python]
+----
+factor*np.round(img/factor)
+----
+
+Downsample the Cb and Cr components using a factor of 10 and display the resulting image.
+
+[TIP]
+====
+Here is some maybe-useful skeleton code. 
+
+[source,python]
+----
+img = io.imread("/anvil/projects/tdm/data/images/barn.jpg")
+img = color.rgb2ycbcr(img)
+# create "dimg" that contains the downsampled Cb and Cr components
+dimg = color.ycbcr2rgb(dimg)
+io.imsave("dcolor.jpg", dimg, quality=100)
+with open("dcolor.jpg", "rb") as f:
+    my_bytes = f.read()
+
+m = hashlib.sha256()
+m.update(my_bytes)
+print(m.hexdigest())
+display.Image("dcolor.jpg")
+----
+
+"dcolor" is just a name we chose to mean downsampled color, as in, we've downsampled the color components.
+
+The hash should be the following.
+
+----
+7bf01998d636ac71553f6d82da61a784ce50d2ab9f27c67fd16243bf1634583b
+----
+====
+
+Fantastic! Can you tell a difference by just looking at the original image and the color-downsampled image?
+
+Okay, let's perform the _same_ operation, but this time, instead of downsampling the Cr and Cb components, let's downsample the Y component (and _only_ the Y component). Downsample using a factor of 10. Display the new image. Can you tell a difference by just looking at the original image and the luminance-downsampled image?
+
+[TIP]
+====
+The hash for the luminance downsampled image should be the following.
+
+----
+dff9e0688d4367d30aa46615e10701f593f1d283314c039daff95c0324a4424d
+----
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+The previous question was pretty cool (_at least in my opinion_)! It really demonstrates how our brains are much better at perceiving changes in luminance vs. color.
+
+Downsampling is an important step in the process. In the previous question, we essentially learned that we can remove color detail by a factor of 10 and not see a difference!
+
+The next step in our compression process is to convert our image data into numeric frequency data using a discrete cosine transform. This data representation allows us to quantify what data from the image is important, and what is less important. Lower frequency components are more important, and higher are less important can essentially be considered "noise".
+
+Create a new function called `dct2` that uses https://docs.scipy.org/doc/scipy/reference/generated/scipy.fftpack.dct.html[scipys dct] function, but performs the same operation over axis 0, and then over axis 1. Use `norm="ortho"`.
+
+[TIP]
+====
+Test it out to verify things are working well.
+
+[source,python]
+----
+test = np.array([[1,2,3],[3,4,5],[5,6,7]])
+dct2(test)
+----
+
+.output
+----
+array([[ 1.20000000e+01, -2.44948974e+00,  4.44089210e-16],
+       [-4.89897949e+00,  0.00000000e+00,  0.00000000e+00],
+       [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00]])
+----
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+For each 8x8 block of pixels in each channel (Y, Cb, Cr), apply the transformation, creating an all new array of frequency data. 
+
+[TIP]
+====
+To loop through 8x8 blocks using numpy, check out the results of the following loop.
+
+[source,python]
+----
+img = io.imread("/anvil/projects/tdm/data/images/barn.jpg")
+img = color.rgb2ycbcr(img)
+s = img.shape
+for i in np.r_[:s[0]:8]:
+    print(np.r_[i:(i+8)])
+----
+====
+
+[TIP]
+====
+To verify your results, you can try the following. Note that `freq` is the result of applying the `dct2` function to each 8x8 block in the image.
+
+[source,python]
+----
+dimg = color.ycbcr2rgb(freq)
+io.imsave("dctimg.jpg", dimg, quality=100)
+with open("dctimg.jpg", "rb") as f:
+    my_bytes = f.read()
+
+m = hashlib.sha256()
+m.update(my_bytes)
+print(m.hexdigest())
+display.Image("dctimg.jpg")
+----
+
+.output
+----
+e45dc2a1a832f97bbb3f230ffaf6688d7f50307d6e43020df262314e9dd577e5
+----
+====
+
+[TIP]
+====
+Another fun (?) way to test is to apply the `dct2` function to every 8x8 block of every channel twice. The resulting image should _kind of_ look like the original. This is because the inverse function is pretty close to the function itself. We will see this in the next project.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====

@@ -1,0 +1,394 @@
+= TDM 30100: Project 10 -- 2022
+
+**Motivation:** Python is an incredible language that enables users to write code quickly and efficiently. When using Python to write code, you are _typically_ making a tradeoff between developer speed (the time it takes to write a functioning program) and program speed (how fast your code runs). Python code does _not_ have the advantage of easily being compiled to machine code and shared. In Python, you need to learn how to use virtual environments, and it is good to have an understanding of how to build and push a package to pypi.
+
+**Context:** This is the third in a series of 3 projects that focuses on setting up and using virtual environments, and creating a package. This is not intended to teach you everything, but rather, give you some exposure to the topics.
+
+**Scope:** Python, virtual environments, pypi
+
+.Learning Objectives
+****
+- Explain what a virtual environment is and why it is important.
+- Create, update, and use a virtual environment to run somebody else's Python code.
+- Create a Python package and publish it on pypi.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Questions
+
+=== Question 1
+
+In the previous project, you had the opportunity to create a single-function package and publish it to pypi.org! While pretty exciting, we did gloss over some good-to-know tidbits of information. In this project, we will update the package from the previous project and cover some of these missing bits of information. Lastly, we will make modifications to the project to prime it for the API we will begin to build in the remaining projects!
+
+For simplicity, we are going to assume your package is called `tdm-kevin`, and lives in your home directory, with the following structure.
+
+[source,bash]
+----
+tree $HOME/tdm-kevin
+----
+
+.directory structure
+----
+tdm-kevin
+├── imdb
+│   ├── imdb.py
+│   └── __init__.py
+├── LICENSE
+├── pyproject.toml
+└── README.md
+
+1 directory, 5 files
+----
+
+The following are the starting contents of the author's `pyproject.toml`.
+
+.pyproject.toml
+----
+[build-system]
+requires      = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tdm-kevin"
+version = "0.0.1"
+description = "Get imdb ratings."
+readme = "README.md"
+authors = [{ name = "Kevin Amstutz", email = "kamstut@purdue.edu" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["example", "imdb", "tutorial"]
+dependencies = [
+    "lxml >= 4.9.1",
+    "requests >= 2.28.1",
+]
+requires-python = ">=3.10"
+----
+
+If you look on Pypi, you will see that these bits of information directly correlate to different parts of https://pypi.org/project/tdm-kevin/0.0.1/[the associated project page]. For example, the `description` field shows up in a grey banner across the middle of the page. The `authors` appear in the meta section, etc.
+
+We want to take our package and go a new direction with it. We want it to end up being an API where we can query information about IMDB. Let's make the following modifications to our `pyproject.toml` file to reflect the new purpose of our package.
+
+. Update the `description` to describe the general idea of what our updated package will do.
+. Update the contents of our `LICENSE` file to be "MIT License (MIT)" -- the text of our license was just too much on the rendered https://pypi.org/project/tdm-kevin/0.0.1/[project page].
+. Our API will use the https://fastapi.tiangolo.com/[FastAPI] package. Check out https://pypi.org/classifiers/[the pypi classifiers] and see if there is an appropriate "FastAPI" classifier. If so, please add it to our `classifiers`. 
+. Update the `keywords` to be any set of keywords you think is appropriate. No change is required.
+. Update the `README.md` file to list the package name and a short description of the project. Could be anything, for now.
+
+Now, go ahead and test out our changes by building and publishing our package on https://test.pypi.org.
+
+. Open a terminal from within Jupyter Lab and run: `module load python/jupyterlab`.
+. Create a virtual environment called `p10q01`.
+. Activate the newly created virtual environment.
+. Install `twine` and `build`: `python3 -m pip install twine build`.
+. Build the package: `python3 -m build $HOME/tdm-kevin`.
+. Check the package: `python3 -m twine check $HOME/tdm-kevin/dist/*`.
+. Upload to https://test.pypi.org: `python3 -m twine upload -r testpypi $HOME/tdm-kevin/dist/* --verbose`.
+
+What happens in the very last step? Any ideas why this happens? The reason is that you can only upload a given version of your package only once! You already uploaded version 0.0.1 in the previous project, so this gives an error! Let's fix this in the following question.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+Of course, you _could_ simply change the `version` section of your `pyproject.toml` file, as well as the `__version__` part of your `imdb.py` file, however, it makes more sense to do this programmatically.
+
+Install `bumpver` to your `p10q01` virtual environment.
+
+For this package, we will use https://semver.org/[semantic versioning]. Read the "Summary" section so you can get a quick overview.
+
+. Navigate to your project directory, for example, `cd $HOME/tdm-kevin`.
+. Initiate `bumpver`: `python3 -m bumpver init`.
++
+This will add a new section to your `pyproject.toml` update the values to look similar to the following.
++
+.pyproject.toml
+----
+[tool.bumpver]
+current_version = "0.0.1"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message = "Bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = false
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = [
+    'current_version = "{version}"',
+    'version = "{version}"',
+]
+"imdb/__init__.py" = [
+    "{version}",
+]
+----
++
+. Use `bumpver` to bump the version a patch number: `python3 -m bumpver update --patch`.
+. Check out `pyproject.toml` and `__init__.py` and see how the version was increased -- cool!
+
+Finally, use `twine` to push your updates up to https://test.pypi.org followed by https://pypi.org.
+
+. Remove your old `dist` directory: `rm -rf $HOME/tdm-kevin/dist`.
+. Build your package: `python3 -m build $HOME/tdm-kevin`.
+. Upload to https://test.pypi.org: `python3 -m twine upload -r testpypi $HOME/tdm-kevin/dist/*`
+. Check out your package on https://test.pypi.org to make sure it looks good.
+. Once satisfied, use `twine` to upload to https://pypi.org: `python3 -m twine upload $HOME/tdm-kevin/dist/*`.
+. Check the page out at https://pypi.org.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+Okay! You now have version 0.0.2 of your package published. Cool beans. Let's add a barebones https://fastapi.tiangolo.com/[FastAPI API] that we will build on in future projects.
+
+In your `tdm-kevin/imdb` directory add the following two files.
+
+.\\__main__.py
+----
+import argparse
+import sys
+import uvicorn
+
+def start_api(port: int):
+    uvicorn.run("imdb.api:app", port=port, log_level="info")
+
+def main():
+	parser = argparse.ArgumentParser()
+	subparsers = parser.add_subparsers(help="possible commands", dest="command")
+	some_parser = subparsers.add_parser("imdb", help="")
+	some_parser.add_argument("-p", "--port", help="port to run on", type=int)
+
+	if len(sys.argv) == 1:
+		parser.print_help()
+		sys.exit(1)
+
+	args = parser.parse_args()
+
+	if args.command == "imdb":
+		start_api(port = args.port)
+
+if __name__ == "__main__":
+	main()
+----
+
+.api.py
+----
+from fastapi import FastAPI
+from fastapi.templating import Jinja2Templates
+
+
+app = FastAPI()
+templates = Jinja2Templates(directory='templates/')
+
+
+@app.get("/")
+async def root():
+    """
+    Returns a simple message, "Hello World!"
+    Returns:
+        dict: The response JSON.
+    """
+    return {"message": "Hello World"}
+----
+
+Next, install the required packages to your `p10q01` virtual environment.
+
+[source,bash]
+----
+module load libffi/3.3
+python3 -m pip install jinja2 lxml fastapi "uvicorn[standard]"
+----
+
+You are now ready to _run_ your API. First, navigate to your project directory.
+
+[source,bash]
+----
+cd $HOME/tdm-kevin
+----
+
+Next, run the API.
+
+[source,bash]
+----
+python3 -m uvicorn imdb.api:app --reload --port 7777
+----
+
+[IMPORTANT]
+====
+If that command fails with an error stating "ERROR: Address already in use", this means that port 7777 is already in use.
+
+To easily find an available port that you can use, simply run the following.
+
+[source,bash]
+----
+find_port
+----
+
+This will print out a port number that is available and ready to use. For example, if I got "50377" as the output, I would run the following.
+
+[source,bash]
+----
+python3 -m uvicorn imdb.api:app --reload --port 50377
+----
+
+And, unless someone started using port 50377 in the time it took to find a port and execute that line, it should work.
+====
+
+Alright, if it is working and running, open a new terminal and test it out!
+
+[source,bash]
+----
+curl http://127.0.0.1:7777
+
+# or if you are using a different port
+curl http://127.0.0.1:50377
+----
+
+Great! Let's kill our API by holding Ctrl on your keyboard and then pressing "c". 
+
+Once killed, let's call this a minor upgrade and bump our version by a minor version bump. Use `bumpver` to increase our version by a minor release.
+
+[source,bash]
+----
+cd $HOME/tdm-kevin
+python3 -m bumpver update --minor
+----
+
+Next, let's build and push up our new package version 0.1.0!
+
+[source,bash]
+----
+cd $HOME
+rm -rf $HOME/tdm-kevin/dist
+python3 -m build $HOME/tdm-kevin
+python3 -m twine upload -r testpypi $HOME/tdm-kevin/dist/*
+
+# if all looks well at test.pypi.org
+python3 -m twine upload $HOME/tdm-kevin/dist/*
+----
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+Create a new virtual environment called `p10q04`, activate the new environment, and install your package. For example, I would run the following.
+
+[source,bash]
+----
+deactivate
+module load python/jupyterlab
+cd $HOME
+python3 -m venv $HOME/p10q04
+source $HOME/p10q04/bin/activate
+python3 -m pip install tdm-kevin
+----
+
+Now, let's try to run our API.
+
+[source,bash]
+----
+python3 -m imdb
+----
+
+Uh oh! You probably got an error that `uvicorn` was not found! We forgot to list those extra packages as dependencies! In addition to all of that, let's make it so we can run a simple command to run our API. One thing at a time.
+
+First, open up your `pyproject.toml` file and update your `dependencies` to include: `fastapi>=0.85.2`, `Jinja2>=3.1.2`, `lxml>=4.9.1`, `uvicorn[standard]`. This should make it so that all of the required packages are installed into your virtual environment upon installing `tdm-kevin` (or your equivalent `tdm-` package).
+
+Next, add the following to your `pyproject.toml`. 
+
+----
+[project.scripts]
+run_api = "imdb.__main__:main"
+----
+
+This _should_ make it so after you've installed the package you can simply run something like the following in order to run the API.
+
+[source,bash]
+----
+run_api imdb --port=7777
+----
+
+Let's test it all out! 
+
+[source,bash]
+----
+cd $HOME
+deactivate
+source $HOME/p10q01/bin/activate
+rm -rf $HOME/tdm-kevin/dist
+cd $HOME/tdm-kevin
+python3 -m bumpver update --patch
+cd $HOME
+python3 -m build $HOME/tdm-kevin
+python3 -m twine upload -r $HOME/tdm-kevin/dist/*
+
+# if https://test.pypi.org looks good
+python3 -m twine upload $HOME/tdm-kevin/dist/*
+----
+
+Excellent! You've just published version 0.1.1 of your package! Let's see if things worked out.
+
+Deactivate your virtual environment, create a new environment called `p10`, activate the environment, and install your package. For example, I would run the following.
+
+[source,bash]
+----
+deactivate
+module load python/jupyterlab
+python3 -m venv $HOME/p10
+source $HOME/p10/bin/activate
+module load libffi/3.3
+python3 -m pip install tdm-kevin
+----
+
+[WARNING]
+====
+The `module load libffi/3.3` command is critical, otherwise you will likely run into an error installing your package.
+====
+
+Now, go ahead and give things a shot!
+
+[source,bash]
+----
+run_api imdb --port=7777
+----
+
+Very cool! Congratulations! You can use this package as a template for any other packages you may want to write!
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+We've covered a _lot_ in a very short amount of time. Which parts of the last 3 projects would you want more instruction on? What lingering questions do you have? Please write at least 1 question that you'd like to have answered about the previous few projects.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====
+

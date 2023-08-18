@@ -1,0 +1,351 @@
+= TDM 20100: Project 7 -- 2022
+:page-mathjax: true
+
+**Motivation:** `awk` is a programming language designed for text processing. It can be a quick and efficient way to quickly parse through and process textual data. While Python and R definitely have their place in the data science world, it can be extremely satisfying to perform an operation extremely quickly using something like `awk`. 
+
+**Context:** This is the third of three projects where we introduce `awk`. `awk` is a powerful tool that can be used to perform a variety of the tasks that we've previously used other UNIX utilities for. After this project, we will continue to utilize all of the utilities, and bash scripts, to perform tasks in a repeatable manner.
+
+**Scope:** awk, UNIX utilities
+
+.Learning Objectives
+****
+- Use awk to process and manipulate textual data.
+- Use piping and redirection within the terminal to pass around data between utilities.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt`
+
+== Questions
+
+=== Question 1
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_r1rcuxol?wid=_983291"></iframe>
+++++
+
+Take a look at the dataset. You may have noticed that the "Store Location" column (8th column) contains latitude and longitude coordinates. That is some rich data that could be fun and useful.
+
+The data will look something like the following:
+
+----
+Store Location
+POINT (-91.716615 41.963516)
+POINT (-91.6537 41.987286)
+POINT (-91.52888 40.962331000000006)
+POINT (-93.596755 41.5464)
+POINT (-91.658105 42.010971)
+POINT (-91.494611 41.807199)
+
+POINT (-91.796988 43.307662)
+POINT (-91.358467 41.280183)
+----
+
+What this means is that you can't just parse out the latitude and longitude coordinates and call it a day -- you need to use `awk` functions like `gsub` and `split` to extract the latitude and longitude coordinates.
+
+Use `awk` to print out the latitude and longitude for each line in the original dataset. Output should resemble the following.
+
+----
+lat;lon
+1.23;4.56
+----
+
+[NOTE]
+====
+Make sure to take care of rows that don't have latitude and longitude coordinates -- just skip them. So if your results look like this, you need to add logic to skip the "empty" rows:
+
+----
+
+-91.716615 41.963516
+-91.6537 41.987286
+-91.52888 40.962331000000006
+-93.596755 41.5464
+-91.658105 42.010971
+-91.494611 41.807199
+
+-91.796988 43.307662
+-91.358467 41.280183
+----
+
+To do this, just go ahead and wrap your print in an if statement similar to:
+
+[source,awk]
+----
+if (length(coords[1]) > ) {
+    print coords[1]";"coords[2]
+}
+----
+====
+
+[TIP]
+====
+`split` and `gsub` will be useful `awk` functions to use for this question.
+====
+
+[TIP]
+====
+If we have a bunch of data formatted like the following:
+
+----
+POINT (-91.716615 41.963516)
+----
+
+If we first used `split` to split on "(", for example like:
+
+[source,awk]
+----
+split($8, coords, "(");
+----
+
+`coords[2]` would be:
+
+----
+-91.716615 41.963516)
+----
+
+Then, you could use `gsub` to remove any ")" characters from `coords[2]` like:
+
+[source,awk]
+----
+gsub(/\)/, "", coords[2]);
+----
+
+`coords[2]` would be:
+
+----
+-91.716615 41.963516
+----
+
+At this point I'm sure you can see how to use `awk` to extract and print the rest!
+====
+
+[IMPORTANT]
+====
+Don't forget any lingering space after the first comma! We don't want that.
+==== 
+
+[IMPORTANT]
+====
+To verify your `awk` command is correct, pipe the first 10 rows to your `awk` command. The output should be the following. 
+
+[source,ipython]
+----
+%%bash
+
+head -n 10 /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt | awk -F';' '{}'
+----
+
+.output
+----
+41.963516;-91.716615
+41.987286;-91.6537
+40.962331000000006;-91.52888
+41.5464;-93.596755
+42.010971;-91.658105
+41.807199;-91.494611
+43.307662;-91.796988
+41.280183;-91.358467
+----
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_rja4tun7?wid=_983291"></iframe>
+++++
+
+Use `awk` to create a new dataset called `sales_by_store.csv`. Include the `lat` and `lon` you figured out how to parse in the previous question. The final columns should be the following.
+
+.columns
+----
+store_name;date;sold_usd;volume_sold;lat;lon
+----
+
+Please exclude all rows that do not have latitude and longitude values. Save volume sold as liters, not gallons.
+
+[TIP]
+====
+You can output the results of the `awk` command to a new file called `sales_by_store.csv` as follows.
+
+[source,ipython]
+----
+%%bash
+
+awk -F';' {} /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt > $HOME/sales_by_store.csv
+----
+
+The `>` part is a _redirect_. You are redirecting the output from the `awk` command to a new file called `sales_by_store.csv`. If you were to replace `>` by `>>` it would _append_ instead of _replace_. In other words, if you use a single `>` it will first erase the `sales_by_store.csv` file before adding the results of the `awk` command to the file. If you use `>>`, it will append the results. If you use `>>` and append results -- if you were to run the command more than once, the `sales_by_store.csv` file would continue to grow.
+====
+
+[TIP]
+====
+To verify your output, the results from piping the first 10 lines of our dataset to your `awk` command should be the following.
+
+[source,ipython]
+----
+%%bash
+
+head -n 10 /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt | awk -F';' '{}'
+----
+
+.output
+----
+store_name;date;sold_usd;volume_sold;lat;lon
+CVS PHARMACY #8443 / CEDAR RAPIDS;08/16/2012;5.25;41.963516;-91.716615 
+SMOKIN' JOE'S #6 TOBACCO AND LIQUOR;09/10/2014;9;41.987286;-91.6537
+HY-VEE FOOD STORE / MOUNT PLEASANT;04/10/2013;1.5;40.962331000000006;-91.52888
+AFAL FOOD & LIQUOR / DES MOINES;08/30/2012;1.12;41.5464;-93.596755
+HY-VEE FOOD STORE #5 / CEDAR RAPIDS;01/26/2015;3;42.010971;-91.658105
+SAM'S MAINSTREET MARKET / SOLON;07/19/2012;12;41.807199;-91.494611
+DECORAH MART;10/23/2013;9;43.307662;-91.796988
+ECON-O-MART / COLUMBUS JUNCTION;05/02/2012;2.25;41.280183;-91.358467
+----
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_u38kx59v?wid=_983291"></iframe>
+++++
+
+Believe it or not, `awk` even supports geometric calculations like `sin` and `cos`. Write a bash script that, given a pair of latitude and pair of longitude, calculates the distance between the two points.
+
+Okay, so how to get started? To calculate this, we can use https://en.wikipedia.org/wiki/Haversine_formula[the Haversine formula]. The formula is:
+
+$2*r*arcsin(\sqrt{sin^2(\frac{\phi_2 - \phi_1}{2}) + cos(\phi_1)*cos(\phi_2)*sin^2(\frac{\lambda_2 - \lambda_1}{2})})$
+
+Where:
+    
+- $r$ is the radius of the Earth in kilometers, we can use: 6367.4447 kilometers
+- $\phi_1$ and $\phi_2$ are the latitude coordinates of the two points
+- $\lambda_1$ and $\lambda_2$ are the longitude coordinates of the two points
+
+In `awk`, `sin` is `sin`, `cos` is `cos`, and `sqrt` is `sqrt`.
+
+To get the `arcsin` use the following `awk` function:
+
+[source,awk]
+----
+function arcsin(x) { return atan2(x, sqrt(1-x*x)) }
+----
+
+To convert from degrees to radians, use the following `awk` function:
+
+[source,awk]
+----
+function dtor(x) { return x*atan2(0, -1)/180 }
+----
+
+The following is how the script should work (with a real example you can test):
+
+[source,ipython]
+----
+%%bash
+
+./question3.sh 40.39978 -91.387531 40.739238 -95.02756
+----
+
+.Results
+----
+309.57
+----
+
+[TIP]
+====
+To include functions in your `awk` command, do as follows:
+
+[source,bash]
+----
+awk -v lat1=$1 -v lat2=$3 -v lon1=$2 -v lon2=$4 'function arcsin(x) { return atan2(x, sqrt(1-x*x)) }function dtor(x) { return x*atan2(0, -1)/180 }BEGIN{
+    lat1 = dtor(lat1);
+    print lat1;
+    # rest of your code here!
+}'
+----
+====
+
+[TIP]
+====
+We want you to create a bash script called `question3.sh` in your `$HOME` directory. After you have your bash script, we want you to run it in a bash cell to see the output. 
+
+The following is some skeleton code that you can use to get started. 
+
+[source,bash]
+----
+#!/bin/bash
+
+lat1=$1
+lat2=$3
+lon1=$2
+lon2=$4
+
+awk -v lat1=$1 -v lat2=$3 -v lon1=$2 -v lon2=$4 'function arcsin(x) { return atan2(x, sqrt(1-x*x)) }function dtor(x) { return x*atan2(0, -1)/180 }BEGIN{
+    lat1 = dtor(lat1);
+    print lat1;
+    # rest of your code here!
+}'
+----
+====
+
+[TIP]
+====
+You may need to give your script execute permissions like this.
+
+[source,ipython]
+----
+%%bash
+
+chmod +x $HOME/question3.sh
+----
+====
+
+[TIP]
+====
+Read the https://the-examples-book.com/starter-guides/unix/scripts#shebang[shebang] and https://the-examples-book.com/starter-guides/unix/scripts#arguments[arguments] sections in the book.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_m6fgshy9?wid=_983291"></iframe>
+++++
+
+Find the latitude and longitude points for two interesting points on a map (it could be anywhere). Make a note of the locations and the latitude and longitude values for each point in a markdown cell.
+
+Use your `question.sh` script to determine the distance. How close is the distance to the distance you get from an online map app? Pretty close?
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====

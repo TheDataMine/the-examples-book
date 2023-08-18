@@ -1,0 +1,250 @@
+= TDM 40200: Project 7 -- 2023
+
+**Motivation:** Dashboards are everywhere -- many of our corporate partners' projects are to build dashboards (or dashboard variants)! Dashboards are used to interactively visualize some set of data. Dashboards can be used to display, add, remove, filter, or complete some customized operation to data. Ultimately, a dashboard is really a website focused on displaying data. Dashboards are so popular, there are entire frameworks designed around making them with less effort, faster. Two of the more popular examples of such frameworks are https://shiny.rstudio.com/[`shiny`] (in R) and https://dash.plotly.com/introduction[`dash`] (in Python). While these tools are incredibly useful, it can be very beneficial to take a step back and build a dashboard (or website) from scratch (we are going to utilize many powerfuly packages and tools that make this far from "scratch", but it will still be more from scratch than those dashboard frameworks).
+
+**Context:** This is the sixth in a series of projects focused around slowly building a dashboard. Students will have the opportunity to: create a backend (API) using `fastapi`, connect the backend to a database using `aiosql`, use the `jinja2` templating engine to create a frontend, use `htmx` to add "reactivity" to the frontend, create and use forms to insert data into the database, containerize the application so it can be deployed anywhere, and deploy the application to a cloud provider. Each week the project will build on the previous week, however, each week will be self-contained. This means that you can complete the project in any order, and if you miss a week, you can still complete the following project using the provided starting point.
+
+**Scope:** Python, dashboards
+
+.Learning Objectives
+****
+- Continue to develop skills and techniques using `fastapi` to build a backend.
+- Learn how to use `pydantic` for data validation and type hints.
+- Learn how `fastapi` and `pydantic` work together to create endpoints that validate data and return typed responses.
+- Create a directory structure to assemble a `fastapi` backend.
+- Use `fastapi` and `jinja2` to build a frontend.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/anvil/projects/tdm/data/movies_and_tv/imdb.db`
+
+== Questions
+
+[WARNING]
+====
+Interested in being a TA? Please apply: https://purdue.ca1.qualtrics.com/jfe/form/SV_08IIpwh19umLvbE
+====
+
+=== Question 1
+
+[IMPORTANT]
+====
+This project assumes you have a working backend from the previous project. Need a clean slate? You can copy over a working API starting Saturday, February 25th.
+
+[source,bash]
+----
+mv $SCRATCH/imdb $SCRATCH/imdb.bak
+mkdir $SCRATCH/imdb
+cp -a /anvil/projects/tdm/etc/project06/* $SCRATCH/imdb
+cp /anvil/projects/tdm/data/movies_and_tv/imdb.db $SCRATCH/imdb/backend/api/
+----
+
+Then, to run the API, first load up our Python environment.
+
+[source,bash]
+----
+module use /anvil/projects/tdm/opt/core
+module load tdm
+module load python/f2022-s2023
+----
+
+Next, find an unused port to run the API on.
+
+[source,bash]
+----
+find_port # 7777, for example
+----
+
+Then, run the API using the port from the previous step, in our case, 7777.
+
+[source,bash]
+----
+cd $SCRATCH/imdb
+python3 -m uvicorn backend.api.api:app --reload --port 7777
+----
+====
+
+In this project, we are going to build a simple _frontend_ for our API using `fastapi` and `jinja2`. Typically, when using `fastapi` and `jinja2`, you would simply create a `templates` directory in your project, and "wire" it all up in the same location. However, it is extremely common for frontends to use different technologies like `reactjs`, `vuejs`, or `svelte`. Sometimes, the frontend and backend teams are even different! 
+
+A clean separation of frontend and backend makes it easier to work on the frontend and backend independently. In order to try and emulate this behavior, we are going to create a frontend that is completely separate from our backend. Endpoints in our frontend will use the `httpx` library to make requests to our backend. This is a bit clunky, but worth the effort to try and emulate a real-world scenario.
+
+Let's get started by setting up our directory structure for the frontend. Create the following directory structure in your project.
+
+.directory structure
+----
+imdb
+├── backend
+│   ├── api
+│   │   ├── api.py
+│   │   ├── database.py
+│   │   ├── imdb.db
+│   │   ├── pydantic_models.py
+│   │   └── queries.sql
+│   ├── pyproject.toml
+│   └── README.md
+├── frontend
+│   ├── endpoints.py
+│   └── templates
+│       └── titles.html
+└── README.md
+
+4 directories, 10 files
+----
+
+Next, let's fill in our `titles.html` and `endpoints.py` files, with a basic example to get started.
+
+.endpoints.py
+----
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.templating import Jinja2Templates
+import httpx
+
+app = FastAPI()
+templates = Jinja2Templates(directory='frontend/templates')
+
+port = 7777
+
+@app.get("/titles/{title_id}", response_class=HTMLResponse)
+async def get_title(request: Request, title_id: str):
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(f'http://localhost:{port}/titles/{title_id}')
+
+    return templates.TemplateResponse("titles.html", {"request": request, "object": resp.json()})
+----
+
+.titles.html
+----
+<html>
+    <head>
+        <title>{{ object.title_id }}</title>
+    </head>
+    <body>
+        <h1>Test</h1>
+        <code>{{ object }}</code>
+    </body>
+</html>
+----
+
+Finally, a few notes.
+
+. You can change the value of `port` to whatever port you are using for your backend. Remember, you can use `find_port` to find an unused port.
++
+[source,bash]
+----
+module use /anvil/projects/tdm/opt/core
+module load tdm
+module load python/f2022-s2023
+
+find_port # 7777, for example
+----
++
+. You will _also_ need to run your frontend on some `port` (for this project), you can use `find_port` to find an unused port as well.
+. We use the `httpx` package to make requests to our backend, retrieve the response, and then pass it to our template. 
+
+Now, in 1 terminal, run your backend on some `port`. Open another terminal, and run your frontend on some `port`. You can run the frontend using the following command.
+
+[source,bash]
+----
+module use /anvil/projects/tdm/opt/core
+module load tdm
+module load python/f2022-s2023
+
+cd $SCRATCH/imdb
+python3 -m uvicorn frontend.endpoints:app --reload --port 8888 # replace 8888 with your port for your frontend
+----
+
+Finally, open a browser, and navigate to `http://localhost:8888/titles/tt0241527`. You should see something like the following.
+
+image::figure49.webp[Expected result, width=792, height=500, loading=lazy, title="Expected result"]
+
+For this question, include a screenshot in your Jupyter notebook showing the output of your frontend when you navigate to `http://localhost:8888/titles/tt1197624`.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+- Screenshot in your Jupyter notebook showing the output of your frontend when you navigate to `http://localhost:8888/titles/tt1197624`
+====
+
+=== Question 2
+
+Okay great! At this point in time, you should have a working frontend and backend. The goal of this project is to learn about and use `jinja2` to build a frontend. Here are some resources to help you.
+
+- https://fastapi.tiangolo.com/advanced/templates/?h=template
+- https://jinja.palletsprojects.com/en/3.1.x/templates/#synopsis
+
+Each of the following questions will introduce a new requirement for your frontend. You will need to add functions to your `endpoints.py` file, add new HTML templates to your `templates` directory, and add stylistic elements to your HTML templates using a CSS framework.
+
+Add new functions for each of the other two endpoints in your backend. In addition, create new HTML templates for each of the other two endpoints as well, that return a very basic HTML page. Basically, duplicate what we did for `titles` for `cast` and `people`. 
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+- Screenshot in your Jupyter notebook showing the output of your frontend when you navigate to `http://localhost:8888/cast/tt1197624`.
+- Screenshot in your Jupyter notebook showing the output of your frontend when you navigate to `http://localhost:8888/people/nm1046097`.
+====
+
+=== Question 3
+
+Update your 3 templates to use HTML elements that make sense. For example, items that are a part of a list, perhaps you should use the `ul` and `li` tags. Titles, should maybe be in an `h1` or `h2` tag, etc.
+
+Finally, make sure to use a https://jinja.palletsprojects.com/en/3.1.x/templates/#list-of-control-structures[for loop] at least 1 time in at least 1 of your templates. 
+
+Add new screenshots of your updated webpages to your Jupyter notebook.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+- Screenshot in your Jupyter notebook showing the output of your frontend when you navigate to `http://localhost:8888/titles/tt1197624`.
+- Screenshot in your Jupyter notebook showing the output of your frontend when you navigate to `http://localhost:8888/cast/tt1197624`.
+- Screenshot in your Jupyter notebook showing the output of your frontend when you navigate to `http://localhost:8888/people/nm1046097`.
+====
+
+=== Question 4
+
+Update your `cast.html` template so that each member of the cast has a link to their `people` page.
+
+Include a couple screenshots demonstrating your updated page's functionality.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+Finally, HTML is not very pretty, and doesn't give you a lot of room for expression. Let's add some CSS using the bootstrap framework. Add the following tag to the `head` of each of your HTML templates.
+
+[source,html]
+----
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+----
+
+Now, check out the bootstrap docs https://getbootstrap.com/docs/5.3/getting-started/introduction/[here], and the examples https://getbootstrap.com/docs/5.3/examples/[here]. 
+
+Use the `class` attributes to add some styling to _all_ of your templates. Once you feel satisfied with your styling, add a screenshot of each of your updated pages to your Jupyter notebook.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+- Screenshot in your Jupyter notebook showing the output of your frontend when you navigate to `http://localhost:8888/titles/tt1197624`.
+- Screenshot in your Jupyter notebook showing the output of your frontend when you navigate to `http://localhost:8888/cast/tt1197624`.
+- Screenshot in your Jupyter notebook showing the output of your frontend when you navigate to `http://localhost:8888/people/nm1046097`.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+
+In addition, please review our xref:projects:current-projects:submissions.adoc[submission guidelines] before submitting your project.
+====

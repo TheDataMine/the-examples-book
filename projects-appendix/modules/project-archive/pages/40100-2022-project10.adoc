@@ -1,0 +1,199 @@
+= TDM 40100: Project 10 -- 2022
+
+**Motivation:** In general, scraping data from websites has always been a popular topic in The Data Mine. In addition, it was one of the requested topics. For the remaining projects, we will be doing some scraping of housing data, and potentially: `sqlite3`, containerization, and analysis work as well.
+
+**Context:** This is the first in a series of 4 projects with a focus on web scraping that incorporates of variety of skills we've touched on in previous data mine courses. For this first project, we will start slow with a `selenium` review with a small scraping challenge. 
+
+**Scope:** selenium, Python, web scraping 
+
+.Learning Objectives
+****
+- Use selenium to interact with a web page prior to scraping.
+- Use selenium and xpath expressions to efficiently scrape targeted data.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Questions
+
+=== Question 1
+
+The following code provides you with both a template for configuring a Firefox browser selenium driver that will work on Anvil, as well as a straightforward example that demonstrates how to search web pages and elements using xpath expressions, and emulating a keyboard. Take a moment, run the code, and try to job your memory.
+
+[source,python]
+----
+import time
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.common.keys import Keys
+----
+
+[source,python]
+----
+firefox_options = Options()
+firefox_options.add_argument("--window-size=810,1080")
+# Headless mode means no GUI
+firefox_options.add_argument("--headless")
+firefox_options.add_argument("--disable-extensions")
+firefox_options.add_argument("--no-sandbox")
+firefox_options.add_argument("--disable-dev-shm-usage")
+
+driver = webdriver.Firefox(options=firefox_options)
+----
+
+[source,python]
+----
+# navigate to the webpage
+driver.get("https://purdue.edu/directory")
+
+# full page source
+print(driver.page_source)
+
+# get html element
+e = driver.find_element("xpath", "//html")
+
+# print html element
+print(e.get_attribute("outerHTML"))
+
+# isolate the search bar "input" element
+# important note: the following actually searches the entire DOM, not just the element e
+inp = e.find_element("xpath", "//input")
+
+# to start with the element e and _not_ search the entire DOM, you'd do the following
+inp = e.find_element("xpath", ".//input")
+print(inp.get_attribute("outerHTML"))
+
+# use "send_keys" to type in the search bar
+inp.send_keys("mdw")
+
+# just like when you use a browser, you either need to push "enter" or click on the search button. This time, we will press enter.
+inp.send_keys(Keys.RETURN)
+
+# We can delay the program to allow the page to load
+time.sleep(5)
+
+# get the table
+table = driver.find_element("xpath", "//table[@class='more']")
+
+# print the table content
+print(table.get_attribute("outerHTML"))
+----
+
+Use `selenium` to isolate and print out Dr. Ward's: alias, email, campus, department, and title.
+
+[TIP]
+====
+The `following-sibling` axis may be useful here -- see: https://stackoverflow.com/questions/11657223/xpath-get-following-sibling.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+Use `selenium` and its `click` method to first click the "VIEW MORE" link and then scrape and print: other phone, building, office, qualified name, and url.
+
+Take a look at the page source -- do you think clicking "VIEW MORE" was needed in order to scrape that data? Why or why not?
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+Okay, finally, we are building some tools to help us analyze the housing market. https://zillow.com has extremely rich data on homes for sale, for rent, and lots of land.
+
+Click around and explore the website a little bit. Note the following.
+
+. Homes are typically list on the right hand side of the web page in a 21x2 set of "cards", for a total of 40 homes.
++
+[NOTE]
+====
+At least in my experimentation -- the last row only held 1 card and there was 1 advertisement card, which I consider spam.
+====
+. If you want to search for homes for sale, you can use the following link: `https://www.zillow.com/homes/for_sale/{search_term}_rb/`, where `search_term` could be any hyphen separated set of phrases. For example, to search Lafayette, IN, you could use: https://www.zillow.com/homes/for_sale/lafayette-in_rb.
+. If you want to search for homes for rent, you can use the following link: `https://www.zillow.com/homes/for_rent/{search_term}_rb/`, where `search_term` could be any hyphen separated set of phrases. For example, to search Lafayette, IN, you could use: https://www.zillow.com/for_rent/lafayette-in_rb.
+. If you load, for example, https://www.zillow.com/homes/for_rent/lafayette-in_rb and rapidly scroll down the right side of the screen where the "cards" are shown, it will take a fraction of a second for some of the cards to load. In fact, unless you scroll, those cards will not load and if you were to parse the page contents, you would not find all 40 cards are loaded. This general strategy of loading content as the user scrolls is called lazy loading.
+
+Write a function called `get_links` that, given a `search_term`, will return a list of property links for the given `search_term`. The function should both get all of the cards on a page, but cycle through all of the pages of homes for the query.  
+
+[TIP]
+====
+The following was a good query that had only 2 pages of results.
+
+[source,python]
+----
+my_links = get_links("47933")
+----
+====
+
+[TIP]
+====
+You _may_ want to include an internal helper function called `_load_cards` that accepts the driver and scrolls through the page slowly in order to load all of the cards.
+
+https://stackoverflow.com/questions/20986631/how-can-i-scroll-a-web-page-using-selenium-webdriver-in-python[This] link will help! Conceptually, here is what we did.
+
+. Get initial set of cards using xpath expressions.
+. Use `driver.execute_script('arguments[0].scrollIntoView();', cards[num_cards-1])` to scroll to the last card that was found in the DOM.
+. Find cards again (now that more may have loaded after scrolling).
+. If no more cards were loaded, exit.
+. Update the number of cards we've loaded and repeat.
+====
+
+[TIP]
+====
+Sleep 2 seconds using `time.sleep(2)` between every scroll or link click.
+====
+
+[TIP]
+====
+After getting the links for each page, use `driver.delete_all_cookies()` to clear off cookies and help avoid captcha.
+====
+
+[TIP]
+====
+If you using the link from the "next page" button to get the next page, instead, use `next_page.click()` to click on the link. Otherwise, you may get a captcha.
+====
+
+[TIP]
+====
+Use something like:
+
+[source,python]
+----
+with driver as d:
+    d.get(blah)
+----
+
+This way, after exiting the `with` scope, the driver will be properly closed and quit which will decrease the liklihood of you getting captchas.
+====
+
+[TIP]
+====
+For our solution, we had a `while True:` loop in the `_load_cards` function and in the `get_links` function and used the `break` command in an if statement to exit.
+====
+
+[TIP]
+====
+Need more help? Post in Piazza and I will help get you unstuck and give more hints.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====
+
