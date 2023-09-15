@@ -1,15 +1,15 @@
 = TDM 20100: Project 5 -- 2023
 
-**Motivation:** `awk` is a programming language designed for text processing. It can be a quick and efficient way to quickly parse through and process textual data. While Python and R definitely have their place in the data science world, it can be extremely satisfying to perform an operation extremely quickly using something like `awk`. 
+**Motivation:** `awk` is a utility designed for text processing. While Python and R definitely have their place in the data science world, awk is a handy way to process data with just one line of analysis. 
 
-**Context:** This is the first of three projects where we introduce `awk`. `awk` is a powerful tool that can be used to perform a variety of the tasks that we've previously used other UNIX utilities for. After this project, we will continue to utilize all of the utilities, and bash scripts, to perform tasks in a repeatable manner.
+**Context:**  `awk` is a powerful tool that can be used to perform a variety of the tasks for which we previously used other UNIX utilities. After this project, we will continue to utilize all of the utilities, and bash scripts, to perform tasks in a repeatable manner, in pipelines of tools.
 
 **Scope:** awk, UNIX utilities
 
 .Learning Objectives
 ****
 - Use awk to process and manipulate textual data.
-- Use piping and redirection within the terminal to pass around data between utilities.
+- Use piping and redirection within the terminal to pipe the output data from one tool to become the input data for the next tool.
 ****
 
 Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
@@ -26,104 +26,100 @@ The following questions will use the following dataset(s):
 ====
 While the UNIX tools we've used up to this point are very useful, `awk` enables many new capabilities, and can even replace major functionality of other tools.
 
-`awk` is a text-processing tool in Unix, it scans and processes text based on patterns. `awk` is a versatile tool, ideally for tasks such as columnar data manipulation, pattern scanning, field-based calculations, and file formatting tasks, all performed efficiently from the command line.
+`awk` is a text-processing tool in Unix.  It scans and processes text based on patterns. `awk` is a versatile tool, ideally used for tasks in data that is organized in columns.  It provides, pattern matching, field-based calculations, and file formatting tasks, all performed efficiently from the command line.
 
-Here is an example to use `awk` to print the header line of file `/anvil/projects/tdm/data/stackoverflow/unprocessed/2011.csv`
+Here is an example to use `awk` to find the number of people in each salary range in the data set `/anvil/projects/tdm/data/stackoverflow/processed/2011.csv`
 
 [source,bash]
-awk 'NR==1 {print}' filename.txtx
+cat /anvil/projects/tdm/data/stackoverflow/processed/2011.csv | awk -F";" '{print $16}' | sort | uniq -c | sort -n
 
+The `cat` command prints the entire file,
 
-* `NR==1`: only for the first line.
-* `{print}`: action when the condition is true. It prints the entire line.
+but instead of outputing the entire file, we send it to the awk command.
 
+In the awk command, we use the semicolor as a separator, and we print the 16th field, which contains the salary information.
 
-In a previous question, we asked you to use commands `head`, `tr` and `wc` to find out how many times does the character 'A' appear in the first 10 lines of the file /anvil/projects/tdm/data/stackoverflow/unprocessed/2011.csv. We can use `awk` to  perform the same operation 
+Then we sort this data, so that all entries that are the same are next to each other.
+
+Then we find how many values of each type occur.
+
+Finally, we sort the responses according to how many times that they occur.
+
+To make this example more interesting, we can simply add the 14th field as well, and then we are classifying responses according the salary range and according to the person's favorite operating system.
+
 [source,bash]
-awk 'NR<=10 {a+=gsub(/A/,"")} END {print a}' /anvil/projects/tdm/data/stackoverflow/unprocessed/2011.csv
+cat /anvil/projects/tdm/data/stackoverflow/processed/2011.csv | awk -F";" '{print $16, $14}' | sort | uniq -c | sort -n
 
-* `NR<=10`: limits to the first 10 lines.
-* `numberofA+=gsub(/A/,"")`: using `gsub` function in `awk` to replace 'A' with a empty value,then add that 1 to a variable to count how many 'A's encountered
-* `END {print a}`: at end,prints the final count of 'A'.
 ====
+
+Here is another example:
+
+[NOTE]
+====
+The prices of the purchases for this file are in the 19th field:
+
+[source,bash]
+cat /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt | awk -F";" '{print $19}' | head
+
+We can add all of the prices as follows:
+
+[source,bash]
+cat /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt | awk -F";" '{myprices += $19} END{print myprices}'
+
+There are 283 million dollars of sales altogether!
+
+We can find the amount of sales of BOURBON like this:
+
+[source,bash]
+cat /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt | grep "BOURBON" | awk -F";" '{myprices += $19} END{print myprices}'
+
+or like this:
+
+cat /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt | awk -F";" '{if ($0 ~ /BOURBON/) {myprices += $19}} END{print myprices}'
+
+Either way, bourbon accounts for 24 million dollars of the sales.
+
+Champagne sales, on the other hand, are only 10206 dollars together:
+
+[source,bash]
+cat /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt | awk -F";" '{if ($0 ~ /CHAMPAGNE/) {myprices += $19}} END{print myprices}'
+
+or equivalently:
+
+[source,bash]
+cat /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt | grep "CHAMPAGNE" | awk -F";" '{myprices += $19} END{print myprices}'
+
+====
+
 
 == Questions
 
-=== Question 1 (1 pt)
-[upperalpha]
-.. How many times does the word 'WHISKIES' appear in the last 5 lines of the file?
+=== Question 1 (2 pt)
 
-[TIP]
-* use tail to get the last 5 lines of the file
-[source,bash]
-tail -n 5 filename.txt
-* use `\<` and `\>` word boundary markers to enclose the word to search, so it will not part of another word
+[upperalpha]
+.. What is the total cost of purchases with `WHISKIES` in the title?
+.. What is the total cost of all purchases from `CEDAR RAPIDS` (not just `WHISKIES`; consider all purchases)
 
 === Question 2 (2 pts)
 
 [upperalpha]
+.. What `Store Name` had the largest number of purchases (not the largest total cost, but the largest number of purchases; please consider each line to be 1 purchase)
+.. Using the `Store Name` identified Question 2A, what was the total cost of all purchases from this `Store Name`?
 
-.. In a previous question, we used `sort` in combination with `uniq` to find  which 5 items have the highest 'state bottle retail' price from the file /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt
-Now please just use `awk` to find which 5 items have the highest 'state bottle retail' price from the file 
-
-[TIP]
-====
-* Sorting an array by values in `awk` can be confusing. Check out https://stackoverflow.com/questions/5342782/sort-associative-array-with-awk[this excellent stackoverflow post] to see a couple of ways to do this. "Edit 2" is the easiest one to follow.
-
-* You can pipe output to the `column` unix command to get neatly formatted output! 
-
-[source,bash]
-----
-man column
-----
-====
-
-
-=== Question 3 (1 pt)
+=== Question 3 (2 pt)
 [upperalpha]
-.. Please compute the total volume (in liters) of `VODKA 80 PROOF` sold in the file iowa_liquor_sales_cleaner.txt. Do this using _only_ `awk` to sum the volume of this specific category. 
-
-[TIP]
-====
-`gsub` is a powerful awk utility that allows you to replace a string with another string. For example, you could replace all `,`'s in field 23 with nothing by:
-
-----
-gsub(/,/, "", $23)
-----
-====
-
-[NOTE]
-====
-The `gsub` operation happens in-place. In a nutshell, what this means is that the original field, `$23` is replaced with the result of the `gsub` operation (which removes the commas).
-====
- 
+.. Please compute the total volume (in liters) of all purchases sold in the file `iowa_liquor_sales_cleaner.txt`
+.. Please compute the total volume (in liters) of `VODKA 80 PROOF` sold in the file `iowa_liquor_sales_cleaner.txt`
 
 === Question 4 (2 pts)
-
-Please compute the total volume (in liters) of `VODKA 80 PROOF` sold _by county_. Do this using _only_ `awk`. Format your output so it looks like the following.
-
-.output
-----
-FRANKLIN: 33536.88 Liters
-GRUNDY: 32453.35 Liters
-DICKINSON: 275542.34 Liters
-O'BRIEN: 73413.50 Liters
-CHEROKEE: 44019.56 Liters
-RINGGOLD: 9068.05 Liters
-----
-
-Notice anything odd about the result? Look carefully at the dataset and suggest an alternative method that would clean up the issue.
-
-[TIP]
-====
-You can see the issue in our tiny sample of output.
-====
-
+[upperalpha]
+.. When looking at which location has the largest numbers of purchases, if we use the address (instead of the store name), we should include the `Address`, `City`, and `Zip Code`.  Using these three variables (together), what location has the largest number of purchases?
+.. Does your answer to Question 4A agree with your answer to Question 2A?  How do you know?  (Please explain why, and/or use some analysis to justify your answer.)
 
 === Question 5 (2 pts)
 
 [upperalpha]
-.. `awk` is extremely powerful, and this liquor dataset is pretty interesting! We haven't covered everything `awk` (and we won't). Look at the dataset and ask yourself an interesting question about the data. Use `awk` to solve your problem (or, at least, get you closer to answering the question). Explore various stackoverflow questions about `awk` and `awk` guides online. Try to incorporate an `awk` function you haven't used, or a `awk` trick you haven't seen. While this last part is not required, it is highly encouraged and can be a fun way to learn something new.
+.. `awk` is powerful, and this liquor dataset is pretty interesting! We haven't covered everything `awk` (and we won't). Look at the dataset and ask yourself an interesting question about the data. Use `awk` to solve your problem (or, at least, get you closer to answering the question). Optionally: You can explore various stackoverflow questions about `awk` and `awk` guides online. Try to incorporate an `awk` function you haven't used, or a `awk` trick you haven't seen. While this last part is not required, it is highly encouraged and can be a fun way to learn something new.
 
 [NOTE]
 ====
@@ -134,6 +130,8 @@ Project 05 Assignment Checklist
 ====
 * Jupyter Lab notebook with your code and comments for the assignment
     ** `firstname-lastname-project05.ipynb`.
+* A `.sh` text file with all of you `bash` code and comments written inside of it
+    ** bash code and comments used to solve questions 1 through 4
 * Submit files through Gradescope
 ====
 
