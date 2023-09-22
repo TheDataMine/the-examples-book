@@ -1,339 +1,85 @@
 = TDM 20100: Project 7 -- 2023
 :page-mathjax: true
 
-**Motivation:** `awk` is a programming language designed for text processing. It can be a quick and efficient way to quickly parse through and process textual data. While Python and R definitely have their place in the data science world, it can be extremely satisfying to perform an operation extremely quickly using something like `awk`. 
+**Motivation:** `awk` is a programming language designed for text processing. It can be a quick and efficient way to quickly parse through and process textual data. While Python and R definitely have their place in the data science world, it can be extremely satisfying to perform an operation extremely quickly using something like `awk`.
 
 **Context:** This is the third of three projects where we introduce `awk`. `awk` is a powerful tool that can be used to perform a variety of the tasks that we've previously used other UNIX utilities for. After this project, we will continue to utilize all of the utilities, and bash scripts, to perform tasks in a repeatable manner.
 
-**Scope:** awk, UNIX utilities
+**Scope:** awk, awk arrays, UNIX utilities
 
 .Learning Objectives
 ****
-- Use awk to process and manipulate textual data.
+- Use awk arrays to efficiently store sets of data
+- Use awk and functions to process and manipulate data.
 - Use piping and redirection within the terminal to pass around data between utilities.
 ****
-
 Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
 
 == Dataset(s)
-
-- `/anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt``
+- `/anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt`
+- `/anvil/projects/tdm/data/election/escaped2020sample.txt`
 - `/anvil/projects/tdm/data/flights/1990.csv`
 
 [NOTE]
 ====
-The following examples will use the dataset(s):
-
-- `/anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt` 
- 
-Take a look at the dataset. You may have noticed that the "Store Location" column (8th column) contains latitude and longitude coordinates. That is some rich data that could be fun and useful.
-
-The data will look something like the following:
-
-----
-Store Location
-POINT (-91.716615 41.963516)
-POINT (-91.6537 41.987286)
-POINT (-91.52888 40.962331000000006)
-POINT (-93.596755 41.5464)
-POINT (-91.658105 42.010971)
-POINT (-91.494611 41.807199)
-
-POINT (-91.796988 43.307662)
-POINT (-91.358467 41.280183)
-----
-
-What this means is that you can't just parse out the latitude and longitude coordinates and call it a day -- you need to use `awk` functions like `gsub` and `split` to extract the latitude and longitude coordinates.
-
-We can use `awk` to print out the latitude and longitude for each line in the original dataset. Output should resemble the following.
-[source,bash]
-
-head -n 10 /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt | awk -F';' 'BEGIN { print "lat;lon" } NR>1{
-    split($8, coords, "(");
-    gsub(/\)/, "", coords[2]);
-    gsub(/ +/, ",", coords[2]);  
-    split(coords[2], coords, ",");
-    if (length(coords) > 1) {
-        print coords[1]";"coords[2];
-    }
-}'
-
-----
-lat;lon
-1.23;4.56
-----
-
-The if statement is used to take care of rows that don't have latitude and longitude coordinates -- just skip them. So if your results look like this, you need to add logic to skip the "empty" rows:
-----
-
--91.716615 41.963516
--91.6537 41.987286
--91.52888 40.962331000000006
--93.596755 41.5464
--91.658105 42.010971
--91.494611 41.807199
-
--91.796988 43.307662
--91.358467 41.280183
-----
-
-====
-
-[TIP]
-====
-We have a bunch of data formatted like the following:
-
-----
-POINT (-91.716615 41.963516)
-----
-
-So we first used `split` to split on "("
-
-[source,awk]
-----
-split($8, coords, "(");
-----
-
-`coords[2]` would be:
-
-----
--91.716615 41.963516)
-----
-
-Then, we used `gsub` to remove any ")" characters from `coords[2]` 
-
-[source,awk]
-----
-gsub(/\)/, "", coords[2]);
-----
-
-`coords[2]` would be:
-
-----
--91.716615 41.963516
-----
-
-
-By using gsub(/ +/, ",", coords[2]), we deal with multiple spaces 
-==== 
-
-[IMPORTANT]
-====
-In this example, we only use 10 rows to verify the `awk` command is correct by piping the first 10 rows to the `awk` command; so the output is only 10 lines 
-
-.output
-----
-41.963516;-91.716615
-41.987286;-91.6537
-40.962331000000006;-91.52888
-41.5464;-93.596755
-42.010971;-91.658105
-41.807199;-91.494611
-43.307662;-91.796988
-41.280183;-91.358467
-----
+In `awk`, arrays are associative, meaning you can store data with key-value pairs. This makes it very efficient to manage data, especially for large files, it does not need for loops as in many other programming languages.
+Awk arrays are versatile and powerful tool, you can index them using strings and numbers
 ====
 
 === Question 1 ( 2 pts)
-
-The questions will use the following dataset(s)
-- `/anvil/projects/tdm/data/flights/1990.csv`
 [loweralpha]
-.. Take a look at the dataset. You may have noticed that the "FlightDate" column (6th column) contains with dates formatted as "1990-01-31".Please write an awk command to extract the year, month from this column and then reformat them as "01/1990". Make sure to use the functions `split`` and `gsub` in your solution.
- 
+In Project 05's Question 2, you were asked to use the dataset `iowa_liquor_sales_cleaner.txt` to find out which Store Name had the most purchases, and once got store name, calculated the total cost from this store. Now let us using `awk arrays` to list all store purchases and total costs 
+
+.. List number of purchases for all stores and sort the result in descending order (not the largest total cost, but the largest number of purchases; please consider each line to be 1 purchase)
+.. List the total cost of all purchases from all stores in descending order 
+
+=== Question 2 (2 pts)
+
+[loweralpha]
+
+.. Let us look at dataset `escaped2020sample.txt`. It contains columns of STATE (column 10), CITY( column 9) and TRANSACTION_AMT (column 15). Please list the total transaction amounts for each city from this dataset. Please use awk array for this question.
+
+[TIP]
+====
+* Use `gsub` to remove `"` for data fields if needed
+* Since there have some cities share same city names but in different state, need to combine state and city to differentiate them
+====
 
 [NOTE]
 ====
-Continue with the previous example, we can use `awk` to create a new dataset called `sales_by_store.csv`. The new dataset will include the following columns, `lat` and `lon` are columns that parsed from "Store Location" column as in the previous example 
-
-.columns
-----
-store_name;date;sold_usd;volume_sold;lat;lon
-----
-[source, bash]
-head -n 10 /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt | awk -F';' 'BEGIN{ 
-    print "store_name;date;sold_usd;volume_sold;lat;lon" 
-} NR>1{
-     # parse out lat and lon into coords[1] and coords[2]
-    gsub(/\$/, "", $22); 
-    split($2, dates, "/", seps);
-    mysales[$4";"dates[1]";"dates[3]] += $22;
-    myvolumes[$4";"dates[1]";"dates[3]] += $24;
-    
-    # track by month/year
-    # parse out lat and lon into coords[1] and coords[2]
-    split($8, coords, "(");
-    gsub(/\)/, "", coords[2]);
-    gsub(/ /, ",", coords[2]);
-    split(coords[2], coords, ",");
-    if (length(coords) > 1) {
-        print $4";"$2";"$22";"$23";"coords[1]";"coords[2];
-    }
-}' >$HOME/sales_by_store.csv
-
-
-* `if` statement used to exclude all rows that do not have latitude and longitude values. Save volume sold as liters, not gallons.
-* `>` is used to output the results of the `awk` command to a new file called `sales_by_store.csv`
-
-** The `>` part is a _redirect_. You are redirecting the output from the `awk` command to a new file called `sales_by_store.csv`. If you were to replace `>` by `>>` it would _append_ instead of _replace_. In other words, if you use a single `>` it will first erase the `sales_by_store.csv` file before adding the results of the `awk` command to the file. If you use `>>`, it will append the results. If you use `>>` and append results -- if you were to run the command more than once, the `sales_by_store.csv` file would continue to grow.
-* Same as previous example, we use first 10 lines to verify output, the results from piping the first 10 lines of our dataset to the `awk` command as following. To manipulate with all data, we can use `cat` instead
-
-[source,bash]
-----
-%%bash
-
-head -n 10 /anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales_cleaner.txt | awk -F';' '{}'
-----
-
-.output
-----
-store_name;date;sold_usd;volume_sold;lat;lon
-CVS PHARMACY #8443 / CEDAR RAPIDS;08/16/2012;5.25;41.963516;-91.716615 
-SMOKIN' JOE'S #6 TOBACCO AND LIQUOR;09/10/2014;9;41.987286;-91.6537
-HY-VEE FOOD STORE / MOUNT PLEASANT;04/10/2013;1.5;40.962331000000006;-91.52888
-AFAL FOOD & LIQUOR / DES MOINES;08/30/2012;1.12;41.5464;-93.596755
-HY-VEE FOOD STORE #5 / CEDAR RAPIDS;01/26/2015;3;42.010971;-91.658105
-SAM'S MAINSTREET MARKET / SOLON;07/19/2012;12;41.807199;-91.494611
-DECORAH MART;10/23/2013;9;43.307662;-91.796988
-ECON-O-MART / COLUMBUS JUNCTION;05/02/2012;2.25;41.280183;-91.358467
-----
+* In `awk`, arrays can also be passed to functions as arguments, it makes data operations or processing based on the associative nature of these arrays very efficient.
 ====
 
-=== Question 2 (2 pts)
+=== Question 3 ( 2 pts)
+
 [loweralpha]
-.. Use `awk` to create a new dataset from `1990.csv` called `1990_flight_info.csv`, the new dataset will include the following columns, flight_month(MM/YYYY) is the output from question 1, delay total is in minutes 
+.. Now let us take a look at the dataset `1990.csv`. You may have noticed that the "FlightDate" column (6th column) contains with dates formatted as "1990-01-31".Please write an awk command to extract the year, month from this column and then reformat them as "01/1990". Make sure to use the functions `split` and `gsub` in your solution
+ 
+[TIP] 
+====
+Start with first 10 lines to verify output, then to manipulate with all data, use `cat`  
+====
+
+=== Question 4 (2 pts)
+
+[loweralpha]
+.. Use `awk` to create a new dataset from `1990.csv` called `1990_flight_info.csv`, the new dataset will include the following columns, flight_month(MM/YYYY) same as you created in question 3, delay total should sum in minutes
 
 .columns
 ----
 flight_month;departure_delay_total;arrive_delay_total;distance_total 
 ----
 
- 
-[NOTE] 
+[TIP] 
 ====
-Believe it or not, `awk` even supports geometric calculations like `sin` and `cos`. The following is an example how to write a bash script that, given a pair of latitude and pair of longitude, calculates the distance between the two points.
-
-Okay, so how to get started? To calculate this, we can use https://en.wikipedia.org/wiki/Haversine_formula[the Haversine formula]. The formula is:
-
-$2*r*arcsin(\sqrt{sin^2(\frac{\phi_2 - \phi_1}{2}) + cos(\phi_1)*cos(\phi_2)*sin^2(\frac{\lambda_2 - \lambda_1}{2})})$
-
-Where:
-    
-- $r$ is the radius of the Earth in kilometers, we can use: 6367.4447 kilometers
-- $\phi_1$ and $\phi_2$ are the latitude coordinates of the two points
-- $\lambda_1$ and $\lambda_2$ are the longitude coordinates of the two points
-
-In `awk`, `sin` is `sin`, `cos` is `cos`, and `sqrt` is `sqrt`.
-
-To get the `arcsin` use the following `awk` function:
-
-[source,awk]
-----
-function arcsin(x) { return atan2(x, sqrt(1-x*x)) }
-----
-
-To convert from degrees to radians, use the following `awk` function:
-
-[source,awk]
-----
-function dtor(x) { return x*atan2(0, -1)/180 }
-----
-
-The following is how the script should work (with a real example you can test):
-
-[source,bash]
-----
-%%bash
-
-./example.sh 40.39978 -91.387531 40.739238 -105.02756
-----
-
-.Results
-----
-1150.93
-----
-
-To include functions in your `awk` command, do as follows:
-
-[source,awk]
-----
-awk -v lat1=$1 -v lat2=$3 -v lon1=$2 -v lon2=$4 'function arcsin(x) { return atan2(x, sqrt(1-x*x)) }function dtor(x) { return x*atan2(0, -1)/180 }BEGIN{
-    lat1 = dtor(lat1);
-    print lat1;
-    # rest of code....
-}'
-----
+Use `>` to _redirect_. You can output from the `awk` command to a new file with this operator. If you were to replace `>` by `>>` it would _append_ instead of _replace_. In other words, if you use a single `>` it will first erase the output file before adding the results of the `awk` command to the file. If you use `>>`, it will append the results
 ====
-
-[NOTE]
-====
-Now we can create a bash script called `example.sh` in the `$HOME` directory. 
-
-[source,bash]
-----
-#!/bin/bash
-
-lat1=$1
-lat2=$3
-lon1=$2
-lon2=$4
-
-awk -v lat1=$lat1 -v lat2=$lat2 -v lon1=$lon1 -v lon2=$lon2 'function arcsin(x) { return atan2(x, sqrt(1-x*x)) }function dtor(x) { return x*atan2(0, -1)/180 }END{
-    lat1 = dtor(lat1);
-    lat2 = dtor(lat2);
-    lon1 = dtor(lon1);
-    lon2 = dtor(lon2);
-    lat_difference = lat2 - lat1;
-    lon_difference = lon2 - lon1;
-    first_part = sin(lat_difference/2)^2;
-    second_part = cos(lat1)*cos(lat2)*sin(lon_difference/2)^2;
-    distance = 2*6367.4447*arcsin(sqrt(first_part + second_part));
-    print distance;
-}'
-----
-====
-[IMPORTANT]
-====
-we need to grant script execute permissions like this 
-
-[source,bash]
-----
-%%bash
-
-chmod +x $HOME/example.sh
-----
-====
-
-[NOTE]
-====
-Read the https://the-examples-book.com/starter-guides/unix/scripts#shebang[shebang] and https://the-examples-book.com/starter-guides/unix/scripts#arguments[arguments] sections in the book.
-====
-==== Question 3 ( 2 pts)
-.. Please update the example.sh file, in addition to calculate the distance between 2 places, also provide information where the place 1 and place 2 locate at，for example if we run the file with inputs
-[source, bash]
-./question3.sh 40.39978 -91.387531 40.739238 -105.02756
-
-The output will be
-.output
-----
-Distance: 1150.93 km
-Point 1 (Latitude 1, Longitude 1) is in the Northwestern Hemisphere
-Point 2 (Latitude 2, Longitude 2) is in the Northwestern Hemisphere
-----
- 
-
-=== Question 4 (2 pts)
- 
-Find the latitude and longitude points for two interesting points on a map (it could be anywhere). Make a note of the locations and the latitude and longitude values for each point in a markdown cell.
-
-Use your `question3.sh` script to determine the distance. How close is the distance to the distance you get from an online map app? Pretty close?
 
 Project 07 Assignment Checklist
 ====
-* Jupyter Lab notebook with your code,comments and output for the assignment
+* Jupyter notebook with your codes,comments and outputs for the assignment
     ** `firstname-lastname-project07.ipynb`
 * 1990_flight_info.csv
-* question3.sh file
 * Submit files through Gradescope
 ====
 
