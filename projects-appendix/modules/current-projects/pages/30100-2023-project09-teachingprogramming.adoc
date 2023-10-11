@@ -63,15 +63,20 @@ Then we will need to use `cv2.resize()` to upsample the resolution reduced image
 cv2.resize(ballpit_reduce,(ballpit_ycrcb.shape[1],ballpit_ycrcb.shape[0]))
 
 .. Please write a function named compress_downsample, it will take 3 arguments, a `jpg` file, a float number (fx) for the width downsampling factor; a float number (fy) for the Height downsampling factor. The returns will be a compressed ( downsampled ) image 
-.. display the compressed image aligned with original image
+.. Visualize the compressed image aligned with original image
+.. Calculate the compression ratio 
 
-=== Question 2 ( 2 pts)
+[TIP]
+You may use `cv2.imwrite` to save the compressed image to a file, get the size of it and divide by size of original image file
 
-Second we will apply the discrete cosine transform technique
+=== Question 2 ( 1 pt)
+
+Second let's look into the discrete cosine transform technique
 [NOTE]
 Per https://www.mathworks.com/help/images/discrete-cosine-transform.html[mathworks], the discrete cosine transform has the property that visually significant information about an image is concentrated in just a few coefficients of the resulting signal data. Meaning, if we are able to capture the majority of the visually-important data from just a few coefficients, there is a lot of opportunity to _reduce_ the amount of data we need to keep. So DCT is a technique allow the important parts of an image separated from the unimportant ones.  
 
-First split the image to 3 Channels
+E.g.
+We will need to split the previous created `ballpit_ycrcb` into 3 Channels
 [source,python]
 y_c, cr_c,cb_c = cv2.split(ballpit_ycrcb)
 
@@ -81,26 +86,35 @@ y_c_dct = cv2.dct(y_c.astype(np.float32))
 cr_c_dct = dct2(g_c.astype(np.float32))
 cb_c_dct = dct2(r_c.astype(np.float32))
 
-[TIP]
-`.astype` is a method to convert numpy array to a certain data type. 
-`np.flfoat32` is a data type of 32-bit floating point numbers array
+.. Please find the dimension for the output DCT blocks  
+.. Please print a 8*8 DCT blocks for each channel separately
 
-Now let us try to visualize the output of DCT compression. One common way will be to set value zero to some of the DCT coefficients, such as high-frequency ones at right or downward in the DCT output matrix, for example if we only want to keep top-left of 50*50 block of coefficients. we can set value zero to all other area, For example for Y channel,
+[TIP]
+====
+* `.astype` is a method to convert numpy array to a certain data type. 
+* `np.flfoat32` is a data type of 32-bit floating point numbers array
+* `shape` will be useful for the block dimensions
+====
+
+=== Question 3 (2 pts)
+
+Now let us try to visualize the output of DCT compression. One common way to do it will be to set value zero to some of the DCT coefficients, such as high-frequency ones at right or downward in the DCT output matrix, for example if we only want to keep top-left of 50*50 block of coefficients. we can set value zero to all other area, For example for Y channel,
 [source, python]
 cut_v = 50 
 y_c_dct[cut_v:,:]=0
 y_c_dct[:,cut_v:]=0 
 
-after update the DCT coefficients, we now can do inverse DCT on each channel to change back to its pixel intensities from its frequency representation, for example for Y channel
+after update the DCT coefficients, we can do inverse DCT on each channel to change back to its pixel intensities from its frequency representation, for example for Y channel
 [source, python]
-y_rec = cv2.idct(y_c_dct.astype(np.foat32))
+y_rec = cv2.idct(y_c_dct.astype(np.float32))
 
-.. Please create a function named `compress_DCT` to implement image compression with DCT. The 2 arguments are a jpg image, and a number for the coefficient area you would like to keep( we only need to consider same size for horizontal and vertical directions)
+.. Please create a function named `compress_DCT` to implement image compression with DCT. The arguments are a jpg image, and a number for the coefficient area you would like to keep( we only need to consider same size for horizontal and vertical directions)
 .. Visualize the DCT compressed image for ballpit.jpg align with the original one 
+.. Calculate the compression ratio 
 
-=== Question 3 (2 pts)
+=== Question 4 (2 pts)
  
-Third, we will use quantization technique. Quantization reduces the precision of the DCT coefficients based on human perceptual characteristics. This introduces data loss, but reduces image size greatly. You can read more about quantization https://en.wikipedia.org/wiki/Quantization_(image_processing)[here]. Apparently, the human brain is not very good at distinguishing changes in high frequency parts of our data, but good at distinguishing low frequency changes. 
+Third, Let us try quantization technique. Quantization reduces the precision of the DCT coefficients based on human perceptual characteristics. This introduces data loss, but reduces image size greatly. You can read more about quantization https://en.wikipedia.org/wiki/Quantization_(image_processing)[here]. Apparently, the human brain is not very good at distinguishing changes in high frequency parts of our data, but good at distinguishing low frequency changes. 
 
 We can use a quantization matrix to filter out the higher frequency data and maintain the lower frequency data. One of the more common quantization matrix is the following.
 
@@ -121,10 +135,11 @@ We can quantize the DCT coefficients by dividing the value from quantization mat
 [source,python]
 np.round(y_c_dct/q1) 
 
-.. Please create a function called `compress_quant that will base on function from question 2, quantize the DCT coefficients before we inverse DCT
+.. Please create a function called `compress_quant that will use the function from question 2, quantize the DCT coefficients before we do DCT inversion 
 .. Run the function with image ballpit.jpg, visualize the output compressed image align with original one 
+.. Calculate the compression ratio
 
-=== Question 4 ( 2 pts)
+=== Question 5 ( 1 pt)
 
 .. Choose one of your favorite image as input and put all the step together
 .. Visualize the output align with original image, describe your findings briefly
