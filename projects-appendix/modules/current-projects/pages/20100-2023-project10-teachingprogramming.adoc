@@ -1,0 +1,171 @@
+= TDM 20100: Project 10 -- 2023
+
+**Motivation:** Being able to use results of queries as tables in new queries (also known as writing sub-queries), and calculating values like `MIN`, `MAX`, and `AVG` in aggregate are key skills to have in order to write more complex queries. In this project we will learn about aliasing, writing sub-queries, and calculating aggregate values.
+
+**Context:** We are in the middle of a series of projects focused on working with databases and SQL. In this project we introduce aliasing, sub-queries, and calculating aggregate values!
+
+**Scope:** SQL, SQL in R
+
+.Learning Objectives
+****
+- Demonstrate the ability to interact with popular database management systems within R.
+- Solve data-driven problems using a combination of SQL and R.
+- Basic clauses: SELECT, ORDER BY, LIMIT, DESC, ASC, COUNT, WHERE, FROM, etc.
+- Showcase the ability to filter, alias, and write subqueries.
+- Perform grouping and aggregate data using group by and the following functions: COUNT, MAX, SUM, AVG, LIKE, HAVING. Explain when to use having, and when to use where.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+For this project, we will be using the `lahman` sqlite database. This database contains the data in the directory  
+
+- `/anvil/projects/tdm/data/lahman`
+
+You may get some more `lahman` database information from this youtube video http://youtube.com/watch?v=tS_-oTbsDzs
+[2023 SABR Analytics:Sean Lahman, "introduction to Baseball Databases"]
+
+To run SQL queries in a Jupyter Lab notebook, first run the following in a cell at the top of your notebook to establish a connection with the database.
+
+[source,python]
+----
+%sql sqlite:////anvil/projects/tdm/data/lahman/lahman.db
+----
+
+For every following cell where you want to run a SQL query, prepend `%%sql` to the top of the cell -- just like we do for R or bash cells.
+
+== Questions
+
+=== Question 1 (2 pts)
+
+[NOTE]
+====
+Let's say we are interested in the how many baseball players played games from year 2018 to year 2022 respectively. We could write the following query to get the numbers in appearance table and display in descending order of year
+
+[source, sql]
+----
+%%sql
+select yearID, count(distinct playerID) as num_of_players from appearances where yearID between 2012 and 2022 group by yearID order by yearID desc;
+----
+
+In the query we named an `alias` for the counting of distinct players. The `alias` is a great way to not only make the headers look good, but it can also be used to reduce the text in a query by giving some intermediate results a shorter name. Following is the basic syntax of column alias. You may get more information from https://www.tutorialspoint.com/sqlite/sqlite_alias_syntax.htm [alias]
+
+SELECT column_name AS alias_name
+FROM table_name
+WHERE [condition];
+====
+.. Now let's look into `teams` table, please find out how many baseball teams played games from year 2012 to year 2022 respectively. Display result in descending order of year
+ 
+
+=== Question 2 (2 pts)
+
+Okay, let's continue with `teams` table, the field `attendance` provides the total number of audiences that attended a team's home game. 
+
+.. Please find out what is the average number of audiences (attendance)from `teams` table at year 2022
+[TIP]
+`avg` function will be useful to calculate average attendance 
+
+.. Please list all teams with team name, attendance that have audiences larger than average attendance from previous question. Please rename attendance to `num_of_audiences`. Which team is the most popular team in year 2022 ( who had most audience in the home games)?
+[TIP]
+We can achieve this using a _subquery_. A subquery is a query that is used to get a smaller result set from a larger result set. Use the query from `question a`, _add_ it to the query for `question b` 
+ 
+
+=== Question 3
+
+Okay, if you did question (2) correctly, you should get the result that team `Los Angeles Dodgers	` , team ID 'LAN` had most audiences, hence we can consider this team is the most popular team in year 2022. 
+
+.. Please calculate the winning percentage for this team at year 2022. You may use the field 'W' and `L` in `teams` table by the formula
+
+winning_percentage = W/(W+L)
+
+[important]
+====
+You may get result as `0' for question a. What is going on?
+====
+[NOTE]
+====
+The `AS` keyword can _also_ be used to _cast_ types. Some of you may or may not be familiar with a feature of many programming languages. Common in many programming languages is an "integer" type -- which is for numeric data _without_ a decimal place, and a "float" type -- which is for numeric data _with_ a decimal place. In _many_ languages, if you were just to do `W/(W+L)`, you'd get what _may_ be unexpected output.
+ 
+ 
+
+Since both of the values are integers, the result will truncate the decimal place. In other words, the result will be `0`  
+
+_This_ is why we are getting 0's for the percentage column!
+
+How do we fix this? The following is an example.
+
+[source, sql]
+
+select cast (W as real)/(cast(W as real)+cast(L as real)) 
+
+ 
+Here, "real" represents "float" or "double" -- it is another way of saying a number with a decimal place.
+====
+
+[IMPORTANT]
+====
+When you do arithmetic with an integer and a real/float, the result will be a real/float. This is why our result is a real even though 50% of our values are integers.
+====
+
+.. Please rename the percentage column `winning_per` using `alias` 
+
+[NOTE]
+====
+You can read more about `sqlite3` types https://www.sqlite.org/datatype3.html[here]. In a lot of ways, the `sqlite3` typing system is simpler than typical RDBMS systems, and it other ways it is more complex. `sqlite3` considers their flexible typing https://www.sqlite.org/flextypegood.html[a feature]. However, `sqlite3` does provide https://www.sqlite.org/stricttables.html[strict tables] for individuals who want a more stringent set of typing rules.
+====
+
+
+=== Question 4 (2 pts)
+
+
+You now know 2 different applications of the `AS` keyword, and you also know how to use a query as a subquery, great!
+
+In the previous project, we were introduced to aggregate functions. We know we can use the `WHERE` clause to filter our results, but what if we wanted to filter our results based on an aggregated column?
+
+Modify our query from question (3) to print only the rows where the `movie count` is greater than 2.
+
+[TIP]
+====
+See https://www.geeksforgeeks.org/having-vs-where-clause-in-sql/[this article] for more information on the `HAVING` and `WHERE` clauses.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_g0qo4yxu?wid=_983291"></iframe>
+++++
+
+Write a query that returns the average number of words in the `primary_title` column, by year, and only for years where the average number of words in the `primary_title` is less than 3.
+
+Look at the results. Which year had the lowest average number of words in the `primary_title` column (no need to write another query for this, just eyeball it)?
+
+[TIP]
+====
+See https://stackoverflow.com/questions/3293790/query-to-count-words-sqlite-3[here]. Replace "@String" with the column you want to count the words in.
+====
+
+[TIP]
+====
+If you got it right, there should be 15 rows in the output.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====
+
