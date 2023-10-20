@@ -1,8 +1,8 @@
-= TDM 40100: Project 9 -- 2023
+= TDM 30100: Project 9 -- 2023
 
 **Motivation:** Images are everywhere, and images are data! We will take some time to dig more into working with images as data in this project.
 
-**Context:** In the previous project, we were able to isolate and display the Y, Cb and Cr channels of our `ballpit.jpg` image,  applied image histogram equalization technique to Y then merged 3 components to an equalized image. Understood the structure of an image and how image's luminance (Y) and chrominance (Cb and Cr) contributed to the whole image, that human eye is more sensitive to the Y Channel than color channels Cb & Cr. In this project, we will continue to work with 'YCbCr` images as we delve into some image compression techniques, we will implement a variation of jpeg image compression!
+**Context:** In the previous project, we were able to isolate and display the Y, Cb and Cr channels of our `ballpit.jpg` image, and we applied an image histogram equalization technique to Y and then merged 3 components, to an equalized image. We understood the structure of an image and how the image's luminance (Y) and chrominance (Cb and Cr) contributed to the whole image.  The human eye is more sensitive to the Y Channel than color channels Cb & Cr. In this project, we will continue to work with 'YCbCr` images as we delve into some image compression techniques, we will implement a variation of jpeg image compression!
 
 **Scope:**  Python, images, openCV, YCbCr, downsampling, discrete cosine transform, quantization
 
@@ -23,7 +23,7 @@ The following questions will use the following dataset(s):
 
 [NOTE]
 ====
-Some helpful links that were really useful.
+Some helpful links that are really useful.
 
 - https://en.wikipedia.org/wiki/JPEG
 - https://en.wikipedia.org/wiki/Quantization_(image_processing)
@@ -34,7 +34,7 @@ JPEG is a _lossy_ compression format and an example of transform based compressi
 
 [NOTE]
 ====
-Since human eye is more sensitive to the Y Channel than color channels, we can reduce the resolution of the color components to achieve image compression. 
+Since the human eye is more sensitive to the Y Channel than color channels, we can reduce the resolution of the color components to achieve image compression. 
 we will first need to import some libraries
 [source,python]
 import cv2
@@ -49,7 +49,7 @@ Then convert the image from default rgb format to YCrCb format
 [source,python]
 ballpit_ycrcb = cv2.cvtColor(ballpit_bgr,cv2.COLOR_BGR2YCrCb)
 ====
-=== Question 1 ( 2 pts)
+=== Question 1 (2 pts)
 [loweralpha]
 
 First we will use a downsample technique, to compress an image by reducing the resolution of the color channels.  It will return a YCrCb image with lower resolution. 
@@ -58,7 +58,7 @@ The following statement downsamples the image Cr channel to half (0.5) by using 
 [source,python]
 ballpit_reduce = cv2.resize(ballpit_ycrcb[;,;,1],(0,0),fx=0.5,fy=0.5)
 
-Then we will need to use `cv2.resize()` to upsample the resolution reduced image to the original size by using a the original image size's tuple  
+Then we will need to use `cv2.resize()` to upsample the resolution reduced image to the original size by using the original image size's tuple  
 [source, python]
 cv2.resize(ballpit_reduce,(ballpit_ycrcb.shape[1],ballpit_ycrcb.shape[0]))
 
@@ -69,11 +69,11 @@ cv2.resize(ballpit_reduce,(ballpit_ycrcb.shape[1],ballpit_ycrcb.shape[0]))
 [TIP]
 You may use `cv2.imwrite` to save the compressed image to a file, get the size of it and divide by size of original image file
 
-=== Question 2 ( 1 pt)
+=== Question 2 (2 pts)
 
 Second let's look into the discrete cosine transform technique
 [NOTE]
-Per https://www.mathworks.com/help/images/discrete-cosine-transform.html[mathworks], the discrete cosine transform has the property that visually significant information about an image is concentrated in just a few coefficients of the resulting signal data. Meaning, if we are able to capture the majority of the visually-important data from just a few coefficients, there is a lot of opportunity to _reduce_ the amount of data we need to keep. So DCT is a technique allow the important parts of an image separated from the unimportant ones.  
+Per https://www.mathworks.com/help/images/discrete-cosine-transform.html[MathWorks], the discrete cosine transform has the property that visually significant information about an image is concentrated in just a few coefficients of the resulting signal data. Meaning, if we are able to capture the majority of the visually-important data from just a few coefficients, there is a lot of opportunity to _reduce_ the amount of data we need to keep. So DCT is a technique allow the important parts of an image separated from the unimportant ones.  
 
 E.g.
 We will need to split the previous created `ballpit_ycrcb` into 3 Channels
@@ -98,23 +98,23 @@ cb_c_dct = dct2(r_c.astype(np.float32))
 
 === Question 3 (2 pts)
 
-Now let us try to visualize the output of DCT compression. One common way to do it will be to set value zero to some of the DCT coefficients, such as high-frequency ones at right or downward in the DCT output matrix, for example if we only want to keep top-left of 50*50 block of coefficients. we can set value zero to all other area, For example for Y channel,
+Now let us try to visualize the output of DCT compression. One common way to do it will be to set value zero to some of the DCT coefficients, such as high-frequency ones at right or downward in the DCT output matrix, for example if we only want to keep top-left of 50*50 block of coefficients. We can set the value to zero to all other areas. For example, for the Y channel,
 [source, python]
 cut_v = 50 
 y_c_dct[cut_v:,:]=0
 y_c_dct[:,cut_v:]=0 
 
-after update the DCT coefficients, we can do inverse DCT on each channel to change back to its pixel intensities from its frequency representation, for example for Y channel
+After updating the DCT coefficients, we can do inverse DCT on each channel to change back to its pixel intensities from its frequency representation, for example for Y channel
 [source, python]
 y_rec = cv2.idct(y_c_dct.astype(np.float32))
 
-.. Please create a function named `compress_DCT` to implement image compression with DCT. The arguments are a jpg image, and a number for the coefficient area you would like to keep( we only need to consider same size for horizontal and vertical directions)
+.. Please create a function named `compress_DCT` to implement image compression with DCT. The arguments are a jpg image, and a number for the coefficient area you would like to keep (we only need to consider same size for horizontal and vertical directions)
 .. Visualize the DCT compressed image for ballpit.jpg align with the original one 
 .. Calculate the compression ratio 
 
 === Question 4 (2 pts)
  
-Third, Let us try quantization technique. Quantization reduces the precision of the DCT coefficients based on human perceptual characteristics. This introduces data loss, but reduces image size greatly. You can read more about quantization https://en.wikipedia.org/wiki/Quantization_(image_processing)[here]. Apparently, the human brain is not very good at distinguishing changes in high frequency parts of our data, but good at distinguishing low frequency changes. 
+Next, let us try a quantization technique. Quantization reduces the precision of the DCT coefficients based on human perceptual characteristics. This introduces data loss, but reduces image size greatly. You can read more about quantization https://en.wikipedia.org/wiki/Quantization_(image_processing)[here]. Apparently, the human brain is not very good at distinguishing changes in high frequency parts of our data, but good at distinguishing low frequency changes. 
 
 We can use a quantization matrix to filter out the higher frequency data and maintain the lower frequency data. One of the more common quantization matrix is the following.
 
@@ -135,14 +135,11 @@ We can quantize the DCT coefficients by dividing the value from quantization mat
 [source,python]
 np.round(y_c_dct/q1) 
 
-.. Please create a function called `compress_quant that will use the function from question 2, quantize the DCT coefficients before we do DCT inversion 
+.. Please create a function called `compress_quant` that will use the function from question 2, to quantize the DCT coefficients before we do DCT inversion 
 .. Run the function with image ballpit.jpg, visualize the output compressed image align with original one 
 .. Calculate the compression ratio
 
-=== Question 5 ( 1 pt)
-
-.. Choose one of your favorite image as input and put all the step together
-.. Visualize the output align with original image, describe your findings briefly
+ 
 
 Project 09 Assignment Checklist
 ====
