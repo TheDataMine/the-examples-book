@@ -40,7 +40,7 @@ For every following cell where you want to run a SQL query, prepend `%%sql` to t
 === Question 1 (1 pt)
 
 [loweralpha]
-.. Let's say we are interested in the total number of baseball players for each year from year 2018 to year 2022 respectively. Please write a query to get the numbers in `appearance` table and display in descending order of year. The output should look like
+.. Let's say we are interested in the total number of baseball players for each year from year 2018 to year 2022 respectively. Please write a query to count the number of players in the appearance table and display the totals in descending order by year. 
 
 .output
 year num_of_players
@@ -51,11 +51,16 @@ year num_of_players
 
 [TIP]
 ====
-In the query, please name `yearID` from `appearance` table an `alias` as `year`, and name the counting of distinct players an `alias` as `num_of_players`. The `alias` is a great way to not only make the headers look good, but it can also be used to reduce the text in a query by giving some intermediate results a shorter name. Following is the basic syntax of column alias. You may get more information from https://www.tutorialspoint.com/sqlite/sqlite_alias_syntax.htm [alias]
+* In the query, please name `yearID` from `appearance` table an `alias` as `year`, and name the counting of distinct players an `alias` as `num_of_players`. The `alias` is a great way to not only make the headers look good, but it can also be used to reduce the text in a query by giving some intermediate results a shorter name. Following is the basic syntax of column alias. You may get more information from https://www.tutorialspoint.com/sqlite/sqlite_alias_syntax.htm [alias]
 
 SELECT column_name AS alias_name
 FROM table_name
 WHERE [condition];
+
+* Example code  
+[source,sql]
+select count(distinct playerID) as num_of_players from appearances group by yearID
+
 ====
 
 
@@ -65,52 +70,56 @@ Now, let's look into `teams` table, the field `attendance` provides the total nu
 
 .. Please find out what is the average number of attendance for the games from `teams` table at year 2022
 
+.. Using the functions from previous questions, write a query to list each team name and the total attendance for that team, add a condition to this query to only display teams where their total attendance is more than the average total attendance for the full league. 
+    Hint: we found this value in the previous query.
+    Using an alias, change the attendance column in your query to appear as “total_num_of_audience”.
+... Which team is the most popular team in terms of attendance in 2022?
+ 
 [TIP]
 `avg` function will be useful to calculate average attendance 
-
-.. Please list all teams with team name, attendance that have attendance (total audiences) larger than average attendance from previous question. Please rename attendance to `total_num_of_audiences`. Which team is the most popular team in year 2022 ( who had most attendance in the home games)?
 [TIP]
 We can achieve this using a _subquery_. A subquery is a query that is used to get a smaller result set from a larger result set. Use the query from `question a`, _add_ it to the query for `question b` 
  
 
 === Question 3 (1 pt)
 
-Okay, if you did question (2) correctly, you should get the result that team `Los Angeles Dodgers	` , team ID 'LAN` had most audiences, hence we can consider this team is the most popular team in year 2022. 
+If you answered question (2) correctly, you should find that team `Los Angeles Dodgers`, with team ID 'LAN`, had the most audiences. We can consider this team as the most popular team in 2022.
 
-.. Please calculate the winning percentage for this team at year 2022. You may use the field 'W' and `L` in `teams` table by the formula
+.. Please calculate the winning percentage for this team in 2022 using the fields 'W' and `L` from the teams table with the formula:
 
+[source]
+----
 winning_percentage = W/(W+L)
+----
 
-[important]
+[IMPORTANT]
 ====
-Some of you might get and wonder why the most popular baseball team had a `0' win percentage! What is going on?
+Some of you might get a `0` in your output and wonder why the most popular baseball team had a `0` win percentage! What's happening here?
 ====
+
 [NOTE]
 ====
-The `AS` keyword can _also_ be used to _cast_ types. Some of you may or may not be familiar with a feature of many programming languages. Common in many programming languages is an "integer" type -- which is for numeric data _without_ a decimal place, and a "float" type -- which is for numeric data _with_ a decimal place. In _many_ languages, if you were just to do `W/(W+L)`, you'd get what _may_ be unexpected output.
- 
- 
+The `AS` keyword can _also_ be used to _cast_ types, which some might be familiar with from other programming languages. In many languages, there are "integer" types (numeric data without a decimal place) and "float" types (numeric data with a decimal place). If you simply use `W/(W+L)`, you might encounter unexpected output since both values are integers, truncating the decimal place. This truncation results in the observed `0`.
 
-Since both of the values are integers, the result will truncate the decimal place. In other words, the result will be `0`  
-
-_This_ is why we are getting 0's for the percentage column!
-
-How do we fix this? The following is an example.
+An example fix is:
 
 [source, sql]
+----
+select cast (W as real)/(cast(W as real)+cast(L as real))
+----
 
-select cast (W as real)/(cast(W as real)+cast(L as real)) 
-
- 
-Here, "real" represents "float" or "double" -- it is another way of saying a number with a decimal place.
+Here, "real" signifies "float" or "double" - indicating a number with a decimal place.
 ====
 
 [IMPORTANT]
 ====
-When you do arithmetic with an integer and a real/float, the result will be a real/float. This is why our result is a real even though 50% of our values are integers.
+Performing arithmetic with an integer and a real/float will yield a real/float result. This explains why our result is a real number even though half of our values are integers.
 ====
 
-.. Please check your query from previous question, update it if needed. Rename the percentage column `winning_per` using `alias` 
+==== Question 4 (1 pt)
+
+..  Please review and, if necessary, update your query from the previous question. Rename the percentage column to `winning_per` using the `alias` feature.
+
 
 [NOTE]
 ====
@@ -118,14 +127,13 @@ You can read more about `sqlite3` types https://www.sqlite.org/datatype3.html[he
 ====
 
 
-=== Question 4 (2 pts)
-
+=== Question 5 (1 pt)
 
 You now know 2 different applications of the `AS` keyword, and you also know how to use a query as a subquery, great!
 
 In the previous project, we were introduced to aggregate functions. We know we can use the `WHERE` clause to filter our results, but what if we wanted to filter our results based on an aggregated column?
 
-.. Update the query from question (3) to print all teams that have average winning percentage from year 2012 to 2022 (year 2012 and 2022 should be included) greater than 55% . You should get 4 teams, display the result by average win percentage in descending order
+.. Update the query from question (4) to print all teams that have average winning percentage from year 2012 to 2022 (year 2012 and 2022 should be included) greater than 55%. You should get 4 teams. Display the results by average win percentage in descending order
 
 [TIP]
 ====
@@ -133,9 +141,9 @@ See https://www.geeksforgeeks.org/having-vs-where-clause-in-sql/[this article] f
 ====
 
 
-=== Question 5 (2 pts)
+=== Question 6 (2 pts)
 
-.. Now let's look at `allstarfull` table, please list all players who attended all star games more than 20 times. List by descending order 0f attending times
+.. Now let's look at `allstarfull` table, please list all players who attended all star games more than 20 times. List by descending order of attending times
 .. Please explore tables and write a query with the information you interested at. Please make sure to use aliasing, subquery and at least one aggregate function. 
 
  Project 10 Assignment Checklist
