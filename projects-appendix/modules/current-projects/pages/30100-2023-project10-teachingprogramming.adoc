@@ -1,0 +1,187 @@
+= TDM 40100: Project 10 -- 2023
+
+**Motivation:** In general, scraping data from websites has always been a popular topic in The Data Mine. In addition, it was one of the requested topics. For the remaining projects, we will be doing some scraping of housing data, and potentially: `sqlite3`, containerization, and analysis work as well.
+
+**Context:** This is the first in a series of 4 projects with a focus on web scraping that incorporates of variety of skills we've touched on in previous data mine courses. For this first project, we will start slow with a `selenium` review with a small scraping challenge. 
+
+**Scope:** selenium, Python, web scraping 
+
+.Learning Objectives
+****
+- Use selenium to interact with a web page prior to scraping.
+- Use selenium and xpath expressions to efficiently scrape targeted data.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Questions
+
+=== Question 1 (2 pts)
+[loweralpha]
+The following code provides you with both a template for configuring a Firefox browser selenium driver that will work on Anvil, as well as a straightforward example that demonstrates how to search web pages and elements using xpath expressions, and emulating a keyboard. Take a moment, run the code, and try to job your memory.
+
+[source,python]
+----
+import time
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.common.keys import Keys
+----
+
+[source,python]
+----
+firefox_options = Options()
+firefox_options.add_argument("--window-size=810,1080")
+# Headless mode means no GUI
+firefox_options.add_argument("--headless")
+firefox_options.add_argument("--disable-extensions")
+firefox_options.add_argument("--no-sandbox")
+firefox_options.add_argument("--disable-dev-shm-usage")
+
+driver = webdriver.Firefox(options=firefox_options)
+----
+
+[source,python]
+----
+# navigate to the webpage
+driver.get("https://books.toscrape.com")
+
+# full page source
+print(driver.page_source)
+
+# get html element
+e = driver.find_element("xpath", "//html")
+
+# print html element
+print(e.get_attribute("outerHTML"))
+
+# find the 'Music'link 
+link = e.find_element("xpath", "//a[contains(text(),'Music')]")
+ 
+print(link.get_attribute("outerHTML"))
+
+# click the link
+link.click()
+
+
+# We can delay the program to allow the page to load
+time.sleep(5)
+
+# after click, get the new html element
+e = driver.find_element("xpath","//html")
+
+# print html element
+print(e.get_attribute("outerHTML"))
+----
+
+.. Please use `selenium` get and display the first book's title and price in the Music books page
+.. At same page, try to find book titled "How music works" then `click` this book link and then scrape and print book information: product description, upc and availability
+
+Take a look at the page source -- do you think clicking the book link was needed in order to scrape that data? Why or why not?
+
+[NOTE]
+====
+You may get more information about `xpath` here: https://stackoverflow.com/questions/11657223/xpath-get-following-sibling.
+====
+ 
+
+=== Question 2 (4 pts)
+
+Okay, Now, let us look into a website of the housing market. https://zillow.com has extremely rich data on homes for sale, for rent, and lots of land.
+
+Click around and explore the website a little bit. Note the following.
+
+. Homes are typically list on the right hand side of the web page in a 21x2 set of "cards", for a total of 40 homes.
++
+[NOTE]
+====
+At least in my experimentation -- the last row only held 1 card and there was 1 advertisement card, which I consider spam.
+====
+. If you want to search for homes for sale, you can use the following link: `https://www.zillow.com/homes/for_sale/{search_term}_rb/`, where `search_term` could be any hyphen separated set of phrases. For example, to search Lafayette, IN, you could use: https://www.zillow.com/homes/for_sale/lafayette-in_rb.
+. If you want to search for homes for rent, you can use the following link: `https://www.zillow.com/homes/for_rent/{search_term}_rb/`, where `search_term` could be any hyphen separated set of phrases. For example, to search Lafayette, IN, you could use: https://www.zillow.com/for_rent/lafayette-in_rb.
+. If you load, for example, https://www.zillow.com/homes/for_rent/lafayette-in_rb and rapidly scroll down the right side of the screen where the "cards" are shown, it will take a fraction of a second for some of the cards to load. In fact, unless you scroll, those cards will not load and if you were to parse the page contents, you would not find all 40 cards are loaded. This general strategy of loading content as the user scrolls is called lazy loading.
+
+.. Write a function called `get_properties_info` that, given a `search_term` (zipcode), will return a list of property information include zpid, price, number of bedroom, number of bathroom and square footage (sqft) . The function should both get all of the cards on a page, but cycle through all of the pages of homes for the query.  
+
+[TIP]
+====
+The following was a good query that had only 2 pages of results.
+
+[source,python]
+----
+properties_info = get_properties_info("47933")
+----
+====
+
+[TIP]
+====
+You _may_ want to include an internal helper function called `_load_cards` that accepts the driver and scrolls through the page slowly in order to load all of the cards.
+
+https://stackoverflow.com/questions/20986631/how-can-i-scroll-a-web-page-using-selenium-webdriver-in-python[This] link will help! Conceptually, here is what we did.
+
+. Get initial set of cards using xpath expressions.
+. Use `driver.execute_script('arguments[0].scrollIntoView();', cards[num_cards-1])` to scroll to the last card that was found in the DOM.
+. Find cards again (now that more may have loaded after scrolling).
+. If no more cards were loaded, exit.
+. Update the number of cards we've loaded and repeat.
+====
+
+[TIP]
+====
+Sleep 2 seconds using `time.sleep(2)` between every scroll or link click.
+====
+
+[TIP]
+====
+After getting the information for each page, use `driver.delete_all_cookies()` to clear off cookies and help avoid captcha.
+====
+
+[TIP]
+====
+If you using the link from the "next page" button to get the next page, instead, use `next_page.click()` to click on the link. Otherwise, you may get a captcha.
+====
+
+[TIP]
+====
+Use something like:
+
+[source,python]
+----
+with driver as d:
+    d.get(blah)
+----
+
+This way, after exiting the `with` scope, the driver will be properly closed and quit which will decrease the likelihood of you getting captchas.
+====
+
+[TIP]
+====
+For our solution, we had a `while True:` loop in the `_load_cards` function and in the `get_properties_info` function and used the `break` command in an if statement to exit.
+====
+
+[TIP]
+====
+Need more help? Post in Piazza and I will help get you unstuck and give more hints.
+====
+
+
+=== Question 3 (2 pts)
+
+.. Please create a visualization based on the data from the previous question. Select any data points you find compelling and choose an appropriate chart type for representation. Provide a brief explanation of your choices
+
+Project 10 Assignment Checklist
+====
+* Jupyter Lab notebook with your codes, comments and outputs for the assignment
+    ** `firstname-lastname-project10.ipynb`.
+ 
+* Submit files through Gradescope
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====
+
