@@ -1,0 +1,224 @@
+= TDM 20100: Project 12 -- 2023
+
+**Motivation:** In the previous projects, you've gained experience writing all types of queries, touching on the majority of the main concepts. One critical concept that we _haven't_ yet done is creating your _own_ database. While typically database administrators and engineers will typically be in charge of large production databases, it is likely that you may need to prop up a small development database for your own use at some point in time (and _many_ of you have had to do so this year!). In this project, we will walk through all of the steps to prop up a simple sqlite database for one of our datasets.
+
+**Context:** We will (mostly) be using the https://www.sqlite.org/[sqlite3] command line tool to interact with the database.
+
+**Scope:** sql, sqlite, unix
+
+.Learning Objectives
+****
+- Create a sqlite database schema.
+- Populate the database with data using `INSERT` statements.
+- Populate the database with data using the command line interface (CLI) for sqlite3.
+- Run queries on a database.
+- Create an index to speed up queries.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The project will use the following datasets:
+
+* `/anvil/projects/tdm/data/restaurant/orders.csv`
+* `/anvil/projects/tdm/data/lahman/lahman.db`
+
+To run SQL queries in a Jupyter Lab notebook, first run the following in a cell at the top of your notebook to establish a connection with the database. For example
+
+[source,python]
+----
+%sql sqlite:////anvil/projects/tdm/data/lahman/lahman.db
+----
+
+For every following cell where you want to run a SQL query, prepend `%%sql` to the top of the cell -- just like we do for R or bash cells.
+
+== Questions
+
+=== Question 1 (2 pts)
+
+.. Create a markdown list of key:value pairs for each column in the `orders.csv` dataset. Each _key_ should be the title of the column, each _value_ should be the _type_ of data that is stored in that column. You may follow the instructions below for this question
+
+
+First thing is first, create a new Jupyter Notebook called `firstname-lastname-project12.ipynb`. You will put the text of your solutions in this notebook. Next, in Jupyter Lab, open a fresh terminal window. We will be able to run the `sqlite3` command line tool from the terminal window.
+
+Okay, once completed, the first step is schema creation. First, it is important to note. **The goal of this project is to put the data in `/anvil/projects/tdm/data/restaurant/orders.csv` into a sqlite database **
+
+With that in mind, run the following (in your terminal) to get a sample of the data.
+
+[source,bash]
+----
+head /anvil/projects/tdm/data/restaurant/orders.csv
+----
+
+Review the output data. An SQL schema is a set of text or code that defines how the database is structured and how each piece of data is stored. In a lot of ways it is similar to how a data.frame has columns with different types -- just more "set in stone" than the very easily changed data.frame.
+
+Each database handles schemas slightly differently. In sqlite, the database will contain a single schema table that describes all included tables, indexes, triggers, views, etc. Specifically, each entry in the `sqlite_schema` table will contain the type, name, tbl_name, root page, and sql for the database object.
+
+[NOTE]
+====
+For sqlite, the "database object" could refer to a table, index, view, or trigger.
+====
+
+This detail is more than is needed for right now. If you are interested in learning more, the sqlite documentation is very good, and the relevant page to read about this is https://www.sqlite.org/schematab.html[here].
+
+For _our_ purposes, when I refer to "schema", what I _really_ mean is the set of commands that will build our tables, indexes, views, and triggers. sqlite makes it particularly easy to open up a sqlite database and get the _exact_ commands to build the database from scratch _without_ the data itself. For example, take a look at our `lahman.db` database by running the following in your terminal.
+
+[source,bash]
+----
+sqlite3 /anvil/projects/tdm/data/lahman/lahman.db
+----
+
+This will open the command line interface (CLI) for sqlite3. It will look similar to:
+
+[source,bash]
+----
+sqlite>
+----
+
+Type `.schema` to see the "schema" for the database.
+
+[NOTE]
+====
+Any command you run in the sqlite CLI that starts with a dot (`.`) is called a "dot command". A dot command is exclusive to sqlite and the same functionality cannot be expected to be available in other SQL tools like Postgresql, MariaDB, or MS SQL. You can list all of the dot commands by typing `.help`.
+====
+
+After running `.schema`, you should see a variety of legitimate SQL commands that will create the structure of your database _without_ the data itself. This is an extremely useful self-documenting tool that is particularly useful.
+
+So, now let's study the sample of our `orders.csv` dataset to create a markdown list of key:value pairs for each column in the dataset. Each _key_ should be the title of the column, and each _value_ should be the _type_ of data that is stored in that column.
+
+For example:
+
+- akeed_order_id: INTEGER
+
+Where the _value_ is one of the 5 "affinity types" (INTEGER, TEXT, BLOB, REAL, NUMERIC) in sqlite. See section "3.1.1" https://www.sqlite.org/datatype3.html[here]. 
+
+Okay, you may be asking, "what is the difference between INTEGER, REAL, and NUMERIC?". Great question. In general (for other SQL RDBMSs), there are _approximate_ numeric data types and _exact_ numeric data types. What you are most familiar with is the _approximate_ numeric data types. In R or Python for example, try running the following:
+
+[source,r]
+----
+(3 - 2.9) <= 0.1
+----
+
+.Output
+----
+FALSE
+----
+
+[source,python]
+----
+(3 - 2.9) <= 0.1
+----
+
+.Output
+----
+False
+----
+
+Under the hood, the values are stored as a very close approximation of the real value. This small amount of error is referred to as floating point error. There are some instances where it is _critical_ that values are stored as exact values (for example, in finance). In those cases, you would need to use special data types to handle it. In sqlite, this type is NUMERIC. So, for _our_ example, store text as TEXT, numbers _without_ decimal places as INTEGER, and numbers with decimal places as REAL -- our example dataset doesn't have a need for NUMERIC.
+
+
+=== Question 2 (2 pts)
+
+
+Okay, great! At this point in time you should have a list of key:value pairs with the column name and the data type, for each column
+
+.. Create a database named "orders.db" and a table named "orders" by following the instructions below
+
+[NOTE]
+====
+Let's put together our `CREATE TABLE` statement that will create our table in the database.
+
+See https://www.sqlitetutorial.net/sqlite-create-table/[here] for some good examples. Realize that the `CREATE TABLE` statement is not so different from any other query in SQL, and although it looks messy and complicated, it is not so bad. Name your table `orders`.
+
+Once you've written your `CREATE TABLE` statement, create a new, empty database by running the following in a terminal: `sqlite3 $HOME/orders.db`. Copy and paste the `CREATE TABLE` statement into the sqlite CLI. Upon success, you should see the statement printed when running the dot command `.schema`. Fantastic! You can also verify that the table exists by running the dot command `.tables`.
+
+Congratulations! To finish things off, please paste the `CREATE TABLE` statement into a markdown cell in your notebook. In addition, include a screenshot of your `.schema` output after your `CREATE TABLE` statement was run.
+====
+
+
+=== Question 3 (2 pts)
+
+The next step in the project is to add the data! After all, it _is_ a _data_ base. You may get how to insert data into table from https://www.sqlitetutorial.net/sqlite-insert/[here]  
+
+.. Please populate the data from `orders.csv` into your `orders` table
+.. Connect to "orders.db"  and run a query to get the first 5 rows from "orders" table.
+
+
+[TIP]
+====
+* You could programmatically generate a `.sql` file with the `INSERT INTO` statement, hook the database up with Python or R and insert the data that way, _or_ you could use the wonderful dot commands sqlite like following
+
+[source,bash]
+.mode csv
+.import --skip 1 /anvil/projects/tdm/data/restaurant/orders.csv orders
+
+====
+
+[TIP]
+====
+To connect to database:
+
+[source,python]
+----
+%sql sqlite:///$HOME/orders.db
+----
+====
+
+[TIP]
+====
+To select data from table
+[source,python]
+%sql select * from orders limit 5
+====
+
+
+=== Question 4 (2 pts)
+
+
+Woohoo! You've successfully created a database and populated it with data from a dataset -- pretty cool! Connect to your database from inside a terminal.
+
+[source,bash]
+----
+sqlite3 $HOME/orders.db
+----
+
+Now, run the following dot command in order to _time_ our queries: `.timer on`. This will print out the time it takes to run each query. For example, try the following:
+
+[source, sql]
+----
+SELECT * FROM orders LIMIT 5;
+----
+
+Cool! Time the following query.
+
+[source, sql]
+----
+SELECT * FROM orders ORDER BY created_at LIMIT 10;
+----
+
+.Output
+----
+Run Time: real 0.021 user 0.000261 sys 0.004553
+----
+
+Running time is often critical, particularly during large-scale database searches. Let's explore some techniques to enhance performance through the use of indexing in tables. You may get more information about index https://www.sqlitetutorial.net/sqlite-index/ [here]
+
+.. create an index for column "created_at". 
+
+
+Project 12 Assignment Checklist
+====
+* Jupyter Lab notebook with your code, comments and output for the assignment
+    ** `firstname-lastname-project12.ipynb` 
+
+* Sql file 'orders.sql'
+* Submit files through Gradescope
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+
+In addition, please review our xref:projects:current-projects:submissions.adoc[submission guidelines] before submitting your project.
+====
