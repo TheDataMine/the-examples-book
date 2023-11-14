@@ -19,47 +19,53 @@ Make sure to read about, and use the template found xref:templates.adoc[here], a
 
 == Dataset(s)
 
-The following questions will use the following dataset(s):
+For this project, we will be using the `lahman` sqlite database. This database contains the data in the directory  
 
-- `/anvil/projects/tdm/data/flights/subset/flights_sample.db`
-- `/anvil/projects/tdm/data/movies_and_tv/imdb.db`
+- `/anvil/projects/tdm/data/lahman`
+
+You may get some more `lahman` database information from this youtube video http://youtube.com/watch?v=tS_-oTbsDzs
+[2023 SABR Analytics:Sean Lahman, "introduction to Baseball Databases"]
+
+To run SQL queries in a Jupyter Lab notebook, first run the following in a cell at the top of your notebook to establish a connection with the database.
+
+[source,python]
+----
+%sql sqlite:////anvil/projects/tdm/data/lahman/lahman.db
+----
+
+For every following cell where you want to run a SQL query, prepend `%%sql` to the top of the cell -- just like we do for R or bash cells.
 
 == Questions
 
-=== Question 1
+=== Question 1 (2 pts)
 
+.. Following the instructions to create a new column and a trigger for table "teams"
+.. Update the table "teams" and display the updated information
 
+[NOTE]
+====
 Begin by copying the database from the previous project to your `$HOME` directory. Open up a terminal and run the following.
 
 [source,bash]
 ----
-cp /anvil/projects/tdm/data/flights/subset/flights_sample.db $HOME
+cp /anvil/projects/tdm/data/lahman/lahman.db $HOME
 ----
 
 Go ahead and launch `sqlite3` and connect to the database.
 
 [source,bash]
 ----
-sqlite3 $HOME/flights_sample.db
+sqlite3 $HOME/lahman.db
 ----
 
 From within `sqlite3`, test things out to make sure the data looks right.
 
 [source, sql]
 ----
-.header on
-SELECT * FROM flights LIMIT 5;
-----
 
-.expected output
+SELECT * FROM teams LIMIT 5;
 ----
-Year|Month|DayofMonth|DayOfWeek|DepTime|CRSDepTime|ArrTime|CRSArrTime|UniqueCarrier|FlightNum|TailNum|ActualElapsedTime|CRSElapsedTime|AirTime|ArrDelay|DepDelay|Origin|Dest|Distance|TaxiIn|TaxiOut|Cancelled|CancellationCode|Diverted|CarrierDelay|WeatherDelay|NASDelay|SecurityDelay|LateAircraftDelay
-2007|1|1|1|1232|1225|1341|1340|WN|2891|N351|69|75|54|1|7|SMF|ONT|389|4|11|0||0|0|0|0|0|0
-2007|1|1|1|1918|1905|2043|2035|WN|462|N370|85|90|74|8|13|SMF|PDX|479|5|6|0||0|0|0|0|0|0
-2007|1|1|1|2206|2130|2334|2300|WN|1229|N685|88|90|73|34|36|SMF|PDX|479|6|9|0||0|3|0|0|0|31
-2007|1|1|1|1230|1200|1356|1330|WN|1355|N364|86|90|75|26|30|SMF|PDX|479|3|8|0||0|23|0|0|0|3
-2007|1|1|1|831|830|957|1000|WN|2278|N480|86|90|74|-3|1|SMF|PDX|479|3|9|0||0|0|0|0|0|0
-----
+ 
 
 With any luck, things should be working just fine.
 
@@ -69,72 +75,70 @@ First, we need to create a new column called "updated_at", and set the default v
 
 [source, sql]
 ----
-ALTER TABLE flights ADD COLUMN updated_at DATETIME DEFAULT '1970-01-01 00:00:00';
+ALTER TABLE teams ADD COLUMN updated_at DATETIME DEFAULT '1970-01-01 00:00:00';
 ----
 
 If you query the table now, you will see all of the values have been properly added, great!
 
 [source, sql]
 ----
-SELECT * FROM flights LIMIT 5;
+SELECT * FROM teams LIMIT 5;
 ----
 
-Now add a trigger called "update_updated_at" that will update the "updated_at" column to the current date and time whenever a record is updated. Check out the official documentation https://www.sqlite.org/lang_createtrigger.html[here] for examples of triggers.
+Now add a trigger called "update_teams_updated_at" that will update the "updated_at" column to the current date and time whenever a record is updated. Check out the official documentation https://www.sqlite.org/lang_createtrigger.html[here] for examples of triggers.
 
 Once your trigger has been written, go ahead and test it out by updating the following record.
 
 [source, sql]
 ----
-UPDATE flights SET Year = 5555 WHERE Year = 2007 AND Month = 1 AND DayofMonth = 1 AND DayOfWeek = 1 AND DepTime = 1225 AND Origin = 'SMF';
+UPDATE teams SET teamRank = 3 WHERE YearID = 2022 AND TEAMID ='ARI';
 ----
 
 [source, sql]
 ----
-SELECT * FROM flights WHERE Year = 5555;
+SELECT * FROM TEAMS WHERE YearID = 2022 AND TEAMID ='ARI' ;
 ----
 
 If it worked right, your `updated_at` column should have been updated to the current date and time, cool!
+====
 
+=== Question 2 (2 pts)
 
-=== Question 2
-
-
+[NOTE]
+====
 Next, we will touch on _views_. A view is essentially a virtual table that is created from some query and given a name. Why would you want to create such a thing? Well, there could be many reasons.
 
 Maybe you have a complex query that you need to run frequently, and it would just be easier to see the final result with a click? Maybe the database has horrible naming conventions and you want to rename things in a view to make it more readable and/or queryable?
 
-After some thought, it may occur to you that we've had such an instance where a view could be nice using our `imdb.db` database!
+After some thought, it may occur to you that we've had such an instance where a view could be nice using our `lahman.db` database! 
 
-Copy the `imdb.db` to your `$SCRATCH` directory, and navigate to your `$SCRATCH` directory.
+You may get more information about "view" https://www.sqlitetutorial.net/sqlite-create-view/ [Here]
+====
 
-[source,bash]
-----
-cp /anvil/projects/tdm/data/movies_and_tv/imdb.db $SCRATCH
-cd $SCRATCH
-----
+.. Create a _view_ called "players_with_awards_2020" that will provide information for a player on the player's name, height, weight and if the play is awards player for year 2020 from the "people" and "awardsplayers" table. 
+.. Display 5 records from the view "players_with_awards_2020"
+[TIP]
+====
+- use "playerID" to join two tables
+====
 
-Sometimes, it would be nice to have the `rating` and `votes` from the `ratings` table available directly from the titles table, wouldn't it? It has been a bit of a hassle to access that information and use a JOIN whenever we've had a need to see rating information. In fact, if you think about it, the rating information living in its own table doesn't really make that much sense. 
-
-Create a _view_ called `titles_with_ratings` that has all of the information from the `titles` table along with the `rating` and `votes` from the `ratings` table. You can find the official documentation https://www.sqlite.org/lang_createview.html[here].
-
-
-=== Question 3
+=== Question 3 (2 pts)
 
 
-Read the offical `sqlite3` documentation for transactions https://www.sqlite.org/lang_transaction.html[here]. As you will read, you've already been using transactions each time you run a query! What we will focus on is how to use transactions to _rollback_ changes, as this is probably the most useful use case you'll run into.
+Read the official `sqlite3` documentation for transactions https://www.sqlite.org/lang_transaction.html[here]. As you will read, you've already been using transactions each time you run a query! What we will focus on is how to use transactions to _rollback_ changes, as this is probably the most useful use case you'll run into.
 
-Connect to our `flights_sample.db` database from question (1), start a _deferred_ transaction, and update a row, similar to what we did before, using the following query.
+Connect to our "lahman.db" database from question (1), start a _deferred_ transaction, and update a row, similar to what we did before, using the following query.
 
 [source, sql]
 ----
-UPDATE flights SET Year = 7777 WHERE Year = 5555;
+UPDATE teams SET teamRank = 30 WHERE YearID = 2022 AND TEAMID ='ARI';
 ----
 
 Now, query the record to see what it looks like.
 
 [source, sql]
 ----
-SELECT * FROM flights WHERE Year = 7777;
+SELECT * FROM teams WHERE YearID = 2022 AND TEAMID ='ARI'and teamRank =30;
 ----
 
 [NOTE]
@@ -142,26 +146,19 @@ SELECT * FROM flights WHERE Year = 7777;
 You'll notice our _trigger_ from before is still working, cool!
 ====
 
-This is pretty great, until you realized that the year should most definitely _not_ be 7777, but rather be 5555. Oh no! Well, at this stage you haven't committed your transaction yet, so you can just _rollback_ the changes and everything will be back to normal. Give it a try (again, following the official documentation).
+This is pretty great, until you realized that the teamRank was not right! Oh no! Well, at this stage you haven't committed your transaction yet, so you can just _rollback_ the changes and everything will be back to normal. Give it a try (again, following the official documentation).
 
 After rolling back, run the following query.
 
 [source, sql]
 ----
-SELECT * FROM flights WHERE Year = 7777;
+SELECT * FROM teams WHERE YearID = 2022 AND TEAMID ='ARI' ;
 ----
 
-As you can see, nothing appears! Let's try with the correct year.
-
-[source,sql]
-----
-SELECT * FROM flights WHERE Year = 5555;
-----
-
-Nice! Note only was our `Year` field rolled back to the original values after question (1), but our `updated_at` field was too, excellent! As you can imagine, this is pretty powerful stuff, especially if you are writing to a database and want to make sure things look right before _committing_ the changes.
+As you can see, the data changed back to the original one! As you can imagine, this is pretty powerful stuff, especially if you are writing to a database and want to make sure things look right before _committing_ the changes.
 
 
-=== Question 4
+=== Question 4 (2 pts)
 
 SQL and `sqlite3` are powerful tools, and we've barely scratched the surface. Check out the https://www.sqlite.org/docs.html[offical documentation], and demonstrate another feature of `sqlite3` that we haven't yet covered.
 
@@ -169,16 +166,14 @@ Some suggestions, if you aren't interested in browsing the documentation: https:
 
 Please make sure the queries you run are run from an sql cell in your Jupyter notebook.
 
+
 Project 13 Assignment Checklist
 ====
 * Jupyter Lab notebook with your code, comments and output for the assignment
-    ** `firstname-lastname-project13.ipynb`  
-
-* Sql file 'orders.sql'
+    ** `firstname-lastname-project13.ipynb` 
+* Sql file
 * Submit files through Gradescope
 ====
-
-
 
 [WARNING]
 ====
