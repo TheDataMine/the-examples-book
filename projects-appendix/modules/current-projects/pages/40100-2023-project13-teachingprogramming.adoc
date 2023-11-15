@@ -1,540 +1,167 @@
 = TDM 40100: Project 13 -- 2023
 
-**Motivation:** One of the primary ways to get and interact with data today is via APIs. APIs provide a way to access data and functionality from other applications. There are 3 very popular types of APIs that you will likely encounter in your work: RESTful APIs, GraphQL APIs, and gRPC APIs. Our focus for the remainder of the semester will be on RESTful APIs.
+**Motivation:** Containers are everywhere and a very popular method of packaging an application with all of the requisite dependencies. In the previous series of projects you've built a web application. While right now it may be easy to share and run your application with another individual, as time goes on and packages are updated, this is less and less likely to be the case. Containerizing your application ensures that the application will have the proper versions of the proper packages available in the proper location to run.
 
-**Context:** We are working on a series of projects that focus on building and using RESTful APIs. We will learn some basics about interacting and using APIs, and even build our own API.
+**Context:** This is a first of a series of projects focused on containers. The end goal of this series is to solidify the concept of a container, and enable you to "containerize" the application you've spent the semester building. You will even get the opportunity to deploy your containerized application!
 
-**Scope:** Python programming, the use of APIs, making asynchronous HTTP requests with httpx, and developing web applications with the lightweight and efficient starlette library.
+**Scope:** Python, containers, UNIX
 
 .Learning Objectives
 ****
-- Understand and use the HTTP methods with the `requests` library.
-- Write REST APIs using the `fastapi` library to deliver data and functionality to a client.
-- Identify the various components of a URL. 
+- Improve your mental model of what a container is and why it is useful.
+- Use UNIX tools to effectively create a container.
 ****
 
 Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
 
 == Questions
 
-[WARNING]
+=== Question 1 (1 pt)
+[loweralpha]
+
+.. Write a bash script to find the available port after you logon to anvil
+
+=== Question 2 (2 pts)
+
+.. Launch a virtual machine (VM) on Anvil with Docker pre-installed.
+.. using docker --version to get version number
+The most popular containerization tool at the time of writing is likely Docker. Unfortunately, Docker is not available on Anvil, as it currently does not enable _rootless_ container creation. In addition, for this first project, we want to mess around with some UNIX tools to _essentially_ create a container -- these tools _also_ require superuser permissions. Therefore, this project will be completed completely from within a shell, using shell tools, on a virtual machine which you will launch. 
+
+We will essentially be running a container on a virtual machine from within a SLURM job on Anvil. Sounds a bit crazy, and it is, but it will provide you with the ability to work fearlessly and break things. Of course, if you _do_ break things, you can _easily_ reset!
+
+First thing is first. Open up a terminal on Anvil. This could be from within Jupyter Lab, or via VS Code, or just from an `ssh` session from within your own terminal. 
+
+Next, to ensure that SLURM environment variables don't alter or effect our SLURM job, run the following.
+
+[source,bash]
+----
+for i in $(env | awk -F= '/SLURM/ {print $1}'); do unset $i; done;
+----
+
+Next, let's make a copy of a pre-made operating system image. This image has Alpine Linux and a few basic tools installed, including: nano, vim, emacs, and Docker. 
+
+[source,bash]
+----
+cp /anvil/projects/tdm/apps/qemu/images/builder.qcow2 $SCRATCH
+----
+
+Next, we want to acquire enough resources (CPU and memory) to not have to worry about something not working. To do this we will use SLURM to launch a job with 4 cores and about 8GB of memory.
+
+[source,bash]
+----
+salloc -A cis220051 -p shared -n 4 -c 1 -t 04:00:00
+----
+
+Next, we need to make `qemu` available to our shell.
+
+[source,bash]
+----
+module load qemu
+----
+
+Next, let's launch our virtual machine with about 8GB of memory and 4 cores.
+
+[source,bash]
+----
+qemu-system-x86_64 -vnc none,ipv4 -hda $SCRATCH/builder.qcow2 -m 8G -smp 4 -enable-kvm -net nic -net user,hostfwd=tcp::2200-:22 &
+----
+
+[IMPORTANT]
 ====
-We updated this project on Tuesday. This update includes changes to the commands run on a windows machine in question (3). We updated the commands as well as the shell (powershell instead of cmd). As noted in the updated question, please make sure to run powershell as an administrator before running the provided commands.
-====
-
-=== Question 1
-
-[WARNING]
-====
-If at any time you get stuck, please make a Piazza post and we will help you out!
-====
-
-For this project, we will be doing something a little different in order to _try_ to make the API development experience on Anvil more pleasant. In addition, I imagine many of you will enjoy what we are going to setup and use it for other projects (or maybe even corporate partners projects).
-
-Typically, when developing an API, you will have a set of code that you will update and modify. To see the results, you will run your API on a certain _port_ (for example 7777), and then interact with the API using a _client_. The most typical client is probably a web browser. So if we had an API running on port 7777, we could interact with it by navigating to `http://localhost:7777` in our browser.
-
-This is not so simple to do on Anvil, or at least not very enjoyable. While there are a variety of ways, the easiest is to use the "Desktop" app on https://ondemand.anvil.rcac.purdue.edu and use the provided editor and browser on the slow and clunky web interface. This is not ideal, and is what we want to avoid. 
-
-Don't just take our word for it, try it out. Navigate to https://ondemand.anvil.rcac.purdue.edu and click on "Desktop" under "Interactive Apps". Choose the following:
-
-- Allocation: "cis220051"
-- Queue: "shared"
-- Wall Time in Hours: 1
-- Cores: 1
-
-Then, click on the "Launch" button. Wait a minute and click on the "Launch Desktop" button when it appears.
-
-Now, lets copy over our example API and run it.
-
-. Click on Applications > Terminal Emulator
-. Run the following commands:
-+
-[source,bash]
-----
-module use /anvil/projects/tdm/opt/core
-module load tdm
-module load python/f2022-s2023
-cp -a /anvil/projects/tdm/etc/hithere $HOME
-cd $HOME/hithere
-----
-+
-. Then, find an unused port by running the following:
-+
-[source,bash]
-----
-find_port # 50087
-----
-+
-. In our example the output was 50087. Now run the API using that port (the port _you_ found).
-+
-[source,bash]
-----
-python3 -m uvicorn imdb.api:app --reload --port 50087
-----
-
-Finally, the last step is to open a browser and check out the API. 
-
-. Click on Applications > Web Browser
-. First navigate to `localhost:50087`
-. Next navigate to `localhost:50087/hithere/yourname`
-
-From here, your development process would be to modify the Python files, let the API reload with the changes, and interact with the API using the browser. This is all pretty clunky due to the slowness of the desktop-in-browser experience. In the remainder of this project we will setup something more pleasant.
-
-For this question, submit a screenshot of your work environment on https://ondemand.anvil.rcac.purdue.edu using the "Desktop" app. It would be best to include both the browser and terminal in the screenshot.
-
- 
-=== Question 2
-
-The first step in this process is an easy one. Install https://code.visualstudio.com/[VS Code] on your local machine. This is a free, open source, and cross-platform editor. It is very popular and has a lot of great features that make it easy and enjoyable to use.
-
-For this question, submit a screenshot of your local machine with a VS Code window open.
- 
-
-=== Question 3
-
-You may be wondering how we are going to use VS Code on your _local_ machine to develop on Anvil. The answer is we are going to use a tool called `ssh` along with a VSCode extension to make this process seamless.
-
-Read through https://the-examples-book.com/starter-guides/unix/ssh[this] page in order to gain a cursory knowledge of `ssh` and how to create public/private key pairs. Generate a public/private key pair on your local machine and add your public key to Anvil. For convenience, we've highlighted the steps below for both Mac and Windows.
-
-**Mac**
-
-. Open a terminal window on your local machine.
-. Run the following command to generate a public/private key pair:
-+
-[source,bash]
-----
-ssh-keygen -a 100 -t ed25519 -f ~/.ssh/id_ed25519
-----
-+ 
-. Click enter twice to _not_ enter a passphrase (for convenience, if you want to follow the other instructions, feel free). 
-. Display the public key contents:
-+
-[source,bash]
-----
-cat ~/.ssh/id_ed25519.pub
-----
-+
-. Highlight the contents of the public key and copy it to your clipboard.
-. Navigate to https://ondemand.anvil.rcac.purdue.edu and click on "Clusters" > "Anvil Shell Access". 
-. Once presented with a terminal, run the following.
-+
-[source,bash]
-----
-mkdir ~/.ssh
-vim ~/.ssh/authorized_keys
-
-# press "i" (for insert) then paste the contents of your public key on a newline
-# then press Ctrl+c, and type ":wq" to save and quit
-
-# set the permissions
-chmod 700 ~/.ssh
-chmod 644 ~/.ssh/authorized_keys
-chmod 644 ~/.ssh/known_hosts
-chmod 644 ~/.ssh/config
-chmod 600 ~/.ssh/id_ed25519
-chmod 644 ~/.ssh/id_ed25519.pub
-----
-. Now, confirm that it works by opening a terminal on your local machine and typing the following.
-+
-[source,bash]
-----
-ssh username@anvil.rcac.purdue.edu
-----
-+
-. Be sure to replace "username" with your _Anvil_ username, for example "x-kamstut".
-. Upon success, you should be immediately connected to Anvil _without_ typing a password -- cool!
-
-**Windows**
-
-https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_keymanagement[This] article may be useful.
-
-. Open a powershell by right clicking on the powershell app and choosing "Run as administrator". 
-. Run the following command to generate a public/private key pair:
-+
-[source,bash]
-----
-ssh-keygen -a 100 -t ed25519
-----
-+
-. Click enter twice to _not_ enter a passphrase (for convenience, if you want to follow the other instructions, feel free).
-. We need to make sure the permissions are correct for your `.ssh` directory and the files therein, otherwise `ssh` will not work properly. Run the following commands from a powershell (again, make sure powershell is running as administrator by right clicking and choosing "Run as administrator"):
-+
-[source,bash]
-----
-# from inside a powershell
-# taken from: https://superuser.com/a/1329702
-New-Variable -Name Key -Value "$env:UserProfile\.ssh\id_ed25519"
-Icacls $Key /c /t /Inheritance:d
-Icacls $Key /c /t /Grant ${env:UserName}:F
-TakeOwn /F $Key
-Icacls $Key /c /t /Grant:r ${env:UserName}:F
-Icacls $Key /c /t /Remove:g Administrator "Authenticated Users" BUILTIN\Administrators BUILTIN Everyone System Users
-# verify
-Icacls $Key
-Remove-Variable -Name Key
-----
-+
-. Display the public key contents:
-+
-[source,bash]
-----
-type %USERPROFILE%\.ssh\id_ed25519.pub
-----
-+
-. Highlight the contents of the public key and copy it to your clipboard.
-. Navigate to https://ondemand.anvil.rcac.purdue.edu and click on "Clusters" > "Anvil Shell Access". 
-. Once presented with a terminal, run the following.
-+
-[source,bash]
-----
-mkdir ~/.ssh
-vim ~/.ssh/authorized_keys
-
-# press "i" (for insert) then paste the contents of your public key on a newline
-# then press Ctrl+c, and type ":wq" to save and quit
-
-# set the permissions
-chmod 700 ~/.ssh
-chmod 644 ~/.ssh/authorized_keys
-chmod 644 ~/.ssh/known_hosts
-chmod 644 ~/.ssh/config
-chmod 600 ~/.ssh/id_ed25519
-chmod 644 ~/.ssh/id_ed25519.pub
-----
-. Now, confirm that it works by opening a command prompt on your local machine and typing the following.
-+
-[source,bash]
-----
-ssh username@anvil.rcac.purdue.edu
-----
-+
-. Be sure to replace "username" with your _Anvil_ username, for example "x-kamstut".
-. Upon success, you should be immediately connected to Anvil _without_ typing a password -- cool!
-
-For this question, just include a sentence in a markdown cell stating whether or not you were able to get this working. If it is not working, the next question won't work either, so please post in Piazza for someone to help!
- 
-
-=== Question 4
-
-Finally, let's install the "Remote Explorer" or "Remote SSH" extension in VS Code. This extension will allow us to connect to Anvil from VS Code and develop on Anvil from our local machine. Once installed, click on the icon on the left-hand side of VS Code that looks like a computer screen.
-
-In the new menu on the left, click the little settings cog. Select the first option, which should be either `/Users/username/.ssh/config` (if on a mac) or `C:\Users\username\.ssh\config` (if on windows). This will open a file in VS Code. Add the following to the file:
-
-.mac config
-----
-Host anvil
-    HostName anvil.rcac.purdue.edu
-    User username
-    IdentityFile ~/.ssh/id_ed25519
-----
-
-.windows config
-----
-Host anvil
-    HostName anvil.rcac.purdue.edu
-    User username
-    IdentityFile C:\Users\username\.ssh\id_ed25519
-----
-
-Save the file and close out of it. Now, if all is well, you will see an "anvil" option under the "SSH TARGETS" menu. Right click on "anvil" and click "Connect to Host in Current Window". Wow! You will now be connected to Anvil! Try opening a file -- notice how the files are the files you have on Anvil -- that is super cool!
-
-Open a terminal in VS Code by pressing `Cmd+Shift+P` (or `Ctrl+Shift+P` on Windows) and typing "terminal". You should see a "Terminal: Create new terminal" option appear. Select it and you should notice a terminal opening at the bottom of your vscode window. That terminal is on Anvil too! Way cool! Run the api by running the following in the new terminal:
+If for some reason you get an error or message saying that port 2200 is being used, no problem! Just change the number in the previous command from 2200 to the output of the following command.
 
 [source,bash]
 ----
-module use /anvil/projects/tdm/opt/core
-module load tdm
-module load python/f2022-s2023
-cd $HOME/hithere
-python3 -m uvicorn imdb.api:app --reload --port 50087
+/script.sh
+# to find available port
 ----
 
-If you are prompted something about port forwarding allow it. In addition open up a browser on your own computer and test out the following links: `localhost:50087` and `localhost:50087/hithere/bob`. Wow! VS Code even takes care of forwarding ports so you can access the API from the comfort of your own computer and browser! This will be extremely useful for the rest of the semester!
-
-For this question, submit a couple of screenshots demonstrating opening code on Anvil from VS Code on your local computer, and accessing the API from your local browser.
- 
-
-=== Question 5
-
-There are tons of cool extensions and themes in VS Code. Go ahead and apply a new theme you like and download some extensions. 
-
-For this question, submit a screenshot of your tricked out VS Code setup with some Python code open. Have some fun!
-
-= TDM 30100: Project 13 -- 2023
-
-**Motivation:** One of the primary ways to get and interact with data today is via APIs. APIs provide a way to access data and functionality from other applications. There are 3 very popular types of APIs that you will likely encounter in your work: RESTful APIs, GraphQL APIs, and gRPC APIs. Our focus for the remainder of the semester will be on RESTful APIs.
-
-**Context:** We are working on a series of projects that focus on building and using RESTful APIs. We will learn some basics about interacting and using APIs, and even build our own API.
-
-**Scope:** Python, APIs, requests, fastapi
-
-.Learning Objectives
-****
-- Understand and use the HTTP methods with the `requests` library.
-- Write REST APIs using the `fastapi` library to deliver data and functionality to a client.
-- Identify the various components of a URL. 
-****
-
-Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
-
-== Questions
-
-[WARNING]
-====
-We updated this project on Tuesday. This update includes changes to the commands run on a windows machine in question (3). We updated the commands as well as the shell (powershell instead of cmd). As noted in the updated question, please make sure to run powershell as an administrator before running the provided commands.
+Then, when you run the `ssh` command below, use the port number to replace 2200.
 ====
 
-=== Question 1
+Next, its time to connect to our virtual machine. We will use `ssh` to do this.
 
-[WARNING]
+[source,bash]
+----
+ssh -p 2200 tdm@localhost -o StrictHostKeyChecking=no
+----
+
+If the command fails, try waiting a minute and rerunning the command -- it may take a minute for the virtual machine to boot up.
+
+When prompted for a password, enter `purdue`. Your username is `tdm` and password is `purdue`.
+
+Finally, now that you have a shell in your virtual machine, you can do anything you want! You have superuser permissions within your virtual machine! To run a command as the super user prepend `doas` to the command. For example, to list the files in the `/root` directory, you would run: `doas ls /root` -- it may prompt you for a password, which is `purdue`. 
+
+If at any time you break something and don't know how to fix it, you can "reset" everything by simply killing the virtual machine, removing `$SCRATCH/builder.qcow2`, and rerunning the commands above.
+
+To kill the virtual machine.
+
+[source,bash]
+----
+# exit the virtual machine by typing "exit" then, on Anvil, run:
+fg %1 # or fg 1 -- this will bring the process to the foreground
+# finally, press CTRL+C to kill the process
+----
+
+For this question, submit a screenshot showing the output of `hostname` from within your virtual machine!
+
+ 
+
+=== Question 3 (2 pts)
+
+.. Exploring the File System. Navigate the Alpine Linux file system and list the contents of the root directory.
+.. List all running processes in the system
+..  Display network configuration and test network connectivity.
+[TIP]
 ====
-If at any time you get stuck, please make a Piazza post and we will help you out!
+- You may refer to the following sample code or create your own ones
+[source, bash] 
+ls /
+
+[source, bash]
+ps aux
+[source,bash]
+ifconfig
+[source, bash]
+ping -c 4 google.com
+
 ====
 
-For this project, we will be doing something a little different in order to _try_ to make the API development experience on Anvil more pleasant. In addition, I imagine many of you will enjoy what we are going to setup and use it for other projects (or maybe even corporate partners projects).
+=== Question 4 (1 pts)
 
-Typically, when developing an API, you will have a set of code that you will update and modify. To see the results, you will run your API on a certain _port_ (for example 7777), and then interact with the API using a _client_. The most typical client is probably a web browser. So if we had an API running on port 7777, we could interact with it by navigating to `http://localhost:7777` in our browser.
+.. Installing a new package 'htop' using the Alpine package manager (apk).
 
-This is not so simple to do on Anvil, or at least not very enjoyable. While there are a variety of ways, the easiest is to use the "Desktop" app on https://ondemand.anvil.rcac.purdue.edu and use the provided editor and browser on the slow and clunky web interface. This is not ideal, and is what we want to avoid. 
+[TIP]
+====
+- some sample codes
 
-Don't just take our word for it, try it out. Navigate to https://ondemand.anvil.rcac.purdue.edu and click on "Desktop" under "Interactive Apps". Choose the following:
+[source, bash]
+#ensure you're installing the latest version of htop.
+sudo apk update
 
-- Allocation: "cis220051"
-- Queue: "shared"
-- Wall Time in Hours: 1
-- Cores: 1
+# use apk to install
+[source, bash]
+sudo apk add htop
+# run to ensure it works
+[source, bash]
+htop
 
-Then, click on the "Launch" button. Wait a minute and click on the "Launch Desktop" button when it appears.
+====
 
-Now, lets copy over our example API and run it.
+=== Question 4 (2 pts)
+.. Write and execute a simple shell script
 
-. Click on Applications > Terminal Emulator
-. Run the following commands:
-+
-[source,bash]
-----
-module use /anvil/projects/tdm/opt/core
-module load tdm
-module load python/f2022-s2023
-cp -a /anvil/projects/tdm/etc/hithere $HOME
-cd $HOME/hithere
-----
-+
-. Then, find an unused port by running the following:
-+
-[source,bash]
-----
-find_port # 50087
-----
-+
-. In our example the output was 50087. Now run the API using that port (the port _you_ found).
-+
-[source,bash]
-----
-python3 -m uvicorn imdb.api:app --reload --port 50087
-----
-
-Finally, the last step is to open a browser and check out the API. 
-
-. Click on Applications > Web Browser
-. First navigate to `localhost:50087`
-. Next navigate to `localhost:50087/hithere/yourname`
-
-From here, your development process would be to modify the Python files, let the API reload with the changes, and interact with the API using the browser. This is all pretty clunky due to the slowness of the desktop-in-browser experience. In the remainder of this project we will setup something more pleasant.
-
-For this question, submit a screenshot of your work environment on https://ondemand.anvil.rcac.purdue.edu using the "Desktop" app. It would be best to include both the browser and terminal in the screenshot.
-
- 
-=== Question 2
-
-The first step in this process is an easy one. Install https://code.visualstudio.com/[VS Code] on your local machine. This is a free, open source, and cross-platform editor. It is very popular and has a lot of great features that make it easy and enjoyable to use.
-
-For this question, submit a screenshot of your local machine with a VS Code window open.
+[source, bash]
+echo 'echo Hello Your name , You are the Best!!!' > hello.sh
+chmod +x hello.sh
+./hello.sh
  
 
-=== Question 3
-
-You may be wondering how we are going to use VS Code on your _local_ machine to develop on Anvil. The answer is we are going to use a tool called `ssh` along with a VSCode extension to make this process seamless.
-
-Read through https://the-examples-book.com/starter-guides/unix/ssh[this] page in order to gain a cursory knowledge of `ssh` and how to create public/private key pairs. Generate a public/private key pair on your local machine and add your public key to Anvil. For convenience, we've highlighted the steps below for both Mac and Windows.
-
-**Mac**
-
-. Open a terminal window on your local machine.
-. Run the following command to generate a public/private key pair:
-+
-[source,bash]
-----
-ssh-keygen -a 100 -t ed25519 -f ~/.ssh/id_ed25519
-----
-+ 
-. Click enter twice to _not_ enter a passphrase (for convenience, if you want to follow the other instructions, feel free). 
-. Display the public key contents:
-+
-[source,bash]
-----
-cat ~/.ssh/id_ed25519.pub
-----
-+
-. Highlight the contents of the public key and copy it to your clipboard.
-. Navigate to https://ondemand.anvil.rcac.purdue.edu and click on "Clusters" > "Anvil Shell Access". 
-. Once presented with a terminal, run the following.
-+
-[source,bash]
-----
-mkdir ~/.ssh
-vim ~/.ssh/authorized_keys
-
-# press "i" (for insert) then paste the contents of your public key on a newline
-# then press Ctrl+c, and type ":wq" to save and quit
-
-# set the permissions
-chmod 700 ~/.ssh
-chmod 644 ~/.ssh/authorized_keys
-chmod 644 ~/.ssh/known_hosts
-chmod 644 ~/.ssh/config
-chmod 600 ~/.ssh/id_ed25519
-chmod 644 ~/.ssh/id_ed25519.pub
-----
-. Now, confirm that it works by opening a terminal on your local machine and typing the following.
-+
-[source,bash]
-----
-ssh username@anvil.rcac.purdue.edu
-----
-+
-. Be sure to replace "username" with your _Anvil_ username, for example "x-kamstut".
-. Upon success, you should be immediately connected to Anvil _without_ typing a password -- cool!
-
-**Windows**
-
-https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_keymanagement[This] article may be useful.
-
-. Open a powershell by right clicking on the powershell app and choosing "Run as administrator". 
-. Run the following command to generate a public/private key pair:
-+
-[source,bash]
-----
-ssh-keygen -a 100 -t ed25519
-----
-+
-. Click enter twice to _not_ enter a passphrase (for convenience, if you want to follow the other instructions, feel free).
-. We need to make sure the permissions are correct for your `.ssh` directory and the files therein, otherwise `ssh` will not work properly. Run the following commands from a powershell (again, make sure powershell is running as administrator by right clicking and choosing "Run as administrator"):
-+
-[source,bash]
-----
-# from inside a powershell
-# taken from: https://superuser.com/a/1329702
-New-Variable -Name Key -Value "$env:UserProfile\.ssh\id_ed25519"
-Icacls $Key /c /t /Inheritance:d
-Icacls $Key /c /t /Grant ${env:UserName}:F
-TakeOwn /F $Key
-Icacls $Key /c /t /Grant:r ${env:UserName}:F
-Icacls $Key /c /t /Remove:g Administrator "Authenticated Users" BUILTIN\Administrators BUILTIN Everyone System Users
-# verify
-Icacls $Key
-Remove-Variable -Name Key
-----
-+
-. Display the public key contents:
-+
-[source,bash]
-----
-type %USERPROFILE%\.ssh\id_ed25519.pub
-----
-+
-. Highlight the contents of the public key and copy it to your clipboard.
-. Navigate to https://ondemand.anvil.rcac.purdue.edu and click on "Clusters" > "Anvil Shell Access". 
-. Once presented with a terminal, run the following.
-+
-[source,bash]
-----
-mkdir ~/.ssh
-vim ~/.ssh/authorized_keys
-
-# press "i" (for insert) then paste the contents of your public key on a newline
-# then press Ctrl+c, and type ":wq" to save and quit
-
-# set the permissions
-chmod 700 ~/.ssh
-chmod 644 ~/.ssh/authorized_keys
-chmod 644 ~/.ssh/known_hosts
-chmod 644 ~/.ssh/config
-chmod 600 ~/.ssh/id_ed25519
-chmod 644 ~/.ssh/id_ed25519.pub
-----
-. Now, confirm that it works by opening a command prompt on your local machine and typing the following.
-+
-[source,bash]
-----
-ssh username@anvil.rcac.purdue.edu
-----
-+
-. Be sure to replace "username" with your _Anvil_ username, for example "x-kamstut".
-. Upon success, you should be immediately connected to Anvil _without_ typing a password -- cool!
-
-For this question, just include a sentence in a markdown cell stating whether or not you were able to get this working. If it is not working, the next question won't work either, so please post in Piazza for someone to help!
- 
-
-=== Question 4
-
-Finally, let's install the "Remote Explorer" or "Remote SSH" extension in VS Code. This extension will allow us to connect to Anvil from VS Code and develop on Anvil from our local machine. Once installed, click on the icon on the left-hand side of VS Code that looks like a computer screen.
-
-In the new menu on the left, click the little settings cog. Select the first option, which should be either `/Users/username/.ssh/config` (if on a mac) or `C:\Users\username\.ssh\config` (if on windows). This will open a file in VS Code. Add the following to the file:
-
-.mac config
-----
-Host anvil
-    HostName anvil.rcac.purdue.edu
-    User username
-    IdentityFile ~/.ssh/id_ed25519
-----
-
-.windows config
-----
-Host anvil
-    HostName anvil.rcac.purdue.edu
-    User username
-    IdentityFile C:\Users\username\.ssh\id_ed25519
-----
-
-Save the file and close out of it. Now, if all is well, you will see an "anvil" option under the "SSH TARGETS" menu. Right click on "anvil" and click "Connect to Host in Current Window". Wow! You will now be connected to Anvil! Try opening a file -- notice how the files are the files you have on Anvil -- that is super cool!
-
-Open a terminal in VS Code by pressing `Cmd+Shift+P` (or `Ctrl+Shift+P` on Windows) and typing "terminal". You should see a "Terminal: Create new terminal" option appear. Select it and you should notice a terminal opening at the bottom of your vscode window. That terminal is on Anvil too! Way cool! Run the api by running the following in the new terminal:
-
-[source,bash]
-----
-module use /anvil/projects/tdm/opt/core
-module load tdm
-module load python/f2022-s2023
-cd $HOME/hithere
-python3 -m uvicorn imdb.api:app --reload --port 50087
-----
-
-If you are prompted something about port forwarding allow it. In addition open up a browser on your own computer and test out the following links: `localhost:50087` and `localhost:50087/hithere/bob`. Wow! VS Code even takes care of forwarding ports so you can access the API from the comfort of your own computer and browser! This will be extremely useful for the rest of the semester!
-
-For this question, submit a couple of screenshots demonstrating opening code on Anvil from VS Code on your local computer, and accessing the API from your local browser.
- 
-
-=== Question 5
-
-There are tons of cool extensions and themes in VS Code. Go ahead and apply a new theme you like and download some extensions. 
-
-For this question, submit a screenshot of your tricked out VS Code setup with some Python code open. Have some fun!
- 
- 
 Project 13 Assignment Checklist
 ====
 * Jupyter Lab notebook with your code, comments and output for the assignment
     ** `firstname-lastname-project13.ipynb` 
 * Submit files through Gradescope
-====
-
-[WARNING]
-====
-_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
-
-In addition, please review our xref:projects:current-projects:submissions.adoc[submission guidelines] before submitting your project.
 ====
 
 [WARNING]
