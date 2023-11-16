@@ -1,6 +1,6 @@
 = TDM 40100: Project 13 -- 2023
 
-**Motivation:** Containers are everywhere and a very popular method of packaging an application with all of the requisite dependencies. In the previous series of projects you've built a web application. While right now it may be easy to share and run your application with another individual, as time goes on and packages are updated, this is less and less likely to be the case. Containerizing your application ensures that the application will have the proper versions of the proper packages available in the proper location to run.
+**Motivation:** Containers are everywhere and a very popular method of packaging an application with all of the requisite dependencies. This project we will learn some basics of containerization in a virtual environment using Alpine Linus
 
 **Context:** This is a first of a series of projects focused on containers. The end goal of this series is to solidify the concept of a container, and enable you to "containerize" the application you've spent the semester building. You will even get the opportunity to deploy your containerized application!
 
@@ -19,19 +19,31 @@ Make sure to read about, and use the template found xref:templates.adoc[here], a
 === Question 1 (1 pt)
 [loweralpha]
 
-.. Write a bash script to find the available port after you logon to anvil
+.. Logon to anvil and use a bash command to find an available port you may use later. Just need to list 1 available port number 
+ 
+[TIP]
+====
+- You may use the following code to find port from range 1025 to 65535, please edit if needed or run you own code
+- You may use a loop to do it for you instead of manually try one by one
+[source, bash]
+if timeout 2 bash -c ">&/dev/tcp/127.0.0.1/1025" 2>/dev/null; then
+    echo "Port used"
+else
+    echo "Port available"
+====
 
 === Question 2 (2 pts)
 
-.. Launch a virtual machine (VM) on Anvil with Docker pre-installed.
-.. using docker --version to get version number
-The most popular containerization tool at the time of writing is likely Docker. Unfortunately, Docker is not available on Anvil, as it currently does not enable _rootless_ container creation. In addition, for this first project, we want to mess around with some UNIX tools to _essentially_ create a container -- these tools _also_ require superuser permissions. Therefore, this project will be completed completely from within a shell, using shell tools, on a virtual machine which you will launch. 
+.. Launch a virtual machine (VM) on Anvil with Docker pre-installed. Submit the output of job id and process id after you start a virtual machine like
+.output
+[1] 3152048
+.. List the docker version inside the virtual machine
 
-We will essentially be running a container on a virtual machine from within a SLURM job on Anvil. Sounds a bit crazy, and it is, but it will provide you with the ability to work fearlessly and break things. Of course, if you _do_ break things, you can _easily_ reset!
+[NOTE]
+====
+The most popular containerization tool at the time of writing is likely Docker. We will Launch a virtual machine on Anvil with Docker pre-installed
 
-First thing is first. Open up a terminal on Anvil. This could be from within Jupyter Lab, or via VS Code, or just from an `ssh` session from within your own terminal. 
-
-Next, to ensure that SLURM environment variables don't alter or effect our SLURM job, run the following.
+First thing is first. Open up a terminal on Anvil. You may do it from within Jupyter Lab, run the following code to ensure that SLURM environment variables don't alter or effect our SLURM job 
 
 [source,bash]
 ----
@@ -52,78 +64,70 @@ Next, we want to acquire enough resources (CPU and memory) to not have to worry 
 salloc -A cis220051 -p shared -n 4 -c 1 -t 04:00:00
 ----
 
-Next, we need to make `qemu` available to our shell.
+Next, we need to make `qemu` available to our shell. Open a terminal and run the following code
 
 [source,bash]
 ----
 module load qemu
+# check the module loaded
+module list
 ----
 
-Next, let's launch our virtual machine with about 8GB of memory and 4 cores.
+Next, let's launch our virtual machine with about 8GB of memory and 4 cores. Replace the "[port]" with port number you got from question 1
 
 [source,bash]
 ----
-qemu-system-x86_64 -vnc none,ipv4 -hda $SCRATCH/builder.qcow2 -m 8G -smp 4 -enable-kvm -net nic -net user,hostfwd=tcp::2200-:22 &
+qemu-system-x86_64 -vnc none,ipv4 -hda $SCRATCH/builder.qcow2 -m 8G -smp 4 -enable-kvm -net nic -net user,hostfwd=tcp::[port]-:22 &
 ----
 
 [IMPORTANT]
 ====
-If for some reason you get an error or message saying that port 2200 is being used, no problem! Just change the number in the previous command from 2200 to the output of the following command.
-
-[source,bash]
-----
-/script.sh
-# to find available port
-----
-
-Then, when you run the `ssh` command below, use the port number to replace 2200.
+- [port] need to be replaced
 ====
 
 Next, its time to connect to our virtual machine. We will use `ssh` to do this.
 
 [source,bash]
 ----
-ssh -p 2200 tdm@localhost -o StrictHostKeyChecking=no
+ssh -p [port] tdm@localhost -o StrictHostKeyChecking=no
 ----
 
 If the command fails, try waiting a minute and rerunning the command -- it may take a minute for the virtual machine to boot up.
 
 When prompted for a password, enter `purdue`. Your username is `tdm` and password is `purdue`.
 
-Finally, now that you have a shell in your virtual machine, you can do anything you want! You have superuser permissions within your virtual machine! To run a command as the super user prepend `doas` to the command. For example, to list the files in the `/root` directory, you would run: `doas ls /root` -- it may prompt you for a password, which is `purdue`. 
-
-If at any time you break something and don't know how to fix it, you can "reset" everything by simply killing the virtual machine, removing `$SCRATCH/builder.qcow2`, and rerunning the commands above.
-
-To kill the virtual machine.
-
-[source,bash]
-----
-# exit the virtual machine by typing "exit" then, on Anvil, run:
-fg %1 # or fg 1 -- this will bring the process to the foreground
-# finally, press CTRL+C to kill the process
-----
-
+Finally, now that you have a shell in your virtual machine, you can do anything you want! You have superuser permissions within your virtual machine! 
 For this question, submit a screenshot showing the output of `hostname` from within your virtual machine!
 
- 
+====
+
+[TIP]
+====
+- You may get your docker version with 
+[source, python]
+docker --version
+====
 
 === Question 3 (2 pts)
 
-.. Exploring the File System. Navigate the Alpine Linux file system and list the contents of the root directory.
-.. List all running processes in the system
-..  Display network configuration and test network connectivity.
+.. Exploring the virtual machine File System. Navigate the Alpine Linux file system and list the contents of the root directory.
+.. List all running processes in the system 
+.. Display network configuration and test network connectivity.
 [TIP]
 ====
 - You may refer to the following sample code or create your own ones
+# list all root files
 [source, bash] 
 ls /
-
+# system running processes
 [source, bash]
 ps aux
+# network interface configuration
 [source,bash]
 ifconfig
+# reachability to purdue.edu
 [source, bash]
-ping -c 4 google.com
+ping -c 4 purdue.edu
 
 ====
 
