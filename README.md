@@ -8,8 +8,6 @@
 
 **Website**: [https://the-examples-book.com](https://the-examples-book.com) (`main` branch)
 
-**Old website (being transferred)**: [https://thedatamine.github.io/the-examples-book](https://thedatamine.github.io/the-examples-book) (`master` branch)
-
 ---
 
 # The Examples Book
