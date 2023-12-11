@@ -1,0 +1,158 @@
+= TDM 10200: Project 3 -- 2024
+
+**Motivation:** Learning about Big Data. When working with large data sets, it is important to know how we can use loops to find our information, a little bit at a time, without reading in all of the files at once. 
+We will need to *set our cores to 4* for this when we spin up Juypter Notebook. This will give us more space, to handle processing this week's datasets. If we do not adjust the cores, then our kernel will crash every time we try to run a cell. 
+
+
+**Scope:** Python, If statements, for loops, 
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Examples Book Content
+
+Please review the following Examples Book Contents  
+- https://the-examples-book.com/programming-languages/python/tuples [Python tuples]
+- https://the-examples-book.com/programming-languages/python/lists [Python lists]
+- https://the-examples-book.com/programming-languages/python/pandas-dataframes [Python pandas DataFrames] 
+- https://the-examples-book.com/programming-languages/python/matplotlib [matplotlib]
+
+== Dataset(s)
+
+/anvil/projects/tdm/data/noaa
+
+[NOTE]
+====
+You can read https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt[here] about what the data means.
+
+. 11 character station ID
+. 8 character date in YYYYMMDD format
+. 4 character element code (you can see the element codes https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt[here] in section III)
+. value of the data (varies based on the element code)
+. 1 character M-flag (10 possible values, see section III https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt[here])
+. 1 character Q-flag (14 possible values, see section III https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt[here])
+. 1 character S-flag (30 possible values, see section III https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt[here])
+. 4 character observation time (HHMM) (0700 = 7:00 AM) -- may be blank
+====
+== Questions
+
+=== Question 1 (2 points) 
+
+
+[loweralpha]
+.. Which years of data are available in the directory "/anvil/projects/tdm/data/noaa"
+.. What would the path be to access only the 2020 file in this data set?
+.. Go ahead and import the library `pandas` as `pd`, and import `Path` from `pathlib`
+
+[TIP]
+====
+[source, python]
+----
+/anvil/projects/tdm/data/noaa/2020.csv
+
+import pandas as pd
+from pathlib import Path
+----
+====
+
+=== Question 2 (2 points)
+
+ 
+[loweralpha]
+
+.. How many records in total for the following "files" object?
+[source, python]
+----
+files = [Path(f'//anvil/projects/tdm/data/noaa/{year}.csv') for year in range(2014,2025)]
+files
+----
+This code uses list comprehension to create a list of file paths, ranging from the years of 2014 to 2024
+*`files`* will now contain strings of file paths for *all* the csv files in this directory. 
+
+.. Add column titles for each column while read the first file to a dataset
+.. Display the data from the first five rows.
+[TIP]
+====
+#reads the first file into a df called `sampleDF`
+sampleDF = pd.read_csv(files[0],names = ["id","date","element_code","value","mflag","qflag","sflag","obstime"])
+#looks for column names from the df
+column_names = sampleDF.columns
+print(column_names)
+====
+
+=== Question 3 (2 points)
+
+Let's look at the column `element_code` 
+
+[loweralpha]
+.. Print out the unique elements of this column.
+.. Find the number of times that `AWDR` occurs in the `element_code` column.
+
+[TIP]
+====
+[source,python]
+----
+sampleDF['element_code'].value_counts()['AWDR']
+----
+====
+ 
+
+=== Question 4 (2 pts)
+
+.. Find the number of times that AWDR` occurs in the `element_code` column from year 1910 to year 2020
+
+Instead of using 
+[source, python]
+----
+count = 0
+for file in files:
+    df = pd.read_csv(file)
+    count += len(df[df['element_code'] == 'AWDR'])
+
+print(count)
+----
+ 
+[source,python]
+----
+total_count = 0
+for file in files:
+    for df in pd.read_csv(file, chunksize=10000):
+        for index, row in df.iterrows():
+            if row['Origin'] == 'IND':
+                total_count += 1
+
+print(total_count)
+----
+
+Using
+ 
+[TIP]
+====
+[source, python]
+----
+ind = 0
+for file in files:
+    with open(file,'r') as f:
+        for line in f:
+            if line.split(",")[16] == 'AWDR':
+                ind += 1
+print(origin_ind)
+----
+====
+Project 03 Assignment Checklist
+====
+* Jupyter Lab notebook with your code, comments and output for the assignment
+    ** `firstname-lastname-project03.ipynb`.
+* Python file with code and comments for the assignment
+    ** `firstname-lastname-project03.py`
+
+* Submit files through Gradescope
+==== 
+
+ 
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====
