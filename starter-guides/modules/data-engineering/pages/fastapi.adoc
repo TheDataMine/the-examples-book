@@ -9,7 +9,7 @@ In Stack Overflow 2021 Developer Survey, FastAPI is the third most loved web fra
 One real life example of FastAPI usage is Netflix's Dispatch (crisis management orchestration framework).
 
 
-== Code Examples
+== Example
 
 NOTE: All of the code examples are written in Python, unless otherwise noted.
 
@@ -78,7 +78,7 @@ from sqlalchemy.orm import sessionmaker
 
 # database URL for SQLAlchemy
 # open a file with the SQLite database in the same directory
-SQLALCHEMY_DATABASE_URL = "sqlite:///./expense_tracker.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./tdm-fastapi-example.db"
 
 # create SQLAlchemy engine (home base for the database)
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -141,7 +141,7 @@ define your data models (sorta like validation)
 [source,python]
 ----
 from pydantic import BaseModel
-from datatime import date
+from datetime import date
 
 class ExpenseBase(BaseModel):
     category: str
@@ -176,7 +176,7 @@ For this example, only create and read
 from sqlalchemy.orm import Session
 
 # import models (SQLAlchemy models) and schemas (Pydantic models/schemas) files
-from * import models, schemas
+from . import models, schemas
 
 # Utility Functions
 
@@ -256,12 +256,14 @@ def create_user(user: schemas.UserCreate, db: Session=Depends(get_db)):
     return crud.create_user(db=db, user=user)
 
 @app.get("/users/", response_model=list[schemas.User])
-def read_users(skip: int=0, limit: int=10, db: session=Depends(get_db)):
-    users = crud.get_users(db, user_id=user_id)
+def read_users(skip: int=0, limit: int=10, db: Session=Depends(get_db)):
+    return crud.get_users(db, skip=skip, limit=limit)
 
-    if db_user is None:
-        raise HTTPExeception(status_code=404, detail="User not found")
-    
+@app.get("/users/{user_id}", reponse_model=schemas.User)
+def read_user(user_id: int, db: Session=Depends(get_db)):
+    db_user = crud.get_user(db, user_id=user_id)
+    if db_user:
+        raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
 @app.post("/users/{user_id}/expenses/", response_model=schemas.Expense)
