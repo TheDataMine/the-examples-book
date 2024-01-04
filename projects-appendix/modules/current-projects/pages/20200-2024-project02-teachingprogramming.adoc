@@ -1,71 +1,171 @@
-= TDM 20200: Project 2 -- 2024
+= TDM 30200: Project 02 -- 2024
 
-**Motivation:** Web scraping is is the process of taking content off of the internet. Typically this goes hand-in-hand with parsing or processing the data. Depending on the task at hand, web scraping can be incredibly simple. With that being said, it can quickly become difficult. Typically, students find web scraping fun and empowering.
+**Motivation:** Web scraping is the process of taking content off of the internet. Typically this goes hand-in-hand with parsing or processing the data. In general, scraping data from websites has always been a popular topic in The Data Mine. We will use the website of "books.toscrape.com" to practice scraping skills
 
-**Context:** In the previous project we gently introduced basic webpage contents and BeautifulSoup concepts. In this project, we will learn about real world web scraping, scrape data from an real website 
+**Context:** In the previous project we gently introduced XML and xpath parse a XML document. In this project, we will learn about web scraping, scrape data from a website using BeautifulSoup
 
-**Scope:** Python, requests, web scraping, BeautifulSoup
+**Scope:** Python, web scraping, selenium, BeautifulSoup
 
 .Learning Objectives
 ****
-- Use the requests package to scrape a web page.
-- Use the lxml package to filter and parse data from a scraped web page.
+- Use Selenium and XPath expressions to efficiently scrape targeted data.
+- Use BeautifulSoup to scrape data from web pages
 ****
 
 Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
 
-== Dataset(s)
 
-You will be extracting your own data from online in this project  
-
-https://the-examples-book.com/book/introduction
-https://the-examples-book.com/projects/current-projects/10100-2023-projects
-https://the-examples-book.com/projects/current-projects/30100-2023-projects
-
+ 
 == Questions
 
-=== Question 1 (2 points)
- 
-.. Review the source code for the "The Example book" and provide the following information
-... Copy and paste the `header` element that is 1 level nested in the `main` element into a markdown cell in an HTML code block. Include _just_ the tag with the attributes -- don't include the elements nested within the `header` element.
-
-... List the _keys_ of the _attributes_ of the `header` element. What are the _values_ of the _attributes_ of the `header` element?
-
-... Do the same for the `article` element that is 1 level nested in the `main` element (after the `header` element). 
+=== Question 1 (2 pts)
  
 
-=== Question 2 (2 points)
+.. Please use `selenium` to get and display the book with book's title is "Something More Thank This" in the Romance books page
+.. At same page, try to find book titled "Black Dust" then `click` this book link and then scrape and print book information: product description, upc and availability
 
-.. Find and list what is your current useragent 
-.. Use BeautifulSoup to get the html content for the webpage and print it
-
-=== Question 3 (2 points)
- 
-.. Use BeautifulSoup to find and list the link for all "CourseLinks"
+Take a look at the page source -- do you think clicking the book link was needed in order to scrape that data? Why or why not?
 
 [NOTE]
 ====
-The link will be combined from home page https://the-examples-book.com and 
-internal links for courses such as /projects/...
+You may get more information about `xpath` here: https://www.w3schools.com/xml/xpath_intro.asp [xpath]
 ====
-.. Use the link you find for TDM 101-102, get the content from that webpage
-.. Get Project name, release date and due date from the page
-.. Save the result to a CSV file
+ 
 
-=== Question 4
+=== Question 2 (2 pts)
+ 
+.. Please use BeautifulSoup library to get and display all categories' names from the homepage of the website
 
-.. Find something you interest at the data mine webpages and scrap it and save result to a CSV file
+[TIP]
+====
+
+* BeautifulSoup is a python library. You can use it to extract data from HTML or XML files. You may find more BeautifulSoup information here:  https://www.crummy.com/software/BeautifulSoup/bs4/doc/
+* Use BeautifulSoup for this question
+[source,python]
+from bs4 import BeautifulSoup
+====
+[TIP]
+====
+* You can parse the page with BeautifulSoup
+[source,python]
+bs = BeautifulSoup(driver.page_source,'html.parser')
+====
+[TIP]
+====
+* Review the page source of the website's homepage, including categories located at the sidebar.  The BeautifulSoup "select" method is useful to get names, like this:
+
+[source,python]
+categories = [c.text.strip() for c in bs.select('.nav-list li a')]
+====
+
+
+[source,python]
+----
+import time
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.common.by import By
+ 
+firefox_options = Options()
+firefox_options.add_argument("--window-size=810,1080")
+# Headless mode means no GUI
+firefox_options.add_argument("--headless")
+firefox_options.add_argument("--disable-extensions")
+firefox_options.add_argument("--no-sandbox")
+firefox_options.add_argument("--disable-dev-shm-usage")
+
+driver = webdriver.Firefox(options=firefox_options)
+
+driver.get("https://books.toscrape.com")
+e_t = driver.find_element("xpath",'//article[@class="product_pod"]/h3/a')
+e_p = driver.find_element("xpath",'//p[@class="price_color"]')
+fst_b_t = e_t.text
+fst_b_p =e_p.text
+
+# find book entitled "how music works"
+book_link = driver.find_element(By.LINK_TEXT, "How Music Works")
+book_link.click()
+time.sleep(5)
+
+#scrape and print book information : product description, UPC and availability
+product_desc=driver.find_element(By.CSS_SELECTOR,'meta[name="description"]').get_attribute('content')
+product_desc
+table = driver.find_element(By.XPATH, "//table[@class='table table-striped']")
+upc= table.find_element(By.XPATH, ".//th[text()='UPC']/following-sibling::td[1]")
+upc_value = upc.text
+upc_value
+
+availability = table.find_element(By.XPATH, ".//th[text()='Availability']/following-sibling::td[1]")
+availability_value = availability.text
+availability_value
+driver.quit()
+----
+
+=== Question 3 (2 pts)
+
+.. Please get first page books for category "Mystery". You will need to display the list of book objects with book titles, book price and book availability from the first webpage.
+
+[TIP]
+====
+* Review the page source, you may find one "article" tag holds one book information. You may use find_all to find all "article" tags, like
+
+[source, python]
+articles=bs.find_all("article",class_="product_pod") 
+====
+
+[TIP]
+====
+* You may create an object to hold the book information, like:
+[source,python]
+book = {
+    "title":title,
+    "price":price,
+    "availability":availability
+}
+====
+
+[TIP]
+====
+* You may use a loop to go through the books, like
+[source,python] 
+for article in articles:
+    title = article.h3.a.attrs['title']
+    price = article.find('p',class_='price_color').text
+    availability = article.find('p',class_='instock availability').text
+# create a book object with the extract information
+    ....
+====
+[TIP]
+====
+* You may need a list to hold all book objects, and add all books to it, like
+[source,python]
+all_books=[]
+...
+all_books.append(book)
+====
+[NOTE]
+====
+* You may use different ways to solve the question, like use function "map" etc.  
+====
+
+=== Question 4 (2 pts)
+
+ 
+.. Please update the code from question 3 to get book list tht include the seconde page of the category "Mystery" 
+
+[TIP]
+====
+* Look for pagination link "next" 
+====
+
+ 
 
 Project 02 Assignment Checklist
 ====
 * Jupyter Lab notebook with your code, comments and output for the assignment
-    ** `firstname-lastname-project02.ipynb`.
-* Python file with code and comments for the assignment
-    ** `firstname-lastname-project02.py`
-
+    ** `firstname-lastname-project02.ipynb` 
 * Submit files through Gradescope
-==== 
-
+====
 
 [WARNING]
 ====
