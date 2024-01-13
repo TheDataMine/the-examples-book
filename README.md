@@ -23,7 +23,7 @@ Supplementary material for solving projects assigned in [The Data Mine](https://
 - Time Series: https://the-examples-book.com/starter-guides/data-science/data-analysis/time-series
 - Projects Archive: https://the-examples-book.com/projects
 - Corporate Partners Information: https://the-examples-book.com/crp
-- RCAC Resources & Guides: https://the-examples-book.com/starter-guides/data-engineering/rcac/introduction-rcac
+- Anvil Resources & Guides: https://the-examples-book.com/starter-guides/anvil/
 - Registration: https://the-examples-book.com/registration
 - Think Summer: https://the-examples-book.com/think-summer
 
