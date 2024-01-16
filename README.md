@@ -22,8 +22,8 @@ Supplementary material for solving projects assigned in [The Data Mine](https://
 - MATLAB: https://the-examples-book.com/starter-guides/tools-and-standards/matlab/introduction-matlab
 - Time Series: https://the-examples-book.com/starter-guides/data-science/data-analysis/time-series
 - Projects Archive: https://the-examples-book.com/projects
-- Corporate Partners Information: https://the-examples-book.com/crp/introduction
-- RCAC Resources & Guides: https://the-examples-book.com/starter-guides/data-engineering/rcac/introduction-rcac
+- Corporate Partners Information: https://the-examples-book.com/crp
+- Anvil Resources & Guides: https://the-examples-book.com/starter-guides/anvil/
 - Registration: https://the-examples-book.com/registration
 - Think Summer: https://the-examples-book.com/think-summer
 
