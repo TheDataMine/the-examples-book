@@ -1,0 +1,240 @@
+=  `lxml` examples with the `otc` data set
+
+
+[source,python]
+----
+# Parsing example 1a:
+
+import lxml.etree
+tree = lxml.etree.parse("/anvil/projects/tdm/data/otc/valu.xml")
+ingredients = tree.xpath("//ns:ingredient", namespaces = {'ns': 'urn:hl7-org:v3'})
+
+# there are ten ingredients elements:
+len(ingredients)
+
+# get an ingredient tag
+ingredients[0].tag
+
+# get the attributes of the first ingredient (the results look like a dictionary object)
+ingredients[0].attrib
+
+# or for the last ingredient
+ingredients[9].attrib
+
+# get the attributes of each of the ingredients
+for e in ingredients:
+    print(e.attrib)
+
+# get the first child of each of the ingredients, which is an ingredientSubstance for the first 9 elements
+#     but is a quantity for the last element
+for e in ingredients:
+    print(e[0])
+
+# Instead, we can start the search from each ingredient, and specify that we want to go next to its ingredientSubstance:
+for e in ingredients:
+    print(e.xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0])
+
+# and from there, we can get their names (which happen to always be the second child of the ingredientSubstance
+for e in ingredients:
+    print(e.xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0][1])
+
+# and the text inside those name elements:
+for e in ingredients:
+    print(e.xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0][1].text)
+----
+
+++++
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_u6s2d6cy&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
+++++
+
+[source,python]
+----
+# Parsing example 1b:
+
+# We can also get the ingredientSubstance element inside any specific ingredient element
+
+# For instance, the 0th ingredient has an ingredientSubstance child, which has two children:
+ingredients[0].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()
+
+# The first is a code element with two attributes:
+ingredients[0].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()[0].attrib
+
+# and the second is a name element with some text:
+ingredients[0].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()[1].text
+
+# BUT the 9th ingredient has an ingredientSubstance child, which has three children:
+ingredients[9].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()
+
+# The first is a code element with two attributes:
+ingredients[9].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()[0].attrib
+
+# and the second is a name element with some text:
+ingredients[9].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()[1].text
+
+# and the third is an activeMoiety element with a child also called activeMoiety that has two children:
+ingredients[9].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()[2]
+
+# as we can see here:
+my_element = ingredients[9].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()[2]
+print(lxml.etree.tostring(my_element, pretty_print=True).decode('utf-8'))
+----
+
+++++
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_ixbj4xce&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
+++++
+
+[source,python]
+----
+# Parsing example 1c:
+
+# It is worthwhile to walk through the elements slowly, one at a time, examining the outputs
+# For instance, this is the way to extract the name of the fourth ingredient element:
+ingredients[3][0][1].text
+----
+
+++++
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_y26q29yx&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
+++++
+
+[source,python]
+----
+# Parsing example 1d:
+
+# We can get all of the elements with attribute codeSystem
+tree.xpath("//ns:*[@codeSystem]", namespaces = {'ns': 'urn:hl7-org:v3'})
+
+# If you want to see the attributes of those elements, we can loop through them:
+for e in tree.xpath("//ns:*[@codeSystem]", namespaces = {'ns': 'urn:hl7-org:v3'}):
+    print(e.attrib)
+
+# We can also loop through the elements that have a tag called name:
+names = tree.xpath("//ns:name", namespaces = {'ns': 'urn:hl7-org:v3'})
+i=1
+# print the content between all name tags
+for name_tag in names:
+    print(i, ":", name_tag.text)
+    i=i+1
+----
+
+++++
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_sqi5b3cm&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
+++++
+
+[source,python]
+----
+# Parsing example 2a:
+
+import lxml.etree
+tree = lxml.etree.parse("/anvil/projects/tdm/data/otc/hawaii.xml")
+ingredients = tree.xpath("//ns:ingredient", namespaces = {'ns': 'urn:hl7-org:v3'})
+
+# there are fourteen ingredients elements:
+len(ingredients)
+
+# get an ingredient tag
+ingredients[0].tag
+
+# get the attributes of the first ingredient (the results look like a dictionary object)
+ingredients[0].attrib
+
+# or for the last ingredient
+ingredients[13].attrib
+
+# get the attributes of each of the ingredients
+for e in ingredients:
+    print(e.attrib)
+
+# get the first child of each of the ingredients, which is an ingredientSubstance for 12 of these elements
+#     but is a quantity for two of the elements
+for e in ingredients:
+    print(e[0])
+
+# Instead, we can start the search from each ingredient, and specify that we want to go next to its ingredientSubstance:
+for e in ingredients:
+    print(e.xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0])
+
+# and from there, we can get their names (which happen to always be the second child of the ingredientSubstance
+for e in ingredients:
+    print(e.xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0][1])
+
+# and the text inside those name elements:
+for e in ingredients:
+    print(e.xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0][1].text)
+----
+
+++++
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_pkyg8qzt&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
+++++
+
+[source,python]
+----
+# Parsing example 2b:
+
+# We can also get the ingredientSubstance element inside any specific ingredient element
+
+# For instance, the 0th ingredient has an ingredientSubstance child, which has two children:
+ingredients[0].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()
+
+# The first is a code element with two attributes:
+ingredients[0].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()[0].attrib
+
+# and the second is a name element with some text:
+ingredients[0].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()[1].text
+
+# BUT the 13th ingredient has an ingredientSubstance child, which has three children:
+ingredients[13].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()
+
+# The first is a code element with two attributes:
+ingredients[13].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()[0].attrib
+
+# and the second is a name element with some text:
+ingredients[13].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()[1].text
+
+# and the third is an activeMoiety element with a child also called activeMoiety that has two children:
+ingredients[13].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()[2]
+
+# as we can see here:
+my_element = ingredients[13].xpath(".//ns:ingredientSubstance", namespaces = {'ns': 'urn:hl7-org:v3'})[0].getchildren()[2]
+print(lxml.etree.tostring(my_element, pretty_print=True).decode('utf-8'))
+----
+
+++++
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_k6u6sdn0&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
+++++
+
+[source,python]
+----
+# Parsing example 2c:
+
+# It is worthwhile to walk through the elements slowly, one at a time, examining the outputs
+# For instance, this is the way to extract the name of the fourth ingredient element:
+ingredients[3][0][1].text
+----
+
+++++
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_jqkyxtlc&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
+++++
+
+[source,python]
+----
+# Parsing example 2d:
+
+# We can get all of the elements with attribute codeSystem
+tree.xpath("//ns:*[@codeSystem]", namespaces = {'ns': 'urn:hl7-org:v3'})
+
+# If you want to see the attributes of those elements, we can loop through them:
+for e in tree.xpath("//ns:*[@codeSystem]", namespaces = {'ns': 'urn:hl7-org:v3'}):
+    print(e.attrib)
+
+# We can also loop through the elements that have a tag called name:
+names = tree.xpath("//ns:name", namespaces = {'ns': 'urn:hl7-org:v3'})
+i=1
+# print the content between all name tags
+for name_tag in names:
+    print(i, ":", name_tag.text)
+    i=i+1
+----
+
+++++
+<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_nzamlgz9&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
+++++
