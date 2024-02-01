@@ -26,16 +26,17 @@ The following questions will use the following dataset(s):
 - Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
 - You may refer to https://plot.ly/python[plot introduction]
 - Read plotly express functions on https://plotly.com/python/plotly-express/[this] page. 
-- https://plotly.com/python/axes/
-- https://dash.plotly.com/introduction[`dash`] (in Python)
-- https://the-examples-book.com/starter-guides/tools-and-standards/vscode[Visual Studio Code Starter Guid]
+- https://dash.plotly.com/tutorial["dash tutorial"] (in Python)
+- https://dash.plotly.com/layout["Dash Layout"]
+- https://the-examples-book.com/starter-guides/tools-and-standards/vscode[Visual Studio Code Starter Guide]
+- https://code.visualstudio.com/docs/introvideos/codeediting[Code Editing in Visual Studio Code]
 ====
 
 == Questions
 
 === Question 1 (2 points)
 [loweralpha]
-.. Following the instruction on https://the-examples-book.com/starter-guides/tools-and-standards/vscode[Visual Studio Code Starter Guid], launch VS Code on Anvil
+.. Following the instruction on https://the-examples-book.com/starter-guides/tools-and-standards/vscode[Visual Studio Code Starter Guide], launch VS Code on Anvil
 +
 [TIP]
 ====
@@ -49,13 +50,15 @@ The following questions will use the following dataset(s):
 
 ====
 
-..  Following the instruction on https://the-examples-book.com/starter-guides/tools-and-standards/vscode[Visual Studio Code Starter Guid], initial Configuration of VS Code, install Python extension for Visual Studio 
+..  Following the instruction on https://the-examples-book.com/starter-guides/tools-and-standards/vscode[Visual Studio Code Starter Guide], initial Configuration of VS Code, install Python extension for Visual Studio 
 
-.. Following the instruction on https://the-examples-book.com/starter-guides/tools-and-standards/vscode[Visual Studio Code Starter Guid], select Python interpreter path to "/anvil/projects/tdm/apps/lmodbin/python-seminar/python3"
+.. Following the instruction on https://the-examples-book.com/starter-guides/tools-and-standards/vscode[Visual Studio Code Starter Guide], select Python interpreter path to "/anvil/projects/tdm/apps/lmodbin/python-seminar/python3"
 .. Open a new terminal at visual studio code, show current path for python interpreter 
+
 [TIP]
 ====
 - Refer to "Initial Configuration of VS Code" section to install Python extension
+- Refer to https://code.visualstudio.com/docs/introvideos/codeediting[Code Editing in Visual Studio Code] to find out how to edit and run code
 - Use the following command to check the path for Python interpreter
 [source,python]
 ----
@@ -68,7 +71,7 @@ which python3
 === Question 2 (2 points)
 
 .. Create a python file in Visual Studio Code, name it "who_am_I.py" , simply to create and display a paragraph of your self-introduction that you may use it at a job interview 
-.. Run the file through terminal
+.. Run the file through terminal 
 
 [TIP]
 ====
@@ -79,21 +82,86 @@ python3 who_am_I.py
 
 === Question 3 (2 points)
 
-.. Assemble the prefix string for dash
-.. Run the python file to display a webpage with your self introduction
+[NOTE]
+====
+After set up the "Visual studio code", we can use it to create our Dash app. Since we will run our code at anvil, obviously it will not run at the root path or root url ("http:ondemand.anvil.rcac.purdue.edu"), we will need to create Prefix Path that nest the Dash app under it. Use the provided code to assemble the Prefix Path
+[source,python]
+----
+import subprocess
+import requests
+import lxml.html
+import socket
+import os
+import psutil
+import yaml
+from dash import Dash, html,dcc
+import pandas as pd
+import plotly.express as px
+
+# get the hostname
+hostname= subprocess.run("hostname", text=True, capture_output=True).stdout.strip()
+ 
+def is_port_open(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) != 0
+
+def find_open_port(start_port, end_port):
+    for port in range(start_port, end_port):
+        if is_port_open(port):
+            return port
+    raise RuntimeError("No open port found")
+
+# Use this function to find an open port
+port = find_open_port(8050, 65535)
+
+vscode_port = yaml.unsafe_load(open(f"/proc/{psutil.Process(psutil.Process(psutil.Process(psutil.Process(os.getpid()).ppid()).ppid()).ppid()).ppid()}/cwd/connection.yml", 'r').read()).get("port")
+
+# assemble prefix
+prefix = f"/rnode/{hostname}/{vscode_port}/proxy/{port}/"
+----
+====
+.. Display the prefix string you assembled
+
 
 === Question 4 (2 points)
 
-.. Replace report for one of report at previous project
+.. Now create a Dash app to display your self-introduction online (anvil local hosted webpage)
 
-=== Question 5
+[TIP]
+====
+- Read the https://dash.plotly.com/tutorial["dash tutorial"], understand the basic components to create a Dash App.  
+- You will need to add additional "requests_pathname_prefix" parameter to `Dash` to specify the URL prefix that the Dash app uses for all its requests. Refer to the following code, modify it if needed
+[source, python]
+Dash(__name__,request_pathname_prefix = prefix)
+- You will need to start the app with "port" parameters, refer to the following code, modify it if needed
 
-.. Create your own report
+app.run(port=port)
+
+- You may start the app with an additional "host" parameter with default value as '0.0.0.0' if you would like to reach the website through all network interface
+
+app.run(host = '0.0.0.0',port=port)
+====
+ 
+=== Question 5 (2 points)
+
+.. Now please create a dash app to do Project 4 question 2b - "Use a bar chart to visualize the top 5 regions with the youngest inventory of homes"
+
+[TIP]
+====
+- Read https://dash.plotly.com/layout["Dash Layout"], understand the basic Dash app layout
+- If You get "killed " output from the program, it might due to the size of dataset is too large. Try to use chunksize to read in dataset 
+[source,python]
+pd.read_csv('/anvil/projects/tdm/data/zillow/Metro_time_series.csv',chunksize=10000)
+- Use for loop to read each chunk DataFrame and calculate the aggregate value each chunk, then combine and find the top 5 for the whole dataset
+
+====
+
 
 Project 05 Assignment Checklist
 ====
-* Jupyter Lab notebook with your code, comments and output for the assignment
+* Jupyter Lab notebook with your code, comments and outputs for the assignment
     ** `firstname-lastname-project05.ipynb` 
+* 4 Python files for Question 2-5
 * Submit files through Gradescope
 ====
 [WARNING]
