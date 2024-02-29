@@ -32,13 +32,20 @@ The following questions will use the following dataset:
 - https://code.visualstudio.com/docs/introvideos/codeediting[Code Editing in Visual Studio Code]
 ====
 
+[IMPORTANT]
+====
+Dr Ward created 5 videos to help with this project.
+
+https://the-examples-book.com/programming-languages/python/making-VS-Code-work-in-Anvil-and-Using-Dash-apps
+====
+
 == Questions
 
 === Question 1 (2 points)
 
 [loweralpha]
-.. Following the instruction on https://the-examples-book.com/starter-guides/tools-and-standards/vscode[Visual Studio Code Starter Guide], launch VS Code on Anvil
-.. Following the instructions on https://the-examples-book.com/starter-guides/tools-and-standards/vscode[Visual Studio Code Starter Guide], initial the Configuration of VS Code, and install the Python extension for Visual Studio 
+.. Following the instructions on https://the-examples-book.com/starter-guides/tools-and-standards/vscode[Visual Studio Code Starter Guide], launch VS Code on Anvil
+.. Following the instructions on https://the-examples-book.com/starter-guides/tools-and-standards/vscode[Visual Studio Code Starter Guide], including the Initial Configuration of VS Code, and install the Python extension for Visual Studio
 .. Following the instructions on https://the-examples-book.com/starter-guides/tools-and-standards/vscode[Visual Studio Code Starter Guide], select the Python interpreter path to `/anvil/projects/tdm/apps/lmodbin/python-seminar/python3`
 .. Open a new terminal in Visual Studio Code.  Show the current path for the Python interpreter.
 
@@ -86,94 +93,51 @@ python3 who_am_I.py
 
 [NOTE]
 ====
-After you setup `Visual Studio Code`, we can use it to create our Dash app. Since we will run our code on Anvil, obviously it will not run at the root path or root url ("http://ondemand.anvil.rcac.purdue.edu").  Instead, we will need to create a Prefix Path that nests the Dash app under it.  Use the provided code to assemble the Prefix Path.
+After you setup `Visual Studio Code`, we can use it to create our Dash app.  Use the provided code to find an available port and a suitable prefix for our Dash app.
 
 [source,python]
 ----
-import subprocess
-import requests
-import lxml.html
-import socket
 import os
-import psutil
-import yaml
-from dash import Dash, html,dcc
-import pandas as pd
-import plotly.express as px
+from dash import Dash, html, dcc
 
-# get the hostname
-hostname= subprocess.run("hostname", text=True, capture_output=True).stdout.strip()
- 
-def is_open(port):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(('localhost', port)) != 0
+vscprefix = os.getenv("VSCODE_PROXY_URI")
+vscprefix = vscprefix.replace("https://ondemand.anvil.rcac.purdue.edu", "")
+vscprefix = vscprefix.replace("{{port}}/", "")
 
-def find_port(start_port, end_port):
-    for port in range(start_port, end_port):
-        if is_open(port):
-            return port
-    raise RuntimeError("No open port found")
+# Try many ports in this range until we find one that is free
+for port in range(8050, 8500):
+    print(f"Trying port {port}...")
+    prefix=vscprefix+str(port)+'/'
 
-# Use this function to find an open port
-port = find_port(8050, 65535)
+    app = Dash("mytest", requests_pathname_prefix=prefix)
 
-vscode_port = yaml.unsafe_load(open(f"/proc/{psutil.Process(psutil.Process(psutil.Process(psutil.Process(os.getpid()).ppid()).ppid()).ppid()).ppid()}/cwd/connection.yml", 'r').read()).get("port")
+    app.layout = html.Div([
+        html.Div(children='Hello World')
+    ])
 
-# assemble prefix
-prefix = f"/rnode/{hostname}/{vscode_port}/proxy/{port}/"
+    try: 
+        app.run(port=port, debug=False)
+        #If we get here, the app ran so we can exit
+        break
+    except:
+        continue # If we get here, the port was busy, let's try the next port
 ----
 ====
-.. Display the prefix string you assembled
+.. Run the code above and make sure that you can see your Dash app appear in a window on your Firefox browser.
 
 
 === Question 4 (2 points)
 
-.. Now create a Dash app to display your self-introduction online (anvil local hosted webpage)
+.. Close the Dash app window that you opened in Question 3.  Copy the file from Question 3 into a new file for Question 4.  Now add a few more lines of text output to the Dash app, which display your self-introduction online (anvil local hosted webpage).
 
-[TIP]
-====
-Read the https://dash.plotly.com/tutorial["dash tutorial"].  Make sure that you understand the basic components to create a Dash App.  
-
-You will need to add an additional "requests_pathname_prefix" parameter to `Dash`, in order to specify the URL prefix that the Dash app uses for all its requests. Refer to the following code.  Modify it if needed:
-
-[source, python]
-Dash(__name__,request_pathname_prefix = prefix)
-
-You will need to start the app with "port" parameters.  You may refer to the following code, and modify it if needed:
-
-[source, python]
-app.run(port=port)
-
-You may start the app with an additional "host" parameter, with default value as '0.0.0.0', if you would like to reach the website through a network interface.
-
-[source, python]
-app.run(host = '0.0.0.0',port=port)
-====
- 
 === Question 5 (2 points)
 
-.. Now please create a dash app to do Project 6 question 2d: "make a bar chart to visualize the top 5 regions with the oldest inventory of homes (on average, in those regions)".
-
-[TIP]
-====
-Read about https://dash.plotly.com/layout["Dash Layout"], to understand the basic Dash app layout.
-
-If you get output that says "Killed" from the program, it might be because the size of dataset is too large. You can either use more cores, or you can use chunksize to read in the dataset iteratively.
-
-[source,python]
-pd.read_csv('/anvil/projects/tdm/data/zillow/Metro_time_series.csv',chunksize=10000)
-
-If you choose to use chunksize, then use a for loop to read chunks of the DataFrame and calculate the aggregate values each chunk, and then combine and find the top 5 for the whole dataset.
-
-(It is likely easier to just use more cores for the project.
-====
+.. Close the Dash app window that you opened in Question 4.  Copy the file from Question 4 into a new file for Question 5.  Now please create a dash app to do Project 6 question 2d: "make a bar chart to visualize the top 5 regions with the oldest inventory of homes (on average, in those regions)".
 
 
 Project 07 Assignment Checklist
 ====
-* Jupyter Lab notebook with your code, comments and outputs for the assignment
-    ** `firstname-lastname-project07.ipynb` 
-* 4 Python files for Question 2-5
+* 4 Python files: one file for each of Question 2, Question 3, Question 4, Question 5
 * Submit files through Gradescope
 ====
 
