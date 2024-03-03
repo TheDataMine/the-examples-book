@@ -14,8 +14,8 @@
     }
 
     iframe {
-        width: 100%;
-        height: 100%;
+        width: 40%;
+        height: 40%;
     }
 
 
@@ -23,7 +23,7 @@
 
         .vimeo-standard {
             float: none;
-            width: 80%;
+            width: 40%;
             margin: 0 auto;
             padding-bottom: 10px;
         }
