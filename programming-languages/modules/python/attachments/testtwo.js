@@ -20,7 +20,7 @@
     }
 
 
-    @media (max-width:767px) {
+    @media (max-width:200px) {
 
         .vimeo-standard {
             float: none;
