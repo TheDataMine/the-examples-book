@@ -28,6 +28,7 @@ The following questions will use the following dataset:
 - https://spark.apache.org/docs/latest/[Apache Spark]
 - https://sparkbyexamples.com/[Spark Examples]
 - https://www.analyticsvidhya.com/blog/2022/10/most-important-pyspark-functions-with-example/[PySpark Examples]
+- https://spark.apache.org/docs/3.1.3/api/python/index.html[PySpark Documentation]
 ====
 
 [WARNING]
@@ -38,10 +39,11 @@ You need to use 2 cores for your Jupyter Lab session for Project 9 this week.
 
 == Questions
 
-=== Question 1 (4 points)
+=== Question 1 (2 points)
 
 .. Create a PySpark session, then load the dataset using PySpark 
 .. Calculate the average score for reviews group by product
+.. Save the output to a file named "averageScores"
 
 [TIP]
 ====
@@ -60,12 +62,48 @@ read.option("header","true")
 - Use following option to make the column names accessible as DataFrame attributes
 [source,python]
 option("inferSchema","true")
+
+-- After all operations are complete, you may need to close the SparkSession like
+[source,python]
+----
+spark.stop()
+----
+- PySpark DataFrame's 'write()' method is useful to a file, like the following sample to write a CSV file to the current directory
+
+[source,python]
+someDF.write.csv("file.csv",header= True)
 ====
+
  
+== Question 2 (2 points)
 
-=== Question 2 (4 points)
+.. Please calculate the average helpfulness ratio (HelpfulnessNumerator/HelpfulnessDenominator) for each product with PySpark SQL 
+.. Write the output to a file 
 
-.. Question 1 we used batch processing mode to do data processing, the whole dataset is loaded and processed in one go. Now let us delve into Spark Streaming concepts. Assuming the dataset streams in real time. Please count the number of reviews for each product in a streaming style
+[TIP]
+====
+- You may need to use 'filter()' to exclude '0' for "HelpfulnessDenominator" like
+
+[source,python]
+----
+filteredDF = myDF.filter(col("HelpfulnessDenominator")>0)
+----
+- 'withColumn()' is useful to add a new column to the DataFrame like the following, the first argument is the new column will be added, the second is the value to be calculated to the new column
+
+[source,python]
+----
+filteredDF.withColumn("HelpfulnessRation",col("HelpfulnessNumerator") / col("HelpfulnessDenominator"))
+----
+
+- groupBy('ProductId') will perform the aggregation for each product
+- 'agg()' is useful to perform aggregation operations on the grouped data. It can take different kinds of aggregations as it's argument like avg, max, min etc.
+- Refer to https://spark.apache.org/docs/3.1.3/api/python/reference/api/pyspark.sql.DataFrame.withColumn.html[.withColumn]
+====
+
+=== Question 3 (4 points)
+
+.. At question 1 and 2 we used batch processing mode to do data processing, the whole dataset is loaded and processed in one go. Now let us delve into Spark Streaming concepts. Assuming the dataset streams in real time. Please count the number of reviews for each product in a streaming style (simulating a real-time data monitoring and analytics) 
+.. Display the first few rows in screen 
 
 [TIP]
 ====
@@ -80,10 +118,36 @@ import os
 home_dir = os.getenv("HOME")
 data_dir = os.path.join(home_dir,"spark")
 ----
+- You may use a start() method on the query initiates the streaming computation, and use a awaitTermination() to keep the application running indefinitely (until manually stopped or an error occurs), allowing it to continuously process incoming data.
 ====
- 
 
-=== Question 3 (2 points)
+=== Question 4 (2 points)
+
+.. Now let us calculate the real-time average score of each product. Only including the products with 10 and above reviews using Spark Structured Streaming
+.. Display the first 20 rows output in screen
+
+[NOTE]
+====
+- Streaming query for products with more than 10 views can be very complex due to the need for stateful operations. In this project we will only use simplified conceptual approach like
+[source,python]
+----
+reviewCounts = myDF.groupBy("ProductId").count()
+filtered_reviewCounts = reviewCounts.filter(col("count")>10)
+----
+====
+
+[TIP]
+====
+- Spark DataFrame join() method is useful to get the filtered DataFrame like the following two DataFrames "myDF" and "filtered_reviewCounts" product an inner join by "ProductId" as key 
+
+[source,python]
+----
+review_filteredDF = myDF.join(filtered_reviewCounts,"ProductId")
+----
+====
+
+
+=== Question 5 (2 points)
 
 .. After you complete the previous two questions, please state your understanding of the difference between reading data from a static file versus a streaming data source in Spark
  
