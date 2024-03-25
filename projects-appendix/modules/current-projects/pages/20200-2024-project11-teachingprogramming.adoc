@@ -1,14 +1,14 @@
 = TDM 20200: Project 11 -- 2024
  
-**Motivation:** Machine learning and AI are huge buzzwords in industry, in this project, we will continue to know more TensorFlow features and GPU acceleration concepts    
+**Motivation:** Machine learning and AI are huge buzzwords in industry, in this project, we will continue to know more TensorFlow features    
 
-**Context:** The purpose of these projects is to give you exposure to machine learning tools, some basic functionality, and to show _why_ they are useful, without needing any special math or statistics background. we will try to build a model to predict the arrival delay (ArrDelay) of flights based on features like departure delay, distance of the flight, departure time, arrival time, etc. 
+**Context:** The purpose of these projects is to give you exposure to machine learning tools, some basic functionality, and to show _why_ they are useful, without needing any special math or statistics background
 
 **Scope:** Python,tensorflow, scikit-learn
 
 == Dataset
 
-`/anvil/projects/tdm/data/flights/2014.csv`
+`/anvil/projects/tdm/data/flights/2019.csv`
 
 == Readings and Resources
 
@@ -25,7 +25,7 @@
 
 [WARNING]
 ====
-You need to use 2 cores for your Jupyter Lab session for Project 9 this week.
+You need to use 2 cores for your Jupyter Lab session for Project 11 this week.
 ====
 [TIP]
 ====
@@ -38,8 +38,10 @@ You can use `pd.set_option('display.max_columns', None)` if you want to see all 
 
 [loweralpha]
 
-.. Explore the dataset columns and figure out the data types for the following specific columns, define a dictionary variable 'col_types' to hold values
-+
+.. At previous project, we created a model to predict arrival delays with dataset of "2014.csv", now let us import the dataset of year 2019 mimic it as real data to calculate the predicted arrival delays. Just import the same columns and 10,000 rows 
+
+..  Use "model.predict()" to predict arrival delays for the dataset of year 2019 
+
 [source, python]
 ----
 cols = [
@@ -48,149 +50,27 @@ cols = [
     'DepTime', 'ArrTime', 'Diverted', 'AirTime'
 ]
 ----
-.. For quick experimentation purpose, load only first 10,000 rows from the dataset with the specific columns  
-[TIP]
-====
-- You may refer to - https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html[pandas read_csv] to know how to read partial data
-- You may define 'nrows=10000' for read_csv()
-====
+ 
  
 === Question 2 (2 points)
 
-.. import the following libraries
-+
-[source,python]
-----
-import tensorflow as tf
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-import pandas as pd
-import numpy as np
-import time
-----
 
-.. Now let us try to understand how to clean our data. Please check on the following example code, state how missing values of a dataset can impact a machine learning model, and the reasons we need to fill the missing values. You may edit or create your own code if needed
-+
-[TIP]
-====
-- You may need to understand that machine learning model can be confused by missing values for it depends on every item to make a decision
-====
-.. While filling numerical missing values, how can we decide the more appropriate values to fill like the median, mode, or mean?
- 
-[source,python]
-----
-for col in myDF.columns:
-    if myDF[col].dtype == 'object':
-        myDF[col] = myDF[col].fillna(myDF[col].mode()[0])
-    else:
-        myDF[col] = myDF[col].fillna(myDF[col].median())
-----
+.. Now let us compare the model's performance on the 2019 year dataset. Calculate the MSE and MAE values
 
-[NOTE]
-====
-- You may need to understand your data to use the appropriate techniques for handling missing values. 
-.. For categorical data, using the `mode` (most common category) is common for it states the most typical case
-.. For numerical data, choose between mean, median or mode depends on your data nature. Using `median` can be reliable even when there exist very high or low values; Using `mean` if your data is normally distributed (the bell curve shape); Using `mode` is least commonly only when data has very frequent repeating number, is categorical, or discretely numerical 
-====
  
 === Question 3 ( 2 points)
 
-.. Now let look into how to prepare our features and labels for the machine learning model by following example code, what is the difference between features and labels?
-+
-[source,python]
-----
-# Splitting features and labels
-features = myDF.drop('ArrDelay', axis=1)
-labels = myDF['ArrDelay']
-----
-+
-[TIP]
-====
-- In machine learning, `features` are the information used to make predictions; `labels` are the outcomes for predictions like if we predict if it will rain, the features might be wind speed, pressure, humidity etc, and label would be rain or no rain.
-- The example code preparing features as everything but 'ArrDelay' and labels as 'ArrDelay' 
-====
-
-.. check on the following Example code, why we need have our data split into training and testing sets?
-
-[source,python]
-----
-# Split
-X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
-----
-[NOTE]
-====
-- You may need to understand what are training and testing sets. The training set is used to train the model and the testing set will validate the model's predictive power
-- test_size= 0.2 setup 80% data will use as training data and 20% data will use to test the model's performance
-- random_state=42 used to ensure the random number generator's sequence of numbers is reproducible across runs of your code, ensure you get the same split of data into training and testing sets
-====
+.. Now let look into the value of MSE and MAE. Please describe and analysis the meaning of the values 
+.. Based on the values of your output, what do you think about your model performance 
 
 === Question 4 ( 2 points)
 
-.. Now let us standardize our data. Check on the following example code. Please state what scaling does to the data and the reason we need it for machine learning models 
-+
-[source,python]
-----
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train).astype(np.float32)
-X_test_scaled = scaler.transform(X_test).astype(np.float32)
-----
-+
-[NOTE]
-====
-- Machine learning models usually assume all features are on a similar scale. So data need to be standardized to be in a common scale
-.. Standardizing is like to translate and rescale every point on a graph to fit within a new frame, so the machine learning model can understand better
-.. StandardScaler() is a function used to pre-process data before feeding it into a machine learning model
-.. The StandardScaler adjusts data features so they have a mean of 0 and a standard deviation of 1, making models like neural networks perform better because they're sensitive to the scale of input data.
-====
-.. Check on the following Example code, try to explain how TensorFlow datasets conduct model training with batch processing
-
-[source,python]
-----
-train_dataset = tf.data.Dataset.from_tensor_slices((X_train_scaled, y_train)).batch(14)
-test_dataset = tf.data.Dataset.from_tensor_slices((X_test_scaled, y_test)).batch(14)
-----
-[NOTE]
-====
-- `from_tensor_slices()` is a function takes tuples of arrays(or tensors) as input and output a dataset that each element is a slice from thess arrays in tuples format, each element is a tuple of one row from `X`(features), and a corresponding row from 'Y'(labels), it allows the model to see the input with corresponding output pair
-- `batch(14)` divides the dataset into batches of 14 elements each instead of feeding all data to the model at one time, the data then can be processed iteratively to avoid memory-intensive
-.. Choose how many pieces of data like 14 at a time to show the model while it's learning can impact the model's performance and how long it takes to learn. You may need to try different numbers to figure which works best
-====
+.. Now if your model performs not good at the 2019 dataset. Let use do some adjustment on the original model to input more rows as 100,000 rows
+.. Redo Question 1-3 
 
 === Question 5 (2 points)
 
-.. Now let us we build a machine learning model, train, and evaluate it in TensorFlow. Check the following Example code, it defines a model architecture, compiles the model, trains the model on a dataset and evaluating it on a separate dataset to ensure the model's effectiveness. Please create and run the whole program from Question 1 load dataset to the end of clean up the model 
-+
-[source,python]
-----
-# Define model
-model = tf.keras.Sequential([
-    tf.keras.layers.Dense(128, activation='relu', input_shape=(X_train_scaled.shape[1],)),
-    tf.keras.layers.Dropout(0.2),
-    tf.keras.layers.Dense(1)
-])
-
-# Compile
-model.compile(optimizer='adam',
-              loss='mean_squared_error',
-              metrics=['mean_absolute_error'])
-
-# Train
-history = model.fit(train_dataset, epochs=10, validation_data=test_dataset)
- 
-# Cleanup
-del X_train_scaled, X_test_scaled, train_dataset, test_dataset
-
-----
-.. Please state the necessary steps involved in developing a machine learning model, from data preparation to model evaluation.
- 
-[NOTE]
-====
-- Building a model includes defining model structure, training it on data and testing it performance
-- The example code defines a simple neural network model with layers to find patterns in the dataset
-.. `tf.keras.Sequential()` defines the structure of the model and how it will learn from the data. It sets up the sequence of steps/layers, the data will pass the layers to get patterns, learn from patterns and make predictions
-.. `model.compile` sets up the model's learning method: using "adam" algorithm to do adjustments, "mean_squared_error" to measure accuracy of the model's prediction, "mean_absolute_error" to average out how much the predictions differ from the real values
-.. `model.fit()` is the function that starts learning process using training data then checking performance with testing data
-==== 
+.. Based on the results from previous questions. Please state what is your solution to improve your model's performance
 
 Project 11 Assignment Checklist
 ====
