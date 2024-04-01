@@ -1,0 +1,219 @@
+= TDM 20200: Project 12 -- 2024
+
+**Motivation:** Containers are everywhere and a very popular method of packaging an application with all of the requisite dependencies. This project we will learn some basics of containerization in a virtual environment using Alpine Linux. We first will start a virtual machine on Anvil, then create a simple container in the virtual machine. You may find more information about container and relationship between virtual machine and container here: https://www.redhat.com/en/topics/containers/whats-a-linux-container
+
+**Context:** The project is to provide very foundational knowledge about containers and virtualization, focusing on theoretical understanding and basic system interactions. 
+
+**Scope:** Python, containers, UNIX
+
+.Learning Objectives
+****
+- Improve your mental model of what a container is and why it is useful.
+- Use UNIX tools to effectively create a container.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Questions
+
+=== Question 1 (2 pts)
+
+[loweralpha]
+
+.. Logon to Anvil and use a bash command to find an available port you may use later
+.. List the available port numbers
+ 
+[TIP]
+====
+- You may use the following code to find a port in the range 1025 to 65535.
+- You may use a loop around the following code, to find an available port (instead of manually trying one by one), or you can find an available port in a different way, if you prefer.
+[source, bash]
+----
+if timeout 2 bash -c ">&/dev/tcp/127.0.0.1/1025" 2>/dev/null; then
+    echo "Port used"
+else
+    echo "Port available"
+----
+====
+
+=== Question 2 (2 pts)
+
+.. Launch a virtual machine (VM) on Anvil.  (Note that Docker is already pre-installed on Anvil.) Submit the output showing the job id and process id, after you start a virtual machine; it should look like this, for example;
+
+[source,bash]
+----
+.output
+[1] 3152048
+----
+
+[NOTE]
+====
+The most popular containerization tool at the time of writing is likely Docker. We will Launch a virtual machine on Anvil (which already has Docker pre-installed).
+
+Open up a terminal on Anvil. You may do it from within Jupyter Lab. Run the following code, to ensure that the SLURM environment variables don't alter or effect our SLURM job.
+
+[source,bash]
+----
+for i in $(env | awk -F= '/SLURM/ {print $1}'); do unset $i; done;
+----
+
+Next, let's make a copy of a pre-made operating system image. This image has Alpine Linux and a few basic tools installed, including: nano, vim, emacs, and Docker. 
+
+[source,bash]
+----
+cp /anvil/projects/tdm/apps/qemu/images/builder.qcow2 $SCRATCH
+----
+
+Next, we want to acquire enough resources (CPU and memory) to not have to worry about something not working. To do this, we will use SLURM to launch a job with 4 cores and about 8GB of memory.
+
+[source,bash]
+----
+salloc -A cis220051 -p shared -n 4 -c 1 -t 04:00:00
+----
+
+Next, we need to make `qemu` available to our shell. Open a terminal and run the following code
+
+[source,bash]
+----
+module load qemu
+# check the module loaded
+module list
+----
+
+Next, let's launch our virtual machine with about 8GB of memory and 4 cores. Replace the "[port]" with the port number that you got from question 1.
+
+[source,bash]
+----
+qemu-system-x86_64 -vnc none,ipv4 -hda $SCRATCH/builder.qcow2 -m 8G -smp 4 -enable-kvm -net nic -net user,hostfwd=tcp::[port]-:22 &
+----
+
+[IMPORTANT]
+====
+- [port] needs to be replaced with your port number
+====
+
+Next, it is time to connect to our virtual machine. We will use `ssh` to do this.
+
+[source,bash]
+----
+ssh -p [port] tdm@localhost -o StrictHostKeyChecking=no
+----
+
+If the command fails, try waiting a minute and rerunning the command -- it may take a minute for the virtual machine to boot up.
+
+When prompted for a password, enter `purdue`. Your username is `tdm` and password is `purdue`.
+
+Finally, now that you have a shell in your virtual machine, you can do anything you want! You have superuser permissions within your virtual machine! 
+For this question, submit a screenshot showing the output of `hostname` from within your virtual machine!
+
+====
+
+
+=== Question 3 (2 pts)
+
+.. Exploring the virtual machine File System. Navigate the Alpine Linux file system and list the contents of the root directory.
+.. List all running processes in the system 
+.. Display network configuration and test network connectivity.
+[TIP]
+====
+- You may refer to the following sample code or create your own ones
+
+[source, bash] 
+----
+ls / # list all root files
+----
+
+[source, bash]
+----
+ps aux # system running processes
+----
+
+[source,bash]
+----
+ifconfig # network interface configuration
+----
+
+====
+
+=== Question 4 (2 pts)
+.. Write and execute a simple shell script to display a message, like
+
+[TIP]
+====
+[source, bash]
+----
+echo 'Hello Your name, You are the Best!!!' > hello.sh
+----
+
+- run the shell script
+
+[source, bash]
+----
+chmod +x hello.sh
+./hello.sh
+----
+====
+
+ 
+=== Question 5 (2 pts)
+
+After you complete the previous questions, you can see that you can use the virtual machine just like your own computer. Now let us follow the following step, to use Docker within the virtual machine to create and manage a container. Run all the commands in your terminal, copy the output to your jupyter notebook cells.
+
+.. List the docker version inside the virtual machine
+[source, bash]
+----
+docker --version
+----
+
+.. Pull the "hello-world" image from Docker Hub
+
+[source, bash]
+----
+docker pull hello-world
+----
+
+..Run a container based on the "hello-world" image
+
+[source, bash]
+----
+docker run hello-world
+----
+
+[NOTE]
+====
+When the command runs, docker will create a container from the 'hello-world' image and run it. The container will display a message confirming that everything worked, and then it will exit.
+====
+
+.. List the container(s) with following command.  It will provide you all the containers that are currently running or that exited already.
+[source, bash]
+----
+docker ps -a
+----
+
+.. After you confirm the container ran successfully, you may using following command to remove it
+
+[source, bash]
+----
+docker rm [Container_id]
+----
+
+[TIP]
+====
+Replace [Container_id] with the id that you got from previous question.
+====
+
+Project 12 Assignment Checklist
+====
+* Jupyter Lab notebook with your code, comments and output for the assignment
+    ** `firstname-lastname-project12.ipynb` 
+* Python file with code and comments for the assignment
+    ** `firstname-lastname-project12.py`
+* Submit files through Gradescope
+====
+ 
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+
+In addition, please review our xref:projects:current-projects:submissions.adoc[submission guidelines] before submitting your project.
+====
