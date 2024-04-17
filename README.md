@@ -26,7 +26,7 @@ Supplementary material for solving projects assigned in [The Data Mine](https://
 - Anvil Resources & Guides: https://the-examples-book.com/starter-guides/anvil/
 - Registration: https://the-examples-book.com/registration
 - Think Summer: https://the-examples-book.com/think-summer
-
+ 
 You can learn more about The Data Mine using the following links:
 
 - [The Data Mine website](https://datamine.purdue.edu/)
