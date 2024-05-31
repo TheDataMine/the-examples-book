@@ -1,382 +1,199 @@
-= 301 Project 01- Choosing a Model 
+= 301 Project 02- K-nearest neighbor Model introduction 
 
 == Project Objectives
 
-This project will help us understand different machine learning models and their applications using the Boston Housing dataset:
+This project we will understand how to use the Iris dataset for training and evaluating a K-Nearest Neighbors (KNN) classifier.
+the steps to create a K-nearest neighbor model using the iris dataset:
 
-- Flexibility vs. Interpretability
-- Classification vs. Regression
-- Prediction vs. Inference
-- Supervised vs. Unsupervised Learning
-- Non-parameterization with Splines
+- Load and Explore the Data
+- Preprocess the Data
+- Train the KNN Classifier
+- Evaluate the Model
 
 == Reading and Resources
 
-- https://the-examples-book.com/starter-guides/data-science/data-modeling/choosing-model/[DataMine Examples Book-Choosing model]
+- https://the-examples-book.com/starter-guides/data-science/data-modeling/knn/[DataMine Examples Book-KNN ]
 - https://www.statlearning.com/[An Introduction to Statistical Learning]
 
 == DataSet
-- `/anvil/scratch/x-nzhou1/boston.csv`
+- `/anvil/scratch/x-nzhou1/iris.csv`
+ 
+[NOTE]
+====
+Overview of the Iris Dataset
 
+- The Iris dataset consists of 150 samples of iris flowers, each with four features: sepal length, sepal width, petal length, and petal width. There are three classes of iris flowers: Setosa, Versicolor, and Virginica.
+====
+== Questions
 
 [NOTE]
-===
-The following steps will prepare data before building and training the specific models
+====
+The first step is to Load and Explore the Data
 
-1. Load dataset
 [source,python]
 ----
 import pandas as pd
+from sklearn.datasets import load_iris
 
-file_path = '/anvil/scratch/x-nzhou1/boston.csv'  
-my_df = pd.read_csv(file_path)
+# Load the Iris dataset
+iris = load_iris()
+data = pd.DataFrame(data=iris.data, columns=iris.feature_names)
+data['target'] = iris.target
 
 # Display the first few rows of the dataset
-my_df.head()
+print(data.head())
 ----
+====
+=== Question 1 (2 points)
+.. Based on the initial exploration, what are the mean, median, and standard deviation of the sepal length for each iris class?
 
-2. Understand dataset
-[source,python]
-----
-my_df.info()
-my_df.describe()
-my_df.isnull().sum()
-----
+[NOTE]
+====
+Then you will need to Pre-process the Data; Split the dataset into training and testing sets and standardize the features.
 
-3. Prepare data for modeling
 [source,python]
 ----
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-# Split the dataset into features and target variable
-X = my_df.drop('MEDV', axis=1)   
-y = my_df['MEDV']
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, test_size=0.2, random_state=42)
 
-# Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# Feature scaling
+# Standardize the features
 scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 ----
+====
 
-== Questions
+=== Question 2 (2 points)
+.. How does the distribution of each feature change after standardization? Provide a comparison of the distributions before and after standardization.
 
 [NOTE]
 ====
-Flexibility vs. Interpretability
-**Neural networks (Flexibility)**
-Refer to our "Reading and Resources". Neural networks are highly flexible models capable of capturing complex, non-linear relationships in the data. They consist of multiple layers of interconnected neurons that transform the input data through a series of weighted sums and activation functions. Following is a typical step to create the model:
+Next, you will need to `Initialize and Train the KNN Classifier`
 
-[source,python]
+[source, python]
 ----
-from sklearn.neural_network import MLPRegressor
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.neighbors import KNeighborsClassifier
 
-# Initialize the model
-nn_model = MLPRegressor(hidden_layer_sizes=(50, 50, 50), max_iter=1000, random_state=42)
+# Initialize the KNN classifier
+knn = KNeighborsClassifier(n_neighbors=3)
 
-# Train the model
-nn_model.fit(X_train_scaled, y_train)
-
-# Make predictions
-y_pred_nn = nn_model.predict(X_test_scaled)
-
-# Evaluate the model
-mse_nn = mean_squared_error(y_test, y_pred_nn)
-r2_nn = r2_score(y_test, y_pred_nn)
-
-print(f'Neural Network - Mean Squared Error: {mse_nn}')
-print(f'Neural Network - R^2 Score: {r2_nn}')
-----
-
-**Decision Trees (Interpretability)**
-
-Decision trees are highly interpretable models that split the data based on feature values, making them easy to visualize and understand. Each node in the tree represents a decision rule, and each leaf node represents a prediction.
-
-[source,python]
-----
-from sklearn.tree import DecisionTreeRegressor
-
-# Initialize the model
-dt_model = DecisionTreeRegressor(max_depth=4, random_state=42)
-
-# Train the model
-dt_model.fit(X_train, y_train)
-
-# Make predictions
-y_pred_dt = dt_model.predict(X_test)
-
-# Evaluate the model
-mse_dt = mean_squared_error(y_test, y_pred_dt)
-r2_dt = r2_score(y_test, y_pred_dt)
-
-print(f'Decision Tree - Mean Squared Error: {mse_dt}')
-print(f'Decision Tree - R^2 Score: {r2_dt}')
+# Train the classifier
+knn.fit(X_train, y_train)
 ----
 ====
-=== Question 1: Please describe the main difference between flexible and interpretable models. (1 point)
+=== Question 3 (2 points)
 
-
-== Question 2: Using the provided code examples, describe the steps to create both a flexible model and an interpretable model. Assume that the training data X_train and y_train are already prepared. (1 point)
-
+.. What impact does changing the number of neighbors (k) have on the model's performance? Test k values of 1, 5, and 10, and compare their accuracies
 
 [NOTE]
 ====
-Classification vs. Regression
-
-**Logistic Regression (Classification)**
-
-Logistic regression is used for binary classification problems. In this case, we convert the regression target variable (house prices) into a binary variable indicating whether the price is above or below the median.
+Next step will be `Evaluate the Model`; Predict the labels for the test set and calculate the accuracy.
 
 [source,python]
 ----
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, classification_report
 
-# Convert target variable into binary classification
-y_binary = (y > y.median()).astype(int)
+# Predict on the test set
+y_pred = knn.predict(X_test)
 
-# Split the data
-X_train_bin, X_test_bin, y_train_bin, y_test_bin = train_test_split(X, y_binary, test_size=0.2, random_state=42)
+# Calculate accuracy
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Test set accuracy: {accuracy * 100:.2f}%')
 
-# Initialize the model
-log_reg = LogisticRegression(max_iter=1000, random_state=42)
-
-# Train the model
-log_reg.fit(X_train_bin, y_train_bin)
-
-# Make predictions
-y_pred_log = log_reg.predict(X_test_bin)
-
-# Evaluate the model
-accuracy_log = accuracy_score(y_test_bin, y_pred_log)
-
-print(f'Logistic Regression - Accuracy: {accuracy_log}')
+# Print classification report
+print(classification_report(y_test, y_pred, target_names=iris.target_names))
 ----
-
-** Linear Regression (Regression)**
-
-Linear regression is used for predicting a continuous target variable. It models the relationship between the target and one or more predictor variables by fitting a linear equation to observed data.
-
-[source,python]
-----
-from sklearn.linear_model import LinearRegression
-
-# Initialize the model
-lin_reg = LinearRegression()
-
-# Train the model
-lin_reg.fit(X_train_scaled, y_train)
-
-# Make predictions
-y_pred_lin = lin_reg.predict(X_test_scaled)
-
-# Evaluate the model
-mse_lin = mean_squared_error(y_test, y_pred_lin)
-r2_lin = r2_score(y_test, y_pred_lin)
-
-print(f'Linear Regression - Mean Squared Error: {mse_lin}')
-print(f'Linear Regression - R^2 Score: {r2_lin}')
-----
-
 ====
+== Question 4 (2 points)
 
-==  Question 3: Describe the main difference between classification problems and regression problems. (1 point)
-
-
-== Question 4: Using the provided code examples, describe the steps to create both a classification model and a regression model. Assume that the training data X_train and y_train are already prepared. (1 point)
-
-
+.. Analyze the classification report. Which class has the highest precision and which class has the lowest recall? What might this indicate about the model's performance on different classes?
 
 [NOTE]
 ====
-Prediction vs. Inference
-
-**Random Forests (Prediction)**
-
-Random forests are ensemble models that build multiple decision trees and aggregate their predictions. They are particularly powerful for making accurate predictions and handling high-dimensional data.
+Full Project Code
 
 [source,python]
 ----
-from sklearn.ensemble import RandomForestRegressor
+import pandas as pd
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, classification_report
 
-# Initialize the model
-rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+# Load the Iris dataset
+iris = load_iris()
+data = pd.DataFrame(data=iris.data, columns=iris.feature_names)
+data['target'] = iris.target
 
-# Train the model
-rf_model.fit(X_train, y_train)
+# Display the first few rows of the dataset
+print(data.head())
 
-# Make predictions
-y_pred_rf = rf_model.predict(X_test)
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, test_size=0.2, random_state=42)
 
-# Evaluate the model
-mse_rf = mean_squared_error(y_test, y_pred_rf)
-r2_rf = r2_score(y_test, y_pred_rf)
+# Standardize the features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
-print(f'Random Forest - Mean Squared Error: {mse_rf}')
-print(f'Random Forest - R^2 Score: {r2_rf}')
-----
+# Initialize the KNN classifier
+knn = KNeighborsClassifier(n_neighbors=3)
 
-**OLS Regression (Inference)**
+# Train the classifier
+knn.fit(X_train, y_train)
 
-Ordinary Least Squares (OLS) regression is used for inference to understand the relationships between variables. It provides coefficients that explain the impact of each predictor variable on the target variable.
+# Predict on the test set
+y_pred = knn.predict(X_test)
 
-[source,python]
-----
-import statsmodels.api as sm
+# Calculate accuracy
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Test set accuracy: {accuracy * 100:.2f}%')
 
-# Add a constant term for the intercept
-X_train_sm = sm.add_constant(X_train)
-X_test_sm = sm.add_constant(X_test)
-
-# Initialize and fit the model
-ols_model = sm.OLS(y_train, X_train_sm).fit()
-
-# Make predictions
-y_pred_ols = ols_model.predict(X_test_sm)
-
-# Evaluate the model
-mse_ols = mean_squared_error(y_test, y_pred_ols)
-r2_ols = r2_score(y_test, y_pred_ols)
-
-print(f'OLS Regression - Mean Squared Error: {mse_ols}')
-print(f'OLS Regression - R^2 Score: {r2_ols}')
-----
-
+# Print classification report
+print(classification_report(y_test, y_pred, target_names=iris.target_names))
+---- 
 ====
-== Question 5: Explain when you would use prediction versus inference in modeling. (1 point)
-
-
-== Question 6: Using the provided code examples, describe the steps to create a model for prediction and one for inference. Assume that the training data X_train and y_train are already prepared (1 point)
-
-
 
 [NOTE]
 ====
-Supervised vs. Unsupervised Learning
-
-**Support Vector Machine (Supervised Learning)**
-
-Support Vector Machines (SVM) are supervised learning models used for classification and regression. They work by finding the hyperplane that best separates the data into classes.
+Using cross-validation can help to ensure that the model's performance is consistent and not dependent on a specific train-test split.
 
 [source,python]
 ----
-from sklearn.svm import SVR
+from sklearn.model_selection import cross_val_score
 
-# Initialize the model
-svm_model = SVR()
+# Perform cross-validation
+cv_scores = cross_val_score(KNeighborsClassifier(n_neighbors=3), iris.data, iris.target, cv=5)
 
-# Train the model
-svm_model.fit(X_train_scaled, y_train)
-
-# Make predictions
-y_pred_svm = svm_model.predict(X_test_scaled)
-
-# Evaluate the model
-mse_svm = mean_squared_error(y_test, y_pred_svm)
-r2_svm = r2_score(y_test, y_pred_svm)
-
-print(f'Support Vector Machine - Mean Squared Error: {mse_svm}')
-print(f'Support Vector Machine - R^2 Score: {r2_svm}')
-----
-
-**K-means Clustering (Unsupervised Learning)**
-
-K-means clustering is an unsupervised learning algorithm used to partition data into k clusters. Each observation belongs to the cluster with the nearest mean.
-
-[source,python]
-----
-from sklearn.cluster import KMeans
-import matplotlib.pyplot as plt
-
-# Initialize the model
-kmeans = KMeans(n_clusters=3, random_state=42)
-
-# Fit the model
-kmeans.fit(X_train_scaled)
-
-# Get cluster labels
-clusters = kmeans.labels_
-
-# Plotting the clusters (using first two features for simplicity)
-plt.scatter(X_train_scaled[:, 0], X_train_scaled[:, 1], c=clusters, cmap='viridis')
-plt.xlabel('Feature 1')
-plt.ylabel('Feature 2')
-plt.title('K-means Clustering')
-plt.show()
+# Display the cross-validation scores
+print(f'Cross-validation scores: {cv_scores}')
+print(f'Average cross-validation score: {cv_scores.mean():.2f}')
 ----
 ====
-== Question 7: Explain the difference between supervised and unsupervised learning. (1 point)
 
+=== Question 5(2 points):
 
-== Question 8: Provide an example of a supervised learning model and an unsupervised learning model. Assume that the training data X_train and y_train are already prepared. (1 point)
+.. What are the cross-validation scores for the model with k=3, and what does the average cross-validation score indicate about the model's performance?
 
-
-
-[NOTE]
+[Tip]
 ====
-Non-parameterization with Splines
-
-We'll use the `dmatrix` function from the patsy library to create spline features. Then we'll fit a regression model using these features.
-
 [source,python]
 ----
-from patsy import dmatrix
-import statsmodels.api as sm
-import numpy as np
-import matplotlib.pyplot as plt
+from sklearn.model_selection import cross_val_score
 
-# Generate spline basis with 4 degrees of freedom for the feature RM (average number of rooms per dwelling)
-# This is just an example; you can apply it to any other feature or multiple features.
-spline = dmatrix("bs(X_train[:, 5], df=4, include_intercept=False)",
-                 {"X_train": X_train}, return_type='dataframe')
+# Perform cross-validation
+cv_scores = cross_val_score(KNeighborsClassifier(n_neighbors=3), iris.data, iris.target, cv=5)
 
-# Fit the model
-model = sm.OLS(y_train, spline).fit()
-
-# Make predictions
-spline_test = dmatrix("bs(X_test[:, 5], df=4, include_intercept=False)",
-                      {"X_test": X_test}, return_type='dataframe')
-y_pred = model.predict(spline_test)
-
-# Evaluate the model
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
-
-print(f'Mean Squared Error: {mse}')
-print(f'R^2 Score: {r2}')
-----
-Visualize the spline regression to understand the relationship between the feature and the target variable.
-
-[source,python]
-----
-# Create a scatter plot of the original data
-plt.scatter(X_train[:, 5], y_train, facecolor='None', edgecolor='k', alpha=0.5)
-
-# Create a plot of the predicted spline
-x_plot = np.linspace(X_train[:, 5].min(), X_train[:, 5].max(), 100)
-X_plot = dmatrix("bs(x_plot, df=4, include_intercept=False)", {"x_plot": x_plot}, return_type='dataframe')
-y_plot = model.predict(X_plot)
-plt.plot(x_plot, y_plot, color='r')
-
-plt.xlabel('Average number of rooms per dwelling (RM)')
-plt.ylabel('Median value of owner-occupied homes in $1000 (MEDV)')
-plt.title('Spline Regression')
-plt.show()
+# Display the cross-validation scores
+print(f'Cross-validation scores: {cv_scores}')
+print(f'Average cross-validation score: {cv_scores.mean():.2f}')
 ----
 
-====
-
-== Question 9: Explain what splines are and their purpose in regression modeling. (1 point)
-
-
-== Question 10: Using the provided code example, describe the steps to create a spline regression model. (1 point)
-
-
-
+ 
 Project 01 Assignment Checklist
 ====
 * Jupyter Lab notebook with your code, comments, and output for the assignment
