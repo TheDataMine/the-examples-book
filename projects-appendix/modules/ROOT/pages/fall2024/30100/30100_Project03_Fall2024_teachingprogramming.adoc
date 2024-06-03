@@ -1,0 +1,154 @@
+= 301 Project 03 - K-Nearest Neighbors Model Using the Boston Housing Dataset
+
+== Project Objectives
+
+To build a robust KNN model using hyperparameter tuning, feature selection, and cross-validation for a real-life dataset, and evaluate its performance.
+
+== Reading and Resources
+
+- [DataMine Examples Book-KNN](https://the-examples-book.com/starter-guides/data-science/data-modeling/knn/)
+- [An Introduction to Statistical Learning](https://www.statlearning.com/)
+
+== Dataset
+
+- `/anvil/scratch/x-nzhou1/boston.csv` 
+
+[NOTE]
+====
+Overview of the Boston Housing Dataset
+
+- This dataset contains various features of houses in Boston, including numerical and categorical data. The target variable is the median value of owner-occupied homes.
+====
+
+== Questions
+
+[NOTE]
+====
+The first step is to Load and Explore the Data
+
+[source,python]
+----
+import pandas as pd
+
+# Load the Boston housing dataset
+data = pd.read_csv('boston.csv')   
+
+# Display the first few rows of the dataset
+print(data.head())
+----
+====
+
+=== Question 1 (2 points)
+.. Based on the initial exploration, what are the mean, median, and standard deviation of the median value of owner-occupied homes (target variable)?
+
+[NOTE]
+====
+Next, Preprocess the Data: Split the dataset into training and testing sets, and standardize the features.
+
+[source,python]
+----
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+# Split the dataset into training and testing sets
+X = data.drop('MEDV', axis=1)  # Replace 'MEDV' with the target column name
+y = data['MEDV']  # Replace 'MEDV' with the target column name
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Standardize the features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+----
+====
+
+=== Question 2 (2 points)
+.. How does the distribution of each feature change after standardization? Provide a comparison of the distributions before and after standardization.
+
+[NOTE]
+====
+Then, Perform Feature Selection using SelectKBest to select the top 10 features.
+
+[source,python]
+----
+from sklearn.feature_selection import SelectKBest, f_regression
+
+# Select the top 10 features
+selector = SelectKBest(score_func=f_regression, k=10)
+X_train_selected = selector.fit_transform(X_train, y_train)
+X_test_selected = selector.transform(X_test)
+----
+====
+ 
+=== Question 3 (2 points)
+.. Why is feature selection important, and how does SelectKBest help in this process?
+
+[NOTE]
+====
+Next, Perform Hyperparameter Tuning using Grid Search to find the best hyperparameters for the KNN model.
+
+[source,python]
+----
+from sklearn.model_selection import GridSearchCV
+from sklearn.neighbors import KNeighborsRegressor
+
+# Define the parameter grid
+param_grid = {
+    'n_neighbors': [3, 5, 7, 9, 11],
+    'weights': ['uniform', 'distance'],
+    'metric': ['euclidean', 'manhattan']
+}
+
+# Initialize the GridSearchCV
+grid_search = GridSearchCV(KNeighborsRegressor(), param_grid, cv=5, scoring='neg_mean_squared_error')
+grid_search.fit(X_train_selected, y_train)
+
+# Get the best parameters
+best_params = grid_search.best_params_
+print(f'Best parameters: {best_params}')
+---- 
+====
+
+=== Question 4 (2 points)
+.. What is Grid Search, and how does it help in finding the best hyperparameters for a KNN model?
+
+[NOTE]
+====
+Evaluate the Model with Cross-Validation to assess its performance.
+
+[source,python]
+----
+from sklearn.model_selection import cross_val_score
+
+# Initialize the KNN model with the best parameters
+knn = KNeighborsRegressor(n_neighbors=best_params['n_neighbors'],
+                          weights=best_params['weights'],
+                          metric=best_params['metric'])
+
+# Perform cross-validation
+cv_scores = cross_val_score(knn, X_train_selected, y_train, cv=5, scoring='neg_mean_squared_error')
+print(f'Cross-validation MSE scores: {-cv_scores}')
+print(f'Average cross-validation MSE: {-cv_scores.mean()}')
+----
+====
+
+=== Question 5 (2 point)
+
+.. Explain the significance of cross-validation in model evaluation. What does the average cross-validation score indicate about the model's performance?
+ 
+
+Project 03 Assignment Checklist
+====
+* Jupyter Lab notebook with your code, comments, and output for the assignment
+    ** `firstname-lastname-project03.ipynb`
+* Python file with code and comments for the assignment
+    ** `firstname-lastname-project03.py`
+* Submit files through Gradescope
+====
+
+[WARNING]
+====
+_Please_ make sure to double-check that your submission is complete and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted was what you _actually_ submitted.
+
+In addition, please review our [submission guidelines](xref:projects:current-projects:submissions.adoc) before submitting your project.
+====
