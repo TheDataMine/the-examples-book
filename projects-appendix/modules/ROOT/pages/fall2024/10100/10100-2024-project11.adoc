@@ -23,63 +23,118 @@ This project will use the following dataset(s):
 
 == Questions
 
-=== Question 1
-
-Read in data from both files, learn about datetime objects and reading in different formats
-
-
+=== Question 1 (2 pts)
 
 Let's begin our exploration of handling dates and times with the most simple and fundamental step: reading them in and understanding their structure.
 
-Start by reading the datasets for this project into a structures called `flights_dat` (for `/anvil/projects/tdm/data/flights/1999.csv`).
+Start by reading the dataset for this project into a structures called `flights_dat` (for `/anvil/projects/tdm/data/flights/1999.csv`).
 
 [NOTE]
 ====
 At this point, we're really going to give you freedom on a lot of parts of these projects. For example, you can choose to either use `fread()` to store your data in a `data.table`, `read.csv()` to store your data into a data.frame, or even `read_csv()` to store your data into a `tibble` (even though we haven't learned about those yet!). Generally , if we don't explicitly limit or request you do things a certain way, you will have the freedom to design and build your own unique solutions to problems going forward.
 ====
 
-Print the head of each dataset. `lubridate` has a ton of fantastic functions to process dates of various formats into their special `date` type that is much easier than regular character data to work with. Take a look at any information associated with dates and times in the data. In particular, notice that we have dates of the format "YYYY-MM-DD" along with individual day, month, and year data.
+Print the head of each dataset. Take a look at any information associated with dates and times in the data. In particular, notice that we have dates of the format "YYYY-MM-DD" along with individual day, month, and year data.
 
-As a callback to concepts we learned early in the semester, index into the column with full date information and get just the first entry. Print the type of that data using `class()`.
+As a callback to concepts we learned early in the semester, index into the `FlightDate` column and get just the first entry. Print the type of that data using `class()`.
 
-Next, create an identical-_looking_ bit of data by combining the first entries in the `day`, `month`, and `year` columns. Don't use `lubridate` just yet. Print the type of this combination using `class`. Is it the same as the date column?
+Next, create a close-to-identical _looking_ bit of data by combining the first entries in the `DayofMonth`, `Month`, and `Year` columns. Don't use `lubridate` just yet. Print the type of this combination using `class`. Is it the same as the date column?
 
-You can see that it is in fact not!
+You can see that it is in fact not! The bit of data from our full date column is of the `date` type, while your combined version is likely something of `character` type. This is an important distinction: when we're working with dates using the `date` type, we have access to all the functions that are specific to dates. Because `character`-type data doesn't have access to these functions, it will be much harder to work with.
 
+Luckily for us, `lubridate` has a ton of fantastic functions to process dates of various formats from `character` type into their special `date` type that is much easier than regular character data to work with.
+
+To finish this question, give https://lubridate.tidyverse.org/reference/ymd.html[this short docs page] a quick read, paying special attention ot the `ymd()` function. After applying it to your `character` date, print the `class()`. If successful, it should now read `Date`.
 
 .Deliverables
 ====
-- Ipsum lorem
+- `1999.csv` data in a data structure called `flights_dat`
+- The head of `flights_dat`
+- The data type of the first date entry in `flights_dat$FlightDate`
+- The data type of your version of the first date by combining columns
+- The data type of your date, after applying `ymd()`
 ====
 
-=== Question 2
+=== Question 2 (3 pts)
 
 learn about reformatting/writing in different formats
 
+So, as you likely gleaned from the linked documentation page, lubridate provides us with a bunch of different functions for parsing character data into date objects. Super useful! As you saw in the last problem, we already have a column labeled FlightDate with our dates in "YYYY-MM-DD" format, so we won't worry about converting the data into `lubridate` type as it has already been done for us. One very important aspect of date data is being able to measure the time between two events occurring.
+
+First off, try subtracting the first date in our `FlightDate` column from the second. As you can see, `date` types can have arithmetic performed on them just like other types can!
+
+Great. Next, we're going to start grouping and sorting our data, with an end goal of being able to create a new column that measures the number of days between planes arriving at a given airport.
+
+Let's create a new dataframe called `BRO_flights` that is a subset of `flights_dat` where the `Dest` column is set to "BRO" (this is the 3 letter code for Brownsville airport in Brownsville, TX). Next, use the https://dplyr.tidyverse.org/reference/arrange.html[`arrange()`] function from `dplyr` to sort our `BRO_flights` data by the `FlightDate` column (Hint: You can do this with the following form: `arrange(dataframe, coltosortby)`).
+
+Finally, let's make a small aside to learn about the https://dplyr.tidyverse.org/reference/transmute.html[`transmute()`] function from `dplyr`. `transmute()` is essentially the same as the `mutate()` function we learned about in the last project. However, `transmute()` only returns the results of whatever calculation we ask it to make. Another useful function is `lead()`, which allows us to get the "next value" in our data (i.e. the next row).  Take a look at the below examples for a breakdown on `transmute()` and `lead()`. Run them yourself and get a good understanding of the output.
+
+[source, R]
+----
+# Use transmute to get all the years, multiplied by 1000
+BRO_flights %>%
+    transmute(Year * 1000) %>%
+    head()
+
+# Use transmute to get each DayOfWeek minus the following DayOfWeek
+BRO_flights %>%
+    transmute(as.numeric(DayOfWeek - lead(DayOfWeek)))
+
+# Does the exact same as above, but adds clear variable names
+BRO_flights %>%
+    transmute(initDay=DayOfWeek, endDay=lead(DayOfWeek), dayDiff=as.numeric(initDay - endDay))
+----
+
+To finish this question, write code that takes your `BRO_flights` dataframe, arranges it by `FlightDate`, and then creates a new dataframe called BRO_intervals using `transmute()` that has 3 columns: `initDate` (the current date in the row), `endDate` (the date in the next row. Hint: `lead()`), and `deltaDate`, the difference between `endDate` and `initDate`. Print the head of `BRO_intervals`. Some starter code has been provided for you below:
+
+[source, r]
+----
+BRO_intervals <- BRO_flights %>%
+    mutate(FlightDate = as.Date(FlightDate)) %>% # converts column from Idate to Date
+    arrange('''Fill this in''') %>% # arrange by FlightDate
+    transmute('''Fill this in''') # Create new dataframe
+----
+
 .Deliverables
 ====
-- Ipsum lorem
+- 2nd entry in `FlightDate` minus 1st entry in `FlightDate`
+- `BRO_flights` dataframe
+- A new dataframe, `BRO_intervals`, as described, with its `head()` printed
 ====
 
-=== Question 3
+=== Question 3 (2 pts)
 
-Convert to different time zones
+The code we've just written is super useful. We can now easily find the number of days between flight arrivals at BRO airport. However, it would be nice to have more generalized utilities for this. In this question, create two new functions.
+
+The first, `intervalDFMaker()`, should take as input a 3-letter airport code and return as output a dataframe of the same structure as `BRO_intervals`, but for whatever airport the user provided.
+
+The second, called `intervalTableMaker()`,  takes as input the three letter code associated with an airport and returns as output a table of the number of days between flights arriving at the given airport. 
+
+Both of your functions can assume that the `flights_dat` already exists and is accessible.
+
+[NOTE]
+====
+This should be very similar to code you wrote in the previous question with a few _small_ additions to it.
+====
+
+Run the below code. Your dataframe's head should be a bunch of flights of Jan 01, 1999, and your table should show that 0 occurred 297915 times and 1 occurred 364 times, signifying that not a single time in 1999 was there a day that a plane didn't arrive at O'hare airport. It's a busy place!
+
+[source, r]
+----
+# test intervalDFMaker()
+head(intervalDFMaker("ORD"))
+
+# test intervalTableMaker()
+intervalTableMaker("ORD")
+----
 
 .Deliverables
 ====
-- Ipsum lorem
+- A new function, `intervalDFMaker()`, as described above
+- A new function `intervalTableMaker()`, as described above
 ====
 
-=== Question 4
-
-Do arithmetic with times, calculate timespans
-
-.Deliverables
-====
-- Ipsum lorem
-====
-
-=== Question 5
+=== Question 4 (3 pts)
 
 Visualize results of datetime analysis and create a summary visual
 
