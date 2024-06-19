@@ -1,49 +1,41 @@
-= 301 Project 03 - K-Nearest Neighbors Model Using the Boston Housing Dataset
+= 301 Project 03 - Advanced K-Nearest Neighbors Model Using the Boston Housing Dataset**
 
-== Project Objectives
+== Project Objectives 
 
-To build a robust KNN model using hyperparameter tuning, feature selection, and cross-validation for a real-life dataset, and evaluate its performance.
+This project aims to build on the foundational knowledge of the K-Nearest Neighbors (KNN) algorithm from Project 02 by introducing more complex aspects such as hyperparameter tuning, feature selection, and model evaluation with cross-validation. We will use the Boston Housing Dataset to build a robust KNN model and evaluate its performance in predicting the median value of owner-occupied homes.
 
-== Reading and Resources
+== Reading and Resources 
 
-- [An Introduction to Statistical Learning](https://www.statlearning.com/)
+- [An Introduction to Statistical Learning](www.statlearning.com/)
+- https://www.ibm.com/topics/knn[What is the k-nearest neighbors (KNN) algorithm]
+== Dataset 
 
-== Dataset
-
-- `/anvil/projects/tdm/data/boston.csv` 
+- `/anvil/projects/tdm/data/boston.csv`
 
 [NOTE]
 ====
-Overview of the Boston Housing Dataset
+This dataset contains various features of houses in Boston, including numerical and categorical data. The target variable is the median value of owner-occupied homes.
 
-- This dataset contains various features of houses in Boston, including numerical and categorical data. The target variable is the median value of owner-occupied homes.
+[source, python]
+----
+     
+import pandas as pd
+
+my_df = pd.read_csv('/anvil/projects/tdm/data/boston.csv')
+
+----
 ====
 
 == Questions
 
-[NOTE]
-====
-The first step is to Load and Explore the Data
+=== Question 1 (2 points):
 
-[source,python]
-----
-import pandas as pd
-
-# Load the Boston housing dataset
-data = pd.read_csv('boston.csv')   
-
-# Display the first few rows of the dataset
-print(data.head())
-----
-====
-
-=== Question 1 (2 points)
-
-.. Based on the initial exploration, what are the mean, median, and standard deviation of the median value of owner-occupied homes (target variable)?
+.. What are the mean, median, and standard deviation of the median value of owner-occupied homes (target variable)?
 
 [NOTE]
 ====
-Next, Preprocess the Data: Split the dataset into training and testing sets, and standardize the features.
+
+After load the date, let us do Pre-process  
 
 [source,python]
 ----
@@ -51,14 +43,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 # Split the dataset into training and testing sets
-X = data.drop('MEDV', axis=1)  
-y = data['MEDV']  
+X = my_df.drop('MEDV', axis=1)
+y = my_df['MEDV']
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-----
 
-
-[source,python]
-----
 # Standardize the features
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
@@ -67,36 +55,12 @@ X_test = scaler.transform(X_test)
 ====
 
 === Question 2 (2 points)
-.. How does the distribution of each feature change after standardization? Provide a comparison of the distributions before and after standardization.
 
-[TIP]
-====
-The following function may use to plot the distribution of each feature
-[source,python]
-----
-import matplotlib.pyplot as plt
+.. Explain how standardizing the features affects the performance of the KNN model.
 
-def plot_distributions(df,title):
-    num_features=df.shape[1]
-    num_cols=2
-    num_rows = (num_features+1)//num_cols
-    plt.figure(figsize=(15,num_rows*5))
-    for i in range(num_features):
-    plt.subplot(num_rows,num_cols,i+1)
-    plt.hist(df.iloc[:,i],bins=20,alph=0.75,edgecolor='purple')
-    plt.title(f'{title}-{feature_names[i]}')
-    plt.xlabel(feature_names[i])
-    plt.ylabel('Frequency')
-    plt.tight_layout()
-    plt.show()
-
-----
-====
 [NOTE]
 ====
-Then, Perform Feature Selection using SelectKBest to select the top 10 features.
-
-Feature selection is a process used in machine learning to select a subset of relevant features (variables, predictors) for use in model construction. It can help improve the performance of the model by removing irrelevant or less important features, reducing overfitting, and decreasing computational cost.
+Now let us select features
 
 [source,python]
 ----
@@ -108,25 +72,28 @@ X_train_selected = selector.fit_transform(X_train, y_train)
 X_test_selected = selector.transform(X_test)
 ----
 ====
- 
-=== Question 3 (1 point)
-.. Why is feature selection important, and how does SelectKBest help in this process?
 
- 
+=== Question 3 (2 points)
+
+.. Describe how feature selection improves model performance and explain the role of the `SelectKBest` method.
+
+
 [NOTE]
 ====
-Next, let us perform Hyperparameter Tuning using Grid Search to find the best hyperparameters for the KNN model.
 
-[source,python]
+The following code are an example to do Hyperparameter Tuning 
+
+[source, python]
 ----
 from sklearn.model_selection import GridSearchCV
 
 # Define the parameter grid
+
 param_grid = {
-    'n_neighbors': range(1, 21),
-    'weights': ['uniform', 'distance'],
-    'metric': ['euclidean', 'manhattan']
-}
+        'n_neighbors': range(1, 21),
+        'weights': ['uniform', 'distance'],
+        'metric': ['euclidean', 'manhattan']
+    }
 
 # Initialize the GridSearchCV
 grid_search = GridSearchCV(KNeighborsRegressor(), param_grid, cv=5, scoring='neg_mean_squared_error')
@@ -135,28 +102,28 @@ grid_search.fit(X_train_selected, y_train)
 # Get the best parameters
 best_params = grid_search.best_params_
 print(f'Best parameters: {best_params}')
-
----- 
+----
 ====
 
-=== Question 4 (1 point)
-.. What is Grid Search, and how does it help in finding the best hyperparameters for a KNN model?
- 
+=== Question 4 (2 points)
+
+..  Explain the importance of choosing the right hyperparameters in KNN and how Grid Search assists in this process.
 
 [NOTE]
 ====
-Now let us evaluate the Model with Cross-Validation to assess its performance
 
-MSE (mean squared error) measures the average squared difference between the actual values and the predicted values
+We can do the evaluation using cross_val_score like
 
 [source,python]
-----
+---- 
+
+from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import cross_val_score
 
 # Initialize the KNN model with the best parameters
 knn_best = KNeighborsRegressor(n_neighbors=best_params['n_neighbors'],
-                               weights=best_params['weights'],
-                               metric=best_params['metric'])
+                                   weights=best_params['weights'],
+                                   metric=best_params['metric'])
 
 # Perform cross-validation
 cv_scores_best = cross_val_score(knn_best, X_train_selected, y_train, cv=5, scoring='neg_mean_squared_error')
@@ -167,61 +134,23 @@ print(f'Cross-validated MSE for the best parameters: {mean_cv_mse_best}')
 knn_best.fit(X_train_selected, y_train)
 
 # Predict and evaluate on the test set
-y_pred_best = knn_best.predict(X_test_selected)
+ y_pred_best = knn_best.predict(X_test_selected)
 mse_best = mean_squared_error(y_test, y_pred_best)
 print(f'MSE for the best parameters: {mse_best}')
-
 ----
 ====
 
-=== Question 5 (1 point)
+=== Question 5 (2 points)
 
-.. Explain the significance of cross-validation in model evaluation. What does the average cross-validation score indicate about the model's performance?
+..  Discuss the significance of using cross-validation in evaluating a KNN model and interpret the cross-validated mean squared error results.
 
-[NOTE]
-====
-Next, Let us find out the impact of the number of neighbors. Use the following code to train the KNN Model for different K values and calculate the MSE 
-
-[source,python]
-----
-# Define a range of k values to test
-k_values = range(1, 21)
-mse_values = []
-
-# Train the KNN model for each k and calculate the MSE
-for k in k_values:
-    knn = KNeighborsRegressor(n_neighbors=k)
-    knn.fit(X_train_selected, y_train)
-    y_pred = knn.predict(X_test_selected)
-    mse = mean_squared_error(y_test, y_pred)
-    mse_values.append(mse)
-
-# Plot the MSE against the number of neighbors
-plt.figure(figsize=(10, 6))
-plt.plot(k_values, mse_values, marker='o', linestyle='--')
-plt.xlabel('Number of Neighbors (k)')
-plt.ylabel('Mean Squared Error (MSE)')
-plt.title('MSE vs. Number of Neighbors in KNN')
-plt.grid(True)
-plt.show()
-
-# Identify the optimal k
-optimal_k = k_values[np.argmin(mse_values)]
-print(f'Optimal number of neighbors: {optimal_k}')
-print(f'Lowest MSE: {min(mse_values)}')
-
-----
-====
-
-=== Question 6 ( 1 point)
-.. Please analyze the impact of the neighbor numbers on the MSE
 
 Project 03 Assignment Checklist
 ====
+
 * Jupyter Lab notebook with your code, comments, and output for the assignment
-    ** `firstname-lastname-project03.ipynb`
-* Python file with code and comments for the assignment
-    ** `firstname-lastname-project03.py`
+    ** `firstname-lastname-project03.ipynb` 
+
 * Submit files through Gradescope
 ====
 
@@ -229,5 +158,6 @@ Project 03 Assignment Checklist
 ====
 _Please_ make sure to double-check that your submission is complete and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted was what you _actually_ submitted.
 
-In addition, please review our [submission guidelines](xref:projects:current-projects:submissions.adoc) before submitting your project.
+In addition, please review our xref:projects:current-projects:submissions.adoc[submission guidelines] before submitting your project.
 ====
+ 
