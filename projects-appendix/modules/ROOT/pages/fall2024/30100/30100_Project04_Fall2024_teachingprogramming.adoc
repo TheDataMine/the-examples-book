@@ -7,10 +7,11 @@ To understand the core components of a simple linear regression model.
 == Reading and Resources
 
 - [An Introduction to Statistical Learning](https://www.statlearning.com/)
+- [What is Linear Regression](https://www.ibm.com/topics/linear-regression)
 
 == Dataset
 
-- '/anvil/projects/tdm/data/youtube/USvideos.csv'
+- '/anvil/projects/tdm/data/youtube/USvideos.csv' (Referred to as 'USvideos.csv' in some places in the file)
 
 [source,python]
 ----
@@ -25,194 +26,143 @@ print(my_df.head())
 
 [NOTE]
 ====
+Linear regression takes input (independent) variables and attempts to predict an output (dependent) variable. 
 
-Linear regression is a simple modeling technique that takes input (independent) variables and attempts to predict an output (dependent) variable. For example, taking the number of views (independent variable) and trying to predict the number of likes (dependent variable). Linear regression focuses on a continuous dependent variable (can take on any numeric value and isn't ordered).
+For example, taking the number of views (independent variable) and trying to predict the number of likes (dependent variable).  
 ====
 
 === Question 1 (2 points)
 
-.. What is the size of the dataset ( How many rows and columns )?
+.. What is the size of the dataset 'USvideos.csv' (How many rows and columns)?
 .. Based on the explanation, identify the independent and dependent variables in the dataset.
-.. Based on the initial exploration, what are the mean, median, and standard deviation of the median value of the dependent variable?
- 
+.. Based on the initial exploration, what are the mean, median, and standard deviation of the 'likes' column (the dependent variable)?
  
 [NOTE]
 ====
-Linear regression is a method that allows us to predict new values! If the model can learn enough about the patterns in the existing data, it can attempt to predict new values. Note that the model assumes that the predictions follow a similar specific pattern, both now and in the future. If they don't, the model won't do very well. There are other modeling techniques that handle different data patterns. Linear regression is also a core technique that many more advanced modeling types build off of.
+Linear regression is a method that allows us to predict new values! If the model can learn enough about the patterns in the existing data, it can attempt to predict new values. 
+
+Note that the model assumes that the predictions follow a similar specific pattern, both now and in the future. If they don't, the model won't do very well. There are other modeling techniques that handle different data patterns. 
+
+Linear regression is also a core technique that many more advanced modeling types build off of.
 
 ====
 
-=== Question 2 ( 2 points)
-
-.. Create a scatter plot for views vs likes
-.. Why is it important to visualize the data before building a model? What patterns can you observe from the scatter plot?
-
-[NOTE]
-====
-We can remove outliers, clean the dataset by removing extreme values that could skew the analysis to make data more clean. Python has a library scipy provide utilities for this purpose. 
+We can remove outliers and clean the dataset by removing extreme values to make data cleaner. Python has a library called `scipy` that provides utilities for this purpose. 
 
 [source,python]
 ----
 from scipy.stats import zscore
-from sklearn.linear_model import LinearRegression
 
-my_df['z_scores'] = zscore(df['views'])
-my_df = my_df[my_df['z_scores'].abs()<3]
-my_df = df.drop(columns=['z_scores'])
+# Remove outliers using z-score
+my_df['z_scores'] = zscore(my_df['views'])
+my_df = my_df[my_df['z_scores'].abs() < 3]
+my_df = my_df.drop(columns=['z_scores'])
 ----
-====
+
+=== Question 2 (2 points)
+
+.. Please use Z-score to remove the outliers for the 'views' column.
+.. Use your own words to explain the statement you used to accomplish the task.
+
+
+
+The following code is used to create a boxplot for the original data:
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+
+# Set the size
+plt.figure(figsize=(8, 6))
+
+# Boxplot for 'views'
+plt.boxplot(my_df['views'], vert=True, patch_artist=True)
+
+# Title and labels
+plt.title('Boxplot - Views Before Removing Outliers')
+plt.ylabel('Views')
+
+# Show the plot
+plt.show()
+----
 
 === Question 3 (2 points)
 
-.. Visualize the distribution and boxplot for the 'views' column before and after removing outliers. How do the plots differ?
+.. Please visualize the boxplot for the 'views' column after removing outliers. How do the plots differ?
+
+Scaling the data can ensure that features contribute equally to the model, improving model performance.
+
+For example, scaling the 'views' column ensures that this variable is treated appropriately, even if its values are in the thousands, compared to other variables.
 
 [source,python]
 ----
-# Plotting the distributions and boxplots before removing outliers
-plt.figure(figsize=(12, 6))
-
-plt.subplot(1, 2, 1)
-plt.title('Distribution Plot - Before Outlier Removal')
-sns.histplot(my_df['views'], kde=True)
-
-plt.subplot(1, 2, 2)
-plt.title('Boxplot - Before Outlier Removal')
-sns.boxplot(y=my_df['views'])
-
-plt.tight_layout()
-plt.show()
-
-# Plotting the distributions and boxplots after removing outliers
-plt.figure(figsize=(12, 6))
-
-plt.subplot(1, 2, 1)
-plt.title('Distribution Plot - After Outlier Removal')
-sns.histplot(cleaned_df['views'], kde=True)
-
-plt.subplot(1, 2, 2)
-plt.title('Boxplot - After Outlier Removal')
-sns.boxplot(y=cleaned_df['views'])
-
-plt.tight_layout()
-plt.show()
-----
-[NOTE]
-===
-Outlier Removal**: Helps to .
-- **Scaling**: Normalizes the data to ensure that features contribute equally to the model, improving model performance and convergence.
-
-
-[NOTE]
-====
-We build a linear regression model by fitting a line to the data. The line is chosen to minimize the sum of the squared differences between the observed values and the values predicted by the line. This is known as the Least Squares Error (LSE) method.
-====
-
-=== Question 4(2 points)
-
-.. Train a linear regression model using the 'views' feature to predict 'likes'. What are the Mean Squared Error (MSE) and R² score on the test set? 
-
-.. Plot the predicted trend line against the actual test data. How well does the model fit the data?
-
-[source,python]
-----
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler
 
-# Select relevant features
-X = cleaned_df[['views']]
-y = cleaned_df['likes']
-
-# Scale the data
+# Scaling the 'views' column
 scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
+my_df['views'] = scaler.fit_transform(my_df[['views']])
+----
+
+=== Question 4 (2 points)
+
+.. What is scaling, and why is it important in linear regression? Provide an example.
+
+
+We build a linear regression model by fitting a line to the data, which minimizes the sum of the squared differences between the observed values and the values predicted. The least value of this sum is called the Least Squares Error (LSE).
+
+The following is the example program to create a Linear Regression model
+
+[source,python]
+----
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+
+# Load the dataset
+my_df = pd.read_csv('/anvil/projects/tdm/data/youtube/USvideos.csv')
+
+# Remove outliers using z-score
+from scipy.stats import zscore
+my_df['z_scores'] = zscore(my_df['views'])
+my_df = my_df[my_df['z_scores'].abs() < 3]
+my_df = my_df.drop(columns=['z_scores'])
+
+# Feature and target
+X = my_df[['views']]  # Independent variable (feature)
+y = my_df['likes']    # Dependent variable (target)
 
 # Split the dataset into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.3, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Initialize and train the Linear Regression model
-lm = LinearRegression()
-model = lm.fit(X_train, y_train)
+# Scaling the 'views' column
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
 
-# Predict the values on the test set
-predictions = model.predict(X_test)
+# Instantiate and fit the model
+model = LinearRegression()
+model.fit(X_train_scaled, y_train)
 
-# Evaluate the model
-mse = mean_squared_error(y_test, predictions)
-r2 = r2_score(y_test, predictions)
-print(f'Mean Squared Error on Test Set: {mse}')
-print(f'R² Score on Test Set: {r2}')
+# Predict for the test set
+predictions = model.predict(X_test_scaled)
+
+# Calculate Least Squares Error (LSE) or Residual Sum of Squares (RSS)
+lse = ((y_test - predictions) ** 2).sum()
+print(f'Least Squares Error: {lse}')
 ----
 
-[source,python]
-----
-# Plot the predicted trend line
-plt.figure(figsize=(10, 6))
-plt.title('Predicted Linear Regression')
-plt.xlabel('Number of Views')
-plt.ylabel('Actual Number of Likes')
-plt.plot(X_test.flatten(), y_test.values.flatten(), 'bo', X_test.flatten(), predictions.flatten(), 'r-')
-plt.show()
-----
 === Question 5 (2 points)
 
-..  How does the model perform for the top 5 channels?
-
-[TIP]
-====
-[source,python]
-----
-
-# Identify the top 5 channels by video count
-top_channels = my_df['channel_title'].value_counts().head(5).index
-print("Top 5 channels by video count:\n", top_channels)
-
-# Filter the dataset to include only videos from the top 5 channels
-top_channels_df = cleaned_df[cleaned_df['channel_title'].isin(top_channels)]
-print("Filtered dataset shape:", top_channels_df.shape)
-
-
-# Plot the regression lines for the top 5 channels
-plt.figure(figsize=(20, 16))
-
-for i, channel in enumerate(top_channels, 1):
-    channel_data = top_channels_df[top_channels_df['channel_title'] == channel]
-    X_channel = channel_data[['views']]
-    y_channel = channel_data['likes']
-    
-    # Scale the data
-    X_channel_scaled = scaler.fit_transform(X_channel)
-
-    # Split the dataset into training and testing sets
-    X_train_channel, X_test_channel, y_train_channel, y_test_channel = train_test_split(X_channel_scaled, y_channel, test_size=0.3, random_state=42)
-
-    # Train the Linear Regression model
-    lm_channel = LinearRegression()
-    model_channel = lm_channel.fit(X_train_channel, y_train_channel)
-
-    # Predict the values on the test set
-    predictions_channel = model_channel.predict(X_test_channel)
-
-    # Plot the predicted trend line
-    plt.subplot(3, 2, i)
-    plt.title(f'Predicted Linear Regression for {channel}')
-    plt.xlabel('Number of Views')
-    plt.ylabel('Actual Number of Likes')
-    plt.plot(X_test_channel.flatten(), y_test_channel.values.flatten(), 'bo', X_test_channel.flatten(), predictions_channel.flatten(), 'r-')
-
-plt.tight_layout()
-plt.show()
-
-----
-====
+.. What is Least Squares Error (LSE) of your output?
+.. Please use your own words to describe how is LSE used in linear regression?  
+ 
 
 Project 04 Assignment Checklist
 ====
 * Jupyter Lab notebook with your code, comments, and output for the assignment
     ** `firstname-lastname-project04.ipynb`
-* Python file with code and comments for the assignment
-    ** `firstname-lastname-project04 .py`
+
 * Submit files through Gradescope
 ====
 
