@@ -91,7 +91,7 @@ As always, remember to properly style and label _all_ plots that you submit for 
 
 Histograms can be useful for looking purely at the distribution of values in data, but oftentimes we want to make more complex comparisons over time to identify trends.
 
-A great and very useful way to do this is to combine the `lubridate` functions we learned about in a previous project with `ggplot2`'s `geom_line()` plot type. 
+A great and very useful way to do this is to combine the `lubridate` functions we learned about in a previous project with `ggplot2` 's `geom_line()` plot type. 
 
 Take a look at the below example, where we make a line plot of likes over time. Run the code, and examine the resulting visual.
 
@@ -109,70 +109,177 @@ As you can see, the default behavior of plotting all of our time along the same 
 
 [source, r]
 ----
-AVG_month_year <- USvids %>% 
+# create a tibble of average likes per month
+avg_M_Y <- USvids %>% 
     # Create a new variable for month and year pairs
-    mutate(month_year = format(publish_time, "%Y_%m")) %>%
+    mutate(publish_month = format(publish_time, "%m"),
+           publish_year = format(publish_time, "%Y")) %>%
     # get the average for each month-year pair
-    group_by(month_year) %>%
-    summarize(AVG_month_year = mean(likes, na.rm=TRUE))
+    group_by(publish_month, publish_year) %>%
+    summarize(avg_M_Y = mean(likes, na.rm=TRUE), .groups='drop')
 
-# plot the average for each month-year pair
-# (note the group=1 argument for aes(). This is important)
-ggplot(AVG_month_year, aes(x = month_year, y = AVG_month_year, group=1)) + 
-       geom_line() + 
-       labs(x = "Month_Year", 
-            y = "Average Likes", 
-            title = "Average Likes per Month") + 
-       scale_x_discrete(guide = guide_axis(check.overlap=TRUE))
+# Plotting with ggplot2
+avg_M_Y %>%
+  ggplot(aes(x = month_year, y = avg_M_Y, group = 1)) +
+  geom_line() +
+  labs(x = "Month_Year", y = "Average Comment Count", title = "Average Comment Count per Month_Year") +
+  theme_minimal() +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ----
 
-Another approach could be to plot each year with its own line, like so:
+Another approach could be to plot each year with its own line for easy comparison between years, like so:
 
 [source, r]
 ----
+# create a tibble of average likes per month
+avg_M_Y <- USvids %>% 
+    # Create a new variable for month and year pairs
+    mutate(publish_month = format(publish_time, "%m"),
+           publish_year = format(publish_time, "%Y")) %>%
+    # get the average for each month-year pair
+    group_by(publish_month, publish_year) %>%
+    summarize(avg_M_Y = mean(likes, na.rm=TRUE), .groups='drop')
 
+# Convert publish_month and publish_year back to Date format
+avg_M_Y <- avg_M_Y %>%
+  mutate(month_year = as.Date(paste(publish_year, publish_month, "01", sep = "-")))
+
+# Plotting with ggplot2
+avg_M_Y %>%
+  ggplot(aes(x = publish_month, y = avg_M_Y, color = publish_year, group = publish_year)) +
+  geom_line() +
+  labs(x = "Month", y = "Average Comment Count", title = "Average Comment Count per Month by Year") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ----
 
+As you can see, the general approach above was to first isolate the data we wanted to plot and then plot it. While there are myriad approaches to this problem, some potentially more concise, separating the data explicitly like this can make pre-processing and grouping much simpler, and we recommend you take a similar approach throughout the rest of this project.
 
-Plot a more complex, specific visual 
+To finish this question, create two plots as described below:
+
+- create a `geom_line()` plot that displays average comment_count for each month, with all the years along the same axis (as in the first example)
+- create a `geom_line()` plot that displays average comment_count for each month, with each year represented by a different line of a different color (as in example two) 
 
 .Deliverables
 ====
-- Ipsum lorem
+- A one-line plot of average `comment_count` per month
+- A line plot of average `comment_count` per month, using different lines for each year
 ====
 
 === Question 3 (2 pts)
 
-Merge data with different countries, ask for a specific, complex visual. Likely building on previous topics
+Now that we've developed a solid approach for observing time-based patterns in our data, we are ready to build on it for further comparisons. 
+
+Load the data from `/anvil/projects/tdm/data/youtube/CAvideos.csv` and `/anvil/projects/tdm/data/youtube/FRvideos.csv`. Using the _faceting_ that you learned about in the last project, create a line plot that compares the average comment count per month in each country. 
+
+Each plot should be a multi-line plot, where each line is a different year in the data for that country. We'll provide some starter code that demonstrates how to quickly combine the country data below.
+
+[source, r]
+----
+# Combine data from all three tibbles
+combined_data <- bind_rows(
+  USvids %>% mutate(country = "USA"),
+  CAvids %>% mutate(country = "Canada"),
+  FRvids %>% mutate(country = "France")
+)
+
+# Create a tibble of average likes per month
+# EXERCISE LEFT TO THE READER
+
+# Plotting with ggplot2, facet by country
+# EXERCISE LEFT TO THE READER
+----
+
+While this may seem like a lot, it is almost entirely copy-paste from the previous question. For a reminder on exactly how faceting works, take a look back at Question 5 from Project 12 for a digestible example. Depending on how much you take from the previous question, this problem can be solved by adding only one extra line to the starter code! (Not counting any copy-pasted lines)
+
+Finish this question off by writing a few sentences analyzing the patterns between countries. Is there anything of note?
 
 .Deliverables
 ====
-- Ipsum lorem
+- A faceted line plot, for the US, France, and Canada data
+- A few sentences, in a markdown cell, describing any trends or differences you see between countries.
 ====
 
 === Question 4 (2 pts)
 
-Beginning of open-ended questions. Give loose guidelines.
+Now that we've looked at a few examples of more complex plots available to us, its your turn to express your creativity and skill learned throughout the semester. Using a visualization of your choice from http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html[this list], create a plot that demonstrates the average number of likes, by category, videos in the `USvideos` dataset got. You may not use any plot type already covered in this project. 
 
-http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html[List of `ggplot2` visualization types]
+You may find the following code helpful to map the numerical category IDs to their actual names, such that your plot is easier to understand.
+
+[source, r]
+----
+# create dict of ID-name pairs
+name_ids <- c("Film & Animation" = 1,
+             "Autos and Vehicles" = 2,
+            "Music" = 10,
+            "Pets & Animals" = 15,
+            "Sports" = 17,
+            "Short Movies" = 18,
+            "Travel & Events" = 19,
+            "Gaming" = 20,
+            "Videoblogging" = 21,
+            "People & Blogs" = 22,
+            "Comedy" = 23,
+            "Entertainment" = 24,
+            "News and Politics" = 25,
+            "Howto & Style" = 26,
+            "Education" = 27,
+            "Science & Technology" = 28,
+            "Nonprofits & Activism" = 29,
+            "Movies" = 30,
+            "Anime/Animation" = 31,
+            "Action/Adventure" = 32,
+            "Classics" = 33,
+            "Comedy" = 34,
+            "Documentary" = 35,
+            "Drama" = 36,
+            "Family" = 37,
+            "Foreign" = 38,
+            "Horror" = 39,
+            "Sci-Fi/Fantasy" = 40,
+            "Thriller" = 41,
+            "Shorts" = 42,
+            "Shows" = 43,
+            "Trailers" = 44)
+
+# map the dictionary to the numerical IDs present in our data
+US_vids["category"] <- names(name_ids)[match(US_vids$category_id, name_ids)]
+----
+
+For full credit, ensure your plot is well-formatted and makes clear what categories had the highest and lowest average likes. Be sure to include appropriate axes labels and a legend!
 
 .Deliverables
 ====
-- Ipsum lorem
+- A plot demonstrating average likes, by category, for `USvids`
 ====
 
 === Question 5 (2 pts)
 
-Repeat of question 4, but with a different plot type (of students choice). Maybe an additional requirement to make things more difficult.
+To finish off this project, and the course content as a whole for the semester, we are going to provide you the opportunity to create your own question.
+
+To receive full credit, you must think of a question about the data and then, using a plot, answer that question to the best of your abilities. Your final answer should include a markdown cell containing your created question, a `ggplot2` plot of a type that we have not used, and that you didn't use in the last question, and another markdown cell answering your question, linking the plot you created to your provided answer.
+
+Take a look at the below for some examples of acceptable questions. Feel free to build on these, but don't just copy them and use them for your own:
+
+- Do different countries have similar trends for popularity of videos over time?
+- Which category of video has the highest comment count, on average?
+- Are different categories of video published more often at specific times?
+
+If you're really struggling to think of a question, consider using one of the above examples, but making comparisons between the different countries available to us. Take the time to develop a question that's interesting to you, and create a quality answer to it.
 
 .Deliverables
 ====
-- Ipsum lorem
+- Your invented question along with its associated plot and answer.
 ====
 
 == Submitting your Work
 
-This is where we're going to say how to submit your work. Probably a bit of copypasta.
+With this project complete, you've now finished all of the new course content for TDM 10100! While this may signify the end of our formal learning together _in this class_, we really hope to see you continue with The Data Mine and are so grateful for the opportunity to get to know each of you better throughout this semester. 
+
+If you have _any_ feedback about this course, including what projects you thought were too easy/difficult, logistics you think needed improving, or anything else that comes to mind, please use Project 14 as your time to voice those thoughts and help us improve this class going forward.
+
+Regardless, we are so grateful for the opportunity to interact with you this semester, and we hope to be able to continue to support you in your learning journey in the future. Thanks so much, and have a great winter break!
 
 .Items to submit
 ====
