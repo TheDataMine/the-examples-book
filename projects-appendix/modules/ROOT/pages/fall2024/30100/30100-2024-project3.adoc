@@ -1,4 +1,4 @@
-= 301 Project # - Intro to ML - Data Preprocessing
+= 301 Project 3 - Intro to ML - Data Preprocessing
 
 == Project Objectives
 
@@ -6,7 +6,7 @@ Learn how to preprocess data for machine learning models. This includes one-hot 
 
 .Learning Objectives
 ****
-- Learn how to one-hot encode categorical variables
+- Learn how to encode categorical variables
 - Learn why scaling data is important
 - Learn how to split data into training, validation, and test sets
 ****
@@ -14,54 +14,156 @@ Learn how to preprocess data for machine learning models. This includes one-hot 
 
 == Dataset
 
+- `/anvil/projects/tdm/data/fips/fips.csv`
 - `/anvil/projects/tdm/data/Iris.csv`
 
-[NOTE]
-====
-make a note block
-====
-
-[source,language]
-----
-make a code cell in language
-----
 == Questions
 
 === Question 1 (2 points)
 
+The accuracy of a machine learning model depends heavily on the quality of the dataset used to train it. There are several issues you may encounter if you feed raw data into a model. We explore some of these issues in this project, as well as other necessary steps to format data for machine learning.
+
+The first step in preprocessing data is to split the dataset into input features and target variable(s). For the fips dataset, let's use the `CLASSFP` column as the target variable and the rest of the columns as input features.
+
+Write code to load the fips dataset using pandas and separate it into 2 dataframes: one containing the input features and the other containing the target variable.
+
+[NOTE]
+====
+Typically, the target variable is denoted by `y` and the input features are denoted by `X`. This is not required, but it is a common convention that we recommend following.
+====
+
+To confirm your dataframes are correct, print the shape of each dataframe.
+
 .Deliverables
 ====
-- Question
+- Load the fips dataset using pandas
+- Separate the dataset into input features and target variable
+- Print the shape of each dataframe
 ====
 
 === Question 2 (2 points)
 
+Label encoding is a technique used to change categorical variables into a number format that can be understood by machine learning models. This is necessary for models that require numerical input features.
+
+The basic concept behind how it works is that if there are `n` unique category labels in a column, label encoding will assign a unique integer value to each category label from `0` to `n-1`.
+
+Print the first 5 rows from the fips dataset. As you can see, the `CountyName` and `State` columns are categorical variables. If we were to use this dataset for a machine learning model, we would need to encode these columns.
+
+In this question, you will use the `LabelEncoder` class from the `scikit-learn` library to label encode the `Species` column in the Iris dataset.
+
+Fill in and run the following code to label encode the input features that need to be encoded. (This code assumes your input features are stored in a variable called `X`.)
+[source,python]
+----
+from sklearn.preprocessing import LabelEncoder
+
+encoder = LabelEncoder()
+
+X_label_encoded = X.copy()
+
+X_label_encoded['CountyName'] = encoder.fit_transform(X['CountyName'])
+# your code here to encode the 'State' column
+----
+
+Now that you have encoded the `CountyName` and `State` columns, print the first 5 rows of the X_label_encoded dataset to see the changes.
+
 .Deliverables
 ====
-- Question
+- Print the first 5 rows of the X dataset before encoding
+- Label encode the `CountyName` and `State` columns in the fips dataset
+- Print the first 5 rows of the X_label_encoded dataset after encoding
 ====
 
 === Question 3 (2 points)
 
+One issue when using label encoding is that the model may interpret these encoded values as having an order or ranking. This is not always the case, as the encoded values are simply a representation of the category labels. One-hot encoding is a method that adresses this issue. Instead of simply assigning a unique integer value to each label, one-hot encoding will create a new binary column for each category label. The value in the binary column will be `1` if the category label is present in the original column, and `0` otherwise. By doing this, the model will not interpret these encoded values as having an order.
+
+Since there are not any columns we need to encode in the Iris dataset, load the `/anvil/projects/tdm/data/fips/fips.csv` dataset into a variable called `fips_df`, and print the first 5 rows.
+
+As you can see, the `CountyName` and `State` columns are categorical variables. If we were to use this dataset for a machine learning model, we would need to one-hot encode these columns.
+
+The `scikit-learn` library provides a `OneHotEncoder` class that can be used to one-hot encode categorical variables. In this question, you will use this class to one-hot encode the `CountyName` and `State` columns in the dataset.
+
+Run the following code to one-hot encode the input features that need to be encoded. (This code assumes your input features are stored in a variable called `X`.)
+[source,python]
+----
+from sklearn.preprocessing import OneHotEncoder
+
+encoder = OneHotEncoder()
+
+X_encoded = X.copy()
+
+# fit and transform the 'CountyName' and 'State' columns
+encoded_columns = pd.DataFrame(encoder.fit_transform(X[['CountyName', 'State']]).toarray())
+
+# drop the original columns
+X_encoded = X_encoded.drop(['CountyName', 'State'], axis=1)
+
+# concatenate the encoded columns
+X_encoded = pd.concat([X_encoded, encoded_columns], axis=1)
+----
+
+Now that you have one-hot encoded the `CountyName` and `State` columns, print the dimensions of the X_encoded dataset to see the changes. You should see the same number of rows as the original dataset, but with a large amount of additional columns for the one-hot encoded variables.
+
 .Deliverables
 ====
-- Question
+- How many rows and columns are in the X_encoded dataset after one-hot encoding?
 ====
 
 === Question 4 (2 points)
 
+Scaling is another important preprocessing step that is often necessary when working with machine learning models. Scaling is the process of normalizing the range of the input features so that they are on a similar scale. This is important because many machine learning models are sensitive to the scale of the input features. If the input features are on different scales, the model may give more weight to features with larger values, which can lead to poor performance.
+
+Since the fips dataset does not contain any columns that need to be scaled, load the Iris dataset into a variable called `iris_df`. Print the first 5 rows of the `SepalLengthCm`, `SepalWidthCm`, `PetalLengthCm`, and `PetalWidthCm` columns. Based on just these rows, what is the range of values in these columns?
+
+As you may guess from the previous 2 questions, the `scikit-learn` library provides a `StandardScaler` class that can be used to scale input features. 
+
+Run the following code to scale the columns in the Iris dataset. (This code assumes your dataframe is stored in a variable called `iris_df`)
+
+[source,python]
+----
+from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler()
+
+# scale the SepalLengthCm, SepalWidthCm, PetalLengthCm, and PetalWidthCm columns
+
+X_scaled = scaler.fit_transform(iris_df[['SepalLengthCm', 'SepalWidthCm', 'PetalLengthCm', 'PetalWidthCm']])
+----
+
+Now that you have scaled the input features, print the first 5 rows of the X_scaled dataset to see the changes.
+
 .Deliverables
 ====
-- Question
+- Range of values for the `SepalLengthCm`, `SepalWidthCm`, `PetalLengthCm`, and `PetalWidthCm` columns
+- Output the first 5 rows of the X_scaled dataset after scaling
 ====
 
 === Question 5 (2 points)
 
-.Deliverables
+The final step in preprocessing data for machine learning is to split the dataset into training and testing sets. The training set is the data used to train the model, and the testing set is used to evaluate the model's performance after training. 
+
+[NOTE]
 ====
-- Question
+Sometimes, a validation set is also created to tune the hyperparameters of the model. This is not required for this project, but it is a common practice in machine learning.
 ====
 
+Again, scikit-learn provides a `train_test_split` function that can be used to split the dataset into training and testing sets.
+
+Using our `y` dataframe from Question 1, and the `X_encoded` dataframe from Question 3, split the dataset into training and testing sets. Run the following code to split the dataset.
+
+[source,python]
+----
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(X_encoded, y, test_size=0.2, random_state=42)
+----
+
+Now that you have split the dataset, print the number of rows in the training and testing sets to confirm the split was successful.
+
+.Deliverables
+====
+- Number of rows in the training and testing sets
+====
 
 == Submitting your Work
 
