@@ -140,6 +140,44 @@ Now that this works, we can remove the heads on each of those data sets.  Then w
 head(sort(table(paste(myDF$Origin, myDF$Dest, sep="-")), decreasing=T), n=100)
 ----
 
+Now we can take these results and make a dotchart:
+
+[source,R]
+----
+%%R
+dotchart(head(sort(table(paste(myDF$Origin, myDF$Dest, sep="-")), decreasing=T), n=10))
+----
+
+or alternatively:
+
+[source,R]
+----
+%%R
+dotchart(tail(sort(table(paste(myDF$Origin, myDF$Dest, sep="-"))), n=10))
+----
+
+We can extract the number of specific flights as well, for instance:
+
+[source,R]
+----
+%%R
+tail(sort(table(paste(myDF$Origin, myDF$Dest, sep="-"))), n=20)["LAX-PHX"]
+----
+
+[source,R]
+----
+%%R
+tail(sort(table(paste(myDF$Origin, myDF$Dest, sep="-"))), n=20)["SAN-LAX"]
+----
+
+In the example below, if we are still using the `tail` then we will not see the `IND-ORD` results, because that flight path is not among the most popular 20 flight paths.  So we had to (instead) look at all of the flight paths.  Note that, in such a case, we want to keep an index at the end (otherwise, we will be asking to see the tens of thousands of flight paths all over the whole country).
+
+[source,R]
+----
+%%R
+sort(table(paste(myDF$Origin, myDF$Dest, sep="-")))[c("SAN-LAX", "LAX-PHX", "IND-ORD")]
+----
+
 When we use the `table` function in R, in the result, we have a row of names followed by a row of data.  Then we have another row of names followed by a row of data, etc., etc.  R always displays data from a table in this way, namely, by alternating a row of names and a row of data.  You can think about how things would look different (and easier) if your screen was really, really wide, and there were only two rows displayed, namely, the names and the data.
 
 These are the airline carriers for the first 6 flights.
@@ -150,12 +188,26 @@ These are the airline carriers for the first 6 flights.
 head(myDF$UniqueCarrier)
 ----
 
-We can see how many flights were flown with each carrier.
+We can see how many flights were flown with each carrier, in either increasing or decreasing order:
 
 [source,R]
 ----
 %%R
 sort(table(myDF$UniqueCarrier), decreasing=T)
+----
+
+[source,R]
+----
+%%R
+sort(table(myDF$UniqueCarrier), decreasing=F)
+----
+
+The first few departure delays are:
+
+[source,R]
+----
+%%R
+head(myDF$DepDelay, n=100)
 ----
 
 The overall average departure delay, across all flights, is 8.67 minutes:
@@ -187,6 +239,23 @@ These are the first 100 departure delays for flights from Indianapolis to Chicag
 %%R
 head(myDF$DepDelay[(myDF$Origin=="IND") & (myDF$Dest=="ORD")], n=100)
 ----
+
+and the mean (or average) of those departure delays are:
+
+[source,R]
+----
+%%R
+mean(myDF$DepDelay[(myDF$Origin=="IND") & (myDF$Dest=="ORD")])
+----
+
+The average departure delay on Christmas Day is:
+
+[source,R]
+----
+%%R
+mean( myDF$DepDelay[myDF$Year == 2005 & myDF$Month == 12 & myDF$DayofMonth == 25], na.rm=T)
+----
+
 
 The first 6 department delays for flights from Boston or flights from Indianapolis are:
 
@@ -226,17 +295,41 @@ and we can add conditions to this.  For instance, if we only want to see the dis
 plot(table(myDF$DepDelay[(myDF$Origin == "IND") & (myDF$DepDelay < 60)]))
 ----
 
+If we look at the raw data (without plotting it), we need to be mindful that the output shows two rows:  the departure delay, and then (below) that how many flights with that delay.
+
+[source,R]
+----
+%%R
+table(myDF$DepDelay[(myDF$Origin == "IND") & (myDF$DepDelay < 60)])
+----
+
 
 
 
 Now we switch gears and load the donation data from federal election campaigns in 2000.  This data is described here:
 https://www.fec.gov/campaign-finance-data/contributions-individuals-file-description/[Contributions by individuals file description]
 
+
 [source,R]
 ----
 %%R
-myDF <- fread("/anvil/projects/tdm/data/election/itcont2000.txt")
+library(data.table)
 ----
+
+[source,R]
+----
+%%R
+myDF <- fread("/anvil/projects/tdm/data/election/itcont2000.txt", quote="")
+----
+
+We need to provide the names of the columns in the data frame:
+
+[source,R]
+----
+%%R
+names(myDF) <- c("CMTE_ID", "AMNDT_IND", "RPT_TP", "TRANSACTION_PGI", "IMAGE_NUM", "TRANSACTION_TP", "ENTITY_TP", "NAME", "CITY", "STATE", "ZIP_CODE", "EMPLOYER", "OCCUPATION", "TRANSACTION_DT", "TRANSACTION_AMT", "OTHER_ID", "TRAN_ID", "FILE_NUM", "MEMO_CD", "MEMO_TEXT", "SUB_ID")
+----
+
 
 The first several rows of election data are:
 
@@ -252,6 +345,14 @@ There are 1.6 million rows and 21 columns
 ----
 %%R
 dim(myDF)
+----
+
+The states where the last 100 donations were made are:
+
+[source,R]
+----
+%%R
+tail(myDF$STATE, n=100)
 ----
 
 Altogether, there were 1.8 billion dollars in contributions
@@ -303,8 +404,17 @@ Now that this works for the first 6 city-state pairs, we can do this again for t
 [source,R]
 ----
 %%R
-head(sort(table(paste(myDF$CITY, myDF$STATE)), decreasing=T))
+head(sort(table(paste(myDF$CITY, myDF$STATE)), decreasing=T), n=20)
 ----
+
+or in the opposite order:
+
+[source,R]
+----
+%%R
+tail(sort(table(paste(myDF$CITY, myDF$STATE)), decreasing=F), n=20)
+----
+
 
 Here are the names of the people who made the largest number of contributions (regardless of the size of the contributions themselves)
 
