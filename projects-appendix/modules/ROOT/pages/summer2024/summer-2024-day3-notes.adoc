@@ -1,0 +1,376 @@
+= Think Summer: Day 3 Notes -- 2024
+
+Loading the R `data.table` library and loading the data from the 2005 airline data set
+
+[source,R]
+----
+%%R
+library(data.table)
+----
+
+[source,R]
+----
+%%R
+myDF <- fread("/anvil/projects/tdm/data/flights/subset/2005.csv")
+----
+
+A dataframe in R, by the way, is a lot like an Excel spreadsheet or a SQL table.  A dataframe has columns of data, with one type of data in each column.  The columns are usually long. In other words, there are usually many rows in the dataframe.
+
+These are the first few lines of the 2005 airline data set
+
+[source,R]
+----
+%%R
+head(myDF)
+----
+
+There are 7 million rows and 29 columns
+
+[source,R]
+----
+%%R
+dim(myDF)
+----
+
+The first few flights are departing from Boston or O'Hare
+
+[source,R]
+----
+%%R
+head(myDF$Origin)
+----
+
+The first few flights are arriving at Boston or O'Hare
+
+[source,R]
+----
+%%R
+head(myDF$Dest)
+----
+
+The last few flights are departing and arriving as follows:
+
+[source,R]
+----
+%%R
+tail(myDF$Origin)
+----
+
+[source,R]
+----
+%%R
+tail(myDF$Dest)
+----
+
+We can use `n=50` to get the destinations of the first 50 flights and the destinations of the last 50 flights.
+
+[source,R]
+----
+%%R
+head(myDF$Dest, n=50)
+----
+
+[source,R]
+----
+%%R
+tail(myDF$Dest, n=50)
+----
+
+If we find out how many times an airplane departed from each airport, we get these counts:
+
+[source,R]
+----
+%%R
+head(table(myDF$Origin), n=10)
+----
+
+Now we can sort those counts, in descending order (i.e., with the largest ones given first), and display the largest such 10 counts.
+
+[source,R]
+----
+%%R
+head(sort(table(myDF$Origin), decreasing=T), n=10)
+----
+
+Now we can display how many flights departed from each of the 10 most popular airports.
+
+[source,R]
+----
+%%R
+dotchart(head(sort(table(myDF$Origin), decreasing=T), n=10))
+----
+
+We can extract the number of flights from specific airports, by looking the data up by the airports as indices.  Note that we are only selecting from the 10 most popular airports here.
+
+[source,R]
+----
+%%R
+head(sort(table(myDF$Origin), decreasing=T), n=10)[c("ATL","CVG","ORD")]
+----
+
+Here is another example, in which we extract the number of flights from airports which may or may not be among the most popular 10 airports.
+
+[source,R]
+----
+%%R
+sort(table(myDF$Origin), decreasing=T)[c("EWR","IND","JFK","ORD")]
+----
+
+We can paste together the first 300 origin airports and the first 300 destination airports.
+
+[source,R]
+----
+%%R
+paste(head(myDF$Origin, n=300), head(myDF$Dest, n=300), sep="-")
+----
+
+Then we can tabulate how many times each such flight path was flown.
+
+[source,R]
+----
+%%R
+table(paste(head(myDF$Origin, n=300), head(myDF$Dest, n=300), sep="-"))
+----
+
+Now that this works, we can remove the heads on each of those data sets.  Then we can tabulate the number of times that every flight path was used, and sort those results, and finally we can display the 100 most popular flight paths overall.
+
+[source,R]
+----
+%%R
+head(sort(table(paste(myDF$Origin, myDF$Dest, sep="-")), decreasing=T), n=100)
+----
+
+When we use the `table` function in R, in the result, we have a row of names followed by a row of data.  Then we have another row of names followed by a row of data, etc., etc.  R always displays data from a table in this way, namely, by alternating a row of names and a row of data.  You can think about how things would look different (and easier) if your screen was really, really wide, and there were only two rows displayed, namely, the names and the data.
+
+These are the airline carriers for the first 6 flights.
+
+[source,R]
+----
+%%R
+head(myDF$UniqueCarrier)
+----
+
+We can see how many flights were flown with each carrier.
+
+[source,R]
+----
+%%R
+sort(table(myDF$UniqueCarrier), decreasing=T)
+----
+
+The overall average departure delay, across all flights, is 8.67 minutes:
+
+[source,R]
+----
+%%R
+mean(myDF$DepDelay, na.rm=T)
+----
+
+We can just restrict attention to the average departure delay for flights departing from `IND` or from `JFK`.
+
+[source,R]
+----
+%%R
+mean(myDF$DepDelay[myDF$Origin=="IND"], na.rm=T)
+----
+
+[source,R]
+----
+%%R
+mean(myDF$DepDelay[myDF$Origin=="JFK"], na.rm=T)
+----
+
+These are the first 100 departure delays for flights from Indianapolis to Chicago.
+
+[source,R]
+----
+%%R
+head(myDF$DepDelay[(myDF$Origin=="IND") & (myDF$Dest=="ORD")], n=100)
+----
+
+The first 6 department delays for flights from Boston or flights from Indianapolis are:
+
+[source,R]
+----
+%%R
+head(myDF$DepDelay[myDF$Origin == "BOS"])
+----
+
+[source,R]
+----
+%%R
+head(myDF$DepDelay[myDF$Origin == "IND"])
+----
+
+We could make a table of departure delays for flights from Indianapolis:
+
+[source,R]
+----
+%%R
+table(myDF$DepDelay[myDF$Origin == "IND"])
+----
+
+and we can plot the distribution of departure delays:
+
+[source,R]
+----
+%%R
+plot(table(myDF$DepDelay[myDF$Origin == "IND"]))
+----
+
+and we can add conditions to this.  For instance, if we only want to see the distribution of delays that are less than 1 hour:
+
+[source,R]
+----
+%%R
+plot(table(myDF$DepDelay[(myDF$Origin == "IND") & (myDF$DepDelay < 60)]))
+----
+
+
+
+
+Now we switch gears and load the donation data from federal election campaigns in 2000.  This data is described here:
+https://www.fec.gov/campaign-finance-data/contributions-individuals-file-description/[Contributions by individuals file description]
+
+[source,R]
+----
+%%R
+myDF <- fread("/anvil/projects/tdm/data/election/itcont2000.txt")
+----
+
+The first several rows of election data are:
+
+[source,R]
+----
+%%R
+head(myDF)
+----
+
+There are 1.6 million rows and 21 columns
+
+[source,R]
+----
+%%R
+dim(myDF)
+----
+
+Altogether, there were 1.8 billion dollars in contributions
+
+[source,R]
+----
+%%R
+sum(myDF$TRANSACTION_AMT)
+----
+
+The largest number of contributions (regardless of the size of the contributions) were made by residents of `CA`, `NY`, `TX`, etc.
+
+[source,R]
+----
+%%R
+sort(table(myDF$STATE), decreasing=T)
+----
+
+We can paste the first 6 cities and the first 6 states together, using the `paste` function:
+
+[source,R]
+----
+%%R
+head(myDF$CITY)
+----
+
+[source,R]
+----
+%%R
+head(myDF$STATE)
+----
+
+[source,R]
+----
+%%R
+paste(head(myDF$CITY), head(myDF$STATE))
+----
+
+Then we can tabulate how many times those 6 city-state pairs occur, and sort the results, and display the head.
+
+[source,R]
+----
+%%R
+head(sort(table(paste(head(myDF$CITY), head(myDF$STATE))), decreasing=T))
+----
+
+Now that this works for the first 6 city-state pairs, we can do this again for the entire data set.  We see that the most donations were made from some typically large cities.  There are also a lot of donations from unknown locations.
+
+[source,R]
+----
+%%R
+head(sort(table(paste(myDF$CITY, myDF$STATE)), decreasing=T))
+----
+
+Here are the names of the people who made the largest number of contributions (regardless of the size of the contributions themselves)
+
+[source,R]
+----
+%%R
+head(sort(table(myDF$NAME), decreasing=T))
+----
+
+Now we can learn how to use the `tapply` function.
+
+The `tapply` function takes three things, namely, some data, some groups to sort the data, and a function to run on the data.
+
+For instance, we can take the data about the election transaction amounts, and split the data according the state where the donation was made, and sum the dollar amounts of those election donations within each state.
+
+[source,R]
+----
+%%R
+head(sort(tapply(myDF$TRANSACTION_AMT, myDF$STATE, sum), decreasing=T))
+----
+
+We can do something similar, now summing the amounts of the transactions in dollars, splitting the data according to the name of the donor:
+
+[source,R]
+----
+%%R
+head(sort(tapply(myDF$TRANSACTION_AMT, myDF$NAME, sum), decreasing=T), n=20)
+----
+
+Now we return to the airline data set from 2005:
+
+[source,R]
+----
+%%R
+myDF <- fread("/anvil/projects/tdm/data/flights/subset/2005.csv")
+----
+
+We can take an average of the departure delays, split according to the airline for the flights:
+
+[source,R]
+----
+%%R
+tapply( myDF$DepDelay, myDF$UniqueCarrier, mean, na.rm=T )
+----
+
+We can sum the distances of the flights according to the airports where the flights departed:
+
+[source,R]
+----
+%%R
+head(sort( tapply( myDF$Distance, myDF$Origin, sum ), decreasing=T ))
+----
+
+We can take an average of the arrival delays according to the destination where the flights landed.
+
+[source,R]
+----
+%%R
+head(sort( tapply( myDF$ArrDelay, myDF$Dest, mean, na.rm=T ), decreasing=T ))
+----
+
+
+
+
+
+
+
+
+
