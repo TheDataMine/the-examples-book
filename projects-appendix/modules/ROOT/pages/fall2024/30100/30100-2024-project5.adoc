@@ -11,23 +11,11 @@ In this project, we will go learn about the K-Nearest Neighbors (KNN) machine le
 - Use KNN to classify data
 ****
 
-== Supplemental Reading and Resources
-
-- url[display name]
 
 == Dataset
 
 - `/anvil/projects/tdm/data/Iris.csv`
 
-[NOTE]
-====
-make a note block
-====
-
-[source,language]
-----
-make a code cell in language
-----
 == Questions
 
 === Question 1 (2 points)
@@ -39,7 +27,7 @@ First, let's learn the basics of how a KNN works. A KNN operates by calculating 
 This random selection during a tie is not ideal, but it is a simple way to handle the case. In the next project, we will explore a way to handle ties in a more sophisticated manner.
 ====
 
-To think about this simply, let's create an example dataset with 2 input features. This dataset uses a hue and size to identify fruit.
+To think about this simply, let's look at an example with 2 input features. This dataset uses a hue and size to identify fruit.
 
 [cols=4*]
 |===
@@ -65,44 +53,167 @@ latexmath:[dist = sqrt((X-X_0)^2 + (Y-Y_0)^2)]
 
 === Question 2 (2 points)
 
-Because the KNN simply calculates the distance between points, it is very important that the input features are scaled. If one feature has a significantly larger range than another, then it is significantly more important in the distance calculation. If we want each feature to have the same importance, they should all have the same range.
+Now that we understand the basics of how a KNN works, let's create a KNN from scratch in python.
+
+We will still use pandas to load the dataset and scikit-learn to scale and split the data, but we will not use scikit-learn to create the KNN.
+
+First, let's load the Iris dataset, separate the data into features and labels, scale the input features, and split the data into training and testing sets (80% training, 20% testing).
+
 [NOTE]
 ====
-Sometimes input features are scaled, but not uniformly. This allows the model creator to essentially manually assign importance to each feature. We will explore this in the next project.
+Please review your work from Project 1 and Project 3 if you need a refresher on how to import a dataset, and how to scale and split data. If you did not complete project 3, please read the https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html#sklearn.preprocessing.StandardScaler.fit_transform[StandardScaler documentation] and the https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html#sklearn.model_selection.train_test_split[train_test_split documentation], or ask a TA for help during office hours.
 ====
+
+
+[source,python]
+----
+# Import libraries
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+
+# load the dataframe into `df`
+'''YOUR CODE TO LOAD THE DATAFRAME'''
+
+# separate the data into input features 'X' and output variable 'y'. Be sure to remove the 'Id' column from the input features
+'''YOUR CODE TO SEPARATE THE DATA'''
+
+# scale the input features into `X_scaled`
+'''YOUR CODE TO SCALE THE INPUT FEATURES'''
+
+# split the data into training 'X_train' and 'y_train' and testing 'X_test' and 'y_test' sets. Use a test size of 0.2 and random state of 42
+'''YOUR CODE TO SPLIT THE DATA'''
+----
+[NOTE]
+====
+train_test_split returns 4 variables in the order X_train, X_test, y_train, y_test. Although we provided pandas dataframes, the train_X and test_X variables will be numpy arrays. However, the y_train and y_test variables will remain pandas series. This may cause confusion in future code, so it may be helpful to convert the pandas series to numpy arrays using their `.to_numpy()` function. For example, `y_train = y_train.to_numpy()`.
+====
+
+*Please print the first 5 rows of the testing input features to confirm whether your data is processed correctly.*
 
 .Deliverables
 ====
-- Question
+- Output the first 5 rows of the testing input features
 ====
 
 === Question 3 (2 points)
 
+Now that we have our data loaded, scaled, and split, let's start working on creating a KNN from scratch.
+
+Over the next 3 questions, we will fill in functions in the KNN class below that are needed to classify new data points and test the model.
+
+[source,python]
+----
+'''
+class : `KNN`
+init inputs : `X_train` (list[list[float]]), `y_train` (list[str])
+
+description : This class stores the training data and classifies new data points using the KNN algorithm.
+'''
+class KNN:
+    def __init__(self, X_train, y_train):
+        self.features = X_train
+        self.labels = y_train
+    
+    def train(self, X_train, y_train):
+        self.features = X_train
+        self.labels = y_train
+
+    def euc_dist(self, point1, point2):
+        '''YOUR CODE FROM QUESTION 2'''
+        pass
+    
+    def classify(self, new_point, k=1):
+        '''YOUR CODE TO CLASSIFY A NEW POINT'''
+        pass
+
+    def test(self, X_test, y_test, k=1):
+        '''YOUR CODE TO TEST THE MODEL'''
+        pass
+----
+
+First, let's fill in the `euc_dist` function that calculates the Euclidean distance between two n-dimensional points. The formula for the Euclidean distance between two points is
+latexmath:[dist = sqrt((X_1-X_2)^2 + (Y_1-Y_2)^2 + ... + (Z_1-Z_2)^2)]
+where X, Y, Z, etc. are the n-dimensional coordinates of the two points.
+
+We can imagine each row in our dataset as a point in n-dimensional space, where n is the number of input features. The Euclidean distance between two points is the straight-line distance between them. It can be difficult to visualize in higher dimensions, but the formula remains the same.
+
+[NOTE]
+====
+With dataframe rows, you can subtract one row from another to get the difference between the two rows. For example, if you have two rows `row1` and `row2`, you can calculate the difference between them by running `row1 - row2`. This will return a new row with the differences between the two rows. This will be useful for calculating the Euclidean distance between two points.
+====
+
+*To test that your function works, calculate the Euclidean distance between the first two rows of the training input features by running the code below. You should get a distance of 2.3137615547435906*
+
+[source,python]
+----
+# make a knn object
+knn = KNN(X_train, y_train)
+print(knn.euc_dist(X_train[0], X_train[1]))
+----
+
 .Deliverables
 ====
-- Question
+- Euclidean distance between the first two rows of the training input features
 ====
 
 === Question 4 (2 points)
 
+Now that we have a function to calculate the Euclidean distance between two points, let's work on the `classify` function, which will classify a new point using the KNN algorithm.
+
+To classify a point, we need to calculate the Euclidean distance between the new point and all points in the training data. Then, we can find the `k` closest points and take a majority vote to classify the new point.
+
+Fill in the `classify` function to classify a new point using the KNN algorithm. If there is a tie, randomly select a class.
+
+[IMPORTANT]
+====
+Since our features and labels are stored in separate variables, it is recommended that you use the `zip` function to iterate over both lists simultaneously. For example, given A=[1,2,3,4] and B=[5,6,7,8], you can use zip(A,B) to create a list [(1,5), (2,6), (3,7), (4,8)]. This will allow you to repackage the features and labels into a single list.
+====
+
+[NOTE]
+====
+To find the `k` closest points, we recommend you to use the `sorted` function with a lambda function as the key. For example, to sort a list in ascending order, you can run `sorted(list, key=lambda x: 'some function involving element x')`
+====
+
+*To test that your function works, classify the first row of the testing input features using the KNN algorithm with k=3 by running the code below. You should get a classification of `Iris-versicolor`*
+
+[source,python]
+----
+# make a knn object
+knn = KNN(X_train, y_train)
+print(knn.classify(X_test[0], k=3))
+----
+
 .Deliverables
 ====
-- Question
+- Classification of the first row of the testing input features using the KNN algorithm with k=3
 ====
 
 === Question 5 (2 points)
 
+Now that we are able to classify a single point, let's work on the `test` function, which will test the model on a dataframe of input features and output variables.
+
+For this function, we simply need to iterate over all points in our input features, classify each point, and compare their classification to the actual output variable. We can then calculate the accuracy of our model by dividing the number of correct classifications by the total number of classifications.
+
+*To test that your function works, test the model on the testing input features and output variables using the KNN algorithm with k=1 by running the code below. You should get an accuracy of 0.9666666666666667*
+
+[source,python]
+----
+# make a knn object
+knn = KNN(X_train, y_train)
+print(knn.test(X_test, y_test, k=1))
+----
+
 .Deliverables
 ====
-- Question
+- Accuracy of the model on the testing input features and output variables using the KNN algorithm with k=1
 ====
-
 
 == Submitting your Work
 
 .Items to submit
 ====
-- firstname_lastname_project4.ipynb
+- firstname_lastname_project5.ipynb
 ====
 
 [WARNING]
