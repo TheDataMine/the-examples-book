@@ -1,0 +1,214 @@
+= TDM 20100: Project 3 -- Pattern Matching and `grep`
+
+**Motivation:** Since the release of Google in 1998, it's popularity has exploded to the point where it has become a household name. Even when someone doesn't literally mean "Search on Google.com", the phrase "Google it!" is often used as a universal call to search for a word or phrase. While we've already learned a lot about traversing and manipulating filesystems through a CLI, we still have another big hurdle to cross: finding specific files. In the CLI, we can't simply "Google it". Instead, we use pattern-matching tools like `grep` to search for the things we want. This project will be dedicated to exploring the basics of `grep` and the idea of pattern-matching and regular expressions more generally.
+
+**Context:** Being able to perform basic filesystem navigation and manipulation, as learned in the previous two projects, will be vital for completing this project
+
+**Scope:** Pattern-matching, `grep`, Regular Expressions, Bash, CLI
+
+.Learning Objectives:
+****
+- Learn about the basic concept of pattern-matching
+- Use `grep` to find specific data in a file
+- Learn about the basic idea of RegEx and its usage
+- Use `cut` to isolate certain parts of data
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about project submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+This project will use the following dataset(s):
+
+- `/anvil/projects/tdm/data/olympics/athlete_events.csv`
+- `/anvil/projects/tdm/data/icecream/combined/products.csv`
+
+== Questions
+
+=== Question 1 (2 pts)
+
+Before we dive into `grep` and regular expressions, let's take a second to understand the concept of pattern-matching more generally. Pattern-matching always involves two central things: a pattern to search for, and some string of data or files to search for that pattern in.
+
+While this idea seems rather straightforward on its face, it does contain a lot of depth. For example, let's say that we are searching for the pattern "aa" In a string of characters "aabbabbbaaa". There are a few different ways we could interpret this simple pattern, shown below:
+
+- We only want to find the first instance of "aa", so we find **aa**bbabbbaaa
+- We don't care if "aa" has some letters between it, so we can now recognize "abbba" as a match as well
+- We don't care if patterns overlap, meaning "aaa" actually contains two different "aa" pairs within it
+- We only want to recognize a "match" when it has "aa" in it exactly _n_ times, where _n_ is some arbitrary integer
+
+As you can see, there is an _enormous_ number of different interpretations for pattern matching, so much so that giving a pattern of simply "aa" is just not specific enough. To solve this issue, regular expressions were developed! Regular expressions, (often referred to simply as regex or regexp) provide us with a concise way to create very specific patterns.
+
+For example, if we wanted to search for the word "pizza" occurring at least once, we could use the pattern `pizza+`. If we wanted pizza to occur exactly 5 times, we could instead use the pattern `pizza{5}`. If we wanted to search for anything that contains "pizza" or "hamburger" at least once, we could use "(pizza|hamburger)+".
+
+Let's take a look at another brief example, which will also serve to introduce `grep` (although we'll wait on explaining until this next question!) and use a regex to search for the letter "a":
+
+[source, Python]
+----
+%%bash
+# create file for example
+cd $SCRATCH
+echo "Hello amigo!" > ex1.txt
+echo "This line doesn't hold the first letter of the english lexicon!" >> ex1.txt
+echo "But this one can and does, just more than once!" >> ex1.txt
+
+grep -E "a" ex1.txt
+
+# remove example files
+rm ex1.txt
+----
+
+Give https://cheatography.com/davechild/cheat-sheets/regular-expressions/[this excellent Reg Ex reference] a quick glance, and use it to attempt to answer the following question. We will also provide a test case for you to use to verify your answer below.
+
+Create a pattern to search for "PasswordXXX" where "XXX" can be any 3 digits from 0-9. If you do it correctly, the below example should verify your work.
+
+[NOTE]
+====
+https://regex101.com/[This website] is a great resource for building and checking your regular expressions, and we would encourage that your first build and test your expressions here before trying them on the command line.
+====
+
+[source, Python]
+----
+%%bash
+# create file for test
+cd $SCRATCH
+echo "PassSSSssWord" > test1.txt
+echo "This line doesn't hold thepassword903first letter of the english lexicon!" >> test1.txt
+echo "But this one password 232 can and does!" >> test1.txt
+echo "Your answer: "
+
+grep -E "INSERT YOUR PATTERN HERE" test1.txt
+
+echo "-----------------------------"
+echo "Correct answer: "
+echo "This line doesn't hold thepassword903first letter of the english lexicon!"
+
+# remove example files
+rm test1.txt
+----
+
+[IMPORTANT]
+====
+Solely for this question, you may not understand all that's going on (i.e. the presence of the `-E` argument to grep). That is okay, as long as you insert your pattern where specified and get the correct answer. We will go into much greater detail on these arguments later in the project.
+====
+
+.Deliverables
+====
+- The correct RegEx pattern as specified above
+====
+
+=== Question 2 (2 pts)
+
+As you're likely realizing, pattern-matching is a ridiculously deep concept and as such will take time to master. Along with all the other concepts we've learned so far in this class, we will continue to explore and apply them to real data and deepen our understanding through repeated usage and development of practical skills.
+
+As you saw in the last question, our regex patterns are only part of our search, and are actually an argument passed to `grep`. In this question, we'll further explore `grep`, some common flags we pass to it, and how it can be used for efficient searching of the filesystem.
+
+First off, what is `grep`? `grep` stands for Global Regular Expression Print and searches through a series of characters, lines, files, or directories for a given regex pattern, returning its results in a variety of forms as desired by the user.
+
+Let's talk about the **E**lephant in the room: The `-E` flag we passed to `grep` in the last question. While regex standards are typically _very_ similar between languages, there are slight differences that lead to what we call different _flavors_ of regex. `-E` specifies that we want to use the https://www.techtarget.com/whatis/definition/POSIX-Portable-Operating-System-Interface[POSIX]-specified Extended Regular Expressions standard. The other major option for `grep` regex is `-P`, which specifies the PCRE2 regex flavor (used in languages like Perl and PHP). For the questions in this project, we won't mind if you use `-P` or `-E`, but it is our suggestion that you pick one and stick to it. `-P` is largely considered to be more powerful and flexible than `-E`, and also has full compatibility with https://regex101.com/[This regex tester], but again it is almost entirely a matter of personal preference and either of these should work equally well for the purposes of this project.
+
+For this question, we'll again have you use grep to search a basic file, this time exploring some of the other arguments you can pass to `grep`. Before attempting this question, please read the man page for `grep` either straight from the terminal or by visiting https://manpages.ubuntu.com/manpages/oracular/en/man1/grep.1posix.html[this website], and take note of some of the arguments for `grep` that may assist you in this question.
+
+.. In the file `/anvil/projects/tdm/data/olympics/athlete_events.csv`, on what line does the string "Bashir Abdullah Abdul Aziz" occur?
+.. In how many lines of the file `/anvil/projects/tdm/data/olympics/athlete_events.csv` does the string "Mahmoud Ahmed Abdin" occur?
+
+[NOTE]
+====
+For some additional help on each of the two sub-problems for this question, look specifically at the `-n` and `-c` options for `grep`, respectively.
+====
+
+.Deliverables
+====
+- A `grep` for the line number for "Bashir Abdullah Abdul Aziz" in `/anvil/projects/tdm/data/olympics/athlete_events.csv`
+- A `grep` for the number of occurrences of Mahmoud Ahmed Abdin in `/anvil/projects/tdm/data/olympics/athlete_events.csv`
+====
+
+=== Question 3 (2 pts)
+
+With the clear power of `grep` for searching a file realized, let's continue to expand on it by searching entire directories at once! Try running the below example, which uses the `-r` flag to `grep` to tell it to recursively search for our pattern throughout all the files in the given directory, and output the names of those files along with the line number of any matches (using `-n`) and the text that matched our regex (using `-o`).
+
+[source, Python]
+----
+%%bash
+grep -Prno "hello world" "/anvil/projects/tdm/data/techcrunch"
+----
+
+For this question, we want you to perform a very similar `grep`, this time to tell us how many times lines the phrase "SUGAR" appears on in the `/anvil/projects/tdm/data/icecream/combined/products.csv`, no matter what is around it. (Hint: `.*` may be a useful bit of regex for this question!)
+
+You'll know you've correctly solved the question if your `grep` for `combined/products.csv` outputs `237`.
+
+.Deliverables
+====
+- A `grep` to find the number of lines that contain "SUGAR" in the file `/anvil/projects/tdm/data/icecream/combined/products.csv`
+====
+
+=== Question 4 (2 pts)
+
+It's good that we know have the incredible power of regex at our disposal when searching through files. However, even with this ability it can still be difficult to search for specific information in files where each line could be hundreds or even thousands of characters long, which is very common in data files like `.csv`'s. Luckily, we have yet another extremely useful command that can help us with this: `cut`.
+
+`cut` allows us to, well, _cut_ a line into a bunch of pieces and select the piece we want. Try running the below code for a concrete example of this at work, and give https://explainshell.com/explain/1/cut[the man page for `cut`] a read before you attempt the below problems.
+
+[source, python]
+----
+%%bash
+# navigate to the appropriate directory
+cd $SCRATCH
+
+# take a look at the first 2 rows of our data file
+# (the first row is the column headers)
+head /anvil/projects/tdm/data/youtube/USvideos.csv -n2
+
+# store the first two rows of our data file to a file in our SCRATCH directory
+head -n2 /anvil/projects/tdm/data/youtube/USvideos.csv > USvids_sample.csv
+
+# cut each line on commas (-d ","), then grab the 3rd field from each line (-f3)
+cut -d "," -f3 USvids_sample.csv
+----
+
+Try changing the `-n2` in `head -n2 /anvil/projects/tdm/data/youtube/USvideos.csv > USvids_sample.csv` to `-n10` or `-n50` to show what happens when you use `cut` on the first 10 and 50 lines of `USvideos.csv`, respectively. Additionally, try changing the `-f3` argument to `cut` to `-f6` or `-f9` to see the `publish_time` or `likes` fields of the lines, respectively.
+
+For this question, we want you to write a command using `cut` to get the names of the first 50 channel titles in the file `/anvil/projects/tdm/data/youtube/USvideos.csv`. If you're having trouble starting this, we would suggest that you use the provided example above as a starting point. It is _very_ close to the solution already, and the first instance of `head` will print the names of all the comma-separated columns, telling you exactly which field you'll need to get using `cut`.
+
+.Deliverables
+====
+- A `cut` to get the first 50 channel names out of `/anvil/projects/tdm/data/youtube/USvideos.csv`
+====
+
+=== Question 5 (2 pts)
+
+For this last question, we're going to combine our `cut` and `grep` skills, along with providing a small tease at a new tool we'll spend the next two projects learning about and using in depth: `piping`. For now, you don't have to fully understand piping and can just imagine it at its simplest: taking the output from the first command and giving it as an input to the second command.
+
+Let's look at the below example:
+
+[source, python]
+----
+%%bash
+cut -d "," -f3 /anvil/projects/tdm/data/youtube/USvideos.csv | grep -Ec "[Aa]pology"
+----
+
+Now let's deconstruct each of the above actions. First, we cut our line on `,` and select the third field, which we know from the previous question is the title of the Youtube video for each line. Next, we use `grep` to search for the pattern `[Aa]pology` case-insensitive, and return the count of lines with that pattern in the title field. As a result, we can see that there are 16 videos containing "Apology" in the title in our `USvideos.csv` data. That's less apology videos than I thought there would be!
+
+Your task for this question is rather basic, as we're asking you to combine both of the commands that you learned about in this project using a new tool we haven't yet discussed in-depth (piping). Modify the above example to search for how many times a channel named "HowToBasic" appears in the `channel_title` field of `/anvil/projects/tdm/data/youtube/USvideos.csv`. (Hint: Your code's answer to this should be 16.)
+
+As an added test, do the same, but this time for the `channel_title` "The Tonight Show Starring Jimmy Fallon".
+
+.Deliverables
+====
+- A `cut` and `grep` to count the number of times "HowToBasic" appears in `/anvil/projects/tdm/data/youtube/USvideos.csv` as a `channel_title`
+- - A `cut` and `grep` to count the number of times "The Tonight Show Starring Jimmy Fallon" appears in `/anvil/projects/tdm/data/youtube/USvideos.csv` as a `channel_title`
+====
+
+== Submitting your Work
+
+Congratulations, with regular expressions in your toolset, you can now show your mom and dad a string like `\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b` and explain to them how what looks like complete nonsense is actually how we can search for emails (a famous and notoriously difficult problem solved with regex)! As we move forward in this semester's curriculum, continue to think about how regular expressions and pattern-matching incorporate into data science generally, and feel free to refer back to previous projects from TDM 101-102 and ask questions about how languages like Python and R might be utilizing regex behind-the-scenes for some of their built-in functions!
+
+.Items to submit
+====
+- firstname-lastname-project3.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
