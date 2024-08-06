@@ -34,7 +34,7 @@ You can learn more about The Data Mine using the following links:
 - [2022 poster symposium](https://datamine.purdue.edu/symposium/welcome.html)
 - [2021 poster symposium](https://datamine.purdue.edu/symposium/welcome2021.html)
 - [2020 poster symposium](https://datamine.purdue.edu/symposium/welcome2020.html)
-- [Our team](https://datamine.purdue.edu/about/welcome.html)
+- [Our team](https://datamine.purdue.edu/about-welcome/)
 
 ## Contribution
 
