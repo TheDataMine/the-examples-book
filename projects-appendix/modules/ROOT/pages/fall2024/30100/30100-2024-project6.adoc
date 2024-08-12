@@ -16,7 +16,7 @@ In this project, we will learn about more advanced techniques for K-Nearest Neig
 
 == Dataset
 
-- `/anvil/projects/tdm/data/Iris.csv`
+- `/anvil/projects/tdm/data/iris/Iris.csv`
 
 [NOTE]
 ====
@@ -41,7 +41,7 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 
-df = pd.read_csv('/anvil/projects/tdm/data/Iris.csv')
+df = pd.read_csv('/anvil/projects/tdm/data/iris/Iris.csv')
 X = df.drop(['Species','Id'], axis=1)
 y = df['Species']
 
@@ -97,18 +97,18 @@ However, uniformly scaling our features may not be the best approach. If we want
 
 [NOTE]
 ====
-This concept of manually assigning the importance of features is known as feature engineering. Feature engineering is using existing knowledge of the data to either create new features or scale existing features in a way that will help the model perform better.
+This concept of manually assigning the importance of features is an example of feature engineering. We can use existing knowledge (or often times intuition) to determine how important each feature should be in the model. This can greatly improve our model's performance if done right, and can also often lead to a more interpretable model.
 ====
 
-Let's create a new function in the KNN that will calculate the euclidean distance between two points, but will take a list of weights to determine how important each feature is. This will allow us to scale the distance between two points based on the importance of each feature.
+Let's create a new function inside the KNN class that will calculate the euclidean distance between two points, but will take a list of weights to determine how important each feature is. This will allow us to scale the distance between two points based on the importance of each feature.
 
 [source,python]
 ----
 def scaled_distance(self, point1, point2, weights):
-    # firstly, scale weights so they sum to 1
+    # firstly, scale weights so they sum to 1 (each weight should be a fraction of the total 1)
     ''' YOUR CODE HERE '''
 
-    # then, scale the 2 points by the weights
+    # then, scale the 2 points by the weights (multiply each feature in the point by the corresponding weight)
     ''' YOUR CODE HERE '''
 
     # finally, calculate and return the euclidean distance between the 2 points (use the existing euc_dist function)
@@ -116,7 +116,7 @@ def scaled_distance(self, point1, point2, weights):
     pass
 ----
 
-*To ensure your implementation is correct, run the below code to calculate the scaled distance between the first row of the training set and the second row of the testing set. The printed values should be 1.4718716551800963 for euc_dist and 1.9691711992735412 for scaled_distance.*
+*To ensure your implementation is correct, run the below code to calculate the scaled distance between the first row of the training set and the second row of the testing set. The printed values should be 1.4718716551800963 for euc_dist and 0.15147470763642634 for scaled_distance.*
 
 [source,python]
 ----
@@ -133,12 +133,17 @@ print(knn.scaled_distance(X_train[0], X_test[1], [1,1,1,10]))
 
 === Question 3 (2 points)
 
-Now that we have code to scale the distance between two points based on the importance of each feature, let's write a function to test the accuracy of our KNN model given weights.
+Now that we have code to scale the distance between two points based on the importance of each feature, let's write two functions inside the KNN class to classify a point using weights, and to test the model using weights.
+
+[NOTE]
+====
+These functions will be extremely similar to the existing classify and test functions, but use the scaled_distance function instead of the euc_dist function.
+====
 
 [source,python]
 ----
 def classify_weighted(self, new_point, k=1, weights=None):
-    ''' If no weights are provided, run the existing classify function '''
+    ''' If weights == None, run the existing classify function '''
 
     # now, write the classify function using the scaled_distance function
     ''' YOUR CODE HERE '''
@@ -148,7 +153,7 @@ def test_weighted(self, X_test, y_test, k=1, weights=None):
     pass
 ----
 
-*To test that your functions work, please run the below code to calculate the accuracy of the model with different weights*
+*To test that your functions work, please run the below code to calculate the accuracy of the model with different weights. Your accuracies should be 0.9666666666666667, 0.9666666666666667, and 0.8333333333333334 respectively.*
 
 [source,python]
 ----
@@ -175,13 +180,15 @@ There are many ways to handle ties in KNN, including the following two approache
 1. Randomly select a class from the tied classes
 2. Weight the classes based on the distance from the new point
 
-Let's implement the second approach in a new classify function that will handle ties by weighting the classes based on the distance from the new point.
+Randomly selecting the class from the tied classes is a very simple approach that can be implemented easily. In environments where the classes are balanced, this approach may be sufficient. However, if our dataset is biased with class imbalance, this approach may not work well.
 
-Please use the 'euc_dist' function to calculate the distance between points, we will not use scaled features for this question.
+Weighting classes based on their distance from the new point is more complex and requires more computation. However, this approach can be quite accurate when classifying new points, and is often used in practice.
+
+Let's implement the second approach in a new classify function that will handle ties by weighting the classes based on the distance from the new point.
 
 [source,python]
 ----
-def classify_weighted_ties(self, new_point, k=1):
+def classify_weighted_ties(self, new_point, k=1, weights=None):
     # follow the same approach as the classify function. however, for each nearest neighbor, we need to save both the label and the distance
     # nearest_labels = [(label, distance), ... k times]
     ''' YOUR CODE HERE '''
@@ -196,21 +203,22 @@ def classify_weighted_ties(self, new_point, k=1):
 It is recommended to use `defaultdict` from the `collections` module to initialize a dictionary with a default value of a list. This will allow you to append to the list without checking if the key exists.
 ====
 
-*To test that your function works properly, we will classify the a test point at different k values. Run the below code to classify the 9th row of the testing input features using the KNN algorithm with k=5, 7, and 9. The output should be 'Iris-versicolor' for all k=5, and k=7, and 'Iris-virginica' for k=9.*
+*To test that your function works properly, we will classify the a test point at different k values. Run the below code to classify the 9th row of the testing input features using the KNN algorithm with k=5, 7, and 9. The output should be 'Iris-versicolor', 'Iris-versicolor', and 'Iris-virginica' respectively.*
 
 [source,python]
 ----
 knn = KNN(X_train, y_train)
-print(knn.classify_weighted_ties(X_test[8], k=5))
-print(knn.classify_weighted_ties(X_test[8], k=7))
-print(knn.classify_weighted_ties(X_test[8], k=9))
+#print(knn.classify_weighted_ties(X_test[0], k=5))
+print(knn.classify_weighted_ties(X_test[8], k=5, weights=None))
+print(knn.classify_weighted_ties(X_test[8], k=7, weights=None))
+print(knn.classify_weighted_ties(X_test[8], k=9, weights=None))
 ----
 
 If you print some debugging information inside the function, you should see that even though at k=9 there are more 'Iris-versicolor' neighbors, the average distance of the 'Iris-virginica' neighbors is smaller and therefore is selected.
 
 .Deliverables
 ====
-- Classification of the 9th row of the testing input features using the KNN algorithm with k=5, 7, and 9
+- Classification test at k=5, 7, and 9.
 - Explanation of why the classification changes when we change the k value
 - What do you think happens if we set k to the number of training points?
 ====

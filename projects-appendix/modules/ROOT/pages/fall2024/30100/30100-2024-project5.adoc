@@ -14,18 +14,24 @@ In this project, we will go learn about the K-Nearest Neighbors (KNN) machine le
 
 == Dataset
 
-- `/anvil/projects/tdm/data/Iris.csv`
+- `/anvil/projects/tdm/data/iris/Iris.csv`
 
 == Questions
 
 === Question 1 (2 points)
 
-First, let's learn the basics of how a KNN works. A KNN operates by calculating the difference between input features to all samples in its existing database, and performing a majority vote between the k closest samples to classify the input features. If k=1, it simply chooses the closest class. If k=3, it takes chooses the majority between the 3 nearest. If there is ever a tie, it will randomly select a class.
+First, let's learn the basics of how a KNN works. A KNN operates by calculating the difference between input features to all samples in its existing database, and performing a majority vote between the k closest samples to classify the input features. If k=1, it simply chooses the closest class. If k=3, it takes chooses the majority between the 3 nearest. If there is ever a tie, the default behavior is to select a random class from the tied classes.
 
 [NOTE]
 ====
 This random selection during a tie is not ideal, but it is a simple way to handle the case. In the next project, we will explore a way to handle ties in a more sophisticated manner.
 ====
+
+image::KNN_example_image.png[]
+
+Take the above example. Suppose we have some dataset containing 2 classes, represented by blue triangles and orange circles. If we have some unknown point (the green square), we can classify it by finding the k closest points to it and taking a majority vote. In this case, the 5 closest points are shown with dashed lines and labeled in order. 
+
+If k=1, what would the unknown point be classified as? If k=3, what would it be classified as? If k=5, what would it be classified as?
 
 To think about this simply, let's look at an example with 2 input features. This dataset uses a hue and size to identify fruit.
 
@@ -41,10 +47,14 @@ To think about this simply, let's look at an example with 2 input features. This
 Given this dataset, we want to identify a fruit with Hue=24, Size=0.95.
 
 To find the distance between 2d points, you can use the formula
-latexmath:[dist = sqrt((X-X_0)^2 + (Y-Y_0)^2)]
+[latexmath]
+++++
+\text{dist} = sqrt((X-X_0)^2 + (Y-Y_0)^2)
+++++
 
 .Deliverables
 ====
+- What class would our the green square be classified as if k=1? if k=3? if k=5?
 - Which point is our unknown fruit closest to? (put the #)
 - What fruit should our unknown fruit be classified as, assuming k=1?
 - What would happen if we set k=4?
@@ -57,7 +67,7 @@ Now that we understand the basics of how a KNN works, let's create a KNN from sc
 
 We will still use pandas to load the dataset and scikit-learn to scale and split the data, but we will not use scikit-learn to create the KNN.
 
-First, let's load the Iris dataset, separate the data into features and labels, scale the input features, and split the data into training and testing sets (80% training, 20% testing).
+First, let's load the Iris dataset, separate the data into features and labels (hint: the Species column is our target variable), scale the input features, and split the data into training and testing sets (80% training, 20% testing).
 
 [NOTE]
 ====
@@ -120,7 +130,7 @@ class KNN:
         self.labels = y_train
 
     def euc_dist(self, point1, point2):
-        '''YOUR CODE FROM QUESTION 2'''
+        '''YOUR CODE TO CALCULATE THE EUCLIDEAN DISTANCE'''
         pass
     
     def classify(self, new_point, k=1):
@@ -138,12 +148,34 @@ where X, Y, Z, etc. are the n-dimensional coordinates of the two points.
 
 We can imagine each row in our dataset as a point in n-dimensional space, where n is the number of input features. The Euclidean distance between two points is the straight-line distance between them. It can be difficult to visualize in higher dimensions, but the formula remains the same.
 
+The inputs for this function are `point1` and `point2`, which are each rows from our dataset. The output should be the float value of the Euclidean distance between the two points.
+
 [NOTE]
 ====
-With dataframe rows, you can subtract one row from another to get the difference between the two rows. For example, if you have two rows `row1` and `row2`, you can calculate the difference between them by running `row1 - row2`. This will return a new row with the differences between the two rows. This will be useful for calculating the Euclidean distance between two points.
+With pandas dataframes, you can perform operations between rows. For example, if you have `row1` and `row2`, you can calculate the difference between them by running `row1 - row2`. This will return a new row with the differences between the two rows. This will be useful for calculating the Euclidean distance between two points.
 ====
 
-*To test that your function works, calculate the Euclidean distance between the first two rows of the training input features by running the code below. You should get a distance of 2.3137615547435906*
+One thing that you should learn how to do is test functions you right. Instead of creating the whole KNN and making sure the code works at the very end, it is important to test each piece of code as we right it. We can create test cases to see if our function is working as expected. Some test cases have been provided to you below. For this function, please create 2-3 test cases of your own to ensure that your function works as expected.
+
+[NOTE]
+====
+In python, we can use the `assert` statement for test cases. If we assert an expression that results in true, the code will continue like nothing happened. However, if the expression results in false, we will receive an `AssertionError`, notifying us that our function is not working as expected.
+====
+
+[source,python]
+----
+import numpy as np
+# make a knn object
+knn = KNN(X_train, y_train)
+# test the euc_dist function
+assert knn.euc_dist(np.array([1,2,3]), np.array(1,2,3)) == 0
+assert knn.euc_dist(np.array([1,2,3]), np.array(1,2,4)) == 1
+assert knn.euc_dist(np.array([0,0]), np.array([3,4])) == 5
+# your test cases here:
+
+----
+
+*To test that your function works, calculate the Euclidean distance between the first two rows of the training input features by running the code below.*
 
 [source,python]
 ----
@@ -154,7 +186,8 @@ print(knn.euc_dist(X_train[0], X_train[1]))
 
 .Deliverables
 ====
-- Euclidean distance between the first two rows of the training input features
+- Your own test cases for the `euc_dist` function
+- Output of calculating the euclidean distance between the first two rows of the training input features
 ====
 
 === Question 4 (2 points)
@@ -172,8 +205,29 @@ Since our features and labels are stored in separate variables, it is recommende
 
 [NOTE]
 ====
-To find the `k` closest points, we recommend you to use the `sorted` function with a lambda function as the key. For example, to sort a list in ascending order, you can run `sorted(list, key=lambda x: 'some function involving element x')`
+To find the `k` closest points, we recommend you to use the `sorted` function with a lambda function as the key. For example, to sort a list in ascending order, you can run `sorted(list, key=lambda x: 'some function involving element x')`. This lambda essentially says for each element x in the list, get a value by running some function and sort based on that value. Another hint is that the 'some function involving element x' should be a function you wrote in the last question...
 ====
+
+Below is some pseudocode to help you get started on the `classify` function.
+[source,python]
+----
+def classify(self, new_point, k=1):
+    # combine features and labels into a single list
+    ### YOUR CODE HERE ###
+
+    # sort the list by the euclidean distance between each point and the new point
+    ### YOUR CODE HERE ###
+
+    # get the k closest points
+    ### YOUR CODE HERE ###
+
+    # get the labels of the k closest points
+    ### YOUR CODE HERE ###
+
+    # find the majority class
+    ### YOUR CODE HERE ###
+----
+
 
 *To test that your function works, classify the first row of the testing input features using the KNN algorithm with k=3 by running the code below. You should get a classification of `Iris-versicolor`*
 
@@ -195,6 +249,22 @@ Now that we are able to classify a single point, let's work on the `test` functi
 
 For this function, we simply need to iterate over all points in our input features, classify each point, and compare their classification to the actual output variable. We can then calculate the accuracy of our model by dividing the number of correct classifications by the total number of classifications.
 
+Below is some pseudocode to help you get started on the `test` function.
+[source,python]
+----
+def test(self, X_test, y_test, k=1):
+    # for each point in X_test
+    ### YOUR CODE HERE ###
+        # classify the point
+        ### YOUR CODE HERE ###
+
+        # compare the classification to the actual output variable
+        # if the classification is correct, increment a counter
+        ### YOUR CODE HERE ###
+
+    # calculate and return the accuracy of the model
+    ### YOUR CODE HERE ###
+----
 *To test that your function works, test the model on the testing input features and output variables using the KNN algorithm with k=1 by running the code below. You should get an accuracy of 0.9666666666666667*
 
 [source,python]
