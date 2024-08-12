@@ -32,7 +32,7 @@ While this is the last _content-based_ project, you will have one more graded pr
 
 To cap off this semester's content, we will be learning about some interesting and unique types of visuals included in `ggplot2` and their use cases along with providing a few open-ended questions that provide you the opportunity to showcase the skills you've been developing all semester!
 
-To start, read the data from `/anvil/projects/tdm/data/youtube/*` into a new data structure called `USvids`. We will be working with the YouTube data again this project, both because you should already be roughly familiar with it and because you will be able to contrast your work now against that of the last project's and decide which plot types you like best.
+To start, read the data from `/anvil/projects/tdm/data/youtube/USvideos.csv` into a new data structure called `USvids`. We will be working with the YouTube data again this project, both because you should already be roughly familiar with it and because you will be able to contrast your work now against that of the last project's and decide which plot types you like best.
 
 `ggplot2` comes with a huge variety of plot types to choose from, with each having its own specific use cases based on functional benefits along with providing aesthetic choices between similar plot types for added customization.
 
@@ -62,7 +62,7 @@ filtered_USvids <- filter(USvids,
 
 # specify data to plot
 ggplot(filtered_USvids, aes(likes)) + 
-    # create histogram with 30 bins
+    # create histogram with 50 bins
     geom_histogram(bins=50) + 
     ggtitle("Video Like Distribution; Q1-Q3") + 
     xlab("Video Likes") + 
@@ -105,24 +105,28 @@ ggplot(USvids, aes(x=publish_time)) +
          y="Like Count")
 ----
 
-As you can see, the default behavior of plotting all of our time along the same axis seems to obscure any trends, as the massive amount of likes in later years completely outweigh any of the earlier years. There are plenty of ways we could handle this, with one of which being instead plotting the _average_ amount of likes for each period of time. For example, the below code will plot the average amount of likes on a video published in a given month and year.
+As you can see, plotting the publish date and like count of every single video seems to obscure any trends, as videos with “low” like counts appear throughout the entire graph. There are plenty of ways we could handle this, with one of which being instead plotting the average amount of likes for each period of time. For example, the below code will plot the average amount of likes on a video published in a given month and year.
 
 [source, r]
 ----
 # create a tibble of average likes per month
 avg_M_Y <- USvids %>% 
     # Create a new variable for month and year pairs
-    mutate(publish_month = format(publish_time, "%m"),
-           publish_year = format(publish_time, "%Y")) %>%
+    mutate(publish_month = format(as.Date(publish_time), "%m"),
+           publish_year = format(as.Date(publish_time), "%Y")) %>%
     # get the average for each month-year pair
     group_by(publish_month, publish_year) %>%
     summarize(avg_M_Y = mean(likes, na.rm=TRUE), .groups='drop')
+
+# Convert publish_month and publish_year back to Date format
+avg_M_Y <- avg_M_Y %>%
+  mutate(month_year = as.Date(paste(publish_year, publish_month, "01", sep = "-")))
 
 # Plotting with ggplot2
 avg_M_Y %>%
   ggplot(aes(x = month_year, y = avg_M_Y, group = 1)) +
   geom_line() +
-  labs(x = "Month_Year", y = "Average Comment Count", title = "Average Comment Count per Month_Year") +
+  labs(x = "Month_Year", y = "Average Like Count", title = "Average Like Count per Month_Year") +
   theme_minimal() +
   scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
@@ -149,7 +153,7 @@ avg_M_Y <- avg_M_Y %>%
 avg_M_Y %>%
   ggplot(aes(x = publish_month, y = avg_M_Y, color = publish_year, group = publish_year)) +
   geom_line() +
-  labs(x = "Month", y = "Average Comment Count", title = "Average Comment Count per Month by Year") +
+  labs(x = "Month", y = "Average Like Count", title = "Average Like Count per Month by Year") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ----
