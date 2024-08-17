@@ -1,0 +1,302 @@
+= FastAPI
+
+FastAPI is a minimal framework for building web application programming interfaces (APIs) in Python quickly.
+
+== Common Applications
+
+In Stack Overflow 2021 Developer Survey, FastAPI is the third most loved web framework.
+
+One real life example of FastAPI usage is Netflix's Dispatch (crisis management orchestration framework).
+
+
+== Example
+
+NOTE: All of the code examples are written in Python, unless otherwise noted.
+
+For this example, we will build a FastAPI for tracking expenses. Users can input their expenses with categories and dates and read those expenses. The example will follow this tutorial: https://fastapi.tiangolo.com/how-to/async-sql-encode-databases/
+
+The FastAPI example has five different features:
+
+** Create a User
+*** Input: name as a string
+*** Output: [internally] assign an ID number to the name and store it in database
+** Get a List of Users
+*** Input: skip first # users (default: 0), limit query (default: 10)
+*** Output: print the users following the input conditions
+** Read a User
+*** Input: user ID
+*** Output: print all info associating to the given user ID
+** Create an Expense
+*** Input: user ID, expense info (category, date, amount, description)
+*** Output: store the expense under given user ID in database
+** Get a List of Expenses
+*** Input: skip first # expenses (default: 0), limit query (default: 10)
+*** Output: print the expenses following the input conditions
+
+The example uses the Desktop in Anvil as you need to use a browser to run the app. SQLite is used as the database as it's simple and easy to use. You can adjust the code to be accomodated to a PostgreSQL.
+
+If you don't want to build a FastAPI with a database, you can follow FastAPI's https://fastapi.tiangolo.com/#example[simple tuortial]
+
+FastAPI also has a https://fastapi.tiangolo.com/project-generation/[project generation template] avaliable. 
+
+=== Code
+The container version is still work in progress. Here's the code you can copy and paste into your environment.
+
+It's important to note that it's necessary to use a Linux desktop in Anvil to launch a FastAPI.
+
+Need help implementing any of this code? Feel free to reach out to mailto:datamine-help@purdue.edu[datamine-help@purdue.edu].
+
+==== Setup
+Open a terminal in the desktop, and run those commands in order to load TDM seminar environment.
+[source,bash]
+----
+#load tdm environment
+module use /anvil/projects/tdm/opt/core/
+module load tdm
+module load python/seminar
+----
+
+The FastAPI example reequires six different python files to be built, so let's make a directory.
+
+[source,bash]
+----
+#make a directory
+mkdir tdm-fastapi-example
+#go to the directory
+cd tdm-fastapi-example
+----
+
+==== database.py
+database configuration python file
+
+[source,python]
+----
+# import SQLAlchemy parts
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+# database URL for SQLAlchemy
+# open a file with the SQLite database in the same directory
+SQLALCHEMY_DATABASE_URL = "sqlite:///./tdm-fastapi-example.db"
+
+# create SQLAlchemy engine (home base for the database)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+# by default, SQLite only accepts one thread
+# but in FastAPI, using (def) functions can interact with the database for the same request, hence multiple threads
+# so `False` for checking the same thread is needed
+
+# instance of the SessionLocal class
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# returns a class to create each database model/class
+Base = declarative_base()
+----
+
+==== models.py
+class configuration python file
+
+[source,python]
+----
+# import SQLAlchemy parts
+from sqlalchemy import Boolean, Column, Date, Double, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
+
+# import Base from the file database.py
+from .database import Base
+
+# create User class
+class User(Base):
+    # the name of the table
+    __tablename__ = "users"
+
+    # Class attributes with each attribute being a column in the table
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+
+    # relationship is a "magic" attribute that conatains values from another table
+    # expense table is related to this owner table
+    expenses = relationship("Expense", back_populates="owner")
+
+# create Expense class
+class Expense(Base):
+    # the name of the table
+    __tablename__ = "expenses"
+
+    # Class attributes
+    id = Column(Integer, primary_key=True, index=True)
+    category = Column(String, index=True)
+    date = Column(Date, index=True)
+    amount = Column(Double, index=True)
+    description = Column(String, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"))
+
+    # owner table is related to this expenses table
+    owner = relationship("User", back_populates="expenses")
+----
+
+==== schemas.py
+define your data models (sorta like validation)
+
+[source,python]
+----
+from pydantic import BaseModel
+from datetime import date
+
+class ExpenseBase(BaseModel):
+    category: str
+    date: date
+    amount: float
+    description: str | None = None
+class ExpenseCreate(ExpenseBase):
+    pass
+class Expense(ExpenseBase):
+    id: int
+    owner_id: int
+    class Config:
+        orm_mode = True
+    
+class UserBase(BaseModel):
+    name: str
+class UserCreate(UserBase):
+    pass
+class User(UserBase):
+    id: int
+    expenses: list[Expense] = []
+    class Config:
+        orm_mode = True
+----
+
+==== crud.py
+CRUD utils: Create, Read, Update, Delete
+For this example, only create and read
+
+[source,python]
+----
+from sqlalchemy.orm import Session
+
+# import models (SQLAlchemy models) and schemas (Pydantic models/schemas) files
+from . import models, schemas
+
+# Utility Functions
+
+# Read a single user by ID
+def get_user(db: Session, user_id: int):
+    return db.query(models.User).filter(models.User.id==user_id).first()
+
+# read a single user by name
+def get_user_by_name(db: Session, name: str):
+    return db.query(models.User).filter(models.User.name==name).first()
+
+# Read multiple users
+def get_users(db: Session, skip: int=0, limit: int=10):
+    return db.query(models.User).offset(skip).limit(limit).all()
+
+# Read multiple expenses
+def get_expenses(db: Session, skip: int=0, limit: int=10):
+    return db.query(models.Expense).offset(skip).limit(limit).all()
+
+# Create a SQLAlchemy model instance
+def create_user(db: Session, user: schemas.UserCreate):
+    db_user = models.User(name=user.name)
+
+    # add the instance to the database system
+    db.add(db_user)
+    # commit the changes to the database session to be saved
+    db.commit()
+    # refresh the instance to contain any new data from the database
+    db.refresh(db_user)
+    return db_user
+
+def create_user_expense(db: Session, expense: schemas.ExpenseCreate, user_id: int):
+    db_expense = models.Expense(**expense.dict(), owner_id=user_id)
+
+    # add the instance to the database session
+    db.add(db_expense)
+    # commit the changes to the database session to be saved
+    db.commit()
+    # refresh the instance to contain any new data from the database
+    db.refresh(db_expense)
+    return db_expense
+----
+==== \__init__.py
+create a blank python and save it as `\__init__.py`
+
+==== main.py
+the python file you call to deploy the app
+
+[source,python]
+----
+from fastapi import Depends, FastAPI, HTTPException
+from sqlalchemy.orm import Session
+
+from . import crud, models, schemas
+from .database import SessionLocal, engine
+
+models.Base.metadata.create_all(bind=engine)
+
+app = FastAPI()
+
+# Dependency: use the same session for the request and then close it
+def get_db():
+    db=SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+@app.post("/users/", response_model=schemas.User)
+def create_user(user: schemas.UserCreate, db: Session=Depends(get_db)):
+    db_user = crud.get_user_by_name(db, user.name)
+
+    if db_user:
+        raise HTTPException(status_code=400, detail="Name already registered")
+
+    return crud.create_user(db=db, user=user)
+
+@app.get("/users/", response_model=list[schemas.User])
+def read_users(skip: int=0, limit: int=10, db: Session=Depends(get_db)):
+    return crud.get_users(db, skip=skip, limit=limit)
+
+@app.get("/users/{user_id}", response_model=schemas.User)
+def read_user(user_id: int, db: Session=Depends(get_db)):
+    db_user = crud.get_user(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_user
+
+@app.post("/users/{user_id}/expenses/", response_model=schemas.Expense)
+def create_expense_for_user(user_id: int, expense: schemas.ExpenseCreate, db: Session=Depends(get_db)):
+    return crud.create_user_expense(db=db, expense=expense, user_id=user_id)
+
+@app.get("/expenses/", response_model=list[schemas.Expense])
+def read_expenses(skip: int=0, limit: int=10, db: Session=Depends(get_db)):
+    return crud.get_expenses(db, skip=skip, limit=limit)
+----
+
+==== Launch the app
+Once all the required files are created, make sure you're one step outside of the `tdm-fastapi-example` directory.
+
+To launch the app, run this command in the terminal:
+[source,bash]
+----
+python3 -m uvicorn tdm-fastapi-example.main:app --reload
+----
+
+Then in the Desktop, open Web Broswer under Applications. Visit *http://127.0.0.1:8000/docs*
+
+You can find your database in the current directory called `tdm-fastapi-example.db` You can access the data via Jupyter Notebook if you want. Learn how to access the database: https://docs.python.org/3/library/sqlite3.html
+
+== Resources
+
+All resources are chosen by Data Mine staff to be of decent quality, and most if not all content is free. 
+
+=== Websites
+https://github.com/zhanymkanov/fastapi-best-practices[FastAPI Best Pratices]
+
+https://www.turing.com/kb/fastapi-vs-flask-a-detailed-comparison[Flask VS FastAPI]
+
+=== References
+https://netflixtechblog.com/introducing-dispatch-da4b8a2a8072[Netfix's Dispatch Feature]
+
+https://insights.stackoverflow.com/survey/2021/#section-most-loved-dreaded-and-wanted-web-frameworks[Stack Overflow 2021 Developer Survey]

@@ -1,0 +1,174 @@
+= Containers
+
+Containers have long ago taken the software world by storm. They are a more efficient solution to the age-old problem of software distribution and portability, than, for example, a virtual machine (VM).footnote:disclaimer[Projects like https://firecracker-microvm.github.io/[Firecracker], and https://github.com/weaveworks/ignite[Weave Ignite] are making the possibility of having both the strong isolation of a VM and the speed of a container a real possibility.] If you've heard mentioned tools like Docker or Kubernetes, you are already aware of some tooling around the container ecosystem!
+
+[quote, A software engineer, ]
+____
+But it works on my machine.
+____
+
+In the not-so-distant past, there was a very large problem with software distribution and portability. 
+
+Compiled software must be built on a specific architecture, and then used on that same architecture. For example, if you were to compile a program on a Intel Mac, and were to share the resulting program with someone that uses an M1 Mac, the program would not run on the M1 Mac. The M1 Mac user would instead need to get the source code, ensure that the dependencies are properly installed, and re-compile the program for use on their machine. This takes a lot of time, and it can be a big hassle to make sure code compiles properly on _n_ different architectures. This is just one example of a problem that was _very_ common in industry. This is still mostly the same, however, if the maintainer of an image repository builds a multi-architecture image, and then publishes it, the image can be used on any machine that has a container engine and runtime installed, as long as it has a matching architecture. This is very useful and reduces the amount of time and work it takes to build and run an application on machines with different architectures.
+
+This problem applies to interpreted languages as well. Perhaps a Python module only works with Python 3.9+, and your colleague only has Python 3.6 installed. If your colleague tries to run the module, they will get an error. In order to fix this problem, your colleague needs to install and configure a newer version of Python. Of course, tools like package managers and virtual environments _try_ to make this process easier, but they are not always successful, and as soon as you introduce a new non-Python dependency, or environment variable, it gets even more complicated.
+
+In came Docker, inc. Docker took advantage of old linux features in order to _logically_ separate computing resources and software. They popularized a standard container format that allowed users to build and run their own containers. This took the industry by storm, and soon the community began the Open Container Initiative (OCI) to define standards for container image formats and runtimes. Any OCI compliant runtime can be used to run any OCI compliant image.
+
+Whereas a VM uses a lot of CPU and memory, and makes decisions about hardware and networking that could potential be detrimental to the end-user, a container is purely logical. As such it uses less resources, and does not have the same hardware restrictions that VMs _can_ impose. This is a huge benefit to the end-user, allowing them to focus on their work instead of having to worry about the hardware. In addition, containers allow for incredible automation possibilities. 
+
+Of course, containers still have a major drawback for security and privacy. In certain use-cases, it is possible for an application running on a container to "escape" the container and access the host machine. There is a lot of interesting work being done in this space, and Amazon's https://firecracker-microvm.github.io/[Firecracker] is an example of a tool that has the potential to bring the security of a VM and the speed of a container together. 
+
+== History of Containers
+
+**Traditional deployment era:** Early on, organizations ran applications on physical servers. There was no way to define resource boundaries for applications in a physical server, and this caused resource allocation issues. For example, if multiple applications run on a physical server, there can be instances where one application would take up most of the resources, and as a result, the other applications would underperform. A solution for this would be to run each application on a different physical server. But this did not scale as resources were underutilized, and it was expensive for organizations to maintain many physical servers.
+
+**Virtualized deployment era:** As a solution, virtualization was introduced. It allows you to run multiple Virtual Machines (VMs) on a single physical server's CPU. Virtualization allows applications to be isolated between VMs and provides a level of security as the information of one application cannot be freely accessed by another application.
+
+Virtualization allows better utilization of resources in a physical server and allows better scalability because an application can be added or updated easily, reduces hardware costs, and much more. With virtualization you can present a set of physical resources as a cluster of disposable virtual machines.
+
+Each VM is a full machine running all the components, including its own operating system, on top of the virtualized hardware.
+
+**Container deployment era:** Containers are similar to VMs, but they have relaxed isolation properties to share the Operating System (OS) among the applications. Therefore, containers are considered lightweight. Similar to a VM, a container has its own filesystem, share of CPU, memory, process space, and more. As they are decoupled from the underlying infrastructure, they are portable across clouds and OS distributions.
+
+Containers have become popular because they provide extra benefits, such as:
+
+* Agile application creation and deployment: increased ease and efficiency of container image creation compared to VM image use.
+
+* Continuous development, integration, and deployment: provides for reliable and frequent container image build and deployment with quick and efficient rollbacks (due to image immutability).
+
+* Dev and Ops separation of concerns: create application container images at build/release time rather than deployment time, thereby decoupling applications from infrastructure.
+
+* Observability not only surfaces OS-level information and metrics, but also application health and other signals.
+
+* Environmental consistency across development, testing, and production: Runs the same on a laptop as it does in the cloud.
+
+* Cloud and OS distribution portability: Runs on Ubuntu, RHEL, CoreOS, on-premises, on major public clouds, and anywhere else.
+
+* Application-centric management: Raises the level of abstraction from running an OS on virtual hardware to running an application on an OS using logical resources.
+
+* Loosely coupled, distributed, elastic, liberated micro-services: applications are broken into smaller, independent pieces and can be deployed and managed dynamically – not a monolithic stack running on one big single-purpose machine.
+
+* Resource isolation: predictable application performance.
+
+* Resource utilization: high efficiency and density.
+
+Containers are a good way to bundle and run your applications. In a production environment, you need to manage the containers that run the applications and ensure that there is no downtime. For example, if a container goes down, another container needs to start. Wouldn't it be easier if this behavior was handled by a system?
+
+That's how Kubernetes comes to the rescue! Kubernetes provides you with a framework to run distributed systems resiliently. It takes care of scaling and failover for your application, provides deployment patterns, and more. For example, Kubernetes can easily manage a canary deployment for your system.
+
+== Terminology
+
+For simplicity, we will be focusing on the tooling around Docker, and we will gloss over technical details that are not relevant to be able to build and run a container using Docker.
+
+We do cover some of the more specific steps in the xref:deployment.adoc#Containerization and Kubernetes Deployment[container deployment documentation], but there is much more depth to containers then we can cover in a single appendix. 
+
+If I am an engineer wanting to "containerize" my Python application, the process would be similar to the following.
+
+. Write a Dockerfile.
+. Build (and tag) an image using the Dockerfile. 
+. Push the image to a registry.
++
+At this stage, the image is ready to be used on the engineer's machine, however, it is also available for another engineer to use as well. Another engineer will simply need to _pull_ the image from the registry, and they will be ready to run the image as well.
++
+. Run the image. 
+
+== Dockerfile 
+
+A Dockerfile is a text document that describes what components are needed in the container. Depending on the tool you are using to build and run containers, this could be named many things. For example, when using https://podman.io/[Podman], it is called a "Containerfile", when using https://sylabs.io/guides/2.6/user-guide/index.html[Singularity], it is called a "recipe". Since the instruction set Docker uses is the most common, we will be using it.
+
+[source,docker]
+----
+FROM python:3.9.8-bullseye <1>
+
+WORKDIR /workspace <2>
+
+ENV PRODIGY_HOME=/workspace/.prodigy <3>
+ENV PRODIGY_CONFIG_OVERRIDES='{"feed_overlap" : false,"port" : 9000, "host" : "0.0.0.0", "db_settings": {"sqlite": {"name": "my.db","path": "/workspace/.prodigy"}}}'
+
+COPY ./prodigy-1.11.5-cp39-cp39-linux_x86_64.whl /workspace/ <4>
+
+RUN python -m pip install --upgrade pip <5>
+RUN python -m pip install prodigy-1.11.5-cp39-cp39-linux_x86_64.whl
+
+EXPOSE 9000 <6>
+
+CMD ["prodigy", "textcat.manual", "my_project", "/data/test.jsonl", "--label", "Joy,Sadness,Fear,Disgust,Anger,Surprise"] <7>
+----
+
+<1> This line is the base image that we will be using. Here, we are _starting_ with an image that someone else made that has Python 3.9.8 installed on a Debian ("bullseye") Linux operating system.
+<2> Here, we declare our "working directory". Any `RUN`, `CMD`, `ENTRYPOINT`, `COPY`, or `ADD` instruction that is run after this line is run as if we are currently inside the directory we declared.
+<3> In these lines we've declare 2 environment variables. The first is `PRODIGY_HOME`, which is the path to the directory where Prodigy will store its data. The second is `PRODIGY_CONFIG_OVERRIDES`, which is a JSON string that contains the configuration overrides that Prodigy will use.
+<4> In this line, we copy the `prodigy-1.11.5-cp39-cp39-linux_x86_64.whl` file to the `/workspace` directory. This Dockefile assumes that this `.whl` file is ready and available inside the same directory that our Dockerfile is located. If the file is not in the same directory, the `COPY` instruction will fail to copy the file into the container.
+<5> These two `RUN` instructions are used to upgrade `pip`, and install the `prodigy` package.
+<6> The `EXPOSE` instruction is used to declare the port that we will be exposing to the outside world. This does _not_ actually publish the port for use. The individual running the container is responsible for publishing the port when running the container.
+<7> Finally, the `CMD` instruction is used to declare the default command that will be used when running the image. In this case, we are running the `prodigy` command.
+
+== Image
+
+Okay, we have a Dockerfile, and now we want to build an image. This is done by running the `docker build` command.
+
+[source,bash]
+----
+docker build -t geddes-registry.rcac.purdue.edu/tdm/prodigy-image:0.0.1 .
+----
+
+[IMPORTANT]
+====
+This command is assuming the Dockerfile is in the current working directory.
+====
+
+The `-t` option allows us to "tag" our image. This is a way of giving the image a name. This is useful for later referencing the image, and critical if you plan on sharing the image with others, using a registry.
+
+The first part of the name is `geddes-registry.rcac.purdue.edu` -- this is the URL where our registry is running. This could be a private registry running on a local IP address, or it could be a publicly available domain address like `geddes-registry.rcac.purdue.edu`.
+
+The second part of the name is the _repository namespace_ that we want to use. In this case, it is `tdm`. A _repository namespace_ can hold a collection of images. In this case our repository holds The Data Mine images (hence `tdm`). 
+
+The third part of the name is the _image name_ that we want to use. In this case, it is `prodigy-image`. This is the name we are giving our image.
+
+Finally, the final part of the name is the _image tag_ that we want to use. In this case, it is `0.0.1`. This is the version of the image. This version number is used to keep track of the versions of the image. Why would we want to keep track of multiple versions? Consider the following scenario. 
+
+We have our website containerized in an image called `tdm-website`. Currently, we are running version `0.0.1`, so our full _name_ is `geddes-registry.rcac.purdue.edu/tdm/tdm-website:0.0.1`. We've made some changes to our website and therefore want to build a new image to run. We tag this image as `geddes-registry.rcac.purdue.edu/tdm/tdm-website:0.0.2`. Now, on our registry, we can see both `tdm-website:0.0.1` and `tdm-website:0.0.2`. Okay, we being to run version 0.0.2, and quickly find out that we have a MAJOR bug in our code and Dr. Ward's name is spelled "Dr. Mard" instead. Whoops! But no fear, we _still_ have our version 0.0.1 container available on our registry, we can simply run it instead to instantly switch back to our old website. This is incredibly useful since we can easily go correct the typo, rebuild version 0.0.2, and deploy the new version of the website again as soon as it is ready.
+
+== Registry
+
+Already mentioned previously, a _registry_ is essentially just a web app running on a server. It could be running on an internal network under some IP address, or it could be exposed to the public internet using a domain name, or world IP address. Once logged in to a registry, you can _push_ and _pull_ images to and from the registry. For example, let's say we have access to a registry running at `geddes-registry.rcac.purdue.edu`. First, we would need to login to the registry.
+
+[source,bash]
+----
+docker login geddes-registry.rcac.purdue.edu
+----
+
+After typing in your credentials, you could now _push_ our image to the registry. Let's say you've build our `prodigy-image` image and you want to push it to the registry. Simply run the following.
+
+[source,bash]
+----
+docker push geddes-registry.rcac.purdue.edu/tdm/prodigy-image:0.0.1
+----
+
+Then, on another computer, you could _pull_ the image from the registry. Let's say you want to pull the `prodigy-image` image from the registry. Simply run the following.
+
+[source,bash]
+----
+docker pull geddes-registry.rcac.purdue.edu/tdm/prodigy-image:0.0.1
+----
+
+If at any time you want to see the images currently available on your computer, you can run the following.
+
+[source,bash]
+----
+docker images
+----
+
+If you want to see the _running_ images on your computer, you can run the following.
+
+[source,bash]
+----
+docker ps
+----
+
+== Resources
+
+https://www.padok.fr/en/blog/container-docker-oci?utm_source=pocket_mylist[From Docker to OCI: What is a container?]
+
+A _fantastic_ article explaining what a container is, what it is _not_, in easy-to-understand format.

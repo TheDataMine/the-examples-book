@@ -1,0 +1,128 @@
+= Preprocessing
+:page-mathjax: true
+
+Preprocessing is getting data ready for analysis. xref:data-modeling/process/wrangling.adoc[We've gotten ahold of our data], xref:data-modeling/process/eda.adoc[looked at it to confirm its approximate properties and condition], xref:data-modeling/process/think-output.adoc[and thought about what our output should look like]. Sometimes, there is extensive preprocessing that has to be done; other times this step could almost be skipped over. Here, our goal is to get data ready so that when we tell our model to train, it has the data cleaned, in the right format, right shape, etc so it can train correctly. 
+
+== Common Preprocessing Tasks
+
+Below is a list of possible actions you may need to do during preprocessing along with a brief description.
+
+=== Data Cleaning
+
+==== Missing Values
+
+During EDA we might discover missing/NaN/null data. Among many possible choices, we can remove rows which have missing data; we can remove whole columns that have little data; or we can *impute* the values, where we estimate what they likely will be depending on the values of the data we do have. Check out the https://pandas.pydata.org/docs/user_guide/missing_data.html[pandas guide on dealing with missing data], or https://scikit-learn.org/stable/modules/impute.html[Scikit-Learn documentation on imputation] to learn about ways you can deal with missing values.
+
+==== Data Formats
+
+Did we discover that our data format might cause some problems for our xref:data-modeling/process/think-output.adoc[output]? Now is the time to fix any data format issues.
+
+==== Data Types
+
+During EDA, we should have looked at all the feature data types to ensure they make sense. For instance, a feature for zip codes might be fine using an int type, until a zip code with a dash (-) in it gets added- at which point it should be a string. We have to make sure all our data types make sense both now, and with how they will get used further on down the line.
+
+=== Normalization
+
+Normalization is the process of setting all your numerical values on a similar scale, often 0 to 1 (or less commonly, -1 to 1). This improves the performance and stability of training a model. As an example, with image data, often you will see all the numbers in the image array divided by 255.0. This effectively puts all the numerical values in the image array between 0 and 1, and hence is normalization.
+
+https://developers.google.com/machine-learning/data-prep/transform/normalization[This Google article has a list of normalization techniques]. Most often, scaling to a range is used.
+
+=== Cross Validation
+
+Once the data is cleaned and in the right format, we can set up cross validation, such as with xref:data-modeling/resampling-methods/cross-validation/train-valid-test.adoc[training, validation, and testing splits].
+
+=== Augmentation
+
+Data augmentation is a technique used to prevent xref:data-modeling/general-principles/bias-variance-tradeoff.adoc[overfitting]. The general idea with augmentation is to modify our data in simple ways to help the model training generalize. For instance, augmentation is commonly used in computer vision problems, such as classifying images of animals: here, it may make sense to randomly flip all the images, because we want our model to detect the animals, not the landscape orientation. Some common augmentation steps include:
+
+Common Visual Augmentations:
+
+- Random Rotation
+- Flipping (Horizontal/Vertical)
+- Color Channel Conversion (such as RGB to grayscale)
+- Random Brightness
+- Random Cropping
+- Random Stretching
+- Random Contrast
+- Random Deletion (remove random pixels from the data)
+- Filter Applications (such as https://en.wikipedia.org/wiki/Sobel_operator[Sobel Filters])
+
+Common Text Augmentations:
+
+- Random Insertion (randomly insert words)
+- Random Deletion (randomly delete words)
+- Shuffling (Shuffle words/sentences randomly)
+- Synonym Replacement (replace words with synonyms)
+- Paraphrasing (state the sentence in different words)
+
+Common Audio Augmentations:
+
+- Random Noise Injection (add random noises in)
+- Change Speed (faster or slower)
+- Random Pitch (randomly change the pitch)
+
+Many data science packages have data augmentation functions built into them, for instance https://www.tensorflow.org/tutorials/images/data_augmentation[processing images with Tensorflow], https://librosa.org/doc/main/index.html[processing audio data with Librosa], or https://nlpaug.readthedocs.io[nlpaug for both audio and text augmentation].
+
+=== Feature Engineering/Selection
+
+We have all of these features/variables/dimensions/etc, but do we really need them? Feature engineering is all about figuring out which features matter, and removing the ones that don't. There are many ways to select features:
+
+- During EDA you might have noticed many missing values in some columns, and decided its better to remove them
+- You use PCA (xref:data-modeling/general-principles/curse-of-dimensionality.adoc[see the power of PCA notebook example for a demonstration of how to use PCA]) to order features based on how much they vary (and/or remove them based off of their order)
+- During EDA you discover that some of these variables are irrelevant to your output/model building/analysis
+- During EDA you realize you have no way of figuring out what some of the features mean, so you remove them
+
+How you go about selecting features is up to you and contingent on the problem itself. Two people with the same data and ultimate goal can select wildly different features and still produce valuable insights!
+
+=== Regularization (L1 and L2)
+
+There are two different kinds of regularization, so called $L_1$ and $L_2$ regularization; they are intended to penalize complex models. They differ in how they penalize the weights in the model:
+
+- $ L_1 $ penalizes $ |weight| $
+- $ L_2 $ penalizes $ weight^2 $
+
+$L_1$ https://developers.google.com/machine-learning/crash-course/regularization-for-sparsity/l1-regularization[is often used] for sparsity or xref:data-modeling/general-principles/curse-of-dimensionality.adoc[Curse of Dimensionality].
+
+$L_2$ https://developers.google.com/machine-learning/crash-course/regularization-for-simplicity/l2-regularization[is often used] to prevent xref:data-modeling/general-principles/bias-variance-tradeoff.adoc[overfitting].
+
+=== Data Shapes
+
+Here, we make sure the data is in the right shape for model building. The shape of your data here will depend on what kind of model building you are doing. 
+
+=== Flattening/Vectorization/Reshaping
+
+Commonly, reshaping means going from a higher dimension to a lower dimension, not just expanding or contracting the same shape. For instance, this can mean going from 2 dimensions to 1. You can see a demonstration of this in the https://the-examples-book.com/starter-guides/data-science/data-analysis/nndl/neural-network-deep-learning[neural network introduction notebook]; the shape required for the neural network training at the start is (784, ), which is a 1 dimensional array of 784 numbers. We reshaped the data from 28*28 pixel images instead to a 1 dimensional sequence of 784 pixels (hence the "flattening": going one dimension lower). Sometimes, you will see this called "vectorization" when you convert the original shape into a vector.
+
+=== Data Labeling
+
+If you have data that needs labels applied, this is where you'd do it. Often for machine learning, labeling is set to be a vector that is the same length as the data, with only one dimension: the corresponding label for each data point.
+
+== Encoding
+
+Encoding is just converting a non-numeric data type into a numeric type. For instance, if we have a column *Nation* it might make sense to convert it into 0 for Afghanistan, 1 for Albania, 2 for Algeria, etc. Sometimes you will see this called "categorical encoding", "categorical labeling", etc. A specific type of encoding, called one-hot encoding, is used to create new columns that use a boolean True/False to represent the original variable.
+
+== Code Examples
+
+NOTE: All of the code examples are written in Python, unless otherwise noted.
+
+=== Containers
+
+TIP: These are code examples in the form of Jupyter notebooks running in a container that come with all the data, libraries, and code you'll need to run it. https://the-examples-book.com/starter-guides/data-engineering/containers/using-data-mine-containers[Click here to learn why you should be using containers, along with how to do so.]
+
+TIP: Quickstart: https://docs.docker.com/get-docker/[Download Docker], then run the commands below in a terminal. 
+
+[source,bash]
+----
+#pull container, only needs to be run once
+docker pull ghcr.io/thedatamine/starter-guides:preprocessing
+
+#run container
+docker run -p 8888:8888 -it ghcr.io/thedatamine/starter-guides:preprocessing
+----
+
+Need help implementing any of this code? Feel free to reach out to mailto:datamine-help@purdue.edu[datamine-help@purdue.edu] and we can help!
+
+== Our Sources
+
+- https://www.techtarget.com/searchdatamanagement/definition/data-preprocessing[Data Preprocessing (TechTarget)]
+- https://www.geeksforgeeks.org/data-preprocessing-in-data-mining/[Data Preprocessing in Data Mining (Geeks for Geeks)]
