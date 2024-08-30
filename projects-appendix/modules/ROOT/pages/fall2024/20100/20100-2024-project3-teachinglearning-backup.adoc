@@ -1,14 +1,17 @@
-= TDM 20100: Project 3 -- Pipelines
+= TDM 20100: Project 3 -- Pattern Matching and `grep`
 
-**Motivation:** In the previous project, at each stage in our analysis, we saved the output to a file.  A more efficient method is to take the output from one command and use it as the input to the next command.  This is called a pipeline of bash commands.
+**Motivation:** Since the release of Google in 1998, it's popularity has exploded to the point where it has become a household name. Even when someone doesn't literally mean "Search on Google.com", the phrase "Google it!" is often used as a universal call to search for a word or phrase. While we've already learned a lot about traversing and manipulating filesystems through a CLI, we still have another big hurdle to cross: finding specific files. In the CLI, we can't simply "Google it". Instead, we use pattern-matching tools like `grep` to search for the things we want. This project will be dedicated to exploring the basics of `grep` and the idea of pattern-matching and regular expressions more generally.
 
-**Context:** Once we learn how to write bash commands in a pipeline, we can (more easily) use several bash commands in tandem.
+**Context:** Being able to perform basic filesystem navigation and manipulation, as learned in the previous two projects, will be vital for completing this project
 
-**Scope:** Pipelines in Bash
+**Scope:** Pattern-matching, `grep`, Regular Expressions, Bash, CLI
 
 .Learning Objectives:
 ****
-- Learn about the concept of bash pipelines, to use several bash commands in sequence.
+- Learn about the basic concept of pattern-matching
+- Use `grep` to find specific data in a file
+- Learn about the basic idea of RegEx and its usage
+- Use `cut` to isolate certain parts of data
 ****
 
 Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about project submissions xref:submissions.adoc[here].
@@ -24,39 +27,73 @@ This project will use the following dataset(s):
 
 === Question 1 (2 pts)
 
-In the previous project, on this collection of files:
+Before we dive into `grep` and regular expressions, let's take a second to understand the concept of pattern-matching more generally. Pattern-matching always involves two central things: a pattern to search for, and some string of data or files to search for that pattern in.
 
-`/anvil/projects/tdm/data/flights/subset/[12]*.csv`
+While this idea seems rather straightforward on its face, it does contain a lot of depth. For example, let's say that we are searching for the pattern "aa" In a string of characters "aabbabbbaaa". There are a few different ways we could interpret this simple pattern, shown below:
 
-we ran the following commands in bash:
+- We only want to find the first instance of "aa", so we find **aa**bbabbbaaa
+- We don't care if "aa" has some letters between it, so we can now recognize "abbba" as a match as well
+- We don't care if patterns overlap, meaning "aaa" actually contains two different "aa" pairs within it
+- We only want to recognize a "match" when it has "aa" in it exactly _n_ times, where _n_ is some arbitrary integer
 
-[source, bash]
+As you can see, there is an _enormous_ number of different interpretations for pattern matching, so much so that giving a pattern of simply "aa" is just not specific enough. To solve this issue, regular expressions were developed! Regular expressions, (often referred to simply as regex or regexp) provide us with a concise way to create very specific patterns.
+
+For example, if we wanted to search for the word "pizza" occurring at least once, we could use the pattern `(pizza)+`. If we wanted pizza to occur 5 times, we could instead use the pattern `(pizza){5}`. If we wanted to search for anything that contains "pizza" or "hamburger" at least once, we could use "(pizza|hamburger)+".
+
+Let's take a look at another brief example, which will also serve to introduce `grep` (although we'll wait on explaining until this next question!) and use a regex to search for the letter "a":
+
+[source, Python]
 ----
-`cat` (to print the files; we did this in Project 2, Question 1)
-`cut -d, -f17,18` (to extract the 17th and 18th fields, for the Origin and Destination columns)
-`sort` (to get all of the same flight paths next to each other in the file)
-`uniq -c` (to discover how many times that each flight path occurs)
-`sort -n` (to numerically sort the number of times that the flight paths occur)
-`tail` (to get the 10 most popular flight paths from the years 1987 to 2008 and the number of times that airplanes flew on each of these flight paths)
+%%bash
+# create file for example
+cd $SCRATCH
+echo "Hello amigo!" > ex1.txt
+echo "This line doesn't hold the first letter of the english lexicon!" >> ex1.txt
+echo "But this one can and does, just more than once!" >> ex1.txt
+
+grep -E "a" ex1.txt
+
+# remove example files
+rm ex1.txt
 ----
 
-Now we can do all of this together, in one long line:
+Give https://cheatography.com/davechild/cheat-sheets/regular-expressions/[this excellent Reg Ex reference] a quick glance, and use it to attempt to answer the following question. We will also provide a test case for you to use to verify your answer below.
 
-[source, bash]
-----
-cat /anvil/projects/tdm/data/flights/subset/[12]*.csv | cut -d, -f17,18 | sort | uniq -c | sort -n | tail
-----
+Create a pattern to search for "passwordXXX" where "XXX" can be any 3 digits from 0-9. If you do it correctly, the below example should verify your work.
 
-(To simplify things, we are not removing the head of each file.)
+[NOTE]
+====
+https://regex101.com/[This website] is a great resource for building and checking your regular expressions, and we would encourage that your first build and test your expressions here before trying them on the command line.
+====
+
+[source, Python]
+----
+%%bash
+# create file for test
+cd $SCRATCH
+echo "PassSSSssWord" > test1.txt
+echo "This line doesn't hold thepassword903first letter of the english lexicon!" >> test1.txt
+echo "But this one password 232 can and does!" >> test1.txt
+echo "Your answer: "
+
+grep -E "INSERT YOUR PATTERN HERE" test1.txt
+
+echo "-----------------------------"
+echo "Correct answer: "
+echo "This line doesn't hold thepassword903first letter of the english lexicon!"
+
+# remove example files
+rm test1.txt
+----
 
 [IMPORTANT]
 ====
-Please use 3 or 4 cores when working on this question.
+Solely for this question, you may not understand all that's going on (i.e. the presence of the `-E` argument to grep). That is okay, as long as you insert your pattern where specified and get the correct answer. We will go into much greater detail on these arguments later in the project.
 ====
 
 .Deliverables
 ====
-- Show the 10 most popular flight paths from the years 1987 to 2008 and the number of times that airplanes flew on each of these flight paths.
+- The correct RegEx pattern as specified above
 ====
 
 === Question 2 (2 pts)
