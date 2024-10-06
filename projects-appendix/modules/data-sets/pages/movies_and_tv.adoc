@@ -59,17 +59,83 @@ Note that the source website mentions "55130 observations of 12 variables" but t
 
 We can download the IMDb data using:
 
-wget https://datasets.imdbws.com/name.basics.tsv.gz
+wget datasets.imdbws.com/name.basics.tsv.gz
 
-wget https://datasets.imdbws.com/title.akas.tsv.gz
+wget datasets.imdbws.com/title.akas.tsv.gz
 
-wget https://datasets.imdbws.com/title.basics.tsv.gz
+wget datasets.imdbws.com/title.basics.tsv.gz
 
-wget https://datasets.imdbws.com/title.crew.tsv.gz
+wget datasets.imdbws.com/title.crew.tsv.gz
 
-wget https://datasets.imdbws.com/title.episode.tsv.gz
+wget datasets.imdbws.com/title.episode.tsv.gz
 
-wget https://datasets.imdbws.com/title.principals.tsv.gz
+wget datasets.imdbws.com/title.principals.tsv.gz
 
-wget https://datasets.imdbws.com/title.ratings.tsv.gz
+wget datasets.imdbws.com/title.ratings.tsv.gz
+
+and then we uncompress the data:
+
+gunzip *.gz
+
+and then remove the `\N` values so that we have NULL values instead:
+
+cat name.basics.tsv | sed 's.\\N..g' >name.tsv &
+
+cat title.akas.tsv | sed 's.\\N..g' >akas.tsv &
+
+cat title.basics.tsv | sed 's.\\N..g' >basics.tsv &
+
+cat title.crew.tsv | sed 's.\\N..g' >crew.tsv &
+
+cat title.episode.tsv | sed 's.\\N..g' >episode.tsv &
+
+cat title.principals.tsv | sed 's.\\N..g' >principals.tsv &
+
+cat title.ratings.tsv | sed 's.\\N..g' >ratings.tsv &
+
+Then we create a new file in sqlite:
+
+module load sqlite
+
+sqlite3 imdb6Oct2024.db
+
+We prepare to input the files:
+
+.headers ON
+
+.mode ascii
+
+.separator "\t" "\n"
+
+Then we import the files:
+
+.import name.tsv name
+
+.import akas.tsv akas
+
+.import basics.tsv basics
+
+.import crew.tsv crew
+
+.import episode.tsv episode
+
+.import principals.tsv principals
+
+.import ratings.tsv ratings
+
+and, finally, we make an index for each of the tables:
+
+CREATE INDEX ix_name_covering ON name(nconst,primaryName,birthYear,deathYear,primaryProfession,knownForTitles);
+
+CREATE INDEX ix_akas_covering ON akas(titleId,ordering,title,region,language,types,attributes,isOriginalTitle);
+
+CREATE INDEX ix_basics_covering ON basics(tconst,titleType,primaryTitle,originalTitle,isAdult,startYear,endYear,runtimeMinutes,genres);
+
+CREATE INDEX ix_crew_covering ON crew(tconst,directors,writers);
+
+CREATE INDEX ix_episode_covering ON episode(tconst,parentTconst,seasonNumber,episodeNumber);
+
+CREATE INDEX ix_principals_covering ON principals(tconst,ordering,nconst,category,job,characters);
+
+CREATE INDEX ix_ratings_covering ON ratings(tconst,averageRating,numVotes);
 
