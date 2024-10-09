@@ -1,0 +1,118 @@
+= Baseball Examples Using the Lahman Database
+
+These examples depend on this database:
+
+`/anvil/projects/tdm/data/lahman/lahman.db`
+
+
+== Players With At Least 60 Home Runs
+
+There are only a few players with at least 60 home runs during the same season.  First we find their playerID values:
+
+[source,SQL]
+----
+SELECT playerID, yearID, teamID, HR FROM Batting WHERE HR >= 60;
+----
+
+To get the information about the full names of the players in this query, we need to use the Batting table and the People table too:
+
+[source,SQL]
+----
+SELECT b.playerID, b.yearID, b.teamID, p.nameFirst, p.nameLast, b.HR
+FROM Batting b INNER JOIN People p ON b.playerID = p.playerID WHERE
+b.HR >= 60;
+----
+
+We might want to also know the full names of the teams that they played on.
+
+[source,SQL]
+----
+SELECT b.playerID, b.yearID, b.teamID, p.nameFirst, p.nameLast, b.HR, t.name
+FROM Batting b INNER JOIN People p ON b.playerID = p.playerID
+INNER JOIN Teams t ON (t.yearID = b.yearID AND t.teamID = b.teamID) WHERE
+b.HR >= 60;
+----
+
+
+== Babe Ruth
+
+Now we can count the number of seasons in which Babe Ruth hit at least 50 HR's:
+
+[source,SQL]
+----
+SELECT b.playerID, p.nameFirst, p.nameLast, t.name, COUNT(*) FROM
+Batting b INNER JOIN People p ON b.playerID = p.playerID INNER JOIN
+Teams t ON (t.yearID = b.yearID AND t.teamID = b.teamID) WHERE b.HR >=
+50 AND b.playerID = 'ruthba01';
+----
+
+Finally, we can count the number of seasons for each player in which
+the player hit over 50 HR's.
+
+[source,SQL]
+----
+SELECT b.playerID, p.nameFirst, p.nameLast, t.name, COUNT(*) FROM
+Batting b INNER JOIN People p ON b.playerID = p.playerID INNER JOIN
+Teams t ON (t.yearID = b.yearID AND t.teamID = b.teamID) WHERE b.HR >=
+50 GROUP BY b.playerID;
+----
+
+== Players with more than 30 home runs
+
+Now we find the players who have hit more than 30 home runs per year, grouped according to player, and displaying the count of the times this happened:
+
+[source,SQL]
+----
+SELECT p.nameFirst, p.nameLast, b.playerID, b.teamID, t.name, COUNT(*) FROM Batting b JOIN People p ON p.playerID = b.playerID JOIN Teams t ON b.yearID = t.yearID AND b.teamID = t.teamID WHERE b.HR >= 30 GROUP BY b.playerID;
+----
+
+Now we calculate the same feat, but no longer grouping by playerID.
+Instead, we can show the actual number of home runs and the year:
+
+[source,SQL]
+----
+SELECT p.nameFirst, p.nameLast, b.playerID, b.HR, b.yearID, b.teamID, t.name FROM Batting b JOIN People p ON p.playerID = b.playerID JOIN Teams t ON b.yearID = t.yearID AND b.teamID = t.teamID WHERE b.HR >= 30 AND t.yearID >= 1990;
+----
+
+Same thing, but only considering a specific year, namely, 1995:
+
+[source,SQL]
+----
+SELECT p.nameFirst, p.nameLast, b.playerID, b.HR, b.yearID, b.teamID, t.name FROM Batting b JOIN People p ON p.playerID = b.playerID JOIN Teams t ON b.yearID = t.yearID AND b.teamID = t.teamID WHERE b.HR >= 30 AND t.yearID = 1995;
+----
+
+Now, for each year since 1991, we count the number of players with at least 30 home runs during that year:
+
+[source,SQL]
+----
+SELECT b.yearID, COUNT(*) FROM Batting b WHERE b.HR >= 30 AND b.yearID >= 1991 GROUP BY b.yearID;
+----
+
+== Players with At Least 50 Home Runs
+
+List each player who hit 50 or more home runs during at least one year since 1991:
+
+SELECT DISTINCT(p.playerID) FROM Batting b JOIN People p ON p.playerID = b.playerID JOIN Teams t ON b.yearID = t.yearID AND b.teamID = t.teamID WHERE b.HR >= 50 AND t.yearID >= 1991 GROUP BY b.playerID;
+
+
+
+== Boston Red Sox in 2008
+
+Next we focus on gathering data about the Boston Red Sox.  We first find out which teamID to use by looking at:
+
+[source,SQL]
+----
+SELECT DISTINCT(teamID), name FROM Teams WHERE name LIKE 'Boston%';
+----
+
+Now we get the names of all Boston Red Sox players in 2008:
+
+[source,SQL]
+----
+SELECT p.playerID, b.yearID, b.teamID, p.nameFirst, p.nameLast, t.name
+FROM Batting b INNER JOIN People p ON b.playerID = p.playerID INNER
+JOIN Teams t ON (t.yearID = b.yearID AND t.teamID = b.teamID) WHERE
+(t.teamID = 'BOS' AND t.yearID = 2008);
+----
+
+
