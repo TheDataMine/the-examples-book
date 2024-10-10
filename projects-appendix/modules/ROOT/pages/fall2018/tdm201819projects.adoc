@@ -830,7 +830,7 @@ mylinks=do.call(rbind,mylinks)
 )
 ----
 
-Project 11:
+== Project 11:
 
 The names in the election data are in CAPITAL LETTERS!
 
@@ -1601,6 +1601,10 @@ tail(sort(sapply(myresult, length)))
 
 ----
 
+== Project 19
+
+There was no Project 19
+
 
 == Project 20
 
@@ -1782,4 +1786,484 @@ xpathSApply(htmlParse("/depot/statclass/data/parks/cato.htm"),
 
 ----
 
+
+== Project 21
+
+
+Please use this template to submit Project 21:
+
+https://raw.githubusercontent.com/TheDataMine/STAT-19000/master/Assignments/hw21.Rmd 
+
+This project is supposed to be an easy modification of the project example, 
+since it is almost time for Spring Break! 
+
+1.  Modify the NPS example to extract the city location for every National Park. 
+
+2.  Same question, for the state location for every National Park. 
+
+3.  Same question, for the zip code for every National Park. 
+
+Note:  Do not worry if some of the results have extra spaces.  We can deal with that later! 
+
+
+
+== Project 21 Example:
+
+[source,R]
+----
+
+library(RCurl)
+library(XML)
+
+# The webpage for the National Park Service includes
+# only a little information about every NPS property:
+#    https://www.nps.gov/findapark/index.htm
+# Importantly, it has the 4-letter codes for each property.
+
+# If you type Control-U, then you can see the source for the page.
+# Scroll down, and you will see on
+# lines 210 through 753 these 4-letter codes
+# (It might not be exactly lines 210 through 753 because the NPS
+# modifies its webpages, just like any organization does!)
+
+# Each such NPS property has the 4-letter code as
+# an attribute to one of the XML tags.  They are all found inside
+# of a "select" tag,
+# and then inside an "optgroup" tag,
+# and then inside an "option" tag.
+# You extract this XML value using the xmlGetAttr, like this:
+
+myparks <- xpathSApply(htmlParse(getURL("https://www.nps.gov/findapark/index.htm")), "//*/div/select/optgroup/option", xmlGetAttr, "value")
+
+# and then we see the full listing of all 497 of these 4-digit codes here:
+
+myparks
+
+# Last week, we already learned how to extract the street address of a park.
+# For instance, this is the name of the Abraham Lincoln Birthplace:
+
+xpathSApply(htmlParse(getURL("https://www.nps.gov/abli/index.htm")),
+            "//*/div[@id='HeroBanner']/div/div/div/a", xmlValue)
+
+# Similarly, this is the name of Catoctin Mountain:
+
+xpathSApply(htmlParse(getURL("https://www.nps.gov/cato/index.htm")),
+            "//*/div[@id='HeroBanner']/div/div/div/a", xmlValue)
+
+# Here's the name of the Great Smoky Mountains;
+# we just change "abli" or "cato" to "grsm" and we have it!
+
+xpathSApply(htmlParse(getURL("https://www.nps.gov/grsm/index.htm")),
+            "//*/div[@id='HeroBanner']/div/div/div/a", xmlValue)
+
+# In general, we could paste in the 4-digit letter of the park, like this:
+
+x <- "abli"
+xpathSApply(htmlParse(getURL( paste0("https://www.nps.gov/", x, "/index.htm"))),
+            "//*/div[@id='HeroBanner']/div/div/div/a", xmlValue)
+
+# where the value of "x" is the park's 4-digit abbreviation.
+# Let's try to get these two park names simultaneously now.
+
+# We build a function to do so:
+
+mynameextractor <- function(x) {xpathSApply(htmlParse(getURL( paste0("https://www.nps.gov/", x, "/index.htm"))),
+            "//*/div[@id='HeroBanner']/div/div/div/a", xmlValue)}
+
+# and then we apply it to each of these 4-letter codes:
+
+sapply( c("abli", "cato", "grsm"), mynameextractor )
+
+# One thing about scraping data from the web is that
+# there are always "hiccups" in the process,
+# i.e., there are always challenges.
+# For instance, we have codes for "cbpo" and "foca"
+# but those pages do not actually exist (yet).
+# So we need to remove them from our list of 4-letter codes:
+
+mygoodparks <- myparks[(myparks != "cbpo")&(myparks != "foca")]
+
+# Now we are ready to apply our function to
+# all the NPS properties.  We do it first to the "head",
+# just to make sure things are working:
+
+myresults <- sapply( head(mygoodparks), mynameextractor )
+
+myresults
+
+# and if this worked, then we apply it to the full list of parks.
+# P.S.  Depending on your web connection, and how many
+# students do this at one time, you might need to run
+# this a few times.  It did not work quite right for me
+# on the first try, but that is the nature of websites,
+# i.e., sometimes there are failures and/or service interruptions,
+# but it should generally work in just a few minutes!
+
+myresults <- sapply( mygoodparks, mynameextractor )
+
+# Finally, here are the names of all the park properties:
+
+myresults
+
+
+----
+
+== Project 22
+
+Here is an *optional* Project 22.  You don't need to do it, but if you choose to do it, we will count it as a replacement for your lowest previous project grade.
+
+In this folder on Scholar:  `/depot/statclass/data/examples`  there is a program called "challenge", so you can run it by typing in the terminal something like this:  `/depot/statclass/data/examples/challenge 111`
+
+Here is the goal:  You can try to make a program (in any language) that converts strings of digits to strings of letters, by substituting
+
+[source,bash]
+----
+1 -> a
+2 -> b
+3 -> c
+......
+26 -> z
+----
+
+Please notice that we do *not* say
+
+[source,bash]
+----
+01 -> a
+----
+
+but rather, we say
+
+[source,bash]
+----
+1 -> a
+----
+
+The program should print the number of ways to do this.
+
+So, for instance, if you type:
+
+`/depot/statclass/data/examples/challenge 111`
+
+It will return the number 3 because there are exactly 3 ways to decode the string 111, namely:
+
+[source,bash]
+----
+ak
+ka
+aaa
+----
+
+Makes sense?  Here is another example:
+
+`/depot/statclass/data/examples/challenge 15114`
+
+will return the number 6 because there are exactly 6 ways to decode the string 15114, namely:
+
+[source,bash]
+----
+aeaad
+aean
+aekd
+oaad
+oan
+okd
+----
+
+The challenge (again, only for bonus credit) is to write a program that will produce the same results as the program that I gave you.  You are welcome to use any programming language.
+
+== Project 23
+
+Here is the project.  We will build on this project in the upcoming work that we will do in April.
+
+Recall that in Project 20, question 3ab, you identified some websites that you were interested to scrape.  Pick only 1 of the websites that is of interest to you, and scrape at least 5 pieces of information from a few pages within that website. (I am being a little nebulous here, because I want you to have the freedom to explore!)  For instance, you could pick IMDB as the website and scrape 3 pieces of information from 5 different movies.  BUT you can pick any website.  It does *NOT* need to be the IMDB website.  You can do any website you like.  That's the entire assignment for this week!  If you are not able to do it for the sites that you mentioned in Project 20, then you can (instead) identify a different website to scrape.
+
+[source,R]
+----
+# We recall that we can scrape information (which is stored in XML format) from the internet, using XPath.
+# Remember that we load Scholar in the web interface and open a browser and use Control-U to see the XML code.
+# Inside R, we first load the XML library and the RCurl library:
+
+library(XML)
+library(RCurl)
+
+# Then we just download the webpage and we put the path to the desired web content into the notation of XPath.
+
+# We already gave some examples of how to scrape XML data from the web,
+# back in Project 20 and Project 21.  Please feel welcome to read those again and remind yourself.
+
+# Here are a few more examples to inspire you, about how to scrape and parse some XML code from the internet.
+
+#####################################################
+# Example:  IMDB (Internet Movie Database)
+# We can scrape information about movies. For instance, IMDB is a popular movie website.
+# The information about the movie Say Anything is given here:  https://www.imdb.com/title/tt0098258/
+# This is Dr Ward's favorite movie, by the way!
+# Here is the title and year, which are stored together in the same place.
+xpathSApply(htmlParse(getURL("https://www.imdb.com/title/tt0098258/")),
+            "//*/div[@class='title_wrapper']/h1", xmlValue)
+
+
+# In this XML, if you only want the year 1989 in which the movie was made,
+# but do not care about the title, then just go deeper, by
+# also including the "span" and "a" tags too:
+
+xpathSApply(htmlParse(getURL("https://www.imdb.com/title/tt0098258/")),
+            "//*/div[@class='title_wrapper']/h1/span/a", xmlValue)
+
+# Here is a completely different place in the XML to find the title:
+
+xpathSApply(htmlParse(getURL("https://www.imdb.com/title/tt0098258/")),
+            "//*/div/div[@id='ratingWidget']/p/strong", xmlValue)
+
+
+
+# Here is the specific release date:
+
+xpathSApply(htmlParse(getURL("https://www.imdb.com/title/tt0098258/")),
+            "//*/a[@title='See more release dates']", xmlValue)
+
+
+
+# We can try to extract the Director and the Writer.
+# Cameron Crowe was both the Director and the Writer.
+# If we do the following search, we get 3 results:
+xpathSApply(htmlParse(getURL("https://www.imdb.com/title/tt0098258/")),
+            "//*/div[@class='credit_summary_item']", xmlValue)
+# So we could save this information in a vector, and just extract the first and second elements
+v <- xpathSApply(htmlParse(getURL("https://www.imdb.com/title/tt0098258/")),
+            "//*/div[@class='credit_summary_item']", xmlValue)
+# Now we have the DIrector:
+v[1]
+# and the Writer:
+v[2]
+# in separate elements.
+# There are other ways to do this, once we get more comfortable with XML
+# but this is a good start!
+
+
+
+# The title is stored lots and lots of places in the webpage.
+# It is also sometimes stored in an XML tag itself, rather than in the content of the page.
+# For instance, search for the phrase:
+#      og:title
+# in the code in your browser to see this.
+
+xpathSApply(htmlParse(getURL("https://www.imdb.com/title/tt0098258/")),
+            "//*/meta[@property='og:title']", xmlGetAttr, "content")
+
+
+# Here's another way, which is just 2 lines later, in the source code for the page.
+# We just change "property" to "name"
+# and we change "og:title" to "title" and we get the title and year again:
+
+xpathSApply(htmlParse(getURL("https://www.imdb.com/title/tt0098258/")),
+            "//*/meta[@name='title']", xmlGetAttr, "content")
+
+# These are just meant to be illustrative examples to try to help!  Have fun!  Explore! 
+
+
+----
+
+
+
+== Project 24
+
+We build on Project 23 as follows:
+
+[source,R]
+----
+# In Project 23, we scraped a few elements of data from a website.
+##################################################
+# Wrap your code from Project 23 into a function, and then
+# scrape at least 100,000 pieces of data from any website:  your choice!
+##################################################
+# Here is an example of how to get started:
+# First we load the needed libraries:
+library(XML)
+library(RCurl)
+# Then we wrap our code into a function.
+mytitlefunc <- function(x) {
+   xpathSApply(htmlParse(getURL(paste0("https://www.imdb.com/title/tt", x, "/"))),
+            "//*/div[@class='title_wrapper']/h1", xmlValue)
+}
+
+# Notice that we replaced the website:
+#   https://www.imdb.com/title/tt0098258/
+# with (instead) some code to build the website as we go:
+#   paste0("https://www.imdb.com/title/tt", x, "/"
+# This uses the value x as the number of the movie.
+# Now we can run our function and extract the results for a movie:
+mytitlefunc("0098258")
+# Our function is vectorized, i.e., we can run it on a vector,
+# and it will return the results for each individual movie,
+# for instance:
+mytitlefunc(c("0110000", "0110001", "0110002", "0110003"))
+# We could try to run it on a sequence of numbers, but
+# this will not quite work at first.
+# For instance, if we try to run it on this sequence:
+110000:110003
+# We see that these numbers are only 6 digits, but the URL expects to
+# have a total of 7 digits to work.
+# So we can use the string print function,
+# which is also available in other languages too:
+sprintf("%07d", 110000:110003)
+# Here we have the "%" which means we are printing a variable,
+# and the "0" means we should pad things with leading zeroes if needed,
+# and the "7" means that we want 7 digits, and the "d" means digits.
+# Now it will work on this input
+mytitlefunc(sprintf("%07d", 110000:110003))
+# and we can even change this to (say) 100 pages at a time:
+mytitlefunc(sprintf("%07d", 110000:110100))
+----
+
+== Hint from Luke Francisco:
+
+Based on my experience with students during my office hours last week, I thought I would share some things to consider when you are looking for data to use on project 24 if you have not done so already.  I should have posted this earlier, but it just now dawned on me that this would make a good Piazza post.
+
+When you are scraping large amounts of data from the web, you want to focus on replicability.  If you look at Dr. Ward's previous two examples with the national parks data and the Billboard music data, you will see what I am talking about.  There are several websites in each case (one webpage for each national park and one webpage for the Billboard top songs for each week).  If you want to scrape all of this data you will need to give R all of the URL's in order to go find the data.  What makes these two examples easy are that the webpages all have the exact same URL's except for one part.  For example, the Billboard top songs all have the same URL except for a different date inserted.  This allows you to make a vector of dates and insert each date into the URL.  If this were not the case and the URL's were totally different for each week, you would have to find the URL for every week since 1980, which would be extremely laborious!!!!!
+
+You also want to make sure that each website is formatted similarly.  Consider the addresses of the national parks - they were all found at the bottom of the page for the corresponding national park with the same HTML formatting.  In the case of the Billboard data, the website for every week has the top songs entered in the exact same format - the only things that change are the song titles and artists, which are the data we are interested in.  This means your code that pulls the songs on the Billboard charts from this week will also pull the songs on the Blackboard charts from 1980!!!!!!
+
+Consider this example I used in my office hours last week.  Ken Pomeroy publishes statistics for all 353 men's division 1 college basketball teams.  The data for the most recent season can be found at this link:
+
+https://kenpom.com/index.php?y=2019
+
+If you look at the HTML code of the website and CTRL+F search for Purdue, you will notice that the data for each team, which is the data in each row of the table on the website, is entered with the exact same format.  Better yet, change the last four digits of the URL to 2018 and CTRL+F for Purdue again in the HTML code.  The data for the 2018 season for every team is also entered in the exact same format.  Even better is that you can change the year at the end of the URL to any year after 2002 and you will find a wealth of similarly formatted data.  This meets the two criteria: 1.) URL's containing data have extremely similar formats and 2.) Each webpage has identical HTML formatting.  This is the type of data you should look for when finding data for your project as it will make your life a whole lot easier!
+
+Also keep in mind that you want to get data that you can analyze in some way for project 25!
+
+Sorry for being long, but I hope this was helpful and inspiring.  Remember to work smarter, not harder!
+
+== Project 25
+
+Question 1
+
+a.  Store the 100,000 pieces of data that you scraped in Project 24 into a data frame.
+
+b.  Save that data frame in an xlsx file, for instance, using the write.xlsx function from the library "xlsx".
+
+Question 2
+
+2a,2b,2c.  Make 3 questions about the data that you assembled in Project 24.
+
+Question 3
+
+3a,3b,3c.  Answer the 3 questions from 2a,2b,2c by making 3 visualizations from the data that you assembled.  Be sure to use best practices for data visualization.
+
+Refer to the selections from the texts:
+
+The Elements of Graphing Data by William S. Cleveland
+
+and Creating More Effective Graphs by Naomi B. Robbins
+
+These selections are archived online here:
+
+http://llc.stat.purdue.edu/ElementsOfGraphingData.pdf 
+
+http://llc.stat.purdue.edu/CreatingMoreEffectiveGraphs.pdf 
+
+Submit your project in RMarkdown.  Please be sure to submit the .Rmd file and also the .xlsx file created in 1b.  Of course the graders will be unable to run your code for 1a, because they do not want to scrape all of the data that you scraped.  Instead, the graders want to use the data from question 1b, so be sure to submit the .Rmd file and the .xlsx file too.
+
+== Optional Project 1
+
+Remind yourself how to run SQL queries in R, for instance, using the examples from Project 8. 
+
+Question 1
+
+Find the largest number of home runs (by an individual batter) each year. 
+
+For instance: 
+
+in 2014 a player hit 40 HR's, 
+
+in 2015 a player hit 47 HR's, 
+
+in 2016 a player hit 47 HR's, 
+
+in 2017 a player hit 59 HR's, and 
+
+in 2018 a player hit 48 HR's. 
+
+(Yes, I have updated the data to include 2018!!) 
+
+Question 2
+
+Make a plot that shows this largest number of home runs per year (not just these 5 years, but the annual records back to 1871).
+
+Question 3
+
+Create a question about baseball that you are interested in, and use a SQL query in R to answer the question.  Put all of your R code into an RMarkdown file, and give some comments about your code, to explain your method of solution. Submit the RMarkdown (.Rmd) file, and also a pdf file the shows the output (including the code, your explanation, the picture from question 2 that displays the plot, etc.). 
+
+== Optional Project 2
+
+Recall how we can work with very large data sets (which are too large to import into R), by using UNIX.  We did this in some of the earliest problem sets in STAT 19000, during the fall semester. 
+
+Question 1
+
+a.  How many taxi cab rides occurred (altogether) during 2015?  Do not give a breakdown by month.  Give the total number of taxi cab rides for the full year 2015.  (Hint: Remember to be careful about the headers at the top of each file.) 
+
+b.  Give the distribution of the number of passengers in the taxi cab rides throughout (all months of) the year 2015.  Do not give a breakdown by month.  Give the distribution across the full year 2015. 
+
+Question 2
+
+a.  Across all years of the airline data, how many flights occurred on each airline?  Which airline is the most popular overall, in terms of the number of flights? 
+
+b.  Across all years of the airline data, which flight path is the most popular?  How many airplane trips occurred on that flight path? 
+
+Question 3
+
+Create a question about taxi cab rides or airline flights that you are interested in, and use UNIX to answer the question. 
+
+Put all of your UNIX code into plain text file, and give some comments about your code, to explain your method of solution. Submit the plain text (.txt) file with your code (including your explanations).
+
+== Optional Project 3
+
+Use R to analyze the election data from the 2018 election.  Remember to use read.csv to read in the data, and use header=F (since there is no header) and use sep="|" since this symbol separates the data. 
+
+Question 1
+
+a.  Identify the top 20 employers that donated the most amount of money (altogether).  Some of these entries will be strange, e.g., blank entries, NA, self employed, etc.  That is OK! 
+
+b.  Plot the largest 20 total amounts (from the 20 employers) on a dotchart, in order from largest (at the top) to smallest (at the bottom). 
+
+Question 2
+
+a.  In which city/state is the average donation amount the largest?  (Treat the city and state data together as a pair.) 
+
+b.  How many donations were given from this city/state pair?  How large were the total amount of donations from this city/state pair? 
+
+Question 3
+
+Create a question about the 2018 election data that you are interested in, and use R to answer the question. 
+
+Put all of your R code into an RMarkdown file, and give some comments about your code, to explain your method of solution. Submit the RMarkdown (.Rmd) file, and also a pdf file the shows the output (including the code, your explanation, the picture from question 1b that displays the plot, etc.).
+
+== Optional Project 4
+
+Please submit your project in RMarkdown. 
+
+Read the selection of The Elements of Graphing Data by William Cleveland, and the selection of Creating More Effective Graphs by Naomi Robbins. 
+
+Also read the classic article "How to Display Data Badly" by Howard Wainer:
+
+http://www.jstor.org.ezproxy.lib.purdue.edu/stable/2683253 
+
+We referred to both of these in Project 25. 
+
+Question 1
+
+a. Find 3 visualizations from the Information Is Beautiful website (http://www.informationisbeautiful.net/) that do a BAD job of portraying data, according to the best practices in the selections mentioned above. Write 1/3 of a page (for each such visualization) about what is done poorly, i.e., write 1 single-spaced page total. 
+
+b. Identify 3 excellent visualizations of data from the Information Is Beautiful website. Write 1/3 of a page (for each such visualization) about what is done well, i.e., write 1 single-spaced page total. 
+
+Question 2
+
+Consider the poster winner "Congestion in the Sky", from the 2009 Data Expo: http://stat-computing.org/dataexpo/2009/posters/ 
+
+a.  Describe at least 3 significant ways that this poster could be improved. For each of these 3 ways, write a 1/3 of a page constructive criticism, specifying what could be improved and how that aspect of the visualization could be done better, i.e., write 1 single-spaced page total. 
+
+b. Which of the posters in the Data Expo 2009 do you think should be the winner? Why? (It is OK if you choose the poster that actually won, or any of the other posters.) Thoroughly justify your answer, using the techniques of effective data visualization, to justify your answer (write 1 single-spaced page total). 
+
+(This entire assignment is 4 single-spaced pages.)
 
