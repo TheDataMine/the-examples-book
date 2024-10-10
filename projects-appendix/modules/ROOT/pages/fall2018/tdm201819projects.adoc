@@ -229,17 +229,13 @@ if you want to read more about how to make a dotchart about the data.
 
 Question 2.
 
-a.  Compute the average total amount of the cost of taxi rides in June 2017, for each pickup location ID.
-
-You can see which variables have the total amount of the cost of the ride, as well as the pickup location ID, if you look at the data dictionary for the yellow taxi cab rides, which you can download here:
-
-http://www.nyc.gov/html/tlc/html/about/trip_record_data.shtml
+a.  Compute the average total amount of the cost of taxi rides in June 2017, for each pickup location ID.  You can see which variables have the total amount of the cost of the ride, as well as the pickup location ID, if you look at the data dictionary for the yellow taxi cab rides, which you can download here: `http://www.nyc.gov/html/tlc/html/about/trip_record_data.shtml`
 
 b.  Sort the result from 2a, and make a dotchart to display the results in sorted order.  (Please ONLY display the results with value bigger than 80.)
 
 Question 3.
 
-3.  Put the two questions above -- including your comments -- into an RMarkdown file.  Submit the .Rmd file itself and either the html or pdf output, when you submit your project in GitHub.
+Put the two questions above -- including your comments -- into an RMarkdown file.  Submit the .Rmd file itself and either the html or pdf output, when you submit your project in GitHub.
 
 
 
@@ -318,9 +314,7 @@ Hints:  Use the tapply function. Save the results of the tapply function in a ve
 
 Question 3.
 
-a.  Try this example: Store the Batting table into a data frame called myBatting. Store the People table into a date frame called myPeople. Merge the two data frames into a new data frame, using the "merge" function:
-
-`myDF <- merge(myBatting, myPeople, by="playerID")`
+a.  Try this example: Store the Batting table into a data frame called myBatting. Store the People table into a date frame called myPeople. Merge the two data frames into a new data frame, using the "merge" function: `myDF <- merge(myBatting, myPeople, by="playerID")`
 
 b.  Use the paste command to paste the first and last name columns from myDF into a new vector. Save this new vector as a new column in the data frame myDF.
 
@@ -647,6 +641,310 @@ myDF <- easyquery("SELECT m.nameFirst, m.nameLast,
                    HAVING SUM(b.SB) >= 30 AND SUM(b.HR) >= 30
                    ORDER BY b.yearID;")
 myDF
+----
+
+
+== Project 10
+
+Use the results of the National Park Service scraping example to answer the following two questions:
+
+1.	Which states have at least 20 NPS properties?
+
+2.	One zip code has 13 properties in the same zip code!  What are the names of those 13 properties?
+
+If you want to learn XPath (as demonstrated in the case study) to scrape data from a website of your choice, you can make up the grades from 1 or 2 of the previous projects.  If you scrape at least 500 pieces of data from the XML of a page,you can replace the grade from 1 previous project.  If you scrape at least 1000 pieces of data from the XML of a page, you can replace the grade from 2 previous projects.  Your project plan will require written approval from Dr Ward, and it will require you to scrape the data from XML itself (not just download the data).
+
+case study: scraping National Park Service data
+
+[source,r]
+----
+# This is a short project to download the data about the
+# properties in the National Park Service (NPS).
+# They are all online through the office NPS webpage:
+#   https://www.nps.gov/findapark/index.htm
+# (Please note that some parks extend into more than one state.)
+
+# At the end of the project, when we export the data,
+# we do not want to use comma-separated values (i.e., a csv file)
+# because there are also some commas in our data.
+# So we will use tabs as our delimiter at the end of this process.
+
+# We will use the RCurl package to download the NPS files.
+# Normally we could just parse the XML (or html) content
+# on-the-fly, without downloading the files, but in this case,
+# it wasn't working on about 10 of the files, and somehow
+# when I downloaded the files, it worked completely.
+# I tried this several times, and just going ahead and downloading
+# the files seems to be the most consistent solution.
+install.packages("RCurl")
+library(RCurl)
+
+# We will use the XML package to parse the html (or XML) data
+install.packages("XML")
+library(XML)
+
+# We will use the xlsx package to export the results at the end,
+# into an xlsx file, for viewing in Microsoft Excel, if desired.
+install.packages("xlsx")
+library(xlsx)
+
+# To see the list of the parks, we can go here:
+#    https://www.nps.gov/findapark/index.htm
+# in any browser.
+# In most browsers, if you navigate to a page and then type:
+# Control-U (i.e., the Control Key and the letter U Key at once)
+# on a Windows or UNIX machine,
+# or if you type Command-U (i.e., the Command Key and the letter U Key at once)
+# on an Apple Macintosh machine,
+# then you can see the code for the way that the webpage is created.
+
+# This webpage that I mentioned:
+#    https://www.nps.gov/findapark/index.htm
+# has 1489 lines of code.  Wow.
+
+
+# From (roughly) lines 206 through 756, we see that the
+# data for the parks are wrapped in a "div" (on line 206)
+# and then in a "select" (on line 208)
+# and then in an "optgroup" and then an "option".
+# We want to extract the "value" of each "option".
+# (We skip the "label" on line 205 because it ends on line 205 too.)
+# So we do the following:
+
+myparks <- xpathSApply(htmlParse(getURL("https://www.nps.gov/findapark/index.htm")), "//*/div/select/optgroup/option", xmlGetAttr, "value")
+myparks
+
+# If the line of code (above) doesn't work,
+# then perhaps you forgot to actually run the three "library" commands
+# near the start of the file.
+
+# We did a lot of things with 1 line of code.
+# The "getURL" temporarily downloads all of the code from this webpage.
+# We do not save the webpage, but rather, we send it to the htmlParse command.
+# Once the page is parsed, we send the parsed results to the xpathSApply command.
+# The pattern we want to look for is:
+#    "//*/div/select/optgroup/option"
+# The star means that anything is OK before this chunk of the pattern,
+# but we definitely want our pattern to end with /div/select/optgroup/option
+# and then we get the xmlGetAttr attribute called "value"
+# which is one of the parks.
+
+# When we check the results, we got 498 results:
+length(myparks)
+
+# For the Abraham Lincoln Birthplace, we want to run the following command,
+# so that we are prepared to download the webpage.
+# After downloading it, we will extract information from the parsed page:
+system("mkdir ~/Desktop/myparks/")
+download.file("https://www.nps.gov/abli/index.htm", "~/Desktop/myparks/abli.htm")
+htmlParse("~/Desktop/myparks/abli.htm")
+
+# but we want to do that for each park.
+# So we build the following function:
+myparser <- function(x) {
+  download.file(paste("https://www.nps.gov/", x, "/index.htm", sep=""), paste("~/Desktop/myparks/", x, ".htm", sep=""))
+  htmlParse(paste("~/Desktop/myparks/", x, ".htm", sep=""))
+}
+
+# Now, we apply this function to each element of "myparks"
+# and we save the results in a variable called "mydocs":
+mydocs <- sapply(myparks, myparser)
+
+# The webpage for the Abraham Lincoln Birthplace is now parsed and stored here:
+mydocs[[1]]
+# The webpage for Zion National Park is now parsed and stored here:
+mydocs[[498]]
+
+# Next we look at the source for the Abraham Lincoln Birthplace:
+#   https://www.nps.gov/abli/index.htm
+# We load that webpage in any browser and then type:
+# Control-U if we are on a Windows or UNIX machine, or
+# Command-U if we are on a Mac.
+
+# Then we can search in this page (using Control-F on Windows or UNIX,
+# or using Command-F on a Mac) for any pattern we want.
+# If we search for "itemprop"
+# we find the information about the address:
+
+# They are all within a "span" tag, with different "itemprop" attributes:
+# The street address has attribute: "streetAddress"
+# The city has attribute: "addressLocality"
+# The state has attribute: "addressRegion"
+# The zip code has attribute: "postalCode"
+# The telephone has attribute: "telephone"
+
+# So, for instance, we can find all of these as follows:
+xpathSApply(mydocs[[1]], "//*/span[@itemprop='streetAddress']", xmlValue)
+xpathSApply(mydocs[[1]], "//*/span[@itemprop='addressLocality']", xmlValue)
+xpathSApply(mydocs[[1]], "//*/span[@itemprop='addressRegion']", xmlValue)
+xpathSApply(mydocs[[1]], "//*/span[@itemprop='postalCode']", xmlValue)
+xpathSApply(mydocs[[1]], "//*/span[@itemprop='telephone']", xmlValue)
+
+# Then the title stuff:
+
+xpathSApply(mydocs[[1]], "//*/div[@id='HeroBanner']/div/div/div/a", xmlValue)
+xpathSApply(mydocs[[1]], "//*/span[@class='Hero-designation']", xmlValue)
+xpathSApply(mydocs[[1]], "//*/span[@class='Hero-location']", xmlValue)
+
+# and, finally, the social media links:
+
+paste(xpathSApply(mydocs[[1]], "//*/div/ul/li[@class='col-xs-6 col-sm-12 col-md-6']/a", xmlGetAttr, "href"),collapse=",")
+
+
+# Here are the versions for the entire data set:
+
+streets <- sapply(mydocs, function(x) xpathSApply(x, "//*/span[@itemprop='streetAddress']", xmlValue))
+cities <- sapply(mydocs, function(x) xpathSApply(x, "//*/span[@itemprop='addressLocality']", xmlValue))
+states <- sapply(mydocs, function(x) xpathSApply(x, "//*/span[@itemprop='addressRegion']", xmlValue))
+zips <- sapply(mydocs, function(x) xpathSApply(x, "//*/span[@itemprop='postalCode']", xmlValue))
+phones <- sapply(mydocs, function(x) xpathSApply(x, "//*/span[@itemprop='telephone']", xmlValue))
+
+mynames <- sapply(mydocs, function(x) xpathSApply(x, "//*/div[@id='HeroBanner']/div/div/div/a", xmlValue))
+mytypes <- sapply(mydocs, function(x) xpathSApply(x, "//*/span[@class='Hero-designation']", xmlValue))
+mylocations <- sapply(mydocs, function(x) xpathSApply(x, "//*/span[@class='Hero-location']", xmlValue))
+
+mylinks <- sapply(mydocs, function(x) paste(xpathSApply(x, "//*/div/ul/li[@class='col-xs-6 col-sm-12 col-md-6']/a", xmlGetAttr, "href"),collapse=","))
+
+# with some cleaning up:
+
+streets <- sapply(streets, function(x) ifelse(length(x)==0,NA,sub("^\\s+","",sub("\\s+$","",x))), simplify=FALSE)
+cities <- sapply(cities, function(x) ifelse(length(x)==0,NA,sub("^\\s+","",sub("\\s+$","",x))), simplify=FALSE)
+states <- sapply(states, function(x) ifelse(length(x)==0,NA,sub("^\\s+","",sub("\\s+$","",x))), simplify=FALSE)
+zips <- sapply(zips, function(x) ifelse(length(x)==0,NA,sub("^\\s+","",sub("\\s+$","",x))), simplify=FALSE)
+phones <- sapply(phones, function(x) ifelse(length(x)==0,NA,sub("^\\s+","",sub("\\s+$","",x))), simplify=FALSE)
+mynames <- sapply(mynames, function(x) ifelse(length(x)==0,NA,sub("^\\s+","",sub("\\s+$","",x))), simplify=FALSE)
+mytypes <- sapply(mytypes, function(x) ifelse(length(x)==0,NA,sub("^\\s+","",sub("\\s+$","",x))), simplify=FALSE)
+mylocations <- sapply(mylocations, function(x) ifelse(length(x)==0,NA,sub("^\\s+","",sub("\\s+$","",x))), simplify=FALSE)
+mylinks <- sapply(mylinks, function(x) ifelse(length(x)==0,NA,sub("^\\s+","",sub("\\s+$","",x))), simplify=FALSE)
+
+myDF <- data.frame(
+streets=do.call(rbind,streets),
+cities=do.call(rbind,cities),
+states=do.call(rbind,states),
+zips=do.call(rbind,zips),
+phones=do.call(rbind,phones),
+mynames=do.call(rbind,mynames),
+mytypes=do.call(rbind,mytypes),
+mylocations=do.call(rbind,mylocations),
+mylinks=do.call(rbind,mylinks)
+)
+----
+
+Project 11:
+
+The names in the election data are in CAPITAL LETTERS!
+
+When asking about names in the questions, we assume that you are using the names from the election data, available on Scholar.
+
+You might want to practice on a smaller data set:  `/depot/statclass/data/election2018/itsmall.txt`
+
+The full data is available here:  `/depot/statclass/data/election2018/itcont.txt`
+
+We are assuming that you are using unique names from column 8, i.e., that you have already removed duplicates of any names of the donors.
+
+Hint:  Save column 8 (which contains the donor names) into a new variable.  Then extract the unique values from the column using the "unique" command.
+
+Answer these questions using the full data given above.  BUT, for convenience, you might want to *start* by using the smaller data set to practice.
+
+Please note that we can read the data into R using the command:
+
+`myDF <- read.csv("/depot/statclass/data/election2018/itsmall.txt", header=F, sep="|")`
+
+or, for the full data set:
+
+`myDF <- read.csv("/depot/statclass/data/election2018/itcont.txt", header=F, sep="|")`
+
+1.  Find the number of (unique) donor names who have your first name,
+    embedded somewhere in the donor's name (not necessarily as the
+    first or last name--any location is OK).
+
+2. a. How many donors have a consecutive repeated letter in their name? b. How many donors have a consecutive repeated vowel in their name? c. How many donors have a consecutive repeated consonant in their name?
+
+3.  Just for fun:  Come up with an interesting question about text patterns, and answer it yourself, using regular expressions.  Of course you can compare questions and answers with another member of The Data Mine.  Have fun!
+
+[source,bash]
+----
+
+Regular expressions enable us to find patterns in text.
+Here are a handful of examples of regular expressions.
+
+The best way to learn them in earnest is to just read some documentation about regular expressions and then try them!
+
+Here is an example:
+v <- c("me", "you", "mark", "laura", "kale", "emma", "err", "eat", "queue", "kangaroo", "kangarooooo", "kangarooooooooo")
+
+The elements of v that contain the letter "m":
+v[grep("m", v)]
+
+containing the phrase "me":
+v[grep("me", v)]
+
+containing the letter "a":
+v[grep("a", v)]
+
+containing the letter "e":
+v[grep("e", v)]
+
+containing the letter "k":
+v[grep("k", v)]
+
+containing the letter "k" at the start of the word:
+v[grep("^k", v)]
+
+containing the letter "k" at the end of the word:
+v[grep("k$", v)]
+
+containing the letter "a" at the end of the word:
+v[grep("a$", v)]
+
+containing the letter "o" at the end of the word:
+v[grep("o$", v)]
+
+containing the letter "o" anywhere in the word:
+v[grep("o", v)]
+
+containing the letter "o" two times in a row, anywhere in the word:
+v[grep("o{2}", v)]
+
+containing the letter "o" three times in a row, anywhere in the word:
+v[grep("o{3}", v)]
+
+containing the letter "o" two to five times in a row, anywhere in the word:
+v[grep("o{2,5}", v)]
+
+containing the letter "q" followed by "ue":
+v[grep("q(ue){1}", v)]
+
+containing the letter "q" followed by "ue" two times:
+v[grep("q(ue){2}", v)]
+
+containing the letter "q" followed by "ue" three times:
+v[grep("q(ue){3}", v)]
+
+containing the letter "e" followed by "m" or "r":
+v[grep("e(m|r)", v)]
+
+again, same idea, but different way, to find words
+containing the letter "e" followed by "m" or "r":
+v[grep("e[mr]", v)]
+
+containing the letter "e" followed by "ma" or "rr":
+v[grep("e(ma|rr)", v)]
+
+containing a repeated letter:
+v[grep("([a-z])\\1", v)]
+In this example, the \\1 refers to whatever was found in the first match
+(which is just given in parentheses for convenience)
+
+Here is a summary of regular expressions:
+
+https://medium.com/factory-mind/regex-tutorial-a-simple-cheatsheet-by-examples-649dc1c3f285 
+
+You are welcome to use any source or reference for regular expressions that you like.
+
+We need to use double backslash for back-references, in R.
+We gave a demonstration of this, in the last example given above.
+In general, in R, when writing a backslash in a regular expression, a double backslash is usually needed.
 ----
 
 
