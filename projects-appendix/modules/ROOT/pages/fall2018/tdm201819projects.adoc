@@ -1240,3 +1240,546 @@ max(myDF$DepTime, na.rm=T)
 ----
 
 
+== Project 17
+
+Please download this template and use it to submit your solutions to GitHub:
+
+https://raw.githubusercontent.com/TheDataMine/STAT-19000/master/Assignments/hw17.ipynb 
+
+Recall the 2018 election data, available here:  `/depot/statclass/data/election2018/itcont.txt`
+
+and the data dictionary for this data, which is available here:
+
+https://www.fec.gov/campaign-finance-data/contributions-individuals-file-description 
+
+Question 1
+
+a.  Use the system command in R to read the data for the first 100,000 donations and store this data into a file called:  shortfile.txt (We use .txt instead of .csv because the file is not comma delimited.)
+
+b.  Use the read.csv command to read this data into a data frame in R, called:  myDF  (Hint: check the help for read.csv:  ?read.csv  to remind yourself about the "sep" and the "header" parameters for read.csv.  In particular, this data has "|" as the separator between the data elements, and it does not have a header.)
+
+c.  Check the dimension of the resulting data frame.   It should be 100,000 rows and 21 columns.
+
+Question 2
+
+a.  Split the data for these 100,000 donations according to the State from which the donation was given.  Store the resulting data in a list called:  myresult  (Hint: Check the data dictionary for the meanings of the columns, since we do not have column headers.) (Another hint:  Remember that we can refer to a column of data in a data frame by its number, for instance, myDF[[8]] is the name of the donor.)
+
+b.  Check the names of myresult:  names(myresult)  We see the the first element of the list does not have a name.  This is a pain!  To solve this, you can give it a name, for instance, by writing:   names(myresult)[1] <- "unknown" (or any other kind of name that you want, to indicate that the name is unknown)
+
+Question 3
+
+a.  Find the mean donation amount, according to each state.
+
+b.  What is the mean donation from Hoosiers (i.e., for people from Indiana)?
+
+c.  Find the standard deviation of the donation amount, according to each state.
+
+d.  Find the number of donations, according to each state.
+
+e.  For a sanity check, make sure that the number of donations in 3d adds up to 100,000 altogether.
+
+Example
+
+[source,R]
+----
+# Remember that we can make system calls from R.
+# For instance, we can take the first 50000 lines of a file
+# and store them into a new file called shortfile.csv
+# To do this, we use the "system" command in R.
+# it basically enables us to run terminal commands
+# while we are still working in R.
+
+# This is an especially handy technique,
+# because the operating system itself is much faster than R.
+
+system("head -n50000 /depot/statclass/data/dataexpo2009/2005.csv >shortfile.csv")
+
+# Now we can read this (much shorter!) file into R.
+
+myDF <- read.csv("shortfile.csv")
+
+# It has data about only 49,999 flights because the header itself
+# counts as one of the 50,000 lines that we extracted.
+
+dim(myDF)
+
+# We can check to make sure that the read.csv worked,
+# by examining the head of myDF:
+
+head(myDF)
+
+# Within myDF, we can break the data into pieces,
+# according to (say) the Origin airport.
+# The split command can easily do that for us.
+# We give the split command 2 pieces of data:
+# 1.  The data that should be split, and
+# 2.  The way that the data is classified into pieces.
+# So, for instance, we can split the DepDelays
+# into pieces, based on the Origin.
+
+myresult <- split(myDF$DepDelay, myDF$Origin)
+
+# If we check the length of the result, it is 93:
+
+length(myresult)
+
+# because there are DepDelays from 93 airports.
+
+# The type of data is a "list".
+
+class(myresult)
+
+# We have not (yet) worked with lists,
+# but they are a lot like data frames.
+# The difference is that each column can have a different length.
+
+# For example, here are the first six columns
+# of the list:
+
+head(myresult)
+
+# The flights to Albuquerque are found in the second column:
+
+myresult$ABQ
+
+# or we can get this data by just asking directly for the second column,
+# without knowing the name of the column:
+
+myresult[[2]]
+
+# Now we can use the power of the apply functions that R provides.
+# You are already familiar with the tapply function.
+# Another very commonly used apply function is called "sapply".
+
+# We use sapply to apply a function to each part of a collection of data.
+
+# For example, remember that myresult has 93 parts:
+
+length(myresult)
+
+# We can take the mean of the data in each element of myresult
+# by applying the function "mean" to each element, as follows:
+
+sapply(myresult, mean)
+
+# Unfortunately, many of the results are NA's, so we can use na.rm=T
+
+sapply(myresult, mean, na.rm=T)
+
+# We can apply many functions to myresult in this way.
+
+# For instance, here is the variance of each part of the data in myresult:
+
+sapply(myresult, var, na.rm=T)
+
+# or the standard deviation:
+
+sapply(myresult, sd, na.rm=T)
+
+# Here is the number of flights from each Origin airport:
+
+sapply(myresult, length)
+
+# If we add up the number of flights, we better get 49,999:
+
+sum(sapply(myresult, length))
+
+# It is worthwhile to experience with sapply.
+# For instance, for something fun to try,
+# you can (simultaneously) make a plot of the DepDelays
+# from each of the 93 airports, as follows:
+
+sapply(myresult, plot)
+
+# This runs the "plot" function on each piece of data,
+# in other words, on the data from each Origin airport.
+
+# You can see the first 6 DepDelays from each Origin airport, as follows:
+
+sapply(myresult, head)
+
+# This is taking the "head" of each part of the data.
+----
+
+== Project 17 Solutions
+
+[source,R]
+----
+# 1a.  We first store the first 100,000 donations into a file
+#      called shortfile.txt
+#      using the system command
+
+system("head -n100000 /depot/statclass/data/election2018/itcont.txt >~/shortfile.txt")
+
+# 1b.  Now we import this data into the read.csv file
+
+myDF <- read.csv("~/shortfile.txt", header=F, sep="|")
+
+# 1c.  The resulting data frame has 100000 rows and 21 columns, as it should!
+
+dim(myDF)
+
+# 2a.  Now we split the data for the donations according to the State
+#      from which the donation was given
+
+myresult <- split(myDF$V15, myDF$V10)
+
+# 2b.  We check the names of myresult:
+
+names(myresult)
+
+# and the first element of the list does not have a name.
+# so we give it a name, for instance, by writing:
+
+names(myresult)[1] <- "unknown"
+
+# 3a.  The mean donation amount, from each state,
+#      can be found using the sapply command:
+
+sapply(myresult, mean, na.rm=T)
+
+# 3b.  The mean donation from Indiana can be found
+#      by extracting the entry with the name "IN"
+
+sapply(myresult, mean, na.rm=T)["IN"]
+
+# and we get:    IN: 367.914678899083
+
+# 3c.  The standard deviation of the donation amount for each state is:
+
+sapply(myresult, sd, na.rm=T)
+
+# 3d.  The number of donations per state can be found by
+#      checking the length of the vector of donations from each state:
+
+sapply(myresult, length)
+
+# 3e.  For our sanity check, we see that yes, indeed,
+#      the total number of donations is 100,000:
+
+sum(sapply(myresult, length))
+
+----
+
+
+== Project 18
+
+Here is the Project 18 template:
+
+https://raw.githubusercontent.com/TheDataMine/STAT-19000/master/Assignments/hw18.ipynb 
+
+Consider the election data stored at:  `/depot/statclass/data/election2018/itcont.txt`
+
+The data set is very large.  You might choose to analyze a smaller portion of the data initially, and then to run your code on the full data set, once you have the code working correctly.
+
+Sometimes there will be warnings in Jupyter Notebooks, and you need to scroll past the warnings, to see the results of your analysis.  This is a known issue with Jupyter Notebooks, and other people are experiencing it too:
+
+https://github.com/IRkernel/IRkernel/issues/590 
+
+Recall that the data dictionary for the data is found here:
+
+https://www.fec.gov/campaign-finance-data/contributions-individuals-file-description 
+
+Question 1
+
+a.  The first column contains the "Filer identification number" for various committees. Which of these committees received the largest monetary amount of donations?
+
+b.  Use the tapply function to make a matrix whose rows correspond to states, whose columns correspond to the "filer identification numbers" of committees, and whose entries contain the total amount of the donations given to the committees, by donors from each individual state. (Hint: Wrap the states and the filer identification numbers into a list.) Print the block of first 10 rows and 10 columns, so that the TA's can see the results of your work.
+
+Question 2
+
+For this question, be sure to take into account the city and state (together).
+
+a.  Identify the six cities that made the largest number of donations.
+
+b.  Identify the six cities that made the largest monetary amount of funding donated.
+
+Question 3
+
+a.  Split the data (using the split command) about the donations, according to the day when the transaction was made.  Once this split is accomplished, use the sapply function to find the following:
+
+b.  On which day was the total monetary amount of donations the largest?
+
+c.  On which day was the largest number of donations made?
+
+
+[source,R]
+----
+# Examples that might help with Project 18 (but are using the airline data set)
+# We can read in the 2005 flight data:
+myDF <- read.csv("/depot/statclass/data/dataexpo2009/2005.csv")
+# and verify that we got it read in properly, using the head:
+head(myDF)
+# We can find the mean DepDelays, according to the Origin and Destination (simultaneously).
+# This puts the Origins on the rows and the Destinations on the columns.
+tapply(myDF$DepDelay, list(myDF$Origin, myDF$Dest), mean, na.rm=T)
+# If you just want to see the first 10 rows and columns,
+# you can save the results to a variable:
+myresult <- tapply(myDF$DepDelay, list(myDF$Origin, myDF$Dest), mean, na.rm=T)
+# and then load the rows and columns that you want to see:
+myresult[1:10,1:10]
+# Many are NA because you can't always get from one city to another.
+# You can lookup specify Origins and Destinations as follows:
+myresult[c("DEN","ORD","JFK"),c("BOS","IAD","ATL")]
+# Those are flights from Origin "DEN" or "ORD" or "JFK" to Destinations "BOS" or "IAD" or "ATL"
+# Here is another example:
+# We can split all of the data about the DepDelays, according to the date.
+# To do this, I first need to make a column that contains the dates,
+# since the airport data doesn't have such a column (yet):
+myDF$completedates <- paste(myDF$Month, myDF$DayofMonth, myDF$Year, sep="/")
+# Then we split the DepDelays, according to the dates:
+mydelays <- split(myDF$DepDelay, myDF$completedates)
+# This gives us a list:
+class(mydelays)
+# Of course the length is 365, because there are 365 days per year:
+length(mydelays)
+# Here are the delays from Christmas Day:
+mydelays["12/25/2005"]
+# Now we can easily use the sapply function on
+# the DepDelay data, which has already been grouped according to the days.
+# Here is the mean DepDelay on each day:
+sapply(mydelays, mean, na.rm=T)
+# Here is the standard deviation of the DepDelay, on each day:
+sapply(mydelays, sd, na.rm=T)
+# Here is the length of each piece of the data,
+# i.e., the number of pieces of data per day.
+# (This is obviously equal to the number of flights per day too,
+#  because each flights has *some kind* of delay!)
+sapply(mydelays, length)
+# Project 18 Solutions:
+# 1a.  The committee C00401224 received $565007473 in donations altogether.
+tail(sort(tapply(myDF$V15, myDF$V1, sum, na.rm=T)))
+# Here are the top six committees, according to the total monetary donations:
+# C00000935   109336606
+# C00571703   114336858
+# C00003418   116712977
+# C00484642   130390881
+# C00504530   133582635
+# C00401224   565007473
+
+# 1b.  We first build a matrix with the data from the states (column 10) on the rows
+#      and the data from the committees (column 1) on the columns.
+#      Each entry have the analogous sum of the sum of the donations.
+myresult <- tapply(myDF$V15, list(myDF$V10, myDF$V1), sum, na.rm=T)
+# Now we display the results of the first 10 rows and 10 columns:
+myresult[1:10,1:10]
+#    C00000059 C00000422 C00000638 C00000729 C00000885 C00000901 C00000935 C00000984 C00001016 C00001180
+#           NA        NA        NA        NA        NA        NA    174182        NA        NA        NA
+# AA        NA        NA        NA        NA        NA        NA     15336        NA        NA        NA
+# AE        NA        NA        NA        NA        NA        NA     13122        NA        NA        NA
+# AK        NA      5148        NA      4384      1985     23135    175850        NA      8674        NA
+# AL        NA      7152        NA      9722      1868    103106    407595        NA     13518        NA
+# AP        NA        NA        NA        NA        NA        NA      4705        NA        NA        NA
+# AR       420      9994        NA      5750      1406     13910    183457      5000     12730        NA
+# AS        NA        NA        NA        NA        NA        NA        NA        NA        NA        NA
+# AZ        NA     10074        NA     26778       615     17040   1223310        NA     12488        NA
+# CA        NA     89498        NA     41752     31705    108253  28039517      5000    256676        NA 
+
+# 2a. We paste together the city and state data using the paste function.
+#     Then we tabulate the number of such donations, according to these city-state pairs.
+#     Finally, we sort these counts and print the six largest ones, using the tail function.
+tail(sort(table(paste(myDF$V9,myDF$V10))))
+
+# 2b. We paste together the city and state data using the paste function.
+#     Then we add the monetary amount of the donations (from column 15),
+#     according to these city-state pairs.
+#     Finally, we sort these total monetary amounts and
+#     print the six largest ones, using the tail function.
+tail(sort(tapply(myDF$V15,paste(myDF$V9,myDF$V10),sum,na.rm=T)))
+
+# 3a. We split the data about the donation amounts (from column 15),
+#     according to the day on which the donations were made.
+myresult <- split(myDF$V15, myDF$V14)
+
+# 3b. Now we sum the monetary amount of the donations, for each day:
+tail(sort(sapply(myresult, sum, na.rm=T)))
+
+# 3c. Alternatively, we see how many donations were made on each day,
+#     by finding the length of the vector that has the donations for that day,
+#     i.e., by finding how many donations there were for each day.
+tail(sort(sapply(myresult, length)))
+
+----
+
+
+== Project 20
+
+Please submit your answers, when you are finished, using GitHub.  We put an RMarkdown file into your individual GitHub accounts, for this purpose.
+
+Notes about scraping data:
+
+As a gentle reminder about how to access RStudio:
+
+Log on to Scholar:
+
+https://desktop.scholar.rcac.purdue.edu
+
+(or use the ThinLinc client on your computer if you installed it!)
+
+open the terminal on Scholar and type:
+
+[source,bash]
+----
+module load gcc/5.2.0
+module load rstudio
+rstudio &
+----
+
+Please remember to install and load the XML and the RCurl libraries.
+
+Using RStudio, we start to learn how to extract data from the web.
+
+Use the data from the Billboard Hot 100 for question 1.
+
+Please use the data from the week you were born.  For instance, if I solve question 1, I would use the data located here:
+
+https://www.billboard.com/charts/hot-100/1976-10-13
+
+Question 1
+
+On the Hot 100 chart, from the day of your birth:
+
+a.  Extract the titles of the songs ranked #2 through #100.
+
+b.  Extract the artists for those 99 songs.
+
+c.  Extract the title of the number 1 song for that day.
+
+d.  Extract the artist for the number 1 song for that day.
+
+Question 2
+
+a.  Extract the city where the National Park property for Catoctin Mountain is located.  This data is found at: `https://www.nps.gov/cato/index.htm` or in the file: `/depot/statclass/data/parks/cato.htm`
+
+b.  Extract the state where Catoctin Mountain is located.
+
+c.  Extract the zip code where Catoctin Mountain is located.
+
+Question 3
+
+a.  Identify three potential websites that you are interested to try to scrape yourself, during the upcoming seminars. Look for websites with data that is (relatively) easy to scrape, for instance: Systematic URL’s that are easy to understand; (relative) consistency in how the data is stored; and make sure that the data is embedded in the page, rather than in csv files that are already prepared for download. (We want to actually scrape some data.)
+
+b.  For each of the three websites that you identified, give a very brief description of the kind of data that you want to scrape.
+
+== Project 20 Billboard Example
+
+[source,R]
+----
+install.packages("XML")
+library(XML)
+
+# Considering the songs and artists who sang popular songs at the time of my birthday in 1976, we can scrape some data from Billboard Hot 100 chart
+
+# Here are the songs titles #2 through #100 from my birthday
+
+# Please notice the double underscore before title:
+
+xpathSApply(htmlParse(getURL("https://www.billboard.com/charts/hot-100/1976-10-13")),
+"//*/div[@class='chart-list-item__title']", xmlValue)
+
+# Here are the artists of the songs #2 through #100 from my birthday
+
+# Please notice the double underscore before artist:
+
+xpathSApply(htmlParse(getURL("https://www.billboard.com/charts/hot-100/1976-10-13")),
+"//*/div[@class='chart-list-item__artist']", xmlValue)
+----
+
+== Project 20 National Park Service Example
+
+[source,R]
+----
+
+# We will use the XML package to parse html (or XML) data
+install.packages("XML")
+library(XML)
+
+# and the RCurl package if you want to pull the data directly from the web:
+install.packages("RCurl")
+library(RCurl)
+
+# To see the list of the parks, we can go here:
+#    https://www.nps.gov/findapark/index.htm
+# if you use Control-U
+# (i.e., the Control Key and the letter U Key at once)
+# then you can see the code
+# for the way that the webpage is created.
+
+# You can use Firefox to open any of the files
+# with the data from the state parks;
+# they are all found inside this directory:
+#   /depot/statclass/data/parks/
+
+########################################
+# To study a specific park,
+# we look at the source for the Abraham Lincoln Birthplace:
+#   https://www.nps.gov/abli/index.htm
+# We load that webpage in a browser and then type Control-U
+
+# You search the code in a page with Control-F in Firefox
+
+# Here is the name of the Abraham Lincoln Birthplace:
+xpathSApply(htmlParse(getURL("https://www.nps.gov/abli/index.htm")), "//*/div[@id='HeroBanner']/div/div/div/a", xmlValue)
+
+# Here is the street address:
+xpathSApply(htmlParse(getURL("https://www.nps.gov/abli/index.htm")), "//*/span[@itemprop='streetAddress']", xmlValue)
+
+# Alternatively, we can also do this with the file itself,
+# instead of pulling the data from the web:
+
+xpathSApply(htmlParse("/depot/statclass/data/parks/abli.htm"), "//*/div[@id='HeroBanner']/div/div/div/a", xmlValue)
+
+xpathSApply(htmlParse("/depot/statclass/data/parks/abli.htm"), "//*/span[@itemprop='streetAddress']", xmlValue)
+----
+
+== Project 20 Answers
+
+[source,R]
+----
+
+install.packages("XML")
+library(XML)
+
+# 1a.  here are the song titles, 2 through 100, from (for instance) January 20, 1990:
+#      but students should use their OWN BIRTHDAYS for this question.
+xpathSApply(htmlParse(getURL("https://www.billboard.com/charts/hot-100/2000-01-20")),
+"//*/div[@class='chart-list-item__title']", xmlValue)
+
+# 1b.  here are the artists of the songs 2 through 100:
+xpathSApply(htmlParse(getURL("https://www.billboard.com/charts/hot-100/2000-01-20")),
+            "//*/div[@class='chart-list-item__artist']", xmlValue)
+
+# 1c.  here is the title of the number 1 song from that week:
+xpathSApply(htmlParse(getURL("https://www.billboard.com/charts/hot-100/2000-01-20")),
+            "//*/div[@class='chart-number-one__title']", xmlValue)
+
+# 1d.  here is the artist for the number 1 song from that week:
+xpathSApply(htmlParse(getURL("https://www.billboard.com/charts/hot-100/2000-01-20")),
+            "//*/div[@class='chart-number-one__artist']", xmlValue)
+
+# 2a. Here is the city:
+xpathSApply(htmlParse(getURL("https://www.nps.gov/cato/index.htm")),
+            "//*/span[@itemprop='addressLocality']", xmlValue)
+# alternatively:
+xpathSApply(htmlParse("/depot/statclass/data/parks/cato.htm"),
+            "//*/span[@itemprop='addressLocality']", xmlValue)
+
+# 2b. Here is the state:
+xpathSApply(htmlParse(getURL("https://www.nps.gov/cato/index.htm")),
+            "//*/span[@itemprop='addressRegion']", xmlValue)
+# alternatively:
+xpathSApply(htmlParse("/depot/statclass/data/parks/cato.htm"),
+            "//*/span[@itemprop='addressRegion']", xmlValue)
+
+# 2c. Here is the zip:
+xpathSApply(htmlParse(getURL("https://www.nps.gov/cato/index.htm")),
+            "//*/span[@itemprop='postalCode']", xmlValue)
+# alternatively:
+xpathSApply(htmlParse("/depot/statclass/data/parks/cato.htm"),
+            "//*/span[@itemprop='postalCode']", xmlValue)
+
+# 3a, 3b answers will vary
+
+----
+
+
