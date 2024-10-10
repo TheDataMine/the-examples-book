@@ -571,3 +571,82 @@ Which years was Nolan Ryan a pitcher?
 For this project, to make your life easier, it is OK to just submit a regular R file, rather than an RMarkdown file.
 
 
+== Project 9
+
+(Please remember that you have a "ReadMe" file, posted on Piazza last week, which tells you about all of the tables, including the table that tells you where the students went to school.)
+
+1.  Find the first and last names of all players who attended Purdue.
+ 
+2.  Find all of the pitchers who have pitched 300 or more strikeouts during a single season.
+
+In the output, give their first and last name and the year in which this achievement occurred.
+(You can just modify Example 3.)
+
+3a. Modify Example 5 to find out which pitchers were able to achieve 300 or more strikeouts AND 20 or more wins during the same season.
+
+3b. Consider the years in which this achievement occurred.  Use R to find the list of distinct years in which this achievement occurred at least once.
+
+Background discussion:
+
+If you look at the example for the 40-40 club (in Example 4), it works because each time that a player achieved 40 (or more) HR's and 40 (or more) SB's during the same season, he was only playing for one team.  A player never got traded to a new team, in any of those years.  Some complications will arise if a player switches teams (i.e., gets traded) during the season.  For this reason, we introduce Example 5.
+
+Here are some notes about Example 5:
+
+If we incorporate the SUM function into a condition, for instance, `WHERE SUM(b.SB) >= 40` the query will not work.  Instead, if the condition has a `SUM` inside it, we change `WHERE` to `HAVING`.  See Example 5 as a perfect example of this.  We can also return the results in a given order, using:  `ORDER BY`  for instance, `ORDER BY by.yearID` if we want to get the results (say) in order by the year.
+
+== SQL Example 5
+
+We only need to install this package 1 time.
+
+`install.packages("RMySQL")`
+
+ No need to run the line above, if you already ran it.
+
+We need to run this library every time we load R.
+
+`library("RMySQL")`
+
+[source,r]
+----
+myconnection <- dbConnect(dbDriver("MySQL"),
+                          host="mydb.ics.purdue.edu",
+                          username="mdw_guest",
+                          password="MDW_csp2018",
+                          dbname="mdw")
+
+easyquery <- function(x) {
+  fetch(dbSendQuery(myconnection, x), n=-1)
+}
+----
+
+Here is basic version for the 30-30 club question.
+(Same question as last week.)
+
+
+[source,r]
+----
+myDF <- easyquery("SELECT b.playerID, b.yearID, SUM(b.SB), SUM(b.HR)
+                   FROM Batting b
+                   GROUP BY b.playerID, b.yearID
+                   HAVING SUM(b.SB) >= 30 AND SUM(b.HR) >= 30
+                   ORDER BY b.yearID;")
+myDF
+----
+
+Here is an improved version, which includes the Batting and the Master table,
+so that we can have the players' full names.
+
+
+[source,r]
+----
+myDF <- easyquery("SELECT m.nameFirst, m.nameLast,
+                   b.yearID, SUM(b.SB), SUM(b.HR)
+                   FROM Master m JOIN Batting b
+                   ON m.playerID = b.playerID
+                   GROUP BY b.playerID, b.yearID
+                   HAVING SUM(b.SB) >= 30 AND SUM(b.HR) >= 30
+                   ORDER BY b.yearID;")
+myDF
+----
+
+
