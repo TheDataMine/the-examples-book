@@ -948,3 +948,295 @@ In general, in R, when writing a backslash in a regular expression, a double bac
 ----
 
 
+== Project 12
+
+There was no project 12
+
+== Project 13
+
+There was no project 13
+
+== Project 14
+
+Remind ourselves how to use bash and awk tools (previously we did this in the terminal).
+
+We will do it in Jupyter Notebooks this semester:  `http://notebook.scholar.rcac.purdue.edu/`
+
+1. a. Start a new Jupyter Notebook with type "bash" (instead of "R").  We are going to put bash code directly inside the Jupyter Notebook.  (In the past, we only wrote bash code directly inside the terminal.)  b.  Look at the first 10 lines of the 2007 flight data, which is found at:  `/depot/statclass/data/dataexpo2009/2007.csv`  All of the flights in those first 10 lines are on the same carrier.  Which carrier is it?  Remember that you can check:  `http://stat-computing.org/dataexpo/2009/the-data.html`  Now we are going to put awk code directly inside the Jupyter Notebook.  (In the past, we only wrote awk code directly inside the terminal.)
+
+2.  Save the information about every flight departing from Indianapolis since January 1, 2000 into a common file, named `MyIndyFlights.csv`
+
+Hint 1:  You only need the files 2000.csv, 2001.csv, ..., 2008.csv  You can work on all of those files at once, using 2*.csv because the "*" is like a wildcard, that matches any pattern.
+
+Hint 2:  You can use awk to do this.  For comparison, ONLY as an example, we can extract all flights
+that are on Delta airlines in 1998 as follows:
+`cat /depot/statclass/data/dataexpo2009/1998.csv | awk -F, '{ if($9 == "DL") {print $0} }' >MyDeltaFlights.csv`
+
+== Project 14 Solutions
+
+
+[source,bash]
+----
+# 1.  The head of the file with the 2007 flights is: 
+head /depot/statclass/data/dataexpo2009/2007.csv 
+
+#     We see that the UniqueCarrier is found in column 9. 
+#     One way to extract the UniqueCarrier is with the cut command 
+#     using a comma as the delimiter and retrieving (cut out) the 9th column: 
+cut -d, -f9 /depot/statclass/data/dataexpo2009/2007.csv | head -n11 
+#     We only displayed the head, because we only want the first 10 flights. 
+#     We specified -n11 because this prints the first 11 lines of the file, 
+#     namely, the header itself, and the first 10 flights. 
+#     We can check the data dictionary, available at:   http://stat-computing.org/dataexpo/2009/ 
+#     The information about the carrier codes is found there, 
+#     by clicking on the link for supplemental data sources:   http://stat-computing.org/dataexpo/2009/supplemental-data.html 
+and then choosing the carriers file:  http://stat-computing.org/dataexpo/2009/carriers.csv 
+#     The carrier code "WN" for each of these first ten flights is Southwest. 
+
+# 2.  We save the information about the Indianapolis flights by using awk. 
+#     First we recall how to see the information about all such flights. 
+#     Here are the first 10 lines of that data. 
+cat /depot/statclass/data/dataexpo2009/2*.csv | head 
+#     Then we change the "head" to the "awk" command. 
+#     We use comma as the field separator 
+#     (this is the same as the role of the delimiter from cut) 
+#     We modify the example from the project assignment, 
+#     so that we focus on the 17th field (which are the Origin airports) 
+#     and we save the resulting data into a file called MyIndyFlights.csv 
+
+cat /depot/statclass/data/dataexpo2009/2*.csv | awk -F, '{ if($17 == "IND") {print $0} }' >MyIndyFlights.csv 
+#     Some of you were not working in your home directory when you ran this commmand. 
+#     If you want to be sure to save the file into your home directory, 
+#     remember that you can explicitly specify your home directory using a tilde, as follows: 
+cat /depot/statclass/data/dataexpo2009/2*.csv | awk -F, '{ if($17 == "IND") {print $0} }' >~/MyIndyFlights.csv 
+#     It is not required that you check things, 
+#     but if you want to check that things worked properly, you can use the wc command 
+#     which gives the number of lines, words, and bytes in the resulting file: 
+wc MyIndyFlights.csv 
+#     or, even more explicitly, 
+wc ~/MyIndyFlights.csv 
+#     An alternative is to check the head and the tail: 
+head MyIndyFlights.csv 
+tail MyIndyFlights.csv 
+#     or, even more explicitly, 
+head ~/MyIndyFlights.csv 
+tail ~/MyIndyFlights.csv 
+----
+
+== Project 15
+
+Remind ourselves how to use R tools (previously we did this in the terminal).  We will do it in Jupyter Notebooks this semester.
+
+Question 1
+
+a.  Start a new Jupyter Notebook with type "R"
+
+b.  Import the flight data from the file MyIndyFlights.csv in a data frame.  You just created this file in Project 14.  It contains all of the flights that departed from Indianapolis since January 1, 2000.  (There should be 356561 flights altogether, and there is no header.)   Hint:  When you import the data, if you use the read.csv command, there is no header, so be sure to use header=FALSE.
+
+c.  What are the five most popular destinations for travelers who depart Indianapolis since January 1, 2000?  List each of these 5 destinations, and the number of flights to each one.
+
+
+Question 2
+
+a.  Consider the year 2005 (only).  Tabulate the number of flights per day.
+
+b.  On each of the most popular five days, how many flights are there?
+
+c.  On each of the least popular five days, how many flights are there?
+
+Hint:  You might be surprised to see the wide range of the number of flights per day!
+
+== Project 15 Solutions
+
+
+[source,R]
+----
+
+# 1.  We first import the flight data from the file MyIndyFlights.csv 
+
+myDF <- read.csv("MyIndyFlights.csv", header=F) 
+
+# or, if you prefer to explicitly state that the file 
+# is in your home directory, you can add the tilde for your home: 
+
+myDF <- read.csv("~/MyIndyFlights.csv", header=F) 
+
+# We check that there are 356561 flights altogether: 
+
+dim(myDF) 
+
+# The five most popular destinations for travelers 
+# who depart Indianapolis since January 1, 2000 are: 
+tail(sort(table(myDF[[18]])),n=5) 
+
+# We used the 18th column, which has the Destination airports. 
+# We tabulated the results, using the table command, 
+# and then we sorted the results. 
+# Finally, at the end, we took the tail of the results, 
+# using n=5, since we wanted to see the largest 5 values. 
+
+# 2a.  We load the 2005 data: 
+
+myDF <- read.csv("/depot/statclass/data/dataexpo2009/2005.csv") 
+
+# To get the number of flights per day, 
+# we can first paste together the Month and Day columns. 
+# We check the head, to make sure that this worked: 
+
+head(paste(myDF$Month, myDF$DayofMonth)) 
+
+# It is also possible, for instance, to separate the 
+# month and the day by separators, such as a slash: 
+
+head(paste(myDF$Month, myDF$DayofMonth, sep="/")) 
+
+# or a dash: 
+
+head(paste(myDF$Month, myDF$DayofMonth, sep="-")) 
+
+# Now we can tabulate the number of flights per day, 
+# using the table command: 
+
+table(paste(myDF$Month, myDF$DayofMonth, sep="/")) 
+
+# 2b. To find the most popular five days, 
+#     we can sort the table, and then consider the tail, 
+#     using the n=5 option, 
+#     since we only want the 5 most popular dates. 
+
+tail(sort(table(paste(myDF$Month, myDF$DayofMonth, sep="/"))),n=5) 
+
+# 2c. We just change tail to head, 
+#     to find the 5 least popular dates: 
+
+head(sort(table(paste(myDF$Month, myDF$DayofMonth, sep="/"))),n=5)
+
+----
+
+
+== Project 16
+
+Project 16 needs to be saved as a `.ipynb` file. This is different from the previous two assignments where the file was uploaded directly from each students Github page. Students need to download it from this link. Thanks!
+
+https://raw.githubusercontent.com/TheDataMine/STAT-19000/master/Assignments/hw16.ipynb
+
+Question 1
+
+Consider the flights from 2005 in the Data Expo 2009 data set.  The actual departure times, as you know, are given in the DepTime column. In this question, we want to categorize the departure times according to the hour of departure.  For instance, any time in the 4 o'clock in the (very early morning) hour should be classified together.  These are the times between 0400 and 0459 (because the times are given in military time). One way to do this is to divide each of the times by 100, and then to take the "floor" of the results, and then make a "table" of the results.  For practice (just to understand things), give this a try with the head of the DepTime, one step at a time, to make sure that you understand what is happening.  Then: a.  Classify all of the 2005 departure times, according to the hour of departure, using this method. b.  During which hour of the day did the most flights depart?
+
+Question 2
+
+a.  Here is another way to solve the question above.  Read the documentation for the "cut" command.  For the "breaks" parameter, use:
+seq(0, 2900, by=100)
+and be sure to set the parameter "right" to be FALSE.
+
+b.  Check that you get the same result as in question 1, using this method.
+
+c.  Why did we choose to use 2900 instead of (say) 2400 in this method?
+
+== Project 16 Solutions
+
+
+[source,R]
+----
+# 1a.  We read the data from the 2005 flights into a data frame 
+
+myDF <- read.csv("/depot/statclass/data/dataexpo2009/2005.csv") 
+
+#      Then we divide each time by 100 and take the floor: 
+
+table(floor(myDF$DepTime/100)) 
+
+#      and we get: 
+
+#      0      1      2      3      4      5      6      7 8      9     10 
+#  21747   7092   2027    458   1610 114469 430723 440532 469386 447705 432526 
+#     11     12     13     14     15     16     17     18     19 20     21 
+# 446432 443252 440903 416661 441021 424299 457678 431613 390398 321680 235810 
+#     22     23     24     25     26     27     28 
+# 128382  58386   1711    301     56      7      1 
+
+# 1b.  The most flights departed during 8 AM to 9 AM; 
+
+sort(table(floor(myDF$DepTime/100))) 
+
+#     28     27     26     25      3      4     24      2 1      0     23 
+#      1      7     56    301    458   1610   1711   2027   7092 21747  58386 
+#      5     22     21     20     19     14     16      6     18 10      7 
+# 114469 128382 235810 321680 390398 416661 424299 430723 431613 432526 440532 
+#     13     15     12     11      9     17      8 
+# 440903 441021 443252 446432 447705 457678 469386 
+
+# 2a.  We cut the DepTime column, using the breaks of 0000 through 2900 
+
+table(cut(myDF$DepTime, breaks=seq(0000,2900,by=100), right=FALSE)) 
+
+#      and we get: 
+
+#           [0,100)         [100,200)         [200,300) [300,400) 
+#             21747              7092 2027               458 
+#         [400,500)         [500,600)         [600,700) [700,800) 
+#              1610            114469            430723 440532 
+#         [800,900)       [900,1e+03)   [1e+03,1.1e+03) [1.1e+03,1.2e+03) 
+#            469386            447705            432526 446432 
+# [1.2e+03,1.3e+03) [1.3e+03,1.4e+03) [1.4e+03,1.5e+03) [1.5e+03,1.6e+03) 
+#            443252            440903            416661 441021 
+# [1.6e+03,1.7e+03) [1.7e+03,1.8e+03) [1.8e+03,1.9e+03) [1.9e+03,2e+03) 
+#            424299            457678            431613 390398 
+#   [2e+03,2.1e+03) [2.1e+03,2.2e+03) [2.2e+03,2.3e+03) [2.3e+03,2.4e+03) 
+#            321680            235810            128382 58386 
+# [2.4e+03,2.5e+03) [2.5e+03,2.6e+03) [2.6e+03,2.7e+03) [2.7e+03,2.8e+03) 
+#              1711               301 56                 7 
+# [2.8e+03,2.9e+03) 
+#                 1 
+
+#      or if you want to re-format the output, you can write, for instance: 
+
+table(cut(myDF$DepTime, breaks=seq(0000,2900,by=100), dig.lab=4, right=FALSE)) 
+
+#     [0,100)   [100,200)   [200,300)   [300,400)   [400,500) [500,600) 
+#       21747        7092        2027         458        1610 114469 
+#   [600,700)   [700,800)   [800,900)  [900,1000) [1000,1100) [1100,1200) 
+#      430723      440532      469386      447705      432526 446432 
+# [1200,1300) [1300,1400) [1400,1500) [1500,1600) [1600,1700) [1700,1800) 
+#      443252      440903      416661      441021      424299 457678 
+# [1800,1900) [1900,2000) [2000,2100) [2100,2200) [2200,2300) [2300,2400) 
+#      431613      390398      321680      235810      128382 58386 
+# [2400,2500) [2500,2600) [2600,2700) [2700,2800) [2800,2900) 
+#        1711         301          56           7           1 
+
+#     We just sort the command above, and we see that 
+#     the most flights departed during 8 AM to 9 AM 
+
+sort(table(cut(myDF$DepTime, breaks=seq(0000,2900,by=100), dig.lab=4, right=FALSE))) 
+
+# [2800,2900) [2700,2800) [2600,2700) [2500,2600)   [300,400) [400,500) 
+#           1           7          56         301         458 1610 
+# [2400,2500)   [200,300)   [100,200)     [0,100) [2300,2400) [500,600) 
+#        1711        2027        7092       21747       58386 114469 
+# [2200,2300) [2100,2200) [2000,2100) [1900,2000) [1400,1500) [1600,1700) 
+#      128382      235810      321680      390398      416661 424299 
+#   [600,700) [1800,1900) [1000,1100)   [700,800) [1300,1400) [1500,1600) 
+#      430723      431613      432526      440532      440903 441021 
+# [1200,1300) [1100,1200)  [900,1000) [1700,1800)   [800,900) 
+#      443252      446432      447705      457678      469386 
+
+#   2b. We do get the same results as in question 1. 
+
+#   2c.  We choose to use 2900 instead of (say) 2400 in this method 
+#        because some flights departed after midnight. 
+#        The time stamps are between 0000 and 2400 
+#        (this is like military time, between 00:00 and 24:00). 
+#        Some flights have delays until after midnight, 
+#        and they are recorded in a surprising way, 
+#        e.g., 24:30 for 30 minutes past midnight, 
+#        or 26:10 for 2 hours and 10 minutes past midnight. 
+#        In our data set, it happens that all of the ranges of the times 
+#        are between 0000 and 2900.  I just checked the max to find that out. 
+#        So that's why we use 2900 as an upper boundary, instead of 2400. 
+
+max(myDF$DepTime, na.rm=T)
+
+----
+
+
