@@ -206,39 +206,57 @@ plot(names(myresults), myresults)
 
 === Question 4 (2 pts)
 
-Read in the information about airports, and also the flight data from 1990, into two separate data frames, as follows:
+Now we find the top 10 states according to the total amount of the donations from each state during the elections from 1980 to 2018.
+
+We can extract the total amount of all the donations from all of the states during an election year as follows:
+
+[source, r]
+----
+mydonations <- function(myyear) {
+    myDF <- fread(paste0("/anvil/projects/tdm/data/election/itcont", myyear, ".txt"), quote="", select = c(10,15))
+    names(myDF) <- c("state", "donation")
+    myvalue <- tapply(myDF$donation, myDF$state, sum)
+    return(myvalue)
+}
+----
+
+and we can test this function by discovering how much money was donated from each state during the 1990 election cycle:
 
 [source, r]
 ----
 library(data.table)
-airportsDF <- fread("/anvil/projects/tdm/data/flights/subset/airports.csv")
-flightdataDF <- fread("/anvil/projects/tdm/data/flights/subset/1990.csv")
+mydonations(1990)
 ----
 
-[IMPORTANT]
-====
-It is necessary to have 2 cores in your Jupyter Lab session for Question 4 and Question 5.
-====
+Finally, we can use the `sapply` function to run this function on each election year (in other words, the even numbered years) from 1980 to 2018.
 
-[IMPORTANT]
-====
-Do not worry about the warning message from the `fread` function when you read in the `airportsDF` data.
-====
-
-These two data frames do not have any columns in common!  Nonetheless, the `"iata"` values from the `airportsDF` are the three-letter codes corresponding to airports, which are also found in the `Origin` and `Dest` columns in the `flightdataDF`.  So when we merge the information from the two tables, if we want to study where the flights depart, then we only want to merge the data according to the `iata` value (from the `airportsDF`) merged with the `Origin` value (from the `flightdataDF`), as follows:
-
-
-[source,r]
+[source, r]
 ----
-mybigDF <- merge(airportsDF, flightdataDF, by.x = "iata", by.y = "Origin")
+library(data.table)
+myresults <- sapply( seq(1980,2018,by=2), mydonations )
 ----
 
-Using this new data frame, find the average departure delay for all flights that have `Origin` airport in Indiana.
+which yields the total amount of money donated from each state during each election cycle from 1980 to 2018.
+
+Now we can add up the amount of donations in each state, across all of the years, as follows:
+
+[source, r]
+----
+v <- unlist(myresults)
+tapply(v, names(v), sum)
+----
+
+and the total amount of donations from each of the top 10 states across all election years 1980 to 2018 is:
+
+[source, r]
+----
+dotchart(tail(sort(tapply(v, names(v), sum)), n=10))
+----
 
 
 .Deliverables
 ====
-- Print the average departure delay for all flights that have `Origin` airport in Indiana.
+- Plot the amount of money donated from each of the top 10 states altogether during 1980 to 2018.
 ====
 
 === Question 5 (2 pts)
