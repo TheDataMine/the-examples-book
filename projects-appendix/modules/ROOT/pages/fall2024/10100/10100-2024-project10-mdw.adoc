@@ -2,7 +2,7 @@
 
 **Motivation:** Using R enables us to applying functions to many data sets in an efficient way.  We can extract information in a straightforward way.
 
-**Context:** There are several types of `apply` functions in R.  In this project, we learn about the `lapply` function, which is a "list" apply function.
+**Context:** There are several types of `apply` functions in R.  In this project, we learn about the `sapply` function, which is a "simplified" apply function.
 
 **Scope:** Applying functions to data.
 
@@ -18,7 +18,7 @@ Make sure to read about, and use the template found xref:templates.adoc[here], a
 This project will use the following dataset(s):
 
 - `/anvil/projects/tdm/data/flights/subset/*` (flights data)
-- `/anvil/projects/tdm/data/election/itcont/*` (flights data)
+- `/anvil/projects/tdm/data/election/itcont/*` (election data)
 
 We demonstrate the power of the apply family of functions.
 
@@ -37,8 +37,10 @@ library(data.table)
 myDF <- fread(paste0("/anvil/projects/tdm/data/flights/subset/1990.csv"))
 myvalue <- table(myDF$Origin)['IND']
 myvalue
+rm(myDF)
 ----
 
+(We use the `rm` at the end, so that we do not keep this data frame in memory, during the remainder of the project.)
 
 Now we can replicate this work, using a function, as follows:
 
@@ -77,6 +79,14 @@ The total number of flights starting from Indianapolis altogether, during 1987 t
 sum(myresults)
 ----
 
+and the number of flights per year is:
+
+[source, r]
+----
+plot(myresults)
+----
+
+
 [NOTE]
 ====
 The data sets cover October 1987 through April 2008.  So the data sets for 1987 and 2008 are smaller than you might expect, and that is OK.
@@ -84,22 +94,65 @@ The data sets cover October 1987 through April 2008.  So the data sets for 1987 
 
 .Deliverables
 ====
-- Print the total number of flights departing from Indianapolis airport during 1987 to 2008.
+- Plot the total number of flights starting from the Indianapolis airport during 1987 to 2008.
 ====
 
 
 === Question 2 (2 pts)
 
-Starting with the `newmergedDF`, find the average number of `stars` for the reviews of ice cream with `name == "Half Baked\302\256"`.
+We replicate the work from Question 1, but this time, we keep track of all of the flights originating at every airport in the data set.
 
-[IMPORTANT]
-====
-There are two characters that you will not see but they are there.  They are encoded as `"\302\256"`.
-====
+
+We make a function, very much like Question 1, but this time, we keep track of the full table of the counts of `Origin` airports, for all airports (not just for Indianapolis):
+
+[source, r]
+----
+myflights <- function(myyear) {
+    myDF <- fread(paste0("/anvil/projects/tdm/data/flights/subset/", myyear, ".csv"))
+    myvalue <- table(myDF$Origin)
+    names(myvalue) <- myyear
+    return(myvalue)
+}
+----
+
+and we can test that this function works for the 1990 flights:
+
+[source, r]
+----
+library(data.table)
+myflights(1990)
+----
+
+Finally, we can use the `sapply` function to run this function on each year from 1987 to 2008.
+
+[source, r]
+----
+library(data.table)
+myresults <- sapply(1987:2008, myflights)
+----
+
+which yields the number of flights starting from each airport in each year, from 1987 to 2008.
+
+Now we can add up the number of flights across all of the years, as follows:
+
+[source, r]
+----
+v <- unlist(myresults)
+tapply(v, names(v), sum)
+----
+
+and the number of flights starting at each of the top 10 airports during the years 1987 to 2008 is:
+
+[source, r]
+----
+dotchart(tail(sort(tapply(v, names(v), sum)), n=10))
+----
+
+
 
 .Deliverables
 ====
-- Print the average number of `stars` for the reviews of ice cream with `name == "Half Baked\302\256"`.
+- Plot the total number of flights starting from each of the top 10 airports during 1987 to 2008.
 ====
 
 
