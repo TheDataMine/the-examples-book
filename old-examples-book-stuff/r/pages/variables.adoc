@@ -1,0 +1,568 @@
+= Variables
+
+== Overview
+
+A variable is a named reference to a value. Variables have _types_ that define what type of data they hold. In R, there 5 basic variable types: 
+
+* <<character, character>>
+* <<double, double>>
+* <<integer, integer>>
+* <<logical, logical>>
+* <<complex, complex>>
+
+In addition, there are some other types you may run into:
+
+* <<raw, raw>>
+* <<list, list>>
+* <<closure, closure>>
+* <<special, special>>
+* <<builtin, builtin>>
+* <<environment, environment>>
+* <<S4, S4>>
+
+== character
+
+A character vector in R is R's version of a string. It is a vector of characters. Characters start and end with double quotes (`"`), or single quotes (`'`).
+
+[source,r]
+----
+typeof('my_character_vector')
+typeof("my_character_vector")
+----
+
+----
+'character'
+'character'
+----
+
+== integer
+
+An integer is a numeric value without a fractional part (no decimal). In many dynamic languages, when you create a variable to hold a number _without_ a decimal point, it will be an integer. For example, in Python, the following is an integer.
+
+[source,python]
+----
+my_integer = 5
+type(my_integer)
+----
+
+----
+int
+----
+
+It is only when you add a decimal point that Python will store the number as a float.
+
+[source,python]
+----
+my_float = 5.0
+type(my_float)
+----
+
+----
+float
+----
+
+In R, however, this is _not_ the case. In R, 5 and 5.0 will _both_ be stored as doubles unless explicitly set as integers using `as.integer()`.
+
+[source,r]
+----
+my_variable <- 5
+typeof(my_variable)
+
+my_variable <- 5.0
+typeof(my_variable)
+----
+
+----
+'double'
+'double'
+----
+
+[source,r]
+----
+my_variable <- as.integer(5)
+typeof(my_variable)
+----
+
+----
+'integer'
+----
+
+One exception to this rule is when creating a vector of integers.
+
+[source,r]
+----
+test <- 1:5
+typeof(test)
+test <- 1.2:4
+typeof(test)
+----
+
+----
+'integer'
+'double'
+----
+
+== double
+
+A double is a numeric value _with_ a fractional part. In R, by default, when you save a single number as a variable, it will be a double. To test if a value is a double, you can use the `typeof` function. To try an convert a numeric value to a double, you can use the `as.double()` function. `as.double()` will also convert a character vector to a double vector if possible.
+
+[source,r]
+----
+char_to_double <- as.double("4.0")
+typeof(char_to_double)
+----
+
+----
+'double'
+----
+
+== logical
+
+Logical vectors are vectors containing logical values. The primary logical values are `TRUE` and `FALSE`. `NA` is also a logical value. It is not uncommon to use `T` or `F` to represent `TRUE` and `FALSE`, however, it is important to note that `T` and `F` are _not_ the same as `TRUE` and `FALSE`. `T` and `F` are global variables with initial values `TRUE` and `FALSE`, respectively. So, the following will fail with an error, because `TRUE` and `FALSE` are reserved keywords who's values cannot be changed.
+
+[source,r]
+----
+TRUE <- "some other value"
+FALSE <- "some other value"
+----
+
+On the other hand, the following will _not_ fail, and could potentially cause problems in code.
+
+[source,r]
+----
+T <- "some other value"
+F <- "some other value"
+----
+
+Logical values are critical in R. They are constantly used when indexing vectors and data.frames. Remember, the result of a comparison using xref:logical-operators.adoc[logical operators] is a vector of logical values. For example, the following code will return all values in our vector > 5.
+
+[source,r]
+----
+vec <- 1:10
+vec[vec > 5]
+----
+
+While initially you may not look at this code and think "I'm using logical indexing", you are! Remember, `vec > 5` evaluates to a logical vector of `TRUE` and `FALSE`.
+
+[source,r]
+----
+vec <- 1:10
+vec > 5
+----
+
+----
+[1] FALSE FALSE FALSE FALSE FALSE TRUE TRUE TRUE TRUE TRUE
+----
+
+So, `vec[vec > 5]` is really equivalent to the following.
+
+[source,r]
+----
+vec[c(FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE)]
+----
+
+In the <<coercion, coercion section>>, we mention that _typically_ R will coerce values from the _most-specific_ type to the _least-specific_ type. One exception to this rule is when treating `TRUE` or `FALSE` as a numeric value. When treating `TRUE` and `FALSE` as a numeric value, the result is a 1L for `TRUE` and 0L for `FALSE`. This is counter-intuitive as `TRUE` and `FALSE` are the _most-specific_ types. However, this enables some powerful shorthands. For example, what if we wanted to count the number of even values in our vector? One may consider the following code.
+
+[source,r]
+----
+vec <- 1:10
+length(vec[vec %% 2 == 0])
+----
+
+----
+5
+----
+
+However, a more succint version of this code is as follows.
+
+[source,r]
+----
+vec <- 1:10
+sum(vec %% 2 == 0)
+----
+
+As you can see, because R coerces the logical values to be 1 for `TRUE` and 0 for `FALSE`, we can easily count the number of even values in our vector.
+
+== complex
+
+While it is less likely that you will need to use complex numbers in R, they have first class support. Complex numbers are a pair of real numbers, the real and imaginary parts of which are separated by a comma. For example, the following code shows a few ways to create a complex number.
+
+[source,r]
+----
+0i ^ (-3:3)
+1i^2
+----
+
+Note that you must prepend a 1 to i, otherwise R will consider i to be a variable instead of an imaginary number. While you may expect the following code to produce a complex number, it does not.
+
+[source,r]
+----
+sqrt(-1)
+----
+
+You can read more about complex numbers in R https://stat.ethz.ch/R-manual/R-devel/library/base/html/complex.html[here].
+
+== Coercion
+
+Coercion is the process of changing the type of a variable, either explicitly (using a special function) or implicitly (by performing an operation on a variable of one type, when the operation was meant for another type). The following is an example of coercion.
+
+[source,r]
+----
+typeof(paste("test", 5.0))
+----
+
+----
+'character'
+----
+
+Here, 5.0 is a double, and "test" is a character vector. `paste` is a function expecting character vector(s) as input, and returns the concatenation of the input vectors. When instead of passing multiple character vectors to `paste`, we pass a character vector and a double, R will coerce the double to be a character so the operation will complete successfully. 
+
+In general, when needed, R will coerce the most-specific type to the less-specific type. For example, if you have a character vector and a double, R will coerce the double to a character vector, because 5.0 _could_ be a piece of text, rather than a number, but it is not possible to say "my_string" is a double. Another example is the following.
+
+[source,r]
+----
+my_integer <- as.integer(5)
+my_double <- 7.0
+my_result <- my_integer + my_double
+typeof(my_result)
+----
+
+----
+'double'
+----
+
+Here, the integer is the most-specific type, so it will be coerced to a double. A double can store numeric data out to many decimal places. An integer cannot. You can take an integer, for example 5, and store it as a double, for example 5.0000000000. Here, we just store 0's for all of the decimal places. You cannot, however, store a double as an integer. 5.12345 cannot be stored as an integer without losing information. 
+
+The following is a more than likely correct order of most-specific to least-specific types.
+
+. logical
+. integer
+. double
+. complex
+. character
+. list
+
+== factors
+
+A factor is R's way of representing a categorical variable. There are elements in a factor (just like there are elements in a vector), but they are constrained to only be chosen from a specific set of values, called "levels". They are useful when a vector has only a few different values it could be, like "Male" or "Female" and "A", "B", or "C".
+
+=== Examples
+
+==== How do I test whether or not a vector is a factor?
+
+.Solution
+====
+[source, r]
+----
+test_factor <- factor("Male")
+is.factor(test_factor)
+----
+
+----
+[1] TRUE
+----
+
+[source,r]
+----
+test_factor_vec <- factor(c("Male", "Female", "Female"))
+is.factor(test_factor_vec)
+----
+
+----
+[1] TRUE
+----
+====
+
+==== How do I convert a vector of strings to a factor?
+
+.Solution
+====
+[source, r]
+----
+vec <- c("Male", "Female", "Female")
+vec <- factor(vec)
+----
+====
+
+==== How do I get the unique values a factor could hold, also known as its _levels_?
+
+.Solution
+====
+[source, r]
+----
+vec <- factor(c("Male", "Female", "Female"))
+levels(vec)
+----
+
+----
+[1] "Female" "Male"
+----
+====
+
+==== How can I rename the levels of a factor?
+
+.Solution
+====
+[source, r]
+----
+vec <- factor(c("Male", "Female", "Female"))
+levels(vec)
+----
+
+----
+[1] "Female" "Male"
+----
+
+[source,r]
+----
+levels(vec) <- c("F", "M")
+vec
+----
+
+----
+[1] M F F
+Levels: F M
+----
+
+[source,r]
+----
+# be careful! Order matters, this is wrong:
+vec <- factor(c("Male", "Female", "Female"))
+levels(vec)
+----
+
+----
+[1] "Female" "Male"
+----
+
+[source,r]
+----
+# here we incorrectly rename "Female"'s to "M" instead of "F"
+levels(vec) <- c("M", "F")
+vec
+----
+
+----
+[1] F M M
+Levels: M F
+----
+====
+
+==== How can I find the number of levels of a factor?
+
+.Solution
+====
+[source, r]
+----
+vec <- factor(c("Male", "Female", "Female"))
+nlevels(vec)
+----
+
+----
+[1] 2
+----
+====
+
+== Dates
+
+`Date` is a class which allows you to perform special operations like subtraction, where the number of days between dates are returned. Or addition, where you can add 30 to a Date and a Date is returned where the value is 30 days in the future.
+
+You will usually need to specify the "format" argument based on the format of your date strings. 
+
+For example, if you had a string "07/05/1990", the format would be: `%m/%d/%Y`, where `%m` matches a zero-padded month value, `/`'s match literal `/`'s, `%d` matches a zero-padded day value, and `%Y` matches a 4 digit year in the format YYYY. If your string was `31-12-90`, the format string would be `%d-%m-%y`. Replace %d, %m, %Y, and %y according to your date strings. A full list of formats can be found https://www.stat.berkeley.edu/~s133/dates.html[here].
+
+Working with dates can be difficult and confusing. See xref:lubridate.adoc[here] for more information about a package called `lubridate` which provides a much easier interface to working with dates.
+
+=== Examples
+
+==== How do I convert a string "07/05/1990" to a `Date`?
+
+.Solution
+====
+[source, r]
+----
+my_string <- "07/05/1990"
+my_date <- as.Date(my_string, format="%m/%d/%Y")
+my_date
+----
+
+----
+[1] "1990-07-05"
+----
+====
+
+==== How do I convert a string "31-12-1990" to a `Date`?
+
+.Solution
+====
+[source, r]
+----
+my_string <- "31-12-1990"
+my_date <- as.Date(my_string, format="%d-%m-%Y")
+my_date
+----
+
+----
+[1] "1990-12-31"
+----
+====
+
+==== How do I convert a string "12-31-1990" to a `Date`?
+
+.Solution
+====
+[source, r]
+----
+my_string <- "12-31-1990"
+my_date <- as.Date(my_string, format="%m-%d-%Y")
+my_date
+----
+
+----
+[1] "1990-12-31"
+----
+====
+
+==== How do I convert a string "31121990" to a `Date`?
+
+.Solution
+====
+[source, r]
+----
+my_string <- "31121990"
+my_date <- as.Date(my_string, format="%d%m%Y")
+my_date
+----
+
+----
+[1] "1990-12-31"
+----
+====
+
+== `NA` & `NaN` & `NULL`
+
+`NA`::
+
+`NA` stands for not available. In general, this represents a missing value or a lack of data. _Technically_, `NA` is a logical value. You can test this with the following code.
+
+[source,r]
+----
+class(NA)
+----
+
+`NaN`::
+`NaN` stands for not a number. This is a special value that is used to indicate that there is a result, it just cannot be represented as a number (for example the result of 0/0). _Technically_, `NaN` is a double value. You can test this with the following code.
+
+[source,r]
+----
+class(NaN)
+----
+
+`NULL`::
+
+If you have an understanding of `NULL` from other programming languages, you can carry it over to R. Otherwise, it is safe to think of `NULL` as something that is neither `TRUE` nor `FALSE`. _Technically_, `NULL` is its own thing. It is not a logical value, double value, etc. `NULL` is commonly used to represent an empty object or something that exists but isn't really defined. When trying to distinguish between `NA` and `NULL`, think of `NA` as a missing value, and `NULL` as an undefined value.
+
+=== Examples
+
+==== How do I tell if a value is `NA`?
+
+.Solution
+====
+[source, r]
+----
+# test if a value is NA.
+value <- NA
+is.na(value)
+----
+
+----
+[1] TRUE
+----
+
+[source,r]
+----
+# does is.nan return TRUE for NA?
+is.nan(value)
+----
+
+----
+[1] FALSE
+----
+====
+
+==== How do I tell if a value is `NaN`?
+
+.Solution
+====
+[source, r]
+----
+# test if a value is NaN.
+value <- NaN
+is.nan(value)
+----
+
+----
+[1] TRUE
+----
+
+[source,r]
+----
+value <- 0/0
+is.nan(value)
+----
+
+----
+[1] TRUE
+----
+
+[source,r]
+----
+# does is.na return TRUE for NaN?
+is.na(value)
+----
+
+----
+[1] TRUE
+----
+====
+
+==== How do I tell if a value is `NULL`?
+
+.Solution
+====
+[source, r]
+----
+# test if a value is NULL.
+value <- NULL
+is.null(value)
+----
+
+----
+[1] TRUE
+----
+
+[source,r]
+----
+class(value)
+----
+
+----
+[1] "NULL"
+----
+
+[source,r]
+----
+# does is.na return TRUE for NULL?
+is.na(value)
+----
+
+----
+logical(0) # no
+----
+====
+
+=== Resources
+
+https://www.r-bloggers.com/2010/04/r-na-vs-null/[R-Bloggers, NA vs. NULL]
+
+A good writeup on the differences between `NA` and `NULL`.

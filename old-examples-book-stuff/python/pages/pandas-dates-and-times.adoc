@@ -1,0 +1,117 @@
+= Pandas Dates and Times
+
+== Using Dates and Times in Pandas
+As with many of the other topics, Pandas has helpful methods built in for date time functionality. However, before we get too far into the different methods that we can use we need to make sure that the data is in the correct format for Pandas date time functions: 
+
+[source, python]
+----
+list_1 = ['7/1/2021', '7/4/2021', '8/20/2021', '9/2/2021', '4/1/2050']
+list_2 = ['Presentation', 'Class', 'Presentation', 'Event', 'Class']
+list_3 = [25, 0, 50, 48, 1000000]
+
+myDF = pd.DataFrame(zip(list_1, list_2, list_3), columns=['date', 'type', 'attendance'])
+print(myDF.dtypes)
+----
+
+----
+date          object
+type          object
+attendance     int64
+----
+
+As we can see in the example, the first `date` column shows as `object` in the output. In this case if we tried to use any of the date time functions we would get an error. Thankfully we can convert the column to the correct date time format: 
+
+[source, python]
+----
+myDF['date'] = pd.to_datetime(myDF['date'], format='%m/%d/%Y')
+print(myDF.dtypes)
+----
+
+----
+date          datetime64[ns]
+type                  object
+attendance             int64
+----
+
+We can now see in the output that the `date` column has been updated to `datetime64[ns]`. This will allow us to utilize the Pandas date time functions. The `format=` field can be a bit confusing. When using this field we need to pass the type of date format that we'd expect to use. In this case `%m` indicates month, `%d` indicates day, and `%Y` indicates year. 
+
+Date time formatting *does* pay attention to capitalization. For example, `%y` is the year without the century while `%Y` is the year with the century. Think `13` compared to `2013`. Thankfull there are lots of https://strftime.org[helpful tables] to explain the different formats. You'll also need to match the separators for the different date formats. If the date field is `8-1-2021` instead of `8/1/2021` you'll need to match that in the format input.  
+
+== Date Time Methods
+Once you have the data in the correct data type there are lots of functions that can be beneficial when working with date time data. A few of the most common functions are included below: 
+
+*What if I just wanted the month or year?*
+
+[source, python]
+----
+myDF['month'] = myDF['date'].dt.month
+myDF['year'] = myDF['date'].dt.year
+print(myDF)
+----
+
+----
+        date          type  attendance  month  year
+0 2021-07-01  Presentation          25      7  2021
+1 2021-07-04         Class           0      7  2021
+2 2021-08-20  Presentation          50      8  2021
+3 2021-09-02         Event          48      9  2021
+4 2050-04-01         Class     1000000      4  2050
+----
+
+*What if I wanted to find the day of the week?*
+
+[source, python]
+----
+myDF['day_of_the_week'] = myDF['date'].dt.day_name()
+print(myDF)
+----
+
+----
+        date          type  attendance day_of_the_week
+0 2021-07-01  Presentation          25        Thursday
+1 2021-07-04         Class           0          Sunday
+2 2021-08-20  Presentation          50          Friday
+3 2021-09-02         Event          48        Thursday
+4 2050-04-01         Class     1000000          Friday
+----
+
+There is also a `month_name()` function that could be used!
+
+*What if I wanted to shift all the days forward one week?*
+
+[source, python]
+----
+myDF['one_week_later'] = myDF['date'] + pd.Timedelta("7 days")
+print(myDF)
+----
+
+----
+        date          type  attendance one_week_later
+0 2021-07-01  Presentation          25     2021-07-08
+1 2021-07-04         Class           0     2021-07-11
+2 2021-08-20  Presentation          50     2021-08-27
+3 2021-09-02         Event          48     2021-09-09
+4 2050-04-01         Class     1000000     2050-04-08
+----
+
+*What if I wanted to see how many days until a specific date?*
+
+[source, python]
+----
+one_year_later = myDF['date'] + pd.offsets.DateOffset(years=1)
+myDF['end_of_school'] = pd.to_datetime({'month': 5, 'day': 31, 'year':one_year_later.dt.year})
+myDF['days_until_school_is_over'] = myDF['end_of_school'] - myDF['date']
+print(myDF)
+----
+
+----
+        date          type  attendance end_of_school days_until_school_is_over
+0 2021-07-01  Presentation          25    2022-05-31                  334 days
+1 2021-07-04         Class           0    2022-05-31                  331 days
+2 2021-08-20  Presentation          50    2022-05-31                  284 days
+3 2021-09-02         Event          48    2022-05-31                  271 days
+4 2050-04-01         Class     1000000    2051-05-31                  425 days
+----
+
+== Resources
+As you can see there is a ton of different functionality when working with date time objects in Pandas. As usual, Pandas has some great https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html[documentation] regarding date time functionality and all the different methods that are available. 

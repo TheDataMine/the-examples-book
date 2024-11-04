@@ -1,0 +1,410 @@
+= STAT 39000: Project 5 -- Spring 2022
+
+**Motivation:** In this project we will slowly get familiar with SLURM, the job scheduler installed on our clusters at Purdue, including Brown.  
+
+**Context:** This is the first in a series of 3 projects focused on parallel computing using SLURM and Python. 
+
+**Scope:** SLURM, unix, Python 
+
+.Learning Objectives
+****
+- Use basic SLURM commands to submit jobs, check job status, kill jobs, and more.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/depot/datamine/data/coco/unlabeled2017/*.jpg`
+
+== Questions
+
+=== Question 1
+
+[IMPORTANT]
+====
+This project (and the next) will have different types of deliverables. Each question will result in an entry in a Jupyter notebook, and/or 1 or more additional Python and/or Bash scripts. 
+
+To properly save screenshots in your Jupyter notebook, follow the guidelines xref:book:projects:templates.adoc#including-an-image-in-your-notebook[here]. Images that don't appear in your notebook in Gradescope will not get credit.
+====
+
+[WARNING]
+====
+When you start your JupyterLab session this week, BEFORE you start your session, please change "Processor cores requested" from 1 to 4.  We will use 4 processing cores this week.  We might change this back to 1 processing core for the Jupyter Lab session next week; please stay tuned.
+====
+
+Most of the supercomputers here at Purdue contain one or more frontends. Users can log in and submit jobs to run on one or more backends. To submit a job, users use SLURM.
+
+SLURM is a job scheduler found on about 60% of the top 500 supercomputers.footnote:[https://en.wikipedia.org/wiki/Slurm_Workload_Manager[https://en.wikipedia.org/wiki/Slurm_Workload_Manager]] In this project (and the next) we will learn about ways to schedule jobs on SLURM, and learn the tools used.
+
+Let's get started by using a script called `sinteractive` written by Lev Gorenstein, here at Purdue. A brief explanation is that `sinteractive` gets some resources (think memory and cpus), and logs you into that "virtual" system. 
+
+Open a terminal and give it a try.
+
+[source,bash]
+----
+sinteractive -A datamine -n 3 -c 1 -t 00:05:00 --mem=4000
+----
+
+After some output, you should notice that your shell changed. Type `hostname` followed by enter to see that your host has changed from `brown-feXX.rcac.purdue.edu` to `brown-aXXX.rcac.purdue.edu`. You are in a different system! Very cool!
+
+To find out what the other options are read https://slurm.schedmd.com/salloc.html
+
+- The `-A datamine` option could have also been written `--account=datamine`. This indicates which account to use when allocating the resources (memory and cpus).  You can also think of this as a "queue" or "the datamine queue". Jobs submitted using this option will use the resources we pay for. Only users with permissions can submit to our queue.
+- The `-n 3` option could have also been written `--ntasks=3`. This indicates how many cpus/tasks we may need for the job. 
+- The `-c 1` option could have also been written `--cpus-per-task=1`. This indicates the number of processors per task.
+- The `-t 00:05:00` option could have also been written `--time=00:05:00`. This indicates how long the job may run for. If the time exceeds the time limit, the job is killed.
+- The `--mem=4000` option indicates how much memory (in MB) we may need for the job. If you want to specify the amount of memory per task, you could use `--mem-per-task`. 
+
+[NOTE]
+====
+Another common option is `-N` or `--nodes`. This indicates how many nodes we may need for the job. A node is a single backend computer. If `-N` is unspecified, the default behavior is to allocate enough nodes to satisfy the requirements of the `-n` and `-c` options. For this course we will break our jobs down into a certain number of tasks, so using the `-n` option makes more sense, and is more flexible as tasks can be distributed on many nodes.
+====
+
+To confirm, use the following script to see how much memory and cpus we have available to us. 
+
+[source,python]
+----
+#!/usr/bin/python3
+
+from pathlib import Path
+
+def main():
+    with open("/proc/self/cgroup") as file:
+        for line in file:
+            if 'cpuset' in line:
+                cpu_loc = "cpuset" + line.split(":")[2].strip()
+            
+            if 'memory' in line:
+                mem_loc = "memory" + line.split(":")[2].strip()
+
+    base_loc = Path("/sys/fs/cgroup/")
+    with open(base_loc / cpu_loc / "cpuset.cpus") as file:
+        num_cpus = len(file.read().strip().split(","))
+        print(f"CPUS: {num_cpus}")
+
+    with open(base_loc / mem_loc / "memory.limit_in_bytes") as file:
+        mem_in_bytes = int(file.read().strip())
+        print(f"Memory: {mem_in_bytes/1024**2} Mbs")
+
+if __name__ == "__main__":
+    main()
+----
+
+To use it.
+
+[source,bash]
+----
+./get_info.py
+----
+
+For this question, add a screenshot of running `hostname` on the `sinteractive` session, as well as `./get_info.py` to your notebook.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+`sinteractive` can be useful, but most of the time we want to run a job.
+
+Before we get started, read the answer to https://stackoverflow.com/questions/46506784/how-do-the-terms-job-task-and-step-relate-to-each-other[this] stackoverflow post. In many instances, it is easiest to use 1 cpu per task, and let SLURM distribute those tasks to run. In this course, we will use this simplified model.
+
+So what is the difference between `srun` and `sbatch`? https://stackoverflow.com/questions/43767866/slurm-srun-vs-sbatch-and-their-parameters[This] stackoverflow post does a pretty great job explaining. You can think of `sbatch` as the tool for submitting a job script for execution, and `srun` as the tool to submit a job to run. We will test out both! 
+
+In the previous question, we used `sinteractive` to get the resources, hop onto the system, and run `hostname` along with out `get_info.py` script.
+
+Use `srun` to run our `get_info.py` script, to better understand how the various options work. Try and guess the results of the script for each configuration.
+
+[TIP]
+====
+Be sure to give you `get_info.py` script execution permissions if you haven't already.
+
+[source,bash]
+----
+chmod +x get_info.py
+----
+====
+
+.configurations to try
+----
+srun -A datamine -n 2 -c 1 -t 00:00:05 --mem=4000 $HOME/get_info.py
+srun -A datamine -n 2 -c 1 -t 00:00:05 --mem-per-cpu=4000 $HOME/get_info.py
+srun -A datamine -N 1 -n 2 -c 1 -t 00:00:05 --mem-per-cpu=1000 $HOME/get_info.py
+srun -A datamine -N 2 -n 2 -c 1 -t 00:00:05 --mem-per-cpu=1000 $HOME/get_info.py
+srun -A datamine -N 2 -n 2 -c 1 -t 00:00:05 --mem=1000 $HOME/get_info.py
+srun -A datamine -N 2 -n 3 -c 1 -t 00:00:05 --mem=1000 $HOME/get_info.py
+srun -A datamine -N 2 -n 3 -c 1 -t 00:00:05 --mem-per-cpu=1000 $HOME/get_info.py
+srun -A datamine -N 2 -n 3 -c 1 -t 00:00:05 --mem-per-cpu=1000 $HOME/get_info.py > $CLUSTER_SCRATCH/get_info.out
+----
+
+[NOTE]
+====
+Check out the `get_info.py` script. SLURM uses cgroups to manage resources. Some of the more typical commands used to find the number of cpus and amount of memory don't work accurately when "within" a cgroup. This script figures out which cgroups you are "in" and parses the appropriate files to get your resource limitations.
+====
+
+Reading the explanation from SLURM's website is not enough to understand, running the configurations will help your understanding. If you have simple, parallel processes, that doesn't need to have any shared state, you can use a  single `srun` per task. Each with `--mem-per-cpu` (so memory availability is more predictable), `-n 1`, `-c 1`, followed by `&` (just a reminder that `&` at the end of a bash command puts the process in the background).
+
+Reading the information about cgroups may lead you to wonder if the RCAC puts you into a cgroup when you are SSH'd into a frontend. Use our `get_info.py` script, along with other unix commands, to determine if you are in a cgroup. If you are in a cgroup, how many cpus and memory do you have?
+
+[TIP]
+====
+If `get_info.py` does not match the resources you get using `free -h` or `lscpu` (for example), you are in a cgroup.
+====
+
+Finally, take note of the last configuration. What is the $CLUSTER_SCRATCH environment variable? 
+
+For the answer to this question:
+
+. Add a screenshot of the results of some (not all) of you running the `get_info.py` script in the `srun` commands. 
+. Write 1-2 sentences about any observations.
+. Include what the `$CLUSTER_SCRATCH` environment variable is.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+The following is a solid template for a job script.
+
+.job script template
+----
+#!/bin/bash
+#SBATCH --account=datamine
+#SBATCH --job-name=serial_job_test    # Job name
+#SBATCH --mail-type=END,FAIL          # Mail events (NONE, BEGIN, END, FAIL, ALL)
+#SBATCH --mail-user=me@purdue.edu     # Where to send mail	
+#SBATCH --ntasks=1                    # Number of tasks (total)
+#SBATCH --cpus-per-task=1             # Number of processors per task
+#SBATCH -o /dev/null                  # Output to dev null
+#SBATCH -e /dev/null                  # Error to dev null
+
+echo "srun commands and other bash below"
+wait
+----
+
+If we we put all of our `srun` commands from the previous question into the same script, we want the output for each `srun` to be put into a uniquely named file, to bea able to see the result of each command. 
+
+Replace the `echo` command in the job script with our `srun` commands from the previous question. Also, direct the output from each command into a uniquely named file. Make sure to end each `srun` line in `&`. Make suret to specify the correct total of tasks.
+
+To submit the job, run the following.
+
+[source,bash]
+----
+sbatch my_job.sh
+----
+
+If the output files are not what you expected, copy your batch script and add the `--exclusive` flag to each `srun` command then run it again. Read about the `--exclusive` option https://slurm.schedmd.com/srun.html[here] and do your best to explain what is happening.
+
+To answer this question, 1. Submit both job scripts, 2. A markdown cell containing your explanation of what happened before `--exclusive` was added to each `srun` command. 3. A markdown cell describing some of your outputs for each of the batch scripts' outputs.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+The more you practice the clearer your understanding will be. So we will be putting our new skills to use to solve a problem.
+
+We begin with a dataset full of images: `/depot/datamine/data/coco/unlabeled2017/*.jpg`. 
+
+We know a picture of Dr. Ward is (naturally) included in the folder. The problem is, Dr. Ward is sneaky and he has added a duplicate image of himself in our dataset. This duplicate could cause problems and we need a clean dataset.
+
+It is time consuming and not best practice to manually go through the entire dataset to find the duplicate. Thinking back to some of the past work, we remember that a hash algorithm is a good way to identify the duplicate image. 
+
+Below is code you could use to produce a hash of an image. 
+
+[source,python]
+----
+with open("/path/to/myimage.jpg", "rb") as f:
+    print(hashlib.sha256(f.read()).hexdigest())
+----
+
+[NOTE]
+====
+In general a hash function, is a function that takes an input and produces a unique "hash", or alphanumeric string. Meaning if you find two identical hashes, most likely you can assume that the inputs are identical.
+====
+
+By finding the hash of all of the images in the first folder, then using sets to quickly find the duplicate image. You can write a Python script that outputs a file containing the hash of each image 
+
+An example:
+a file called `000000000013.jpg` with the contents `7ad591844b88ee711d1eb60c4ee6bb776c4795e9cb4616560cb26d2799493afe`.
+
+
+Parallelize the file creating and search process will make finding the duplicate faster. 
+
+[source,python]
+----
+#!/usr/bin/python3
+
+import os
+import sys
+import hashlib
+import argparse
+
+
+def hash_file_and_save(files, output_directory):
+    """
+    Given an absolute path to a file, generate a hash of the file and save it
+    in the output directory with the same name as the original file.
+    """
+
+    for file in files:
+        file_name = os.path.basename(file)
+        file_hash = hashlib.sha256(open(file, "rb").read()).hexdigest()
+        output_file_path = os.path.join(output_directory, file_name)
+        with open(output_file_path, "w") as output_file:
+            output_file.write(file_hash)
+
+
+def main():
+    
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(help="possible commands", dest='command')
+    hash_parser = subparsers.add_parser("hash", help="generate and save hash")
+    hash_parser.add_argument("files", help="files to hash", nargs="+")
+    hash_parser.add_argument("-o", "--output", help="directory to output file to", required=True)
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
+    args = parser.parse_args()
+
+    if args.command == "hash":
+        hash_file_and_save(args.files, args.output)
+
+if __name__ == "__main__":
+    main()
+----
+
+Quickly recognizing that it is not efficient to have an `srun` command for each image, you'd have to programmatically build the job script, also the script runs quickly so there would be a rapid build up wasted time with overhead related to calling `srun`, allocating resources, etc. Instead for efficency create a job script that splits the images into groups of 12500 or less. Then, within 10 `srun` commands you will be able to use the provided Python script to process the 12500 images. 
+
+The Python script works as follows.
+
+[source,bash]
+----
+./hash.py hash --output /path/to/outputfiles/ /path/to/image1.jpg /path/to/image2.jpg 
+----
+
+[TIP]
+====
+https://stackoverflow.com/questions/21668471/bash-script-create-array-of-all-files-in-a-directory[This] stackoverflow post shows how to get a Bash array full of absolute paths to files in a folder.
+====
+
+[TIP]
+====
+To pass many arguments (_n_ arguments) to our Python script, you can `./hash.py hash --output /path/to/outputfiles/ ${my_array[@]}`.
+====
+
+[TIP]
+====
+https://stackoverflow.com/questions/23747612/how-do-you-break-an-array-in-groups-of-n[This] stackoverflow post shows how to break an array of values into groups of _x_.
+====
+
+Create a job script that processes all of the images in the folder, and outputs the hash of each image into a file with the same name as the original image. Output these files into a folder in `$CLUSTER_SCRATCH`, so, for example, `$CLUSTER_SCRATCH/q4output`.
+
+[NOTE]
+====
+This job took 2 minutes 34 seconds to run.
+====
+
+Once the images are all hashed, in your Jupyter notebook, write Python code that processes all of the hashes and prints out the name of one of the duplicate images. Display the image in your notebook using the following code.
+
+[source,python]
+----
+from IPython import display
+display.Image("/path/to/duplicate_image.jpg")
+----
+
+To answer this question, submit the functioning job script AND the code in the Jupyter notebook that was used to find (and display) the duplicate image.
+
+[TIP]
+====
+Using sets will help find the duplicate image. One set can store new hashes that haven't yet been seen. The other set can store duplicates, since there is only 1 duplicate you can immediately return the filename when found!
+
+https://stackoverflow.com/questions/9835762/how-do-i-find-the-duplicates-in-a-list-and-create-another-list-with-them[This] stackoverflow post shares some ideas to manage this. 
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+.Solution
+====
+.myjob.sh
+[source,bash]
+----
+#!/bin/bash
+#SBATCH --account=datamine              # Queue
+#SBATCH --job-name=kevinsjob          # Job name
+#SBATCH --mail-type=END,FAIL          # Mail events (NONE, BEGIN, END, FAIL, ALL)
+#SBATCH --mail-user=kamstut@purdue.edu     # Where to send mail	
+#SBATCH --time=00:30:00
+#SBATCH --ntasks=10                   # Number of tasks (total)
+#SBATCH -o /dev/null                  # Output to dev null
+#SBATCH -e /dev/null                  # Error to dev null
+
+arr=(/depot/datamine/data/coco/unlabeled2017/*)
+
+for((i=0; i < ${#arr[@]}; i+=12500))
+do 
+    part=( "${arr[@]:i:12500}" )
+    srun -A datamine --exclusive -n 1 --mem-per-cpu=200 $HOME/hash1.py hash --output $CLUSTER_SCRATCH/p4output/ ${part[*]} &
+done
+
+wait
+----
+
+[source,bash]
+----
+sbatch myjob.sh
+----
+
+[source, python]
+----
+from pathlib import Path
+
+def get_duplicate(path):
+    path = Path(path)
+    files = path.glob("*.jpg")
+    uniques = set()
+    duplicates = set()
+    for file in files:
+        with open(file, 'r') as f:
+            hsh = f.readlines()[0].strip()
+            if hsh in uniques:
+                duplicates.add(file)
+                return(file)
+            else:
+                uniques.add(hsh)
+
+file = get_duplicate("/scratch/brown/kamstut/p4output/")
+
+from IPython.display import Image
+Image(filename=f"/depot/datamine/data/coco/unlabeled2017/{file.name}")
+----
+
+.Output
+----
+<Picture of Dr. Ward>
+----
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connect    ion, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:book:projects:submissions.adoc[submission guidelines] before submitting your project.
+====
