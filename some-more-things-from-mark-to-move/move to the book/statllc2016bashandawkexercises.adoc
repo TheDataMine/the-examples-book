@@ -1,0 +1,596 @@
+= STAT-LLC 2016 bash and awk Exercises
+
+== Project 1
+
+Use the data set from the http://stat-computing.org/dataexpo/2009/[Data Expo 2009]
+
+to answer the following questions.
+
+A description of the data is given http://stat-computing.org/dataexpo/2009/the-data.html[here]
+
+All of the data is already downloaded for you on the llc server here:
+
+`/data/public/dataexpo2009/`
+
+Please save your solutions in a file named, for instance, if you are group 3:
+
+`/proj/gpproj16/p01g3/p01g3.txt`
+
+Question 1.
+
+1.  How many distinct airport codes appear:
+
+a.  In the origin column?
+
+b.  In the destination column?
+
+c.  Altogether?
+
+Solution:
+
+`cd /data/public/dataexpo2009`
+
+a. There are 347 distinct airport codes that appear in the Origin column
+
+`cut -d, -f17 allyears.csv | sort | uniq | grep -v "Origin" | wc -l`
+
+b. There are 352 distinct airport codes that appear in the Destination column
+
+`cut -d, -f18 allyears.csv | sort | uniq | grep -v "Dest" | wc -l`
+
+c. In fact, there are 352 distinct airport codes that appear in the origin and destination columns altogether.
+
+[source,bash]
+----
+cut -d, -f17 allyears.csv | grep -v "Origin" >/home/mdw/origins.txt
+cut -d, -f18 allyears.csv | grep -v "Dest" >/home/mdw/destinations.txt
+cat /home/mdw/origins.txt /home/mdw/destinations.txt | sort | uniq -c | wc -l
+----
+
+You can double-check your solution to 1a by typing:
+
+`sort /home/mdw/origins.txt | uniq -c | wc -l`
+
+and you can double-check your solution to 1b by typing:
+
+`sort /home/mdw/destinations.txt | uniq -c | wc -l`
+
+After question 1c is over, we need to be sure to delete these temporary files!
+
+[source,bash]
+----
+rm /home/mdw/origins.txt
+rm /home/mdw/destinations.txt
+----
+
+Question 2.
+
+a.  Use cut (it is always OK to use other commands in tandem, if needed) to find how many flights arrive or depart from IND.  Hint: You might need more than 1 line of code for this problem.  It might be helpful to try your code on individual years before you try it on the entire data set.
+
+b.  For a much faster solution, use grep to see how many flights arrive or depart from IND.
+
+Solution:
+
+a. There are 1646578 IND flights altogether.
+
+`cut -d, -f17,18 allyears.csv | grep IND | wc -l`
+
+b.  Of course we get the same result:
+
+`grep IND allyears.csv | wc -l`
+
+
+Question 3.
+
+How many tailnums have the following kids of errors:
+
+a.  Equal to NA?
+
+b.  Equal to 0?
+
+c.  Equal to 000000?
+
+d.  The phrase NKNO is part of the tailnum?
+
+e.  The tailnum is blank, i.e., consisting only of zero or more whitespace characters but no other content?
+
+Solution:
+
+First we can save the tailnums to a file, for convenience:
+
+`cut -d, -f11 allyears.csv >/home/mdw/tailnums.txt`
+
+We can answer questions 3a, 3b, 3c by just classifying the various kinds of tailnums that appear in the file:
+
+`sort /home/mdw/tailnums.txt | uniq -c | sort -n | tail`
+
+a. There are 37245646 lines equal to NA
+
+b. There are 351056 lines equal to 0
+
+c. There are 55349 lines equal to 000000
+
+d. There are 756609 flights that have NKNO in the tailnum:
+
+`grep NKNO /home/mdw/tailnums.txt | wc -l`
+
+e. There are 139774 flights that have (only) zero or more whitespace characters, but no other content.
+
+`grep '^[:space:]*$' /home/mdw/tailnums.txt | wc -l`
+
+or we could get this same answer by going back to our solution for 3abc, and noticing this same answer from that solution.
+
+
+Question 4.
+
+Which 10 planes took the most flights overall?
+
+Solution:
+
+The 10 planes that took the most flights overall can be found by:
+
+`cut -d, -f11 allyears.csv | sort | uniq -c | sort -n | tail -n15`
+
+We get the following:
+
+[source,bash]
+----
+  34216 N522
+  34230 N521
+  34253 N523
+  34254 N513
+  34275 N524
+  34344 N514
+  34394 N527
+  34474 N525
+  34519 N526
+  34526 N528
+  55349 000000
+ 139774
+ 351056 0
+ 572299 UNKNOW
+37245646 NA
+----
+
+
+Question 5.
+
+a.  How many airplane flights did the airplane with tailnum N528 make altogether?
+
+b.  What was the largest number of flights that this airplane ever made during a single day?
+
+c.  How many flights did this airplane make on November 3, 1995?
+
+Solution:
+
+a. The airplane with tailnum N528 made 34526 flights altogether.
+
+`grep ,N528, allyears.csv | wc -l`
+
+b. This airplane made 14 flights on a single day. This happened three times altogether.
+
+`grep ,N528, allyears.csv | cut -d, -f1,2,3 | sort | uniq -c | sort -n | tail`
+
+c. One of those 14 flights in a single day was made on Nov 3, 1995:
+
+`grep ,N528, allyears.csv | cut -d, -f1,2,3 | grep -w 1995,11,3 | wc -l`
+
+
+Question 6.
+
+How many flights has each airline had (as an Origin) from each airport?  E.g., give a list of all pairs of (Origin) airports and airlines, with the associated counts.  Please sort from the highest count to the lowest count.  This question should give you some insight about which airports are hubs for which airlines.
+
+Solution:
+
+We can print them all, if we leave the tail off the command below. For convenience, here we just print the 10 most popular.
+
+`cut -d, -f17,9 allyears.csv | grep -v Origin | sort | uniq -c | sort -nr | head`
+
+We get the following:
+
+[source,bash]
+----
+3884756 DL,ATL
+3312135 AA,DFW
+2726727 UA,ORD
+2176716 NW,DTW
+2120503 NW,MSP
+2073554 AA,ORD
+2008069 US,CLT
+1814823 CO,IAH
+1809174 UA,DEN
+1681793 US,PIT
+----
+
+
+Question 7.
+
+How many airplane flights occur per year?
+
+Solution:
+
+To get the flights per year, we can just do the following:
+
+`cut -d, -f1 allyears.csv | grep -v Year | sort | uniq -c | sort -n`
+
+We get these results
+
+[source,bash]
+----
+1311826 1987
+5041200 1989
+5070501 1993
+5076925 1991
+5092157 1992
+5180048 1994
+5202096 1988
+5270893 1990
+5271359 2002
+5327435 1995
+5351983 1996
+5384721 1998
+5411843 1997
+5527884 1999
+5683047 2000
+5967780 2001
+6488540 2003
+7009728 2008
+7129270 2004
+7140596 2005
+7141922 2006
+7453215 2007
+----
+
+
+== Project 2
+
+Please refer to Chapters 1, 2, 3 of
+this book on `sed` and `awk` (we only cover `awk`)
+
+http://proquestcombo.safaribooksonline.com.ezproxy.lib.purdue.edu/1565922255
+
+or to the http://www.gnu.org/software/gawk/manual/[awk manual] itself:
+
+Question 1.
+
+a.  How many users are on the llc machine?
+
+b.  If we restrict ourselves to users whose home directory resides
+        in the /home filesystem, how many users does llc have?
+
+Solution:
+
+a. There are about 191 users on the llc machine.
+
+`cat /etc/passwd | wc -l`
+
+b. There are 156 users whose home directory resides in the /home filesystem:
+
+`cat /etc/passwd | cut -d\: -f6 | grep /home | wc -l`
+
+
+Question 2.
+
+Considering the first names of people on the llc machine, which first names appear 3 or more times?
+
+Solution:
+
+
+There are 3 first names that each appear 3 times: Christine, Emily, and Michael, and there is 1 first name that appears 4 times:  David.
+
+`cat /etc/passwd | cut -d\: -f5 | cut -d" " -f1 | sort | uniq -c | sort -n`
+
+
+Question 3.
+
+Print a list of all origin-to-destination airplane routes (from the Data Expo 2009) that are 2500 miles or longer.
+
+Solution:
+
+The list of all origin-to-destination routes that are 2500 miles or longer can be discovered by:
+
+`cat /data/public/dataexpo2009/allyears.csv | grep -v Origin | awk -F, '{if ($19 >= 2500) print $17, $18}' | sort | uniq -c | sort -n`
+
+and this list includes the number of counts of such routes; the most popular such routes are (we list just the top 10 of them here)...
+
+[source,bash]
+----
+  46274 BOS SFO
+  47400 SFO BOS
+  53587 BOS LAX
+  54797 LAX BOS
+  57702 EWR SFO
+  61635 SFO EWR
+ 104253 JFK SFO
+ 105628 SFO JFK
+ 108092 LAX HNL
+ 110549 HNL LAX
+----
+
+Question 4.
+
+How many miles has United flown altogether?
+
+Solution:
+
+
+United has flown 12185717876 miles altogether.
+
+`awk -F, '{if ($9 == "UA") unitedmiles += $19} END {print unitedmiles}' /data/public/dataexpo2009/allyears.csv`
+
+
+Question 5.
+
+How many flights have a departure delay of 15 minutes or longer, but an arrival delay of 5 minutes or less?
+
+Solution:
+
+There are 983916 flights that have a departure delay of 15 minutes or longer, but an arrival delay of 5 minutes or less.
+
+`awk -F, '{if (($15 <= 5) && ($16 >= 15)) print $15, $16}' /data/public/dataexpo2009/allyears.csv | wc -l`
+
+
+Question 6.
+
+This question asks about the individual campaign contributions, as reported on the FEC website:
+
+http://www.fec.gov/finance/disclosure/ftpdet.shtml
+
+Scroll down to the table for 2015-2016 Data Files if you want to see this data.
+
+There is some information about the data here:
+
+http://www.fec.gov/finance/disclosure/metadata/DataDictionaryContributionsbyIndividuals.shtml
+
+The data for "Contributions by Individuals" was downloaded from September 4, 2016.
+
+This data is stored on the llc machine in the directory `/data/public/election2016/itcont.txt`
+
+`CMTE_ID` (in Column 1) shows the committee that receives the donation.
+
+`TRANSACTION_AMT` (in Column 15) shows the transaction amount.
+
+a. How much money has been donated by individuals to Hillary Clinton's committee `"HILLARY FOR AMERICA"`, `C00575795`?
+
+b. How much money has been donated by individuals to Donald Trump's committee `"DONALD J. TRUMP FOR PRESIDENT, INC."`, `C00580100`?
+
+c. Who received the most separate donations: Clinton, Sanders, or Trump?  The committee number for Sanders is `C00577130`.
+
+Solution:
+
+a. Hillary Clinton's campaign has received 191262903 from individuals.
+
+`awk -F\| '{if ($1 == "C00575795") mycontributions += $15} END {print mycontributions}' /data/public/election2016/itcont.txt`
+
+b. Donald Trump's campaign has received 23935255 from individuals.
+
+`awk -F\| '{if ($1 == "C00580100") mycontributions += $15} END {print mycontributions}' /data/public/election2016/itcont.txt`
+
+c. Hillary Clinton's campaign has received 864587 separate donations:
+
+`awk -F\| '{if ($1 == "C00575795") print $0}' /data/public/election2016/itcont.txt | wc -l`
+
+Donald Trump's campaign has received 57249 separate donations:
+
+`awk -F\| '{if ($1 == "C00580100") print $0}' /data/public/election2016/itcont.txt | wc -l`
+
+Bernie Sanders's campaign has received 1502306 separate donations:
+
+`awk -F\| '{if ($1 == "C00577130") print $0}' /data/public/election2016/itcont.txt | wc -l`
+
+
+Question 7.
+
+a.  In which state were donations given most frequently?
+
+b.  What was the total amount of donations given, from donors in that state?
+
+Solution:
+
+a. Donations were given most frequently in California (CA).
+
+`awk -F\| '{print $10}' /data/public/election2016/itcont.txt | sort | uniq -c | sort -n`
+
+b. A total amount of 532031973 was given from donors in California (CA).
+
+`awk -F\| '{if ($10 == "CA") mycontributions += $15} END {print mycontributions}' /data/public/election2016/itcont.txt`
+
+
+Question 8.
+
+a.  Which campaign did students most frequently give money to, i.e., which was the most popular in terms of the number of donations? (not the dollar amount)
+
+A person can be classified as a student, for the purpose of this problem, if STUDENT appears as part of their job title.
+
+b.  Which campaign was second most popular with the students? (Hint: This is not explicitly Clinton, Sanders, or Trump!)
+
+c.  Which campaign was third most popular with the students?
+
+Solution:
+
+Students gave the largest number of donations to C00577130 (Bernie Sanders).
+
+Students gave the second largest number of donations to C00401224 (ACTBLUE).
+
+Students gave the third largest number of donations to C00575795 (Hillary Clinton).
+
+`awk -F\| '{if ($13 ~ "STUDENT") print $1}' /data/public/election2016/itcont.txt | sort | uniq -c | sort -n`
+
+Question 9.
+
+a.  In which state do most homemakers live?
+
+b.  How much money (dollar amount) was donated altogether by homemakers?
+
+Solution:
+
+a. Most homemakers live in California (CA).
+
+`awk -F\| '{if ($13 ~ "HOMEMAKER") print $10}' /data/public/election2016/itcont.txt | sort | uniq -c | sort -n`
+
+b. The amount of money donated by homemakers is 103916397.
+
+`awk -F\| '{if ($13 ~ "HOMEMAKER") mycontributions += $15} END {print mycontributions}' /data/public/election2016/itcont.txt`
+
+Question 10.
+
+10.  Consider the data files in `/data/public/subtraction` which have the form x followed by some number(s) followed by `t16384.txt`
+
+How many bytes are stored altogether in these files?
+Hint:  Do not use `wc`.  That would take way too long.
+
+Solution:
+
+There are 733007732737 bytes stored altogether in the files:
+
+`ls -la /data/public/subtraction | grep x*t*.txt | awk '{myfilesize += $5} END {print myfilesize}'`
+
+Bonus question:  Considering the files from question 10, how many occurrences are there of the character 0? 1? 2? ... 9?
+
+(This question is not required but might be fun to try.)
+
+Solution:
+
+Here is an answer based on a modification to the discussion from this thread:
+
+http://superuser.com/questions/485800/whats-the-quickest-way-to-count-the-number-of-each-character-in-a-file/485811
+
+first we make a program to do this:
+
+`echo 'unsigned long long int cache[16777216],x,y;char buf[16777216],letters[]="0123456789"; int main(){while((x=read(0,buf,sizeof buf))>0)for(y=0;y<x;y++)cache[(unsigned char)buf[y]]++;for(x=0;x<sizeof letters-1;x++)printf("%llu ",cache[letters[x]]);printf("\n");}' | gcc -w -xc -`
+
+then we run the file on all of the data:
+
+`cat /data/public/subtraction/x*t16384.txt | ./a.out`
+
+and we get the following counts of the number of occurrences of the characters 0 through 9:
+
+`1162210234 218946980 259323591 270558260379 261891382 383125732544 77220073802 0 41247776 25852896`
+
+
+
+
+== Project 5
+
+Question 6.
+
+Consider the New York City taxi data located at:
+
+http://www.nyc.gov/html/tlc/html/about/trip_record_data.shtml
+
+Here is a data dictionary:
+
+http://www.nyc.gov/html/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pdf
+
+Use the system and either the wget or curl command, inside R, to scrape all of the yellow taxi cab data (in CSV format) into the *scratch* folder for your team. You can scrape these directly using bash if you prefer (in fact, that is probably recommended), but make sure that the code that you use to scrape them is succinct, and if you make bash calls, please use the system command in R to make them.
+
+Solution:
+
+[source,r]
+----
+myyears <- c(rep(2009:2015,each=12),rep(2016,times=6))
+mymonths <- c(rep(sprintf("%02d",1:12),times=7), sprintf("%02d",1:6))
+myfilestodownload <- paste("curl s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_", myyears, "-", mymonths, ".csv >/scratch/mentors/mdw/", myyears, "-", mymonths, ".csv", sep="")
+sapply(myfilestodownload, system, ignore.stderr=TRUE)
+----
+
+Question 7.
+
+You may want to cut the data in various ways in bash (again using the system command in R), before answering the following questions:
+
+a. On which day did the most taxi cab rides occur? If a ride goes past midnight, use the start of the ride for the date of the ride.
+
+b. For each day, determine the distribution of the number of passengers. Your output should allow you to answer questions like the following: On January 1, 2016, how many rides had 1 passenger? 2 passengers? 3 passengers? Etc.?
+
+Solution:
+
+a. 849414 rides occurred on 2010-09-19
+
+[source,r]
+----
+system("cat /scratch/mentors/mdw/20*.csv | grep -v ickup | awk -F [,\\ ] '{a[$2] += 1} END {for (i in a) print a[i], i}' | sort -n >/scratch/mentors/mdw/resultfile7a.txt")
+myDFquestion7a <- read.table("/scratch/mentors/mdw/resultfile7a.txt", sep=' ')
+dim(myDFquestion7a)
+tail(myDFquestion7a)
+----
+
+b.
+
+219590 rides on 2016-01-01 had 1 passenger
+
+63213 rides on 2016-01-01 had 2 passengers
+
+19363 rides on 2016-01-01 had 3 passengers
+
+etc...
+
+[source,r]
+----
+system("cat /scratch/mentors/mdw/20*.csv | grep -v ickup | awk -F [,\\ ] '{a[$2\" \"$6] += 1} END {for (i in a) print a[i], i}' | sort -n >/scratch/mentors/mdw/resultfile7b.txt")
+myDFquestion7b <- read.table("/scratch/mentors/mdw/resultfile7b.txt", sep=' ')
+dim(myDFquestion7b)
+tail(myDFquestion7b)
+myDFquestion7b[myDFquestion7b$V2 == "2016-01-01", ]
+----
+
+Question 8.
+
+a. For each day, determine the average distance of a taxi cab ride.
+
+b. For each day, determine the average number of passengers.
+
+Solution:
+
+a.
+
+[source,r]
+----
+system("cat /scratch/mentors/mdw/20*.csv | grep -v ickup | awk -F [,\\ ] '{a[$2] += 1; b[$2] += $7} END {for (i in a) print a[i], b[i], i}' | sort -n > /scratch/mentors/mdw/resultfile8a.txt")
+myDFquestion8a <- read.table("/scratch/mentors/mdw/resultfile8a.txt", sep=' ')
+dim(myDFquestion8a)
+v <- myDFquestion8a$V2/myDFquestion8a$V1
+names(v) <- myDFquestion8a$V3
+v
+----
+
+b.
+
+[source,r]
+----
+system("cat /scratch/mentors/mdw/20*.csv | grep -v ickup | awk -F [,\\ ] '{a[$2] += 1; b[$2] += $6} END {for (i in a) print a[i], b[i], i}' | sort -n > /scratch/mentors/mdw/resultfile8b.txt")
+myDFquestion8b <- read.table("/scratch/mentors/mdw/resultfile8b.txt", sep=' ')
+dim(myDFquestion8b)
+w <- myDFquestion8b$V2/myDFquestion8b$V1
+names(w) <- myDFquestion8b$V3
+w
+----
+
+Question 9.
+
+a. On which type of day (Sun, Mon, ..., Sat) is the average distance of a ride the longest?
+
+b. On which type of day (Sun, Mon, ..., Sat) is the average number of passengers in a car the largest?
+
+Solution:
+
+a. On Friday, the average is 6.130944
+
+[source,r]
+----
+myDFquestion8a$V4 <- c("Sunday", weekdays(as.Date(myDFquestion8a$V3[-1])))
+sort(tapply( myDFquestion8a$V2, myDFquestion8a$V4, sum ) / tapply( myDFquestion8a$V1, myDFquestion8a$V4, sum ))
+----
+
+b. On Saturday, the average is 1.769277
+
+[source,r]
+----
+myDFquestion8b$V4 <- c("Sunday", weekdays(as.Date(myDFquestion8b$V3[-1])))
+sort(tapply( myDFquestion8b$V2, myDFquestion8b$V4, sum ) / tapply( myDFquestion8b$V1, myDFquestion8b$V4, sum ))
+----
+
+Question 10.
+
+Put the resulting answers from this entire project into an RMarkdown file.
+
+

@@ -1,0 +1,143 @@
+# Inside each of the project 6 folders, we put two files:
+# june1990.csv and also 1990.csv
+# these are files of flight data from the dataexpo2009 data set.
+# We first change into that directory (I just picked group 1 here).
+cd /proj/gpproj15/p06g1
+
+# We could print all of the lines from the june1990.csv file.
+awk 'BEGIN{  }  { print }  END{  }' june1990.csv 
+
+# Since $0 is the whole line, this has the same effect.
+awk 'BEGIN{  }  { print $0 }  END{  }' june1990.csv
+
+# We could just look at the last few lines of this file.
+awk 'BEGIN{  }  { print $0 }  END{  }' june1990.csv | tail
+
+# If we wanted to do something at the very end
+# (after processing all of the lines),
+# we put it into the END part of our awk command.
+awk 'BEGIN{  }  { print $0 }  END{ print "I am done now" }' june1990.csv | tail
+
+# We could print the 17th field, which denotes the origin airport of each flight.
+# The -F, part tells awk that a comma is used in between the fields.
+awk -F, 'BEGIN{  }  { print $17 }  END{ }' june1990.csv | tail
+
+# If we want to sort the output, we can pipe the results to the sort command.
+awk -F, 'BEGIN{  }  { print $17 }  END{ }' june1990.csv | sort
+
+# Then we can count how many unique lines there are, by using uniq with the -c parameter.
+# (Remember that we need to sort before doing a uniq command,
+#  because uniq needs the same kinds of lines to already be sorted next to each other.)
+# The manual for uniq is found here:
+# (Remember that we type a single letter  q  to quit looking in the manual.)
+man uniq
+awk -F, 'BEGIN{  }  { print $17 }  END{ }' june1990.csv | sort | uniq -c
+
+# The uniq command with the -c parameter will count how many lines of each type.
+awk -F, 'BEGIN{  }  { print $17 }  END{ }' june1990.csv | sort | uniq -c | sort -n
+
+# The following line helps us to find the longest line in the june1990.csv file.
+# We are measuring the length of the line here by the number of bytes,
+# i.e., by the number of characters on the line.
+# The length command is built into awk already.
+# The mymax variable is just something we defined.  We can call it by any name we like.
+# We didn't have to use the name mymax.
+# FYI, all such variables are 0 by default, at the beginning.
+# In this line, if the length of the current is longer than mymax, 
+# then we sent the value of mymax to be the length of the current line.
+# At the very end, we print the value of mymax.
+awk -F, 'BEGIN{  }  { if(length($0) > mymax) mymax=length($0) }  END{ print mymax }' june1990.csv
+
+# The first line of the flight data has the word "Origin" at the top of the 17th column.
+awk -F, 'BEGIN{  }  { print $17 }  END{ }' 1990.csv | head -n4
+
+# If we only want to print the 17th field when it doesn't equal the word "Origin",
+# we can do the following instead:
+awk -F, 'BEGIN{  }  { if ($17 != "Origin") print $17 }  END{ }' 1990.csv | head -n4
+
+# Now we switch back to our home directory.
+# Remember that the tilde represents our home directory.
+cd ~
+
+# When we run ls -la, the 5th field shows the size of the files in that directory.
+ls -la
+ls -la | awk 'BEGIN{ } { print $5 } END{ }'
+
+# The following command will add the file sizes on each line to a variable we called x,
+# and it will print x at the end.
+ls -la | awk 'BEGIN{ } { x += $5 } END{ print x }'
+
+# We can even print a sentence at the end, like this:
+ls -la | awk 'BEGIN{  } { x += $5 } END{ print "The total number of bytes is " x }'
+
+# We could (instead) choose to print the month, day,
+# and year when each file was last modified.
+# Note:  If the file was modified within the last year, then
+# the year won't be in the 8th column;
+# instead, the time of day when the file was
+# modified will be in the 8th column instead of the year.
+ls -la | awk 'BEGIN{ } { print $6, $7, $8 } END{ }'
+
+# Same thing, but without putting space between each field that we print:
+ls -la | awk 'BEGIN{ } { print $6 $7 $8 } END{ }'
+
+# Here is another way that we could print all of the Origin-to-Destination information
+# from the flight data:
+cd /proj/gpproj15/p06g3
+awk -F, 'BEGIN{  }  { print $17 "to" $18 }  END{ }' 1990.csv | head
+
+# We could also sort the data afterwards, and the use uniq -c to count how many of each,
+# and finally we could sort the results,
+# to find out which Origin-to-Destination pair is the most common.
+awk -F, 'BEGIN{  }  { print $17 "to" $18 }  END{ }' 1990.csv | sort | uniq -c | sort -n
+
+# Also built into awk:
+#  NF is built into awk, the number of fields on a line
+#  NR is built into awk, the number of records (lines)
+
+# Remember that we can see the first several lines of a file with head:
+head /etc/passwd
+
+# and the last few lines of the file with tail.
+tail /etc/passwd
+
+# Here we print the 1st field of each line in the password file,
+# which is the username.
+awk -F: 'BEGIN{ } { print $1 } END{ }' /etc/passwd
+
+# This is the number of lines in the password file:
+awk -F: 'BEGIN{ } {  } END{ print NR }' /etc/passwd
+
+# Here we print the DepDelay and the Origin airport for each flight,
+# and then we sort the data and find the flights with the longest delays.
+awk -F, 'BEGIN{  }  { print $16, $17 }  END{ }' 1990.csv | sort -n | tail -n10
+
+# Here are all of the lines of flight data with IND on the line.
+awk -F, 'BEGIN{  }  { if ($0 ~ /IND/) print $0 }  END{ }' 1990.csv | tail
+
+# Now we count how many lines there are with the phrase IND on the line.
+awk -F, 'BEGIN{  }  { if ($0 ~ /IND/) mycounter = mycounter + 1 }  END{ print mycounter }' 1990.csv
+
+# Here are two other ways to do this:
+awk -F, 'BEGIN{  }  { if ($0 ~ /IND/) mycounter++ }  END{ print mycounter }' 1990.csv
+awk -F, 'BEGIN{  }  { if ($0 ~ /IND/) mycounter += 1 }  END{ print mycounter }' 1990.csv
+
+# Or another way to do it, by just using wc instead of a counter:
+awk -F, 'BEGIN{  }  { if ($0 ~ /IND/) print $0 }  END{ }' 1990.csv | wc
+
+# now we make our own april1990.csv file
+awk -F, 'BEGIN{  }  { if ($2 ~ /4/) print $0 }  END{ }' 1990.csv >mdwapril1990.csv
+
+# and now we make a file with the data from the first six months of the year
+awk -F, 'BEGIN{  }  { if ($2 <= 6) print $0 }  END{ }' 1990.csv >mdwfirsthalf1990.csv
+
+# Here are the flights with Origins that start with the letter I.
+awk -F, 'BEGIN{  }  { if ($17 ~ /^I/) print $17 }  END{ }' 1990.csv
+
+# Now we sort that data and find the unique names of those flights.
+awk -F, 'BEGIN{  }  { if ($17 ~ /^I/) print $17 }  END{ }' 1990.csv | sort | uniq
+
+# Here are the flights with Origins that end with the letter I.
+awk -F, 'BEGIN{  }  { if ($17 ~ /I$/) print $17 }  END{ }' 1990.csv | sort | uniq
+
+exit

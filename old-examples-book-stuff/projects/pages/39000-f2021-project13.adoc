@@ -1,0 +1,393 @@
+= STAT 39000: Project 13 -- Fall 2021
+
+**Motivation:** Containers are a modern solution to packaging and shipping some sort of code in a reproducible and portable way. When dealing with R and Python code in industry, it is highly likely that you will eventually have a need to work with Docker, or some other container-based solution. It is best to learn the basics so the basic concepts aren’t completely foreign to you.
+
+**Context:** This is the second project in a 2 project series where we learn about containers.
+
+**Scope:** unix, Docker, Python, R, Singularity
+
+.Learning Objectives
+****
+- Understand the various components involved with containers: Dockerfile/build file, container image, container registry, etc.
+- Understand how to push and pull images to and from a container registry.
+- Understand the basic Dockerfile instructions.
+- Understand how to build a container image.
+- Understand how to run a container image.
+- Use singularity to run a container image.
+- State the primary differences between Docker and Singularity.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Questions
+
+=== Question 1
+
+Containers solve a real problem. In this project, we are going to demonstrate a real-world example of code that doesn't prove to be portable, and we will _fix_ it using containers.
+
+Check out the code (questions and solutions) in the https://thedatamine.github.io/the-examples-book/projects.html#p03-290[Fall 2020 STAT 29000 Project 3], and try to run the solution for question (4) in your Jupyter Notebook. You'll quickly notice that the code no longer works, _as-is_. In this case it is (partly) due to incorrect paths for the Firefox executable as well as the Geckodriver executable. These changes occurred because we switched systems from Scholar to Brown. 
+
+_What if_ we could create a container to run this function on any system with a OCI compliant engine and/or runtime? Let's try!
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+Okay, below is a modified version of the code from the previous question. All we have done is turned it into a script that would be run as follows:
+
+[source,bash]
+----
+python get_price.py zip 47906
+----
+
+Okay, here it is:
+
+.get_price.py
+[source,python]
+----
+import sys
+import re
+import os
+import time
+import argparse
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.firefox.options import Options
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.service import Service
+
+def avg_house_cost(zip: str) -> float:
+    firefox_options = Options()
+    firefox_options.add_argument("window-size=1920,1080")
+    firefox_options.add_argument("--headless") # Headless mode means no GUI
+    firefox_options.add_argument("start-maximized")
+    firefox_options.add_argument("disable-infobars")
+    firefox_options.add_argument("--disable-extensions")
+    firefox_options.add_argument("--no-sandbox")
+    firefox_options.add_argument("--disable-dev-shm-usage")
+    firefox_options.binary_location = '/class/datamine/apps/firefox/firefox'
+    
+    service = Service('/class/datamine/apps/geckodriver', log_path=os.path.devnull)
+
+    driver = webdriver.Firefox(options=firefox_options, service=service)
+    url = 'https://www.trulia.com/'
+    driver.get(url)
+    
+    search_input = driver.find_element(By.ID, "banner-search")
+    search_input.send_keys(zip)
+    search_input.send_keys(Keys.RETURN)
+    time.sleep(10)
+
+    allbed_button = driver.find_element(By.XPATH, "//button[@data-testid='srp-xxl-bedrooms-filter-button']/ancestor::li")
+    allbed_button.click()
+    time.sleep(2)
+
+    bed_button = driver.find_element(By.XPATH, "//button[contains(text(), '3+')]")
+    bed_button.click()
+    time.sleep(3)
+
+    price_elements = driver.find_elements(By.XPATH, "(//ul[@data-testid='search-result-list-container'])[1]//div[@data-testid='property-price']")
+    prices = [int(re.sub("[^0-9]", "", e.text)) for e in price_elements]
+    
+    driver.quit()
+    
+    return sum(prices)/len(prices)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    subparsers = parser.add_subparsers(help="possible commands", dest="command")
+
+    zip_parser = subparsers.add_parser("zip", help="search by zipcode")
+    zip_parser.add_argument("zip_code", help="the zip code to search for")
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        parser.exit()
+    
+    args = parser.parse_args()
+
+    if args.command == "zip":
+        print(avg_house_cost(f'{args.zip_code}'))
+
+
+if __name__ == '__main__':
+    main()
+----
+
+First thing is first, we need to launch and connect to our VM so we can create our Dockerfile and build our container image.
+
+If you have not already done so, please login and launch a Jupyter Lab session. Create a new notebook to put your solutions, and open up a terminal window beside your notebook.
+
+In your terminal, navigate to `/depot/datamine/apps/qemu/scripts/`. You should find 4 scripts. They perform the following operations, respectively.
+
+. Copies our VM image from `/depot/datamine/apps/qemu/images/` to `/scratch/brown/$USER/`, so you each get to work on your _own_ (virtual) machine.
+. Creates a SLURM job and provides you a shell to that job. The job will last 4 hours, provide you with 4 cores, and will have ~6GB of RAM.
+. Runs the virtual machine in the background, in your SLURM job.
+. SSH's into the virtual machine.
+
+Run the scripts in your Terminal, in order, from 1-4.
+
+[source,bash]
+----
+cd /depot/datamine/apps/qemu/scripts/
+./1_copy_vm.sh
+----
+
+[source,bash]
+----
+./2_grab_a_node.sh
+----
+
+[source,bash]
+----
+./3_run_a_vm.sh
+----
+
+[IMPORTANT]
+====
+You may need to press enter to free up the command line.
+====
+
+[source,bash]
+----
+./4_connect_to_vm.sh
+----
+
+[IMPORTANT]
+====
+You will eventually be asked for a password. Enter `thedatamine`.
+====
+
+[NOTE]
+====
+Remember, to add an image or screenshot to a markdown cell, you can use the following syntax:
+
+----
+![](/home/kamstut/my_image.png)
+----
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+Create a new folder in your $HOME directory (_inside_ your VM) called `project13`. Inside the folder, place the `get_price.py` code into a file called `get_price.py`. Give the file execute permissions:
+
+[source,bash]
+----
+chmod +x get_price.py
+----
+
+Great! Next, create a Dockerfile in the `project13` folder. The following is some _starter_ content for your Dockerfile.
+
+.Dockerfile
+----
+FROM python:3.9.9-slim-bullseye <1>
+
+RUN apt update && apt install -y wget bzip2 firefox-esr <2>
+
+<3>
+
+RUN wget --output-document=geckodriver.tar.gz https://github.com/mozilla/geckodriver/releases/download/v0.30.0/geckodriver-v0.30.0-linux64.tar.gz && \
+    tar -xvf geckodriver.tar.gz && \
+    rm geckodriver.tar.gz && \
+    chmod +x geckodriver <4>
+
+RUN python -m pip install selenium <5>
+
+<6>
+
+<7>
+
+<8>
+<9>
+----
+
+<1> The first line should look familiar. This is just our base image that has Python3 fully locked and loaded and ready for us to use.
+
+<2> The second line installed 3 critical packages in our container. The first is `wget`, which we use to download compatible versions of Geckodriver. The second is `bzip2`, which we use to unzip the Geckodriver archives. The third is firefox, which is installed to `/usr/bin/firefox`.
+
+<3> Here, I want you to change the work directory to `/vendor`, so our Geckodriver binary lives directly in `/vendor/geckodriver`.
+
+<4> The next line downloads the Geckodriver program, and extracts it.
+
+<5> This line installed the `selenium` Python package which is needed for our `get_price.py` script.
+
+<6> Here, I want you to change the work directory to `/workspace` -- this way our `get_price.py` script will be copied in the `/workspace` directory.
+
+<7> Copy the `get_price.py` code into the `/workspace` directory. 
++
+[CAUTION]
+====
+You _may_ want to modify the script! There are two locations in the script: `/class/datamine/apps/firefox/firefox` as well as `/class/datamine/apps/geckodriver`. These _should_ be the location of the firefox executable and the geckodriver executable. Inside our container, however, these locations will be different! You will need to change the `/class/datamine/apps/firefox/firefox` to the location of the firefox executable, `/usr/bin/firefox`. You will need to change the `/class/datamine/apps/geckodriver` to the location of the geckodriver executable, `/vendor/geckodriver`.
+====
++
+<8> Here, I want you to use the `ENTRYPOINT` command to place the commands that you _always_ want to run.
++
+[TIP]
+====
+It will be 3 of the 4 of the following (in quotes in the right format):
+
+----
+python get_price.py zip 47906
+----
+====
++
+<9> Here, I want you to use the `CMD` command to place a default zip code to search for. The `CMD` command will get overwritten by commands you enter in the terminal. 
++
+[TIP]
+====
+For example: 
+
+----
+CMD ["47906"]
+----
+====
+
+The combination of (8) and (9) allow for the following functionality.
+
+[source,bash]
+----
+docker run ABC123XYZ 
+----
+
+.Output
+----
+319876.0 # default price for 47906 (our default zip passed in (9))
+----
+
+Or, if you want to search for a zip code that is _not_ the default zip code (47906 in my example).
+
+[source,bash]
+----
+docker run ABC123XYZ 63026
+----
+
+.Output
+----
+498393.15 # price for 63026
+----
+
+Very cool!
+
+Okay, lets build your image.
+
+[source,bash]
+----
+docker build -t pricer:latest .
+----
+
+Upon success, you should be able to run the following to get the image id.
+
+[source,bash]
+----
+docker inspect pricer:latest --format '{{ .ID }}'
+----
+
+.Output
+----
+sha256:skjdbgf02u4ntb2j4tn
+----
+
+Then to test your image, run the following:
+
+[source,bash]
+----
+docker run skjdbgf02u4ntb2j4tn
+----
+
+[IMPORTANT]
+====
+Here, replace skjdbgf02u4ntb2j4tn with _your_ image id.
+====
+
+Then, to test a different, non-default zip code, run the following:
+
+[source,bash]
+----
+docker run skjdbgf02u4ntb2j4tn 63026
+----
+
+[IMPORTANT]
+====
+Make sure 63026 is a zip code that is different from your default zip code.
+====
+
+Awesome job! Okay, now, take some screenshots of all your hard work, and add them to your Jupyter Notebook in a markdown cell. Please also include your Dockerfile contents.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+[IMPORTANT]
+====
+You do _not_ need to complete the previous questions to complete this one.
+====
+
+So all the talk about portability, yet we've been working on the same VM. Well, let's use Singularity on Brown to run our code!
+
+[NOTE]
+====
+Singularity is a tool _similar_ to Docker, but different in many ways. The important thing to realize here is that since we have a OCI compliant image publicly available, we can use Singularity to run our code. Otherwise, it is safe to just think of this as a different "docker" that works on Brown (for now).
+====
+
+First step is to exit your VM if you have not already. Just run `exit`.
+
+Then, while in Brown, _pull_ our image. We've uploaded a correct version of the image for anyone to use. To pull the image using Singularity, run the following command.
+
+[source,bash]
+----
+cd $HOME
+singularity pull docker://kevinamstutz/pricer:latest
+----
+
+This may take a couple minutes to run. Once complete, you will see a SIF file in your $HOME directory called `pricer_latest.sif`. Think of this file as your container, but rather than accessing it using an engine (for example with `docker images`), you have a file.
+
+Then, to run the image, run the following command.
+
+[source,bash]
+----
+cd $HOME
+singularity run --cleanenv --pwd '/workspace/' pricer_latest.sif
+----
+
+[NOTE]
+====
+You may notice the extra argument `--cleanenv`. This is to prevent environment variables on Brown from leaking into our container. In a lot of ways it doesn't make much sense why this wouldn't be a default.
+
+In addition, the `WORKDIR` command is not respected by Singularity. This feature makes sense due to some core differences in design, however, it _does_ make it marginally more difficult to use images built using Docker, and as a result makes it less reliable to simply pull and image and run it. This is what the `--pwd '/workspace/'` argument is for. With that being said, if you don't already _know_ the location from which the container expects to run, this can lead to more work.
+====
+
+Then, to give it a non-default zip code, run the following command.
+
+[source,bash]
+----
+singularity run --cleanenv --pwd '/workspace/' pricer_latest.sif 33004
+----
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+====

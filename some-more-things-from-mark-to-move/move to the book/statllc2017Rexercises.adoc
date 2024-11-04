@@ -1,0 +1,666 @@
+= STAT-LLC 2017 R Exercises
+
+== Project 3
+
+Question 1.
+
+Load the supplemental data from the ASA DataExpo 2009 about the airports
+
+http://stat-computing.org/dataexpo/2009/airports.csv
+
+Solution:
+
+`library(ggmap)`
+
+`airportsDF <- read.csv("http://stat-computing.org/dataexpo/2009/airports.csv")`
+
+Question 2.
+
+Make a map featuring the State of Indiana, which displays all of the airports in Indiana (but no airports from other states).
+
+Solution:
+
+`mypointsDF <- data.frame(lon=airportsDF$long, lat=airportsDF$lat)`
+
+`ind_center = as.numeric(geocode("Indianapolis"))`
+
+Then we build a map of Indiana
+
+`INDMap = ggmap(get_googlemap(center=ind_center,zoom=7), extent="normal")`
+
+and we display it.
+
+`INDMap`
+
+Finally, we add the points to the map
+
+`INDMap <- INDMap + geom_point(data=mypointsDF[airportsDF$state=="IN", ])`
+
+and we display the map again.
+
+`INDMap`
+
+
+Question 3.
+
+Same as question 2, but displaying only the airports from the East North Central portion of the Midwest, namely, from IL, IN, MI, OH, WI.
+
+Solution:
+
+`midwest_center = as.numeric(geocode("South Haven, MI"))`
+
+Then we build a map of the Midwest
+
+`MidwestMap = ggmap(get_googlemap(center=midwest_center,zoom=6), extent="normal")`
+
+and we display it.
+
+`MidwestMap`
+
+Finally, we add the points to the map
+
+`MidwestMap <- MidwestMap + geom_point(data=mypointsDF[airportsDF$state %in% c("IL", "IN", "MI", "OH", "WI"), ])`
+
+and we display the map again.
+
+`MidwestMap`
+
+Question 4.
+
+Same as question 2, but for only the 48 continental US States. [Hint: R has a built-in `state.abb` so that you can avoid needing to type the necessary abbreviations.]
+
+Solution:
+
+`usa_center = as.numeric(geocode("Kansas City, MO"))`
+
+Then we build a map of the USA
+
+`USAMap = ggmap(get_googlemap(center=usa_center,zoom=4), extent="normal")`
+
+and we display it.
+
+`USAMap`
+
+Finally, we add the points to the map
+
+`USAMap <- USAMap + geom_point(data=mypointsDF[airportsDF$state %in% state.abb[state.abb != "AK" & state.abb != "HI"], ], col="blue")`
+
+and we display the map again.
+
+`USAMap`
+
+
+
+== Project 4
+
+Question 1.
+
+Consider the data available from:
+
+https://bikeshare.metro.net/about/data/
+
+a. Download the 2017 Q2 data using the wget command in the bash shell (i.e., in the terminal).
+
+b. Use the `unzip` command in the bash shell (i.e., in the terminal) to extract the csv file.
+
+c. Import the data into R using the read.csv command.
+
+`myDF <- read.csv("la_metro_gbfs_trips_Q2_2017.csv")`
+
+d. How many unique bike ID’s are found in this file?
+
+e. Which bike was used for the largest number of trips?
+
+`length(table(myDF$bike_id))`
+
+f. Which type of passholder is the most common?
+
+`table(myDF$passholder_type)`
+
+Solution:
+
+a. We use:
+
+`wget https://11ka1d3b35pv1aah0c3m9ced-wpengine.netdna-ssl.com/wp-content/uploads/2017/07/la_metro_gbfs_trips_Q2_2017.csv.zip`
+
+in the bash shell (i.e., at the terminal) to download the data
+
+b. We use:
+
+`unzip la_metro_gbfs_trips_Q2_2017.csv.zip`
+
+again in bash, to unzip the file.
+
+c. Now we import the data into R:
+
+`myDF <- read.csv("la_metro_gbfs_trips_Q2_2017.csv")`
+
+d. There are 738 bike ID's.
+
+`length(table(myDF$bike_id))`
+
+e. Bike 4727 was used for 139 trips.
+
+`sort(table(myDF$bike_id),decreasing=T)[1]`
+
+f. The Monthly Pass is most common. There are 35737 Monthly Passes.
+
+`sort(table(myDF$passholder_type), decreasing=T)[1]`
+
+Question 2.
+
+The starting and ending times are given, but they are easier to work with in R, if we put them into a date context, for instance, using the `as.POSIXlt` function. This allows us, for instance, to subtract the times to find the differences.
+
+a. Compare the duration column to the difference of the end time minus the start time (where we use the `as.POSIXlt` command on each of the end time and start time columns beforehand). Why is the duration not always equal to the end time minus the start time?
+
+b. How many times are the duraction values in 2a different from the end time minus the start time?
+
+c. Create a new column in the data.frame that contains the end time minus the start time.
+
+d. Find an average of the values in this new column, for each of the bike ID’s.
+
+Solution:
+
+a.  Here are the computed end_time minus start_time values:
+
+[source,r]
+----
+mytimes <- as.POSIXlt(myDF$end_time) - as.POSIXlt(myDF$start_time)
+mytimes
+----
+
+Here are the actual values:
+
+`myDF$duration`
+
+On these trips, when the computed and the given times do not agree, the duration was longer than 1440 minutes (i.e., longer than 1 day):
+
+`mytimes[mytimes != myDF$duration]`
+
+but the saved values are always truncated to 1440 minutes on such trips:
+
+`myDF$duration[mytimes != myDF$duration]`
+
+So, basically, the bike company does not record durations that are longer than 1 day.
+
+b. These are unequal for only 78 trips.
+
+`sum(mytimes != myDF$duration)`
+
+c. We can build a new column in the data frame, containing the calculated duration (end_time minus start_time)
+
+`myDF$calcduration <- as.POSIXlt(myDF$end_time) - as.POSIXlt(myDF$start_time)`
+
+d. Here are the averages of the values in this new column, for each of the bike ID's.
+
+`tapply(myDF$calcduration, myDF$bike_id, mean)`
+
+
+
+Question 3.
+
+Make a map that displays the locations of the stations. (You can use either the starting or the ending locations, or both.)
+
+Solution:
+
+We build a data frame with all of the starting and ending latitudes and longitudes.
+
+[source,r]
+----
+library(ggmap)
+mylons <- c(myDF$start_lon,myDF$end_lon)
+mylats <- c(myDF$start_lat,myDF$end_lat)
+
+goodlons <- mylons[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+goodlats <- mylats[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+
+mypointsDF <- data.frame(lon=goodlons,lat=goodlats)
+
+map_center = as.numeric(geocode("Los Angeles"))
+----
+
+Then we build a map of Los Angeles
+
+`LAmap = ggmap(get_googlemap(center=map_center,zoom=11), extent="normal")`
+
+and we display it.
+
+`LAmap`
+
+Finally, we add the points to the map
+
+`LAmap <- LAmap + geom_point(data=mypointsDF)`
+
+and we display the map again.
+
+`LAmap`
+
+Questions 4, 5, 6.
+
+Please solve questions 1, 2, 3 again, but this time use the Q1 2017 data, and then the Q4 2016 data, and then the Q3 2016 data.
+
+Please note that for these three data sets, the seconds are missing, and the data is given in a nonstandard format, so you will need to use the option `format='%m/%d/%Y %H:%M'` inside each of your functions calls to the `as.POSIXlt` function. Also please be careful, when comparing the duration to the end time minus the start time, whether the times are given in minutes or seconds.
+
+Solution:
+
+Solving #1, #2, #3 again for the Q1 2017 data
+
+1a.
+
+`wget https://11ka1d3b35pv1aah0c3m9ced-wpengine.netdna-ssl.com/wp-content/uploads/2017/04/la_metro_gbfs_trips_Q1_2017.zip`
+
+1b.
+
+`unzip la_metro_gbfs_trips_Q1_2017.zip`
+
+1c. Now we import the data into R:
+
+`myDF <- read.csv("la_metro_gbfs_trips_Q1_2017.csv")`
+
+1d. There are 751 bike ID's.
+
+`length(table(myDF$bike_id))`
+
+1e. Bike 6344 was used for 98 trips.
+
+`sort(table(myDF$bike_id),decreasing=T)[1]`
+
+1f. The Monthly Pass is most common. There are 21007 Monthly Passes.
+
+`sort(table(myDF$passholder_type), decreasing=T)[1]`
+
+2a.  Here are the computed end_time minus start_time values:
+
+`mytimes <- as.POSIXlt(myDF$end_time,format='%m/%d/%Y %H:%M') - as.POSIXlt(myDF$start_time,format='%m/%d/%Y %H:%M')`
+
+Here are the actual values:
+
+`myDF$duration`
+
+2b. These are unequal for only 89 trips. IN THIS DATA, we need to multiply the calculated times by 60.
+
+`sum(60*mytimes != myDF$duration)`
+
+2c. 
+
+`myDF$calcduration <- 60*(as.POSIXlt(myDF$end_time,format='%m/%d/%Y %H:%M') - as.POSIXlt(myDF$start_time,format='%m/%d/%Y %H:%M'))`
+
+2d. Here are the averages of the values for each bike ID's.
+
+`tapply(myDF$calcduration, myDF$bike_id, mean)`
+
+3.  We build the map.
+
+[source,r]
+----
+mylons <- c(myDF$start_lon,myDF$end_lon)
+mylats <- c(myDF$start_lat,myDF$end_lat)
+goodlons <- mylons[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+goodlats <- mylats[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+mypointsDF <- data.frame(lon=goodlons,lat=goodlats)
+map_center = as.numeric(geocode("Los Angeles"))
+LAmap = ggmap(get_googlemap(center=map_center,zoom=11), extent="normal")
+LAmap
+LAmap <- LAmap + geom_point(data=mypointsDF)
+LAmap
+----
+
+Solving #1, #2, #3 again for the Q4 2016 data
+
+1a.
+
+`wget https://11ka1d3b35pv1aah0c3m9ced-wpengine.netdna-ssl.com/wp-content/uploads/2017/01/Metro_trips_Q4_2016.zip`
+
+1b.
+
+`unzip Metro_trips_Q4_2016.zip`
+
+1c. Now we import the data into R:
+
+`myDF <- read.csv("Metro_trips_Q4_2016.csv")`
+
+1d. There are 730 bike ID's.
+
+`length(table(myDF$bike_id))`
+
+1e. Bike 5932 was used for 115 trips.
+
+`sort(table(myDF$bike_id),decreasing=T)[1]`
+
+1f. The Monthly Pass is most common. There are 27081 Monthly Passes.
+
+`sort(table(myDF$passholder_type), decreasing=T)[1]`
+
+2a.  Here are the computed end_time minus start_time values:
+
+`mytimes <- as.POSIXlt(myDF$end_time,format='%m/%d/%Y %H:%M') - as.POSIXlt(myDF$start_time,format='%m/%d/%Y %H:%M')`
+
+Here are the actual values:
+
+`myDF$duration`
+
+2b. These are unequal for only 107 trips. IN THIS DATA, we need to multiply the calculated times by 60.
+
+`sum(60*mytimes != myDF$duration)`
+
+2c. 
+
+`myDF$calcduration <- 60*(as.POSIXlt(myDF$end_time,format='%m/%d/%Y %H:%M') - as.POSIXlt(myDF$start_time,format='%m/%d/%Y %H:%M'))`
+
+2d. Here are the averages of the values for each bike ID's.
+
+`tapply(myDF$calcduration, myDF$bike_id, mean)`
+
+3.  We build the map.
+
+[source,r]
+----
+mylons <- c(myDF$start_lon,myDF$end_lon)
+mylats <- c(myDF$start_lat,myDF$end_lat)
+goodlons <- mylons[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+goodlats <- mylats[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+mypointsDF <- data.frame(lon=goodlons,lat=goodlats)
+map_center = as.numeric(geocode("Los Angeles"))
+LAmap = ggmap(get_googlemap(center=map_center,zoom=11), extent="normal")
+LAmap
+LAmap <- LAmap + geom_point(data=mypointsDF)
+LAmap
+----
+
+Solving #1, #2, #3 again for the Q3 2016 data
+
+1a.
+
+`wget https://11ka1d3b35pv1aah0c3m9ced-wpengine.netdna-ssl.com/wp-content/uploads/2016/10/MetroBikeShare_2016_Q3_trips.zip`
+
+1b.
+
+`unzip MetroBikeShare_2016_Q3_trips.zip`
+
+1c. Now we import the data into R:
+
+`myDF <- read.csv("MetroBikeShare_2016_Q3_trips.csv")`
+
+1d. There are 761 bike ID's.
+
+`length(table(myDF$bike_id))`
+
+1e. Bike 6373 was used for 135 trips.
+
+`sort(table(myDF$bike_id),decreasing=T)[1]`
+
+1f. The Monthly Pass is most common. There are 33216 Monthly Passes.
+
+`sort(table(myDF$passholder_type), decreasing=T)[1]`
+
+2a.  Here are the computed end_time minus start_time values:
+
+`mytimes <- as.POSIXlt(myDF$end_time,format='%m/%d/%Y %H:%M') - as.POSIXlt(myDF$start_time,format='%m/%d/%Y %H:%M')`
+
+Here are the actual values:
+
+`myDF$duration`
+
+2b. These are unequal for only 89 trips.IN THIS DATA, we need to multiply the calculated times by 60.
+
+`sum(60*mytimes != myDF$duration)`
+
+2c. 
+
+`myDF$calcduration <- 60*(as.POSIXlt(myDF$end_time,format='%m/%d/%Y %H:%M') - as.POSIXlt(myDF$start_time,format='%m/%d/%Y %H:%M'))`
+
+2d. Here are the averages of the values for each bike ID's.
+
+`tapply(myDF$calcduration, myDF$bike_id, mean)`
+
+3.  We build the map.
+
+[source,r]
+----
+mylons <- c(myDF$start_lon,myDF$end_lon)
+mylats <- c(myDF$start_lat,myDF$end_lat)
+goodlons <- mylons[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+goodlats <- mylats[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+mypointsDF <- data.frame(lon=goodlons,lat=goodlats)
+map_center = as.numeric(geocode("Los Angeles"))
+LAmap = ggmap(get_googlemap(center=map_center,zoom=11), extent="normal")
+LAmap
+LAmap <- LAmap + geom_point(data=mypointsDF)
+LAmap
+----
+
+
+Question 7.
+
+a. In each of the 4 data frames, carefully give a new defintion to the `start_time` and `end_time` columns (but keep the same column names), by converting each of these columns using the `as.POSIXlt` function. After doing so, then the dates and times for all four data frames should be in the same format.
+
+b. Rename the 5th and 8th columns of the 2017 Q2 `data.frame` to be `"start_station_id"` and `"end_station_id"` respectively. You can use `names(myDF)[5]` and `names(myDF)[8]` to access and change these names.
+
+c. Convert the duration column of the other three data frames (i.e., 2017 Q1, 2016 Q4, and 2016 Q3) from seconds into minutes by dividing by 60 and saving the new values into the duration column.
+
+d. Build a new data.frame, using the `rbind` function, which contains all of the data from all four data frames.
+
+Solution:
+
+a.  We read in the data again:
+
+[source,r]
+----
+myDF1 <- read.csv("la_metro_gbfs_trips_Q2_2017.csv")
+myDF2 <- read.csv("la_metro_gbfs_trips_Q1_2017.csv")
+myDF3 <- read.csv("Metro_trips_Q4_2016.csv")
+myDF4 <- read.csv("MetroBikeShare_2016_Q3_trips.csv")
+----
+
+Now we normalize the times:
+
+[source,r]
+----
+myDF1$end_time <- as.POSIXlt(myDF1$end_time)
+myDF2$end_time <- as.POSIXlt(myDF2$end_time,format='%m/%d/%Y %H:%M')
+myDF3$end_time <- as.POSIXlt(myDF3$end_time,format='%m/%d/%Y %H:%M')
+myDF4$end_time <- as.POSIXlt(myDF4$end_time,format='%m/%d/%Y %H:%M')
+myDF1$start_time <- as.POSIXlt(myDF1$start_time)
+myDF2$start_time <- as.POSIXlt(myDF2$start_time,format='%m/%d/%Y %H:%M')
+myDF3$start_time <- as.POSIXlt(myDF3$start_time,format='%m/%d/%Y %H:%M')
+myDF4$start_time <- as.POSIXlt(myDF4$start_time,format='%m/%d/%Y %H:%M')
+----
+
+b. We ename the 5th and 8th columns of the 2017 Q2 data.frame.
+
+[source,r]
+----
+names(myDF1)[5] <- "start_station_id"
+names(myDF1)[8] <- "end_station_id"
+----
+
+c.  We convert the duration column of the other three data.frames
+
+[source,r]
+----
+myDF2$duration <- myDF2$duration/60
+myDF3$duration <- myDF3$duration/60
+myDF4$duration <- myDF4$duration/60
+----
+
+d.  We build a new data.frame now:
+
+`myDF <- rbind(myDF1, myDF2, myDF3, myDF4)`
+
+
+Question 8.
+
+Now repeat questions 1, 2, 3 using the new `data.frame` that was created in 7d.
+
+Solution:
+
+Now we repeat questions 1, 2, 3 using the new data.frame that was created in 7d.
+
+1d. There are 766 bike ID's.
+
+`length(table(myDF$bike_id))`
+
+1e. Bike 4727 was used for 451 trips.
+
+`sort(table(myDF$bike_id),decreasing=T)[1]`
+
+1f. The Monthly Pass is most common. There are 117041 Monthly Passes.
+
+`sort(table(myDF$passholder_type), decreasing=T)[1]`
+
+2a.  Here are the computed end_time minus start_time values:
+
+[source,r]
+----
+mytimes <- as.POSIXlt(myDF$end_time) - as.POSIXlt(myDF$start_time)
+mytimes
+----
+
+Here are the actual values:
+
+`myDF$duration`
+
+2b. These are unequal for only 363 trips.
+
+`sum(mytimes != myDF$duration)`
+
+2c. We can build a new column in the data frame, containing the calculated duration (end_time minus start_time)
+
+`myDF$calcduration <- as.POSIXlt(myDF$end_time) - as.POSIXlt(myDF$start_time)`
+
+2d. Here are the averages of the values in this new column, for each of the bike ID's.
+
+`tapply(myDF$calcduration, myDF$bike_id, mean)`
+
+3.  We build a data frame with all of the starting and ending latitudes and longitudes.
+
+[source,r]
+----
+library(ggmap)
+mylons <- c(myDF$start_lon,myDF$end_lon)
+mylats <- c(myDF$start_lat,myDF$end_lat)
+
+goodlons <- mylons[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+goodlats <- mylats[(mylons > -120) & (mylons < -116) & (mylats > 32) & (mylons < 36)]
+
+mypointsDF <- data.frame(lon=goodlons,lat=goodlats)
+
+map_center = as.numeric(geocode("Los Angeles"))
+----
+
+Then we build a map of Los Angeles
+
+`LAmap = ggmap(get_googlemap(center=map_center,zoom=11), extent="normal")`
+
+and we display it.
+
+`LAmap`
+
+Finally, we add the points to the map
+
+`LAmap <- LAmap + geom_point(data=mypointsDF)`
+
+and we display the map again.
+
+`LAmap`
+
+
+
+
+
+== Project 7
+
+Question 1.
+
+a. In the Q2 2017 bike data:
+
+https://bikeshare.metro.net/about/data/
+
+how many unique start_station to end_station pairs are there?
+
+b. Which is the most popular?
+
+c. How many such pairs are only used one time?
+
+Question 2.
+
+a. In the built-in co2 data set, use the apply function to find the average co2 per year.
+
+b. In the co2 data set, find the average co2 per month (across all years)
+
+Question 3.
+
+a.  In the 2008 airline data (from the DataExpo 2009), paste the Year, Month, and DayofMonth into a new column of the data.frame.
+
+b.  Use this new column to discover which day of the year 2008 had the longest average Departure Delays.
+
+Question 4.
+
+4.   For each day of the year 2015, in New York City, find the average number of passengers per taxi cab on that day.
+
+Question 5.
+
+a.   Download the individual campaign contributions from here:
+
+ftp://ftp.fec.gov/FEC/2016/indiv16.zip
+
+Some metadata is available here:
+
+http://classic.fec.gov/finance/disclosure/metadata/DataDictionaryContributionsbyIndividuals.shtml
+
+When you unzip the file, there are several data files.
+
+Consider this one:  itcont_2016_20161214_92060702.txt
+
+b.   Use `read.delim` to read the data into R.
+
+Hint:  It does not have a header, and the delimiter is the | symbol.
+
+c.   Use R to determine which state's individuals contributed the most funding. How much funding did they contribute?
+
+d.   Double-check your solution by using bash and awk.
+
+Question 6.
+
+a.   Get the number of H, 2B, 3B, and HR that Hank Aaron hit in each year of his career.
+
+b.   Build a matrix with 4 columns and 23 rows (one row per year, 1954 through 1976)
+
+c.   Find the maximum number of H that he ever hit in one season.
+
+Find the maximum number of 2B that he ever hit in one season.
+
+Find the maximum number of 3B that he ever hit in one season.
+
+Find the maximum number of HR that he ever hit in one season.
+
+Hint: If you use an apply command, you can do Q6c in one line of R code.
+
+Another hint:  Instead of myDF$2B, it will be necessary to use `myDF$"2B"` since R gets confused when a column name starts with a number.
+
+Question 7.
+
+7.    Consider the metadata given here:
+
+ftp://ftp.cmdl.noaa.gov/data/meteorology/in-situ/sum/README
+
+We will examine the data from 2016:
+
+ftp://ftp.cmdl.noaa.gov/data/meteorology/in-situ/sum/met_sum_insitu_1_obop_hour_2016.txt
+
+a.   Read this data into R using `read.table`. Please note that the file does not have a header.
+
+b.   Convert any values that are equal to 99 to instead be NA.
+
+Question 8.
+
+a.   Perform the summary function on each of the columns 6 through 14.
+
+Hint:  You could use sapply to perform the summary function column-by-column.
+
+Alternatively, you can use the data.matrix function to convert columns 6 through 14 of the `data.frame` into a `matrix` (see the help for data.matrix) and then use the `apply` function to perform the `summary` function, on each column.
+
+b.   What are the maximum values in each of the columns 6 through 14?
+
+c.   Column 7 is the wind speed. Find the average wind speed in each of the 12 months in 2016.
+

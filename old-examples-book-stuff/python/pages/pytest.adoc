@@ -1,0 +1,186 @@
+= pytest
+
+== Overview
+
+While not part of the Python standard library like xref:book:python:unittest.adoc[`unittest`], `pytest` is in many ways the faster, simpler, and user-friendly alternative to `unittest`. `unittest` requires a lot of boilerplate code to set a test suite up, including a module, class, and test methods inside said class. There is a significantly larger learning curve and more concepts to understand in order to properly utilize `unittest`. 
+
+`pytest` on the other hand, is extremely straightforward to use, and there are very few concepts that need to be understood in order to take advantage.
+
+Let's say we have a function that accepts _n_ digits and returns the product of all of the numbers. 
+
+.mymodule.py
+[source,python]
+----
+import functools
+
+def product(*numbers: float) -> float:
+    return functools.reduce(lambda x, y: x*y, numbers)
+----
+
+Now, using `unittest`, we would first need to create a module as follows.
+
+.test_mymodule.py
+[source,python]
+----
+import unittest
+import mymodule
+
+class TestMyModule(unittest.TestCase):
+
+    def test_product(self):
+        result = mymodule.product(1, 2, 3)
+        self.assertEqual(result, 6)
+
+if __name__ == '__main__':
+    unittest.main()
+----
+
+To use the `test_mymodule.py` module to actually test `mymodule.py`, we would need to run the following command.
+
+[source,bash]
+----
+python -m unittest test_mymodule
+----
+
+.unittest results
+----
+.
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK
+----
+
+To better visualize the difference, the equivalent functionality is much more straightforward using `pytest`.
+
+.test_mymodule.py
+[source,python]
+----
+import mymodule 
+
+def test_product():
+    result = mymodule.product(1, 2, 3)
+    assert result==6
+----
+
+Then, to run the tests.
+
+[source,bash]
+----
+python -m pytest
+----
+
+.pytest results
+----
+=========================================== test session starts ===========================================
+platform darwin -- Python 3.9.2, pytest-6.2.5, py-1.10.0, pluggy-1.0.0
+rootdir: /Users/kamstut
+plugins: anyio-2.2.0
+collected 1 item                                                                                          
+
+test_mymodule.py .                                                                                  [100%]
+
+============================================ 1 passed in 0.01s ============================================
+----
+
+As you can see, `pytest` involves less boilerplate code. `pytest` is easier to use and run. The results of `pytest` are easier to read, _and_ `pytest` is faster.
+
+[IMPORTANT]
+====
+By default `pytest` will look for and test all files named `test_*.py` or `*_test.py` in the current working directory. To prevent ensure that only the test you intend to run are run, you should run the `pytest` command from _inside_ the directory containing the tests you want to run.
+====
+
+== Parametrizing tests
+
+Parametrizing tests is a really good way to test a variety of inputs, all at once. For example, let's say we have a function called `my_func` that accepts a value, $v$ and returns $100/v$. Let's say we were provided the given function, with some doctests.
+
+.mymodule.py
+[source,python]
+----
+def my_func(v: float) -> float:
+    """
+    Given a value, $v$, return 100/v.
+
+    >>> my_func(-2.0)
+    -50.0
+
+    >>> my_func(2.0)
+    50.0
+
+    >>> my_func(0.5)
+    200.0
+    """
+    return 100/v
+----
+
+The doctests pass with flying colors. With that being said, we are working with computers -- it doesn't make sense to just test 3 human-picked values does it? Especially considering we don't want to type out every single test we want to run.
+
+This is where parametrizing tests come in. We can create a test that runs the function with a whole range of inputs, which could, in theory, help us test more thoroughly. The following `pytest` module, allows us to do this. Rather than test for a specific value, we can just test to make sure that the type of the result is a float.
+
+.test_mymodule.py
+[source,python]
+----
+import pytest
+import mymodule
+import numpy as np
+
+@pytest.mark.parametrize('v', [float(n) for n in np.arange(-100.0, 100.0, 1)])
+def test_my_func(v: float):
+    assert isinstance(mymodule.my_func(v), float)
+----
+
+[source,bash]
+----
+python -m pytest
+----
+
+.Output
+----
+...
+================================================ FAILURES ================================================
+___________________________________________ test_my_func[0.0] ____________________________________________
+
+v = 0.0
+
+    @pytest.mark.parametrize('v', [float(n) for n in np.arange(-100.0, 100.0, 1)])
+    def test_my_func(v: float):
+>       assert isinstance(mymodule.my_func(v), float)
+
+test_mymodule.py:7: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+v = 0.0
+
+    def my_func(v: float) -> float:
+        """
+        Given a value, $v$, return 100/v.
+    
+        >>> my_func(-2.0)
+        -50.0
+    
+        >>> my_func(2.0)
+        50.0
+    
+        >>> my_func(0.5)
+        200.0
+        """
+>       return 100/v
+E       ZeroDivisionError: float division by zero
+
+mymodule.py:14: ZeroDivisionError
+======================================== short test summary info =========================================
+FAILED test_mymodule.py::test_my_func[0.0] - ZeroDivisionError: float division by zero
+===================================== 1 failed, 199 passed in 0.43s ======================================
+----
+
+Ah ha! Whoever wrote this code didn't consider the case when the value is 0.0.
+
+== Fixtures
+
+
+
+== Resources
+
+https://realpython.com/pytest-python-testing/[Effective Python Testing with Pytest]
+
+An excellent an extensive guide to using `pytest` to test your Python code from https://realpython.com.

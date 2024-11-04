@@ -1,0 +1,126 @@
+= pdoc
+
+pdoc is a Python package that auto-generates API documentation straight from the Python code itself. It is a simple, straightforward tool that generates HTML documentation, with a few extra features that allow for more advanced customization.
+
+Below is an arbitrary example of a small Python module.
+
+.mymodule.py
+[source,python]
+----
+"""
+This Python module is a fake module that is used to test the pdoc package. 
+
+It is useful to be able to look at a set of example Python code, and see how 
+the Python code is translated to HTML.
+"""
+
+import pandas as pd
+import numpy as np
+import requests
+
+
+def scrape_website(url: str) -> requests.models.Response:
+    """
+    Given a URL, return the `requests` response object.
+
+    Args:
+        url (str): URL to scrape.
+
+    Returns:
+        requests.models.Response: `requests` response object.
+    """
+    resp = requests.get(url)
+    return resp
+
+
+def are_pages_different(page1: requests.models.Response, page2: requests.models.Response) -> bool:
+    """
+    Given two `requests` response objects, return True if they are different, False otherwise.
+
+    Args:
+        page1 (requests.models.Response): First page to compare.
+        page2 (requests.models.Response): Second page to compare.
+
+    Returns:
+        bool: True if the pages are different, False otherwise.
+    """
+    return page1.text != page2.text
+
+
+class WebPage:
+    def __init__(self, resp: requests.models.Response):
+        """
+        Given a `requests` response object, initialize a WebPage object.
+
+        Args:
+            resp (requests.models.Response): `requests` response object.
+            
+        Raises:
+            ValueError: If the `requests` response object returned a non 200 status code.
+        """
+        if resp.status_code != 200:
+            raise ValueError('The response code is not 200.')
+        else:
+            self.resp = resp
+        
+    def is_datamine_affiliated(self, case_insensitive: bool = False) -> bool:
+        """
+        Returns True if the WebPage is affiliated with Datamine, False otherwise.
+        
+        A WebPage is affiliated with Datamine if HTML contains the string "Purdue" 
+        and the string "datamine". By default the search is case-insensitive.
+
+        Args:
+            case_insensitive (bool, optional): Whether or not the search is case-sensitive or not. Defaults to False.
+
+        Returns:
+            bool: Whether the WebPage is affiliated with The Data Mine or not.
+        """
+        if not case_insensitive:
+            if 'purdue' in self.resp.text.lower() and 'datamine' in self.resp.text.lower():
+                return True
+            return False
+        else:
+            if 'Purdue' in self.resp.text and 'datamine' in self.resp.text:
+                return True
+            return False
+----
+
+This Python module follows the https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings[Google Styleguide for comments and docstrings]. By default, pdoc won't assume any particular style for the docstrings. However, we can use the `-d` flag to specify the "google" style.
+
+[source,bash]
+----
+mkdir $HOME/my_documentation
+python -m pdoc -d google -o $HOME/my_documentation/ mymodule.py
+----
+
+Here, the `-d` option specifies that we are using Google-style docstrings, and to format HTML appropriately. The `-o` option tells pdoc to output the documentation to the specified directory, `$HOME/my_documentation`.
+
+[IMPORTANT]
+====
+Note that the order of the arguments _does_ matter. In other words, the _value_ being passed with the `-d` option _must_ come directly after the `-d` option. This is because the `-d` option is a flag, and the value is a required argument. Same with the `-o` option. For example, the following code would **not** work.
+
+[source,bash]
+----
+python -m pdoc -d -o google $HOME/my_documentation/ mymodule.py
+----
+
+In that case, "google" would be passed to `-o`, and `-o` would be passed to `-d`, which makes no sense.
+====
+
+The resulting HTML documentation looks clean and informative.
+
+.pdoc documentation for mymodule.py
+++++
+include::book:python:partial$mymodule.adoc[]
+++++
+
+== Resources
+
+https://pdoc.dev[Official pdoc website]
+
+The official website for the pdoc package.
+
+https://pdoc.dev/docs/pdoc.html[Official pdoc documentation]
+
+The official set of documentation for the pdoc package.

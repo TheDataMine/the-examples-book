@@ -1,0 +1,335 @@
+= STAT-LLC 2015 XML Exercises
+
+== Project 9
+
+Project 9 is about scraping data from the web in XML format,
+and then parsing the data using XML tools.
+
+The goal is to scrape the Hot 100 chart from Billboard.
+This chart is posted every Saturday.  So the first chart is here:
+
+`http://www.billboard.com/charts/hot-100/1958-08-09`
+
+and the most current chart is here:
+
+`http://www.billboard.com/charts/hot-100/2015-11-14`
+
+So there are 2989 such charts during the history of the Hot 100.
+
+You can do questions 1 and 2 at the same time, if your group decides to split up its efforts.  I.e., questions 1 and 2 can be solved independently from questions 3 and 4.
+
+Question 1.
+
+Make a list in R of all of the Saturdays from `1958-08-09` to `2015-11-14`.
+Dr. Ward did this in about 6 lines of code, using commands in R such as:
+`rep`, `sprintf`, `sapply`, `unlist`, and `paste`.
+You might have other solutions.  Please try to resist the urge to use a for loop.  Notice that functions like sapply can be used instead, e.g., `sapply(1:12, function(x) ...... )` can be used, if you put the thing that you want to do for each month, where the ...... goes.
+
+Solution:
+
+[source,r]
+----
+months <- c(31,28,31,30,31,30,31,31,30,31,30,31)
+names(months) <- 1:12
+
+myYY <- rep(1958:2015, each=365)
+myMM <- unlist(sapply(1:12, function(x) sprintf("%02d", rep( x,times=months[x])) ))
+myDD <- unlist(sapply(1:12, function(x) sprintf("%02d",1:months[x]) ))
+myYYMMDD <- paste(myYY,myMM,myDD,sep="-")
+myYYMMDD <- c(myYYMMDD, sapply(seq(1960,2012,by=4), function(x) paste(x, "-02-29", sep="")))
+v <- sort(myYYMMDD)
+v <- v[215:21137]
+v <- v[(1:length(v))%%7==0]
+----
+
+
+Question 2.
+
+Scrape the data for all of the charts into files on your computer.
+
+Solution:
+
+[source,r]
+----
+mycommands <- sapply(v, function(x) paste("wget www.billboard.com/charts/hot-100/", x, sep="") )
+sapply(mycommands, system)
+----
+
+Question 3.
+
+Parse the XML data from one of the Saturdays.  More specifically, parse the title and artist for each of the 100 songs.  Hint:  You might want to try some early years and some later years, to make sure that your code works consistently.  For instance, the title of a song does not appear as an html link.  In contrast, the artist usually appears as an html link, but not always.  (There is more variability in the earlier years of the chart about that.)
+
+Solution:
+
+[source,r]
+----
+install.packages("XML")
+library(XML)
+
+mydoc <- htmlParse("1958-08-09")
+mysongs <- xpathSApply(mydoc, "//*/article/*/div[@class='row-title']/h2", xmlValue)
+mysongs
+mysongs <- sub("^\\s+", "", mysongs)
+mysongs <- sub("\\s+$", "", mysongs)
+mysongs
+
+myartists <- xpathSApply(mydoc, "//*/article/*/div[@class='row-title']/h3", xmlValue)
+myartists
+myartists <- sub("^\\s+", "", myartists)
+myartists <- sub("\\s+$", "", myartists)
+myartists
+----
+
+
+Question 4.
+
+Once you have your code working for 3, wrap the code into a function that can be called with just one input, namely, the Saturday you want to parse.  For instance, you might call:  `myfunction( "1958-08-09" )`  to parse the data from the `1958-08-09` file.
+
+Solution:
+
+[source,r]
+----
+songfunction <- function(x) {
+sub("\\s+$", "", sub("^\\s+", "",
+xpathSApply(htmlParse(x), "//*/article/*/div[@class='row-title']/h2", xmlValue))) }
+
+artistfunction <- function(x) {
+sub("\\s+$", "", sub("^\\s+", "",
+xpathSApply(htmlParse(x), "//*/article/*/div[@class='row-title']/h3", xmlValue))) }
+----
+
+
+Question 5.
+
+Now use the results from question 2 (where you scraped all of the files from the web) along with the results from question 4 (where you wrote a parser), with the goal of parsing all 2989 charts.  Hint:  You might want to just try this for a few of the charts at a time, until you have this working well.
+
+Solution:
+
+[source,r]
+----
+mysonglist <- sapply(v, songfunction)
+myartistlist <- sapply(v, artistfunction)
+----
+
+Note:  Some of the songs and artists are missing from the Billboard charts. There is nothing we can do about that! We can check to see which are missing!
+
+[source,r]
+----
+class(mysonglist)
+length(mysonglist)
+
+class(myartistlist)
+length(myartistlist)
+----
+
+These are the weeks with missing data:
+
+[source,r]
+----
+sapply(myartistlist, length)[sapply(myartistlist, length) != 100]
+sapply(mysonglist, length)[sapply(mysonglist, length) != 100]
+----
+
+These are the lengths for all of the weeks:
+
+[source,r]
+----
+mylengths <- sapply(myartistlist, length)
+
+myweeks <- rep(names(mylengths), times=mylengths)
+length(myweeks)
+alltheartists <- unlist(myartistlist)
+length(alltheartists)
+allthesongs <- unlist(mysonglist)
+length(allthesongs)
+----
+
+Since some of the songs are missing some songs, it is helpful to get the song positions. Here is how to do that for one week (which happens to be missing a song):
+
+[source,r]
+----
+mydoc <- htmlParse("1961-09-16")
+mypositions <- xpathSApply(mydoc, "//*/span[@class='this-week']", xmlValue)
+as.integer(mypositions)
+----
+
+Here is a function for finding the position in a given week:
+
+[source,r]
+----
+positionfunction <- function(x) {
+  as.integer(xpathSApply(htmlParse(x), "//*/span[@class='this-week']", xmlValue)) }
+----
+
+Here are all of the song positions across all of the weeks:
+
+[source,r]
+----
+mypositionlist <- sapply(v, positionfunction)
+allthepositions <- unlist(mypositionlist)
+----
+
+Now we build a data frame with all of this data:
+
+[source,r]
+----
+myBB <- data.frame(alltheartists, allthesongs, myweeks, allthepositions)
+names(myBB) <- c("artist", "song", "week", "position")
+length(myBB$artist)
+length(myBB$song)
+length(myBB$week)
+length(myBB$position)
+----
+
+Now we use the myBB data frame to answer the questions.
+
+
+
+Now answer some interesting questions about the data in the charts, for instance:
+
+Question 6.
+
+a.  What song(s) stayed in the Hot 100 for the most weeks overall?
+
+b.  What song(s) stayed at number 1 in the Hot 100 for the most weeks overall?
+
+c.  What song(s) stayed in the Top 10 for the most weeks overall?
+
+Solution:
+
+a. We might initially try to just look at the song titles,
+
+`head(sort(table(myBB$song),decreasing=T))`
+
+but some common song titles were sung by more than one person. So it is better to take the artist name into account too.
+
+`head(sort(table(  paste(myBB$song, "by", myBB$artist)  ),decreasing=T))`
+
+b. Now we do something similar, but we restrict attention to songs at position #1.
+
+`head(sort(table(  paste(myBB$song, "by", myBB$artist)[myBB$position == 1]  ),decreasing=T), n=8)`
+
+c. Now we do something similar, but we restrict attention to songs at position <= 10
+
+`head(sort(table(  paste(myBB$song, "by", myBB$artist)[myBB$position <= 10]  ),decreasing=T))`
+
+All the answers from question 6 agree with those in Wikipedia:
+
+https://en.wikipedia.org/wiki/List_of_Billboard_Hot_100_chart_achievements_and_milestones#Most_total_weeks_on_the_Hot_100
+
+
+Question 7.
+
+a.  What artist(s) had the most songs in the Hot 100?
+
+b.  What artist(s) had the most number 1 songs in the Hot 100?
+
+c.  What artist(s) spent the most weeks in the Hot 100?
+
+Solution:
+
+a. The results for the artist will depend on exact matches of the artists. For instance, if an artist name is listed differently, or with another artist together, then it will not show up.  So our results here are slightly different than the Wikipedia page mentioned above.
+
+`head(sort(tapply(myBB$song, myBB$artist, function(x) length(unique(x)) ),decreasing=T))`
+
+b. Here are the most #1 songs. The same kinds of differences with Wikipedia apply here. For instance, Wikipedia shows 20 songs at #1 for the Beatles, but we only have 19 here.  The one we are missing is "Get Back" because it is listed as having artist "The Beatles With Billy Preston"
+
+`head(sort(tapply(myBB$song[myBB$position == 1], myBB$artist[myBB$position == 1], function(x) length(unique(x)) ),decreasing=T))`
+
+c. For this question, it depends if we allow an artist to appear two or more times in the same week, e.g., with different songs. If we allow an artist to count every week that they appear, with possible repetitions for multiple songs, then this is easy:
+
+`head(sort(table(myBB$artist),decreasing=T))`
+
+If we prefer to only allow an artist to be counted at most 1 time each week, then we can work a little harder. This has, for instance, a big impact on Taylor Swift, who has been in the chart a lot lately, and has multiple songs in the chart at once, but has not been on the charts for as long as other artists. So she will not be represented as strongly, with this method. Notice that each count will be less, with this method, than the previous method, because we are simply just counting each week at most once per artist.
+
+`head(sort(tapply(myBB$week, myBB$artist, function(x) length(unique(x)) ),decreasing=T))`
+
+
+Question 8.
+
+What song(s) have been at number 1 in the Hot 100, with 2 or more covers by different artists?
+
+Solution:
+
+We look at the number 1 songs, grouped according to the title. We cannot be sure that these are actually the same songs, without doing more research.
+
+`head(sort(tapply(myBB$artist[myBB$position==1], myBB$song[myBB$position==1], function(x) length(unique(x)) ),decreasing=T),n=26)`
+
+
+Question 9.
+
+What artist(s) have had a number 1 song for the longest number of consecutive years?
+
+Solution:
+
+When working with a vector of years, the challenging thing is to find the longest consecutive string of years.  First we get the years.
+
+[source,r]
+----
+M <- matrix(unlist(strsplit(as.character(myBB$week), "-")),ncol=3,byrow=T)
+allyears <- M[ ,1]
+length(allyears)
+----
+
+As an example, here are the years in which the Beatles were on the charts.
+
+`w <- as.numeric(unique(allyears[myBB$artist=="The Beatles"]))`
+
+We can use the rle function to do this pretty easily.
+
+`max(rle(diff(w))$lengths)`
+
+Now we go apply this function to all of the years that an artist had a number 1 hit, grouping by the artist.  We also put "0" into each of the lists of consecutive years, so that we do not get any trivial values.
+
+[source,r]
+----
+head(sort(tapply( as.numeric(allyears)[myBB$position==1], myBB$artist[myBB$position==1], 
+    function(x) max(c(0,rle(diff(sort(unique(x))))$lengths)))   ,decreasing=T))
+----
+
+
+Question 10.
+
+What artist(s) had the most number 1 singles during a calendar year?  How many singles in the same calendar year was that?
+
+As always, you are welcome to suggest some questions/answers of your own too, if you find some interesting trends.
+
+Solution:
+
+The Beatles managed to get 6 songs at #1 in 1964, and also 5 songs at #1 in 1965.  Remarkable!
+
+[source,r]
+----
+head(sort(tapply( myBB$song[myBB$position==1], paste(myBB$artist[myBB$position==1], "in", allyears[myBB$position==1]), 
+        function(x) length(unique(x)) ),decreasing=T),n=14)
+----
+
+
+
+== Project 10
+
+Project 10 is about summarizing what you have learned in the course.
+
+Please find some data on the web that you are interested in (as a group).
+
+Scrape it from the web in XML format, and then parse the data using XML tools, and finally design 6 questions about the data, and answer your questions.
+
+Since we are focusing on large data, I would like you to (please) have at least 2 million pieces of data in the set that you scrape.  You are certainly welcome to have more than this.
+
+For comparison, in Project 9, we had roughly 3000 weeks of data, with 1 webpage/chart per week, and roughly 200 pieces of data per week, so it was about 600,000 pieces of data.  So I would like your Project 10 to be a little bigger than this... but it will be a similar "order of magnitude".  In other words, you can handle this, I know it for sure!, because you have all been doing great on Project 9.  You can certainly handle 2 million pieces of data.  (For comparison, the airline data set had about 120 million pieces of data.)
+
+I would also request (please) that, once you identify your website with your 2 million (or more) pieces of data, you run your project idea by me.  OK?
+
+Once you have identified your website, and you run your project idea by me, I will ask you to scrape the data from the web, and parse it.  Then you should design 6 or more interesting questions about the data, and answer each of the 6 questions.
+
+So you will give to me and Chen the following:
+
+The code for scraping the data from the web, and the code for parsing the data, and the 6 questions you designed about the data, and the answers to the 6 questions.
+
+I hope that sounds suitable, and I hope that it will be fun for your project 10 groups.
+
+The due date for Project 10 is the end of the final week of classes, i.e., by the end of the day on Friday, December 11.  (We don't have a final exam, of course.)  I just want you to be done with this project before the final exams start, so that it doesn't get in the way of your exams.
+
+If you have any questions, please let me know.  Enjoy!
+
+

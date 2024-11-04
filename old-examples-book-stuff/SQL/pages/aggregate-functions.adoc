@@ -1,0 +1,520 @@
+= Aggregate functions
+
+== Overview
+
+`COUNT`, `SUM`, `AVG`, `MIN`, and `MAX` are aggregate functions that can be used with or without the `GROUP BY` and `HAVING` clauses. When used without `GROUP BY` or `HAVING`, these functions perform the action that they are named after. For example, let's look at link:{attachmentsdir}/join.db[our database] from the xref:book:SQL:joins.adoc[joins page].
+
+.Orders
+[cols="1,1,1,1",stripes=even]
+|===
+|id|description|customer_id|value
+
+|1
+|Water bottle
+|1
+|15.00
+
+|2
+|Key chain
+|1
+|7.50
+
+|3
+|Computer
+|3
+|2000.00
+
+|4 
+|Thumb drive
+|3
+|25.00
+
+|5
+|Notebook
+|4
+|9.00
+
+|6
+|Shampoo
+|
+|5.00
+
+|7
+|Paper
+|
+|4.00
+|===
+
+.Customers
+[cols="1,1,1,1",stripes=even]
+|===
+|id|first_name|last_name|email
+
+|1
+|Natalie
+|Wright
+|wright@example.com
+
+|2
+|Ana
+|Sousa
+|sousa@example.com
+
+|3
+|Ben
+|Schwartz
+|schwartz@example.com
+
+|4
+|Chen
+|Xi
+|xi@example.com
+
+|5
+|Frank
+|Zhang
+|zhang@example.com
+
+|6
+|Tianchi
+|Liu
+|liu@example.com
+
+|7
+|Jake
+|Jons
+|jons@example.com
+|===
+
+To count the number of rows in a table, for example, the `orders` table, you could run the following query.
+
+[source, sql]
+----
+SELECT COUNT(*) FROM orders;
+----
+
+[%header,format=csv]
+|===
+include::example$result24.csv[]
+|===
+
+As you can see, by default the column header for the resulting row is `COUNT(*)`. To rename the column, you can create an xref:book:SQL:aliasing.adoc[alias].
+
+[source, sql]
+----
+SELECT COUNT(*) AS 'number of results' FROM orders;
+----
+
+[%header,format=csv]
+|===
+include::example$result25.csv[]
+|===
+
+`COUNT` only returns the number of rows returned by the query. If the query only returns 4 rows, 4 will be the result of `COUNT`.
+
+[source, sql]
+----
+SELECT COUNT(*) AS 'number of results' FROM orders WHERE value > 10;
+----
+
+[%header,format=csv]
+|===
+include::example$result26.csv[]
+|===
+
+In `COUNT(*)`, the `*` is a https://en.wikipedia.org/wiki/Wildcard_character[wildcard] that returns all columns from the selected table. In our examples with the `orders` table, this is the same as running the following query.
+
+[source, sql]
+----
+SELECT id, description, customer_id, value FROM orders;
+----
+
+You can, of course, selected a specific column, however, if there are any `NULL` values for the selected column, they will _not_ be counted. 
+
+[source, sql]
+----
+SELECT COUNT(customer_id) FROM orders;
+----
+
+[%header,format=csv]
+|===
+include::example$result27.csv[]
+|===
+
+The rest of the functions work the same way. For example, `SUM` returns the sum of all of the values in the selected rows.
+
+[source, sql]
+----
+SELECT SUM(value) AS 'our sum' FROM orders WHERE value > 10;
+----
+
+[%header,format=csv]
+|===
+include::example$result28.csv[]
+|===
+
+`MIN`, `MAX`, and `AVG` return the minimum, maximum, and average, respectively.
+
+[source, sql]
+----
+SELECT MIN(value) AS minimum, MAX(value) AS maximum, AVG(value) AS avg FROM orders WHERE value > 10;
+----
+
+[%header,format=csv]
+|===
+include::example$result29.csv[]
+|===
+
+== `GROUP BY`
+
+The capabilities of the aggregate functions are not realized until used in conjunction with the `GROUP BY` clause. The `GROUP BY` clause goes after the `WHERE` clause (if `WHERE` clause is present). `GROUP BY` forces the SQL engine to calculate the aggregate function after the data has been grouped by one or more columns. For example, both of the following queries work. The first calculates the sum of the `value` of all orders _by_ the `category` of the order. The second does the same thing, but excludes all rows where `value` <= 10 _before_ performing the operations.
+
+[source, sql]
+----
+SELECT category, SUM(value) FROM orders GROUP BY category;
+----
+
+[%header,format=csv]
+|===
+include::example$result30.csv[]
+|===
+
+[source, sql]
+----
+SELECT category, SUM(value) FROM orders WHERE value > 10 GROUP BY category;
+----
+
+[%header,format=csv]
+|===
+include::example$result31.csv[]
+|===
+
+This is powerful when you want to calculate values for many categories. For example, if we wanted to count the number of orders for each `category`, we could do so with the following query.
+
+[source, sql]
+----
+SELECT category, COUNT(*) FROM orders GROUP BY category;
+----
+
+[%header,format=csv]
+|===
+include::example$result32.csv[]
+|===
+
+Or, you could get all of the statistics when grouped by `category`.
+
+[source, sql]
+----
+SELECT category, COUNT(*), SUM(value), MIN(value), MAX(value), AVG(value) FROM orders GROUP BY category;
+----
+
+[%header,format=csv]
+|===
+include::example$result33.csv[]
+|===
+
+== `HAVING`
+
+`HAVING` adds one more tool to the tool chest. `HAVING` is similar to the `WHERE` clause but instead of being applied to every row _before_ grouping, it is applied on the aggregated data. A single query can have both a `WHERE` clause and a `HAVING` clause. The `WHERE` clause will filter the data _before_ aggregation, and the `HAVING` clause will filter the data _after_ aggregation. The following is an example that tries to demonstrate this slightly subtle difference.
+
+In this example, the `SUM` of the `value` is calculated for each `category`, and afterwards, only results are included where the `SUM` of the `value` is greater than 10.
+
+[source, sql]
+----
+SELECT
+	category,
+	SUM(value)
+FROM
+	orders
+GROUP BY
+	category
+HAVING
+	value > 10;
+----
+
+The following are also equivalent.
+
+[source, sql]
+----
+SELECT
+	category,
+	SUM(value)
+FROM
+	orders
+GROUP BY
+	category
+HAVING
+	SUM(value) > 10;
+----
+
+[source, sql]
+----
+SELECT
+	category,
+	SUM(value) AS 's_value'
+FROM
+	orders
+GROUP BY
+	category
+HAVING
+	s_value > 10;
+----
+
+[%header,format=csv]
+|===
+include::example$result34.csv[]
+|===
+
+In this example, all rows where `value` <= 10 are excluded, _then_ the remaining rows are grouped by `category`, and the `SUM` of `value` is calculated for the groups.
+
+[source, sql]
+----
+SELECT
+	category,
+	SUM(value)
+FROM
+	orders
+WHERE
+	value > 10
+GROUP BY
+	category;
+----
+
+[%header,format=csv]
+|===
+include::example$result35.csv[]
+|===
+
+=== Examples
+
+==== Using the SQLite chinook database https://www.datadepot.rcac.purdue.edu/datamine/data/chinook/chinook.db[here], find the average length (in seconds) of the tracks with genre `Pop`.
+
+.Solution
+====
+[source, sql]
+----
+SELECT
+	AVG(Milliseconds / 1000.0) AS avg
+FROM
+	tracks
+WHERE
+	genreId = 9;
+----
+
+[%header,format=csv]
+|===
+include::example$result83.csv[]
+|===
+====
+
+
+==== Using the SQLite chinook database https://www.datadepot.rcac.purdue.edu/datamine/data/chinook/chinook.db[here], figure out what the longest track (in seconds) is for the "Bossa Nova" genre.
+
+.Solution
+====
+[source, sql]
+----
+SELECT
+	GenreId
+FROM
+	genres
+WHERE
+	Name = 'Bossa Nova';
+----
+
+[%header,format=csv]
+|===
+include::example$result84.csv[]
+|===
+
+[source, sql]
+----
+SELECT
+	*,
+	MAX(Milliseconds / 1000.0) AS Seconds
+FROM
+	tracks
+WHERE
+	genreId = 11;
+----
+
+[%header,format=csv]
+|===
+include::example$result85.csv[]
+|===
+====
+
+
+==== Using the SQLite chinook database https://www.datadepot.rcac.purdue.edu/datamine/data/chinook/chinook.db[here], get the average price per hour for Bossa Nova music (`genreId` of 11).
+
+.Solution
+====
+[source, sql]
+----
+SELECT
+	AVG(UnitPrice / (Milliseconds / 1000.0 / 3600)) AS 'Price per Hour'
+FROM
+	tracks
+WHERE
+	genreId = 11;
+----
+
+[%header,format=csv]
+|===
+include::example$result86.csv[]
+|===
+====
+
+
+==== Using the SQLite chinook database https://www.datadepot.rcac.purdue.edu/datamine/data/chinook/chinook.db[here], get the average time (in seconds) for tracks by genre.
+
+.Solution
+====
+[source, sql]
+----
+SELECT
+	genreId,
+	AVG(Milliseconds / 1000.0) AS 'Average seconds per track'
+FROM
+	tracks
+GROUP BY
+	genreId;
+----
+
+[%header,format=csv]
+|===
+include::example$result87.csv[]
+|===
+
+You can take this 1 step further by getting the genre names. This requires using an xref:book:SQL:joins.adoc#inner-join[inner join], however.
+
+[source, sql]
+----
+SELECT
+	g.Name,
+	track_time. 'Average seconds per track'
+FROM
+	genres AS g
+	INNER JOIN (
+		SELECT
+			genreId,
+			AVG(Milliseconds / 1000.0) AS 'Average seconds per track'
+		FROM
+			tracks
+		GROUP BY
+			genreId) AS track_time ON g.GenreId = track_time.GenreId
+ORDER BY
+	track_time. 'Average seconds per track' DESC;
+----
+
+[%header,format=csv]
+|===
+include::example$result88.csv[]
+|===
+====
+
+
+==== Using the SQLite chinook database https://www.datadepot.rcac.purdue.edu/datamine/data/chinook/chinook.db[here], figure out what the average price per track is, for each genre.
+
+.Solution
+====
+[source, sql]
+----
+SELECT
+	genreId,
+	AVG(UnitPrice) AS 'Average price per track'
+FROM
+	tracks
+GROUP BY
+	genreId;
+----
+
+[%header,format=csv]
+|===
+include::example$result89.csv[]
+|===
+====
+
+
+==== Using the SQLite chinook database https://www.datadepot.rcac.purdue.edu/datamine/data/chinook/chinook.db[here], what is the average number of tracks per album?
+
+.Solution
+====
+[source, sql]
+----
+SELECT
+	AVG(trackCount)
+FROM (
+	SELECT
+		COUNT(*) AS trackCount
+	FROM
+		tracks
+	GROUP BY
+		albumId) AS track_count;
+----
+
+[%header,format=csv]
+|===
+include::example$result90.csv[]
+|===
+====
+
+
+==== Using the SQLite chinook database https://www.datadepot.rcac.purdue.edu/datamine/data/chinook/chinook.db[here], figure out what the average number of tracks is, per album genre.
+
+.Solution
+====
+[source, sql]
+----
+SELECT
+	genreId,
+	AVG(trackCount)
+FROM (
+	SELECT
+		genreId,
+		COUNT(*) AS trackCount
+	FROM
+		tracks
+	GROUP BY
+		albumId) AS track_count
+GROUP BY
+	genreId;
+----
+
+[%header,format=csv]
+|===
+include::example$result91.csv[]
+|===
+
+Of course, we can add the names of genres in, using xref:book:SQL:joins.adoc[joins].
+
+[source, sql]
+----
+SELECT
+	Name,
+	avg_track_count. 'Average Track Count'
+FROM
+	genres AS g
+	INNER JOIN (
+		SELECT
+			genreId,
+			AVG(trackCount) AS 'Average Track Count'
+		FROM (
+			SELECT
+				genreId,
+				COUNT(*) AS trackCount
+			FROM
+				tracks
+			GROUP BY
+				albumId) AS track_count
+		GROUP BY
+			genreId) AS avg_track_count ON g.GenreId = avg_track_count.genreId;
+----
+
+[%header,format=csv]
+|===
+include::example$result92.csv[]
+|===
+====
+
+=== Resources

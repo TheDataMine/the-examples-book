@@ -1,0 +1,191 @@
+= Docstrings & Comments
+
+Well-commented code is easier to maintain and understand than un-commented code. Adding clear and concise comments to your code is not necessary in order for your code to work. It _does_ however impact the readability, and maintainability, of your code. The individual who will inherit your codebase will greatly appreciate useful notes -- who knows, that individual may end up being you! Do yourself a favor, and adopt a consistent style of commenting your Python code.
+
+== Comments
+
+Comments in Python start with a `#` and continue to the end of the line. Comments are ignored by the interpreter, and have no functional purpose other than to help humans understand the code.
+
+The following is an example of an inline comment. An inline comment is a comment that follows code in the same line. While the code itself is not ignored by the interpreter, the comment _following_ the code _is_.
+
+[source,python]
+----
+import pandas as pd
+
+myDF = pd.read_csv("/path/to/my.csv") # read in the csv file
+----
+
+Is this an example of a good comment? No, it is not. Comments should only be added to snippets of code that are non-obvious. In this case, what the code does is nearly in sentence-form -- it reads in a csv file. Sometimes, as the writer of code, a problem or snippet of code you write may be clear to you because you took the time to understand it before writing it. When in doubt, it is usually better to write a comment than to leave it out.
+
+Multi-line comments are also possible in Python, but not in a way that is as convenient as a language like c, for example. In c, you could add a multi-line comment like this.
+
+[source,c]
+----
+/*
+    This is a multi-line comment.
+    Each line I add here will be ignored
+    until I close the comment.
+*/
+----
+
+In Python, you can do the same thing, but it is not as convenient.
+
+[source,python]
+----
+# This is a multi-line comment.
+# Each line I add here will be ignored
+# but it still needs to start with a #
+----
+
+== Docstrings
+
+The primary way to document code in Python, is to use docstrings. Docstrings are central to documenting your code. If you had to choose a single method to document a project in Python, it would be the docstring. _Every_ single module should have a module-level docstring. _Every_ single class should have a docstring. _Every_ single method should have a docstring. _Every_ single function should have a docstring.
+
+So, what does a docstring look like? The following is an example Python module (a `.py` file) with an example of each type of docstring.
+
+.mymodule.py
+[source,python]
+----
+""" <1>
+This is a module-level docstring. It goes at the very top of the file, and describes the module.
+
+Often times the module-level docstring will give examples showing how to use the module, and maybe
+even contain some info about things that are still left TODO.
+"""
+
+import pandas as pd
+import numpy as np
+import requests
+
+
+def scrape_website(url: str) -> requests.models.Response:
+    """<2>
+    Given a URL, return the `requests` response object.
+
+    Args:
+        url (str): URL to scrape.
+
+    Returns:
+        requests.models.Response: `requests` response object.
+    """
+    resp = requests.get(url)
+    return resp
+
+
+def are_pages_different(page1: requests.models.Response, page2: requests.models.Response) -> bool:
+    """<3>
+    Given two `requests` response objects, return True if they are different, False otherwise.
+
+    Args:
+        page1 (requests.models.Response): First page to compare.
+        page2 (requests.models.Response): Second page to compare.
+
+    Returns:
+        bool: True if the pages are different, False otherwise.
+    """
+    return page1.text != page2.text
+
+
+class WebPage:
+    def __init__(self, resp: requests.models.Response):
+        """<4>
+        Given a `requests` response object, initialize a WebPage object.
+
+        Args:
+            resp (requests.models.Response): `requests` response object.
+            
+        Raises:
+            ValueError: If the `requests` response object returned a non 200 status code.
+        """
+        if resp.status_code != 200:
+            raise ValueError('The response code is not 200.')
+        else:
+            self.resp = resp
+        
+    def is_datamine_affiliated(self, case_insensitive: bool = False) -> bool:
+        """<5>
+        Returns True if the WebPage is affiliated with Datamine, False otherwise.
+        
+        A WebPage is affiliated with Datamine if HTML contains the string "Purdue" 
+        and the string "datamine". By default the search is case-insensitive.
+
+        Args:
+            case_insensitive (bool, optional): Whether or not the search is case-sensitive or not. Defaults to False.
+
+        Returns:
+            bool: Whether the WebPage is affiliated with The Data Mine or not.
+        """
+        if not case_insensitive:
+            if 'purdue' in self.resp.text.lower() and 'datamine' in self.resp.text.lower():
+                return True
+            return False
+        else:
+            if 'Purdue' in self.resp.text and 'datamine' in self.resp.text:
+                return True
+            return False
+----
+
+<1> This is a module-level docstring. It goes at the very top of the file, and describes the module. Often times this docstring will contain usage examples and information about things that are still in a todo list.
+
+<2> This is function-level docstring. This docstring is written in the Google-style. This style of docstring makes your code comments consistent, easy to read, and easy to maintain.
+
+<3> This is another function-level docstring.
+
+<4> This is a function-level docstring for the class's __init__ method.
+
+<5> This is a function-level docstring for the class's is_datamine_affiliated method.
+
+What do docstrings _do_ other than provide info for the reader? Docstrings actually have a functional purpose, unlike regular comments.
+
+[source,python]
+----
+help(scrape_website)
+----
+
+.Output
+----
+Help on function scrape_website in module __main__:
+
+scrape_website(url: str) -> requests.models.Response
+    Given a URL, return the `requests` response object.
+    
+    Args:
+        url (str): URL to scrape.
+    
+    Returns:
+        requests.models.Response: `requests` response object.
+----
+
+Or, less-readable.
+
+[source,python]
+----
+scrape_website.__doc__
+----
+
+.Output
+----
+'\n    Given a URL, return the `requests` response object.\n\n    Args:\n        url (str): URL to scrape.\n\n    Returns:\n        requests.models.Response: `requests` response object.\n    '
+----
+
+This allows for powerful code introspection, and automated documentation generation using a tool like xref:book:python:pdoc.adoc[pdoc, for example].
+
+It is highly recommended to pick a good docstring style, for example, the https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings[Google style], and stick with it and consistently document your code in that style.
+
+== Resources
+
+https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings[Google Python Style Guide]
+
+The preferred style for docstrings and comments in Python, from Google.
+
+https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html[Example of NumPy style docstrings]
+
+The preferred style for docstrings and comments in Python, from NumPy.
+
+https://marketplace.visualstudio.com/items?itemName=graykode.ai-docstring[AI Python Docstring Generator]
+
+A VSCode extension that generates docstrings for you in styles including but not limited to: Google, NumPy, and Sphinx.
+
+https://realpython.com/documenting-python-code/[Real Python: A complete guide to documenting Python code]
+
+A very thorough walkthrough of comments and docstrings in Python.

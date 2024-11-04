@@ -1,0 +1,146 @@
+# The basic template for an awk program has 4 parts, namely:
+
+# the delimiter (which uses -F rather than the style of -d from cut)
+
+# the begin section, which only runs 1 time at the start of the program
+
+# the middle section, which runs 1 time per line, and 
+
+# the end section, which only runs 1 time at the end of the program.
+
+# (The idea that a command will run 1 time per line is the main idea in awk.)
+
+# Every awk program looks like this (here we use comma for the delimiter):
+
+awk -F, 'BEGIN{ } { } END{ }'
+
+# The begin and end section are optional, and are often not present.
+
+# They are useful for typing headers and footers for the data.
+
+# The end section is especially useful for displaying the results of a computation.
+
+# If we remove the begin and end section, the awk program looks like this:
+
+awk -F, '{ }'
+
+# We emphasize that awk refers to each field with a dollar sign,
+
+# i.e., $3 means the 3rd field on the row.
+
+# There is one variable which has a special meaning, namely, $0 refers to the whole line.
+
+# Two more notes, and then we do some examples.
+
+# NF stands for the number of fields on a line,
+
+# and NR stands for the record number (the same as the line number)
+
+
+
+# To demonstrate the power of awk, we first change directories,
+
+# to the Data Expo 2009 data about airline flights
+
+cd /depot/statclass/data/dataexpo2009/
+
+# Checking the head of the 2005.csv file, we remind ourselves what types of data
+
+# are found in the 29 fields
+
+head 2005.csv
+
+# We can print the 19th field -- which is the distance of the flight -- by using cut:
+
+head 2005.csv | cut -d, -f19
+
+# The equivalent program in awk is this:
+
+head 2005.csv | awk -F, 'BEGIN{ } { print $19 } END{ }'
+
+# That is a case in which the begin and end sections are unnecessary,
+
+# so we could have written instead:
+
+head 2005.csv | awk -F, '{ print $19 }'
+
+# This immediately gives us the power to do things we could not do before.
+
+# For instance, we can print the data for flights whose distance exceeds 500.
+
+head 2005.csv | awk -F, 'BEGIN{  } {if ($19 > 500) {print $0}} END{   }'
+
+# This is easier to read if we again drop the begin and end sections:
+
+head 2005.csv | awk -F, '{if ($19 > 500) {print $0}}'
+
+# Only the header appears, if we try to print the flights whose distance exceeds 1000:
+
+head 2005.csv | awk -F, '{if ($19 > 1000) {print $0}}'
+
+# Now we will add the flight distances across all flights.
+
+# First we do this for the head, do make sure that our code works properly:
+
+head 2005.csv | awk -F, '{mileage = mileage + $19}  END{print mileage}'
+
+# We find that the first several flights traveled 7803 miles altogether.
+
+# We created the variable "mileage" here, but we could have named it anything.
+
+# If we name it something arbitrary like "pizza", we get the same effect:
+
+head 2005.csv | awk -F, '{pizza = pizza + $19}  END{print pizza}'
+
+# Now we return to the previous command, but we analyze the entire file,
+
+# by changing head to cat:
+
+cat 2005.csv | awk -F, '{mileage = mileage + $19}  END{print mileage}'
+
+# We see that the airplanes flew 5167936343 miles altogether in 2005.
+
+# Question to students:  Are you remembering to use the "up" and "down" arrows
+
+# when you want to run one of the recent commands?  This saves a lot of time!
+
+# (Retyping is too slow.)
+
+# Here is another example.  Suppose that we want to print the departure delays
+
+# and the distances too.  We already knew how to print them both at once,
+
+# using the cut command:
+
+head 2005.csv | cut -d, -f16,19
+
+# We can do the same thing with awk:
+
+head 2005.csv | awk -F, '{delay = delay + $16; mileage = mileage + $19  } END{print delay, mileage}'
+
+# Notice that we only printed one line of output, namely, at the end of the processing,
+
+# we printed the total delay and the total mileage.
+
+# We did not previously know how to sum variables, using the techniques from previous weeks.
+
+# Here is another example:
+
+# We can print the flights that departed from Boston:
+
+head 2005.csv | awk -F, '{if ($17 == "BOS") {print $0} }'
+
+# or that departed from Chicago O'Hare:
+
+head 2005.csv | awk -F, '{if ($17 == "ORD") {print $0} }'
+
+# or the flights that departed from either BOS or ORD (the "or" symbol is "||")
+
+head 2005.csv | awk -F, '{if (($17 == "BOS") || ($17 == "ORD")) {print $0} }'
+
+# We can print the flights that departed from BOS
+
+# and landed at ORD (the "and" symbol is "&&"):
+
+head 2005.csv | awk -F, '{if (($17 == "BOS") && ($17 == "ORD")) {print $0} }'
+
