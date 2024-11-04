@@ -1,0 +1,405 @@
+# It would be helpful to put two files into your working directory:
+#   http://llc.stat.purdue.edu/2014/29000/projects/1990.csv
+#   and
+#   http://llc.stat.purdue.edu/2014/29000/projects/june1990.csv
+
+# These are locally located at:
+#   /proj/www/2014/29000/projects/1990.csv
+#   and
+#   /proj/www/2014/29000/projects/june1990.csv
+
+# Now we are set to begin:
+
+# Every awk file has this basic structure:
+
+awk 'BEGIN{  } {  } END{  }'
+
+# The stuff in the first set of braces is run 
+#   before the lines of the input are processed.
+
+# The stuff in the third set of braces is run 
+#   after the lines of the input are processed.
+
+# The stuff in the second set of braces is perhaps most important.
+#   That stuff is run on every single line of the input.
+# We can even omit the BEGIN and END parts,
+#   and just use the middle part if we want to.
+# Moreover, we can omit any part that we are not using.
+# We can also keep all 3 parts around, just for clarity of understanding.
+
+# If you have the file june1990.csv in your current directory, then
+#   this awk program prints every line of that file:
+awk 'BEGIN{  } { print } END{  }' june1990.csv
+
+# So does this program, which is almost exactly the same,
+#   but we explicitly write $0 for the thing to be printed.
+#   This strange looking $0 represents the entire current line.
+awk -F, 'BEGIN{  } { print $0 } END{  }' june1990.csv
+
+# How about we add a celebration message at the end of our output:
+awk -F, 'BEGIN{  } { print $0 } END{ print "That was awesome!!!!" }' june1990.csv
+
+# We could also add a welcome message at the start:
+awk -F, 'BEGIN{ print "Hello and welcome to awk." } { print $0 } END{ print "That was awesome!!!!" }' june1990.csv
+
+# Since the previous program had so many lines of output in the middle,
+#   how about we just make it only print the beginning and ending stuff.
+# You will notice that awk pauses for a couple seconds, between the beginning
+#   welcome message and the ending message, because it is still reading
+#   every line of the input.  It just isn't doing anything on these lines.
+awk -F, 'BEGIN{ print "Hello and welcome to awk." } {  } END{ print "That was awesome!!!!" }' june1990.csv
+
+# Here is one way to find the longest line in the file
+#   (I just left the BEGIN and END parts off here):
+awk -F, '{print length}' june1990.csv | sort -n | tail -n1
+
+# Here is another way to do it, within awk itself, by just
+#   updating the variable mymax, whenever we come to a line that
+#   is longer than the previous value of mymax.
+awk -F, 'BEGIN{  } { if (length($0) > mymax) mymax=length($0) } END{ print mymax }' june1990.csv
+
+# There is nothing special about the variable name mymax.
+# We could have called it pizza.
+# This would look a little strange, and it would not be very informative,
+#   but it would work, nonetheless.
+awk -F, 'BEGIN{  } { if (length($0) > pizza) pizza=length($0) } END{ print pizza }' june1990.csv
+
+# Remember that $0 refers to the current line that is being processed.
+# In general, if we do not tell awk which variable we are working with,
+#   awk automatically assumes we mean the variable $0.
+#   So this does the same thing (notice that we removed every $0).
+awk -F, 'BEGIN{  } { if (length > mymax) mymax=length } END{ print mymax }' june1990.csv
+
+# Besides "length", there are several built-in variables in awk, e.g.:
+#   NF is the number of fields on one line.
+#   NR is the number of records (i.e., number of lines)
+#      that awk has processed so far
+
+# We know that $0 refers to the entire line we are currently working with.
+# On the other hand, $1, $2, $3, etc., refers to the 1st, 2nd, 3rd, etc.,
+#   of the fields on the line.
+# For instance, if we type ls -la
+# we can a listing of the files in our current directory.
+ls -la
+
+# We can print the last field of each line:
+ls -la | awk 'BEGIN{  } { print $NF } END{  }'
+
+# The fifth field is the size of the file.
+# (By default, awk uses whitespace for the delimiter between fields,
+#  so we do not need the -F, after the awk command for this example.)
+
+# We could print the size of each file in our current directory:
+ls -la | awk 'BEGIN{  } { print $5 } END{  }'
+
+# We could add up the sizes of all the files in our current directory,
+#   and print the total size when we are done.
+#   The express x += $5 is just the same as x = x + $5
+#   (i.e., if just means to add the value of $5 to x).
+ls -la | awk 'BEGIN{  } { x += $5 } END{ print "The total number of bytes is " x }'
+
+# Remember what the /etc/passwd file looks like?
+cat /etc/passwd
+# We could change the delimiter in awk to be a colon
+#   (instead of whitespace or a comma),
+#   and we could print the first field in the /etc/passwd file
+awk -F: 'BEGIN{  } {print $1} END{  }' /etc/passwd
+
+# We could pipe the output to the sort command,
+#   so that we get an alphabetical list of users:
+awk -F: 'BEGIN{  } {print $1} END{  }' /etc/passwd | sort
+
+# We could print the total number of lines in a file:
+awk -F, 'BEGIN{  } {  } END{ print NR }' june1990.csv
+
+# We could print the 
+#   origin and destination cities of each flight;
+#   these are the 17th and 18th fields:
+awk -F, 'BEGIN{  } { print $17, $18 } END{  }' june1990.csv
+
+# We could print the difference in the 5th and 6th fields
+#   (this is the scheduled departure time (5th field) minus the
+#                actual departure time (6th field)
+#   and we can also print the 16th field, which is the departure delay
+awk -F, 'BEGIN{  } { print $5 - $6, $16 } END{  }' june1990.csv
+
+# Since NF is the number of fields on a line,
+#   we can print the number of fields per line, e.g.:
+ls -la | awk 'BEGIN{  } { print NF } END{  }'
+
+
+
+
+# We could print the information about the flight
+#  with the longest delay, by updating the maxdelay
+#  every time we find a longer delay:
+# The && is used like "and", to make sure two conditions are true (at once),
+#  i.e., we want to make sure that $16 is not an "NA".
+# Also notice that, if the conditions are satisfied,
+#  we want to do two things: set maxdelay to be $16,
+#  and also set myflight to be $0,
+#  so we wrap both of these into a set of braces,
+#  to make sure that both of these are run, if the "if statement" is true:
+awk -F, 'BEGIN{  } { if (($16 > maxdelay) && ($16 != "NA")) 
+  {maxdelay = $16; myflight = $0} }
+  END{ print "Delay " maxdelay " is found in flight: " myflight }' june1990.csv
+
+################## REGULAR EXPRESSIONS ##################
+
+# If the line (i.e., $0) has a match of the pattern IND, print the line.
+# The tilde symbol means to check for a match,
+#   and the IND is put in slashes, because that is the pattern
+#   we are trying to match.
+awk -F, 'BEGIN{  } { if ($0 ~ /IND/) print } END{  }' june1990.csv
+
+# We could find how many flights have IND somewhere on the line:
+awk -F, 'BEGIN{  } { if ($0 ~ /IND/) mycounter = mycounter + 1 } END{ print mycounter }' june1990.csv
+
+# We can write this more succinctly as:
+awk -F, 'BEGIN{  } { if ($0 ~ /IND/) mycounter++ } END{ print mycounter }' june1990.csv
+
+# By the way, here is how to extract the flights from a given month,
+#  out of the 1990.csv file:
+# To do this, we check to see if (for example) the 2nd field
+#  contains 4 (which means the month of April).
+# If it does contain 4 in the 2nd field,
+#  then we print that line.
+# All of the printed lines are saved into the file april1990.csv
+awk -F, 'BEGIN{  } { if ($2 ~ /4/) print $0 } END{  }' 1990.csv >april1990.csv
+
+# All of the printed lines for flights in March or earlier
+#  are saved into the file januarytomarch1990.csv
+awk -F, 'BEGIN{  } { if ($2 <= 3) print $0 } END{  }' 1990.csv >januarytomarch1990.csv
+
+# All of the printed lines for flights strictly after October:
+#  are saved into the file nowdec1990.csv
+awk -F, 'BEGIN{  } { if ($2 > 10) print $0 } END{  }' 1990.csv >novdec1990.csv
+
+
+# tilde means to try and match a field with a pattern
+# So !tilde means to try and see if the field does not match pattern
+
+# print the entire record if the Origin field (the 17th field)
+#   is not IND
+awk -F, 'BEGIN{  } {if ($17 !~ /IND/) print} END{  }' june1990.csv
+
+# Piping through the wc command,
+#   this lets us see that 433874 flights did not depart from IND:
+awk -F, 'BEGIN{  } {if ($17 !~ /IND/) print} END{  }' june1990.csv | wc
+# While 3521 flights did depart from IND:
+awk -F, 'BEGIN{  } {if ($17 ~ /IND/) print} END{  }' june1990.csv | wc
+# This checks out correctly, since there were 437395 flights altogether:
+wc june1990.csv
+
+
+# There are several operators for regular expressions, listed here:
+# http://www.gnu.org/software/gawk/manual/html_node/Regexp-Operators.html
+# This might look a little technical, but some examples should make 
+#  these ideas more clear.
+
+########### REGULAR EXPRESSIONS: CARROT ###########
+
+# The carrot means:   ^ matches at the start of a string
+# For example, we can check to see if the flight departs from
+#  an airport that starts with the letter I.
+# We just print the airport code, for simplicity:
+awk -F, 'BEGIN{  } {if ($17 ~ /^I/) print $17} END{  }' june1990.csv
+
+# We could sort the output and just print the unique entries:
+awk -F, 'BEGIN{  } {if ($17 ~ /^I/) print $17} END{  }' june1990.csv | sort | uniq
+
+# We can look for patterns with more than one character.
+# For instance, here are the Origin airports that start with IA:
+awk -F, 'BEGIN{  } {if ($17 ~ /^IA/) print $17} END{  }' june1990.csv | sort | uniq
+
+
+########### REGULAR EXPRESSIONS: DOLLAR SIGN ###########
+
+# The dollar sign means:   $ matches at the end of a string
+# For example, we can check to see if the flight departs from
+#  an airport that ends with the letter R.
+# We just print the airport code, for simplicity:
+awk -F, 'BEGIN{  } {if ($17 ~ /R$/) print $17} END{  }' june1990.csv
+
+# We could sort the output and just print the unique entries:
+awk -F, 'BEGIN{  } {if ($17 ~ /R$/) print $17} END{  }' june1990.csv | sort | uniq
+
+# We can look for patterns with more than one character.
+# For instance, here are the Origin airports that end with YR:
+awk -F, 'BEGIN{  } {if ($17 ~ /YR$/) print $17} END{  }' june1990.csv | sort | uniq
+
+########### REGULAR EXPRESSIONS: DOT ###########
+
+# The dot means:   . matches any one character
+# For example, we can check to see if the flight departs from
+#  an airport that has a B and then "any character" and then an R.
+# We just print the airport code, for simplicity:
+awk -F, 'BEGIN{  } {if ($17 ~ /B.R/) print $17} END{  }' june1990.csv
+
+# We could sort the output and just print the unique entries:
+awk -F, 'BEGIN{  } {if ($17 ~ /B.R/) print $17} END{  }' june1990.csv | sort | uniq
+
+
+########### REGULAR EXPRESSIONS: CHARACTER LIST ###########
+
+# The [  ] means:   [  ] matches any one character from inside the list
+# For example, we can check to see if the flight departs from
+#  an airport that starts with Q or X.
+# We just print the airport code, for simplicity:
+awk -F, 'BEGIN{  } {if ($17 ~ /^[UVWXYZ]/) print $17} END{  }' june1990.csv
+
+# We could sort the output and just print the unique entries:
+awk -F, 'BEGIN{  } {if ($17 ~ /^[UVWXYZ]/) print $17} END{  }' june1990.csv | sort | uniq
+
+# It is easier to use a dash, when we have a sequence of characters:
+awk -F, 'BEGIN{  } {if ($17 ~ /^[U-Z]/) print $17} END{  }' june1990.csv | sort | uniq
+
+# The carrot takes on a different meaning, when we put it 
+#  inside a character list.  In that case, the carrot means to
+#  avoid anything inside the character list.
+
+# So this has the same effect as before.
+# The first carrot (outside the character list) means to 
+#  match the expression starting at the beginning of the word.
+#  We saw examples of this above, in several examples.
+# The second carrot (inside the character list) is the new idea here.
+#  It means to avoid the letters A through T.
+awk -F, 'BEGIN{  } {if ($17 ~ /^[^A-T]/) print $17} END{  }' june1990.csv | sort | uniq
+
+# Similarly, we could print airport codes that do not end with A through T:
+awk -F, 'BEGIN{  } {if ($17 ~ /[^A-T]$/) print $17} END{  }' june1990.csv | sort | uniq
+
+# This has the same meaning, if we use !~ instead of ~
+#  and we drop the ^ inside the character list.
+awk -F, 'BEGIN{  } {if ($17 !~ /[A-T]$/) print $17} END{  }' june1990.csv | sort | uniq
+
+########### REGULAR EXPRESSIONS: ALTERNATION ###########
+
+# The | means:   | matches one of several different possibilities
+# For example, we can check to see if the flight departs from
+#  an airport that starts with IN or that starts with MD:
+# We just print the airport code, for simplicity:
+awk -F, 'BEGIN{  } {if ($17 ~ /^IN|^MD/) print $17} END{  }' june1990.csv | sort | uniq
+
+# This can also be done with grouping:
+awk -F, 'BEGIN{  } {if ($17 ~ /^(IN|MD)/) print $17} END{  }' june1990.csv | sort | uniq
+
+
+# If (instead) we do not use parentheses, and we remove the second carrot,
+#  we will get all the flights that start with IN,
+#  and all the flights that have MD anywhere in their code,
+#  not necessarily at the start.
+# So we get a new airport code now, namely, PMD.
+awk -F, 'BEGIN{  } {if ($17 ~ /^IN|MD/) print $17} END{  }' june1990.csv | sort | uniq
+
+
+########### REGULAR EXPRESSIONS: several consecutive occurrences ###########
+
+# The * means:   * matches 0 or more occurrences in a row
+# This is easier to demonstrate with longer patterns, e.g.,
+awk 'BEGIN{  } {if ($0 ~ /c(or)*d/) print $0} END{  }' /usr/share/dict/words
+
+# The + means:   + matches 1 or more occurrences in a row
+awk 'BEGIN{  } {if ($0 ~ /c(or)+d/) print $0} END{  }' /usr/share/dict/words
+
+# There are 359 words with the pattern c(or)*d
+# There are 301 words with the pattern c(or)+d
+
+# FYI: Can we find the 58 words that are missing in the second list?  Yes,
+#  with an explanation in the next section:
+awk -W posix 'BEGIN{  } {if ($0 ~ /c((or){0})d/) print $0} END{  }' /usr/share/dict/words
+
+# or more simply we could have just looked for the pattern "cd" itself:
+awk 'BEGIN{  } {if ($0 ~ /cd/) print $0} END{  }' /usr/share/dict/words
+
+########### REGULAR EXPRESSIONS: specifying number of occurrences ###########
+
+# There are three ways of doing this:
+# {n}     exactly n repetitions
+# {n,}    n or more repetitions
+# {n,m}   between n and m repetitions
+
+# We can specify exactly how many occurrences of a pattern that we want:
+
+# We know how to search for 1 or more occurrences, using +
+awk -W posix 'BEGIN{  } {if ($0 ~ /(ed)+/) print $0} END{  }' /usr/share/dict/words
+
+# We can do the same thing this way, i.e., 1 or more occurrences:
+awk  -W posix 'BEGIN{  } {if ($0 ~ /(ed){1,}/) print $0} END{  }' /usr/share/dict/words
+
+# but this is more general, e.g., here are 2 or more (consecutive) occurrences:
+awk  -W posix 'BEGIN{  } {if ($0 ~ /(ed){2,}/) print $0} END{  }' /usr/share/dict/words
+
+# In general, {n,} means to look for n or more consecutive occurrences.
+
+# There is also a version that looks for exactly n occurrences, e.g.,
+#  we could find all words with a d, followed by exactly 2 e's, followed by d:
+awk  -W posix 'BEGIN{  } {if ($0 ~ /d(e){2}d/) print $0} END{  }' /usr/share/dict/words
+
+#  This is the same as:
+awk  -W posix 'BEGIN{  } {if ($0 ~ /deed/) print $0} END{  }' /usr/share/dict/words
+
+# I must point out this funny search, for two or more dee's in the row:
+awk  -W posix 'BEGIN{  } {if ($0 ~ /(dee){2}/) print $0} END{  }' /usr/share/dict/words
+
+# Similarly, there is the {n,m} construct, which you can try yourself.
+
+# For instance, there are many words with the pattern:
+#   letter, a, letter, a, letter, a:
+awk  -W posix 'BEGIN{  } {if ($0 ~ /(.a){3}/) print $0} END{  }' /usr/share/dict/words
+# There are even a few words with 4 such patterns:
+awk  -W posix 'BEGIN{  } {if ($0 ~ /(.a){4}/) print $0} END{  }' /usr/share/dict/words
+
+# For the letter i, there are even some words with 5 such occurrences:
+awk  -W posix 'BEGIN{  } {if ($0 ~ /(.i){5}/) print $0} END{  }' /usr/share/dict/words
+
+# Here are all the words with:
+#  e, then 3 or 4 occurrences of a letter followed by i, and then t afterwards:
+awk  -W posix 'BEGIN{  } {if ($0 ~ /e(.i){3,4}t/) print $0} END{  }' /usr/share/dict/words
+
+
+########### REGULAR EXPRESSIONS: specifying number of occurrences ###########
+
+# The ? means:   ? matches 0 or 1 occurrences
+
+# For example, the words that contain tmb or thumb can be found like this:
+awk 'BEGIN{  } {if ($0 ~ /th(um)?b/) print $0} END{  }' /usr/share/dict/words
+
+
+awk 'BEGIN{  } {if ($0 ~ /th(um)?b/) print toupper($0)} END{  }' /usr/share/dict/words
+
+### A few more cool tools:
+
+# One more cool tool is to use toupper or tolower to change the case
+#  of the text before printing.  E.g., some of the words in the dictionary
+#  have uppercase letters.  We can see them here:
+awk 'BEGIN{  } {if ($0 ~ /[A-Z]/) print $0} END{  }' /usr/share/dict/words
+
+# So it is helpful (sometimes) to know how to change all letters to lowercase
+#  or to uppercase.  We can do that as follows.
+# Notice that words like Zythia (which were capitalized)
+#  now appear in lowercase, i.e., as zythia:
+awk 'BEGIN{  } {print tolower($0)} END{  }' /usr/share/dict/words
+
+# Another neat tool, with regard to changing letters, is to substitute 
+#  one pattern for another.  E.g., we could substitute each q by Q.
+# We use gsub to do a global substitution.
+awk 'BEGIN{  } {gsub(/q/, "Q"); print $0} END{  }' /usr/share/dict/words
+
+########### Arithmetic in awk ###########
+
+awk -F, 'BEGIN{  } { if ($16 ~ /^(-)?[0-9]+$/) {total += $16; numlines++} } END{ print "The total is " total " and there are " numlines " lines so the average is " total/numlines }' june1990.csv
+
+# TWO WARNINGS:
+# WARNING 1: 
+# Notice that we first checked to make sure that the data in $16
+#  is actually a number, because we don't want to deal with things like
+#  empty values or NA's.  So we look for the possibility of a - (or not)
+#  at the beginning of the string, followed by 1 or more digits.
+#  
+# WARNING 2:
+# Notice that we need to put braces around this part:
+#   {total += $16; numlines++}
+# because we only want to do these lines if the "if condition" is true.
+
+

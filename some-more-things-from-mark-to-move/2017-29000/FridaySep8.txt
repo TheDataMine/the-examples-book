@@ -1,0 +1,96 @@
+# First we download the data; this can take a long time (roughly an hour).
+# Be sure to save the data somewhere in the scratch directory,
+# as opposed to your home or proj directory.
+
+for year in {2009..2017}; do
+  for month in {01..12}; do
+    wget https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_$year-$month.csv
+  done
+done
+
+# Now we want to put all of the files into one big file.
+# If the taxi cab data is the only data in that folder, then 
+# we can just concatenate them all into one big file.
+cat yellow*.csv >bigfile.csv
+
+# To demonstrate how to use awk, first we use the airline data.
+# Please go ahead and navigate to where your airline data is stored.
+# Then we can try this following:
+
+# We already know how to cut the 17th and 18th fields out of a file:
+
+tail 2008.csv  | cut -d, -f17-18
+
+# In awk, a general command looks like this:
+awk -F, 'BEGIN{  }  {  }  END{  }'
+# We specify the delimiter (here we used a comma)
+# What goes in the BEGIN is only run one time, at the start.
+# What goes in the middle is run once per line of the file.
+# What goes in the END is only run one time, at the end.
+
+# The BEGIN and END are always optional.
+# So, for instance, we can achieve the same effect as:
+tail 2008.csv  | cut -d, -f17-18
+
+# by writing in awk
+tail 2008.csv | awk -F, '{print $17, $18}'
+
+# but we do not get a comma between the variables.
+# If we want a comma in between, we need to force it to be there, e.g.,
+tail 2008.csv | awk -F, '{print $17","$18}'
+# or we can set the output file separator, like this:
+tail 2008.csv | awk -F, 'BEGIN{OFS=","} {print $17, $18}'
+# The $17 and $18 refer to the 17th and 18th fields, respectively.
+
+# If you only want to see the data for flights that depart from IND:
+tail -n1000 2008.csv | awk -F, '{if ($17=="IND") {print $0}}'
+# Here the $0 refers to the entire line.
+
+# We can pipe the results of an awk statement to other commands, for instance,
+# we can sort the results, tabulate them, and sort by the counts
+tail -n1000 2008.csv | awk -F, 'BEGIN{OFS=","} {print $17, $18}' | sort | uniq -c | sort -n
+
+# We can remove the header
+head 2008.csv | awk -F, 'BEGIN{OFS=","} {print $17, $18}' | sort | uniq -c | sort -n | grep -V Origin
+
+# In other words, awk works in tandem with the other UNIX commands that we know.
+
+# Now we consider the taxi data:
+# Here is the head of the January 2009 taxi data.
+head yellow_tripdata_2009-01.csv 
+
+# We could print just the second field (only).
+# Note that we are using both the comma and space as delimiters.
+head yellow_tripdata_2009-01.csv | awk -F[,\ ] '{print $2}'
+
+# We could print the 2nd and 4th fields, but only when they are different.
+head -n10000 yellow_tripdata_2009-01.csv | awk -F[\ ,] '{if ($2 != $4) {print $2, $4}}'
+
+# Of course we can tabulate the results, as we have done many times.
+head -n10000 yellow_tripdata_2009-01.csv | awk -F[\ ,] '{if ($2 != $4) {print $2, $4}}' | sort | uniq -c
+
+# We can tabulate the results of one variable,
+# according to the values in another variable.
+# For example, if we use the comma and space as delimiters, then
+# the second field is the pickup date,
+# and the sixth field is the number of passengers.
+# We can tabulate how many passengers rode the taxi cabs (the 6th field),
+# according to the day (the 2nd field)
+head yellow_tripdata_2009-01.csv | awk -F[,\ ] '{count[$2] += $6} END{for (i in count) print a[i], i}'
+
+# Then we can print the results by iterating over all of the possible dates:
+head yellow_tripdata_2009-01.csv | awk -F[,\ ] '{count[$2] += $6} END{for (i in count) print count[i], i}'
+
+# We do this again, for the first 10000 taxi cab rides.
+head -n10000 yellow_tripdata_2009-01.csv | awk -F[,\ ] '{count[$2] += $6} END{for (i in count) print count[i], i}'
+
+# We can sort the results:
+head -n10000 yellow_tripdata_2009-01.csv | awk -F[,\ ] '{count[$2] += $6} END{for (i in count) print count[i], i}' | sort -n
+
+# Now we find the maximum number of passengers.
+# To do this, we just make a variable called "initial"
+# and whenever the current number of passengers is larger than 
+# the previous value stored in "initial",
+# we store the current value.
+head yellow_tripdata_2009-01.csv | grep -v Count | cut -d, -f4 | awk '{if (initial < $1) {initial = $1}} END{print initial}'
+

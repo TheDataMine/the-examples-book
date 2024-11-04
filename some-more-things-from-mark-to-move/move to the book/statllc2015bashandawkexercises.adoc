@@ -1,0 +1,830 @@
+= STAT-LLC 2015 bash and awk Exercises
+
+== Project 6
+
+Question 1.
+
+a.  In the DataFest 2015 file for the visitors to Edmunds.com, found in:
+
+`/data/public/datafest2015/visitor.csv`
+
+identify the zip codes that had 800 or more visitors.
+It is OK to ignore the blank and undefined zip codes in your answer.
+
+b.  There should be 4 such zip codes in part a. For each of these 4 zip codes, identify the city corresponding to that zip code. (Hint: The cities are listed in the field called `dma_name`.)
+
+c.  If we focus only on the cities directly (ignoring the zip codes, and only using the `dma_name` field), what are the 20 most popular cities?
+
+Solution:
+
+a.  In the DataFest 2015 file for the visitors to Edmunds.com, found in:
+
+`/data/public/datafest2015/visitors.csv`
+
+identify the zip codes that had 800 or more visitors.
+It is OK to ignore the blank and undefined zip codes in your answer.
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { print $197 } END{ }' visitor.csv | sort | uniq -c | sort -n
+
+  count   zip
+    822 90011
+    892 95051
+    893 94043
+   1192 90404
+----
+
+b.  There should be 4 such zip codes in part a.  For each of these 4 zip codes, identify the city corresponding to that zip code.  (Hint: The cities are listed in the field called dma_name.)
+
+One line solution:
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { if ($197 ~ /90011|95051|94043|90404/) print $197, $198 } END{ }' visitor.csv | sort | uniq -c | sort -n
+   822 90011 LOS ANGELES
+   892 95051 SAN FRANCISCO-OAK-SAN JOSE
+   893 94043 SAN FRANCISCO-OAK-SAN JOSE
+  1192 90404 LOS ANGELES
+----
+
+Four line solution:
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { if ($197 == "90011") print $198 } END{ }' visitor.csv | sort | uniq -c | sort -n
+   822 LOS ANGELES
+awk -F, 'BEGIN{ } { if ($197 == "95051") print $198 } END{ }' visitor.csv | sort | uniq -c | sort -n
+   892 SAN FRANCISCO-OAK-SAN JOSE
+awk -F, 'BEGIN{ } { if ($197 == "94043") print $198 } END{ }' visitor.csv | sort | uniq -c | sort -n
+   893 SAN FRANCISCO-OAK-SAN JOSE
+awk -F, 'BEGIN{ } { if ($197 == "90404") print $198 } END{ }' visitor.csv | sort | uniq -c | sort -n
+  1192 LOS ANGELES
+----
+
+c.  If we focus only on the cities directly (ignoring the zip codes, and only using the dma_name field), what are the 20 most popular cities?
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { print $198 } END{ }' visitor.csv | sort | uniq -c | sort -n | tail -n21
+
+  6648 MINNEAPOLIS-ST. PAUL
+  8211 ORLANDO-DAYTONA BCH-MELBRN
+  8271 SACRAMNTO-STKTON-MODESTO
+  8651 DENVER
+  8875 SAN DIEGO
+  9501 TAMPA-ST. PETE (SARASOTA)
+  9608 PHOENIX (PRESCOTT)
+ 11279 SEATTLE-TACOMA
+ 11797 MIAMI-FT. LAUDERDALE
+ 11916 BALTIMORE
+ 15808 DALLAS-FT. WORTH
+ 15975 ATLANTA
+ 19498 HOUSTON
+ 20691 BOSTON (MANCHESTER)
+ 24117 PHILADELPHIA
+ 25949 WASHINGTON. DC (HAGRSTWN)
+ 26919 CHICAGO
+ 36902 SAN FRANCISCO-OAK-SAN JOSE
+ 57513 NEW YORK
+ 60296 LOS ANGELES
+144505
+----
+
+
+Question 2
+
+If we study the `first_device_model` and `last_device_model` fields, we can discover the first and last devices that the visitors used during their visit to the site.  (Sometimes visitors change platforms while they are visiting, e.g., if they continue a search that they began on an earlier device.)
+
+a.  Categorize the types of `first_device_model` used, according to how many times each device was used.  Sort your resulting list according to the number of each kind of device.
+
+b.  Same question, for `last_device_model` used.
+
+c.  Now consider only the people who switched devices.  Ignoring blank entries, and ignoring "other" entries, what was the most common device switch?
+
+Solution:
+
+If we study the first_device_model and last_device_model fields, we can discover the first and last devices that the visitors used during their visit to the site.  (Sometimes visitors change platforms while they are visiting, e.g., if they continue a search that they began on an earlier device.)
+
+a.  Categorize the types of first_device_model used, according to how many times each device was used.  Sort your resulting list according to the number of each kind of device.
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { print $188 } END{ }' visitor.csv | sort | uniq -c | sort -n
+     1 first_device_model
+    27 Blackberry
+    67 Windows Phone
+  1362 Kindle Fire
+  3372 Windows Tablet
+  4591 iPhone
+ 12385 Android
+ 15744 other
+ 79809 iPad
+ 87504
+106753 Mac
+413317 Windows PC
+----
+
+b.  Same question, for last_device_model used.
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { print $189 } END{ }' visitor.csv | sort | uniq -c | sort -n
+     1 last_device_model
+    30 Blackberry
+    75 Windows Phone
+  1180 Kindle Fire
+  3258 Windows Tablet
+  4872 iPhone
+ 13401 Android
+ 18049 other
+ 37312
+ 89879 iPad
+118416 Mac
+438459 Windows PC
+----
+
+c.  Now consider only the people who switched devices.  Ignoring blank entries, and ignoring "other" entries, what was the most common device switch?
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { if ($188 != $189) print $188, $189 } END{ }' visitor.csv | sort | uniq -c | sort -n | tail
+   510 Windows Tablet Windows PC
+----
+
+
+Question 3
+
+Now consider the `shopping.csv` file.
+
+a.  What are the ten most popular makes of cars that people shopped for?
+
+b.  If we consider both the make and the model of the car, what are the ten most popular make-and-model pairs of cars?
+
+c.  What are all the models that Toyota sells?
+
+d.  For this question (only), consider instead the leads.csv file, and identify the top 10 makes of cars for which there is a lead.  Please note that the cars do not have a uniform capitalization, so it is necessary for you to standardize the capitalization before you make your tally.
+
+Solution:
+
+Now consider the shopping.csv file.
+
+a.  What are the ten most popular makes of cars that people shopped for?
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { print $3 } END{ }' shopping.csv | sort | uniq -c | sort -n | tail
+ 76919 Mercedes-Benz
+ 90482 Chevrolet
+100163 Mazda
+101158 BMW
+102170 Hyundai
+116566 Subaru
+126890 Nissan
+157486 Ford
+275181 Honda
+289938 Toyota
+----
+
+b.  If we consider both the make and the model of the car, what are the ten most popular make-and-model pairs of cars?
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { print $3, $4 } END{ }' shopping.csv | sort | uniq -c | sort -n | tail
+ 31988 Subaru Outback
+ 33166 Mazda CX-5
+ 33378 Toyota Camry
+ 34287 Mazda Mazda3
+ 34600 Subaru Forester
+ 35260 Toyota RAV4
+ 42118 Honda Civic
+ 44760 Toyota Highlander
+ 68623 Honda Accord
+ 68832 Honda CR-V
+----
+
+c.  What are all the models that Toyota sells?
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { if ($3 == "Toyota") print $4 } END{ }' shopping.csv | sort | uniq -c | sort -n
+     1 Celica
+     8 Camry Solara
+   547 Matrix
+  1221 RAV4 EV
+  1387 Land Cruiser
+  2718 Yaris
+  3481 Highlander Hybrid
+  3644 Sequoia
+  3654 FJ Cruiser
+  4075 Prius Plug-in
+  5661 Avalon Hybrid
+  6019 Venza
+  7092 Prius v
+  8510 Prius c
+  9552 Tundra
+ 10368 Camry Hybrid
+ 11698 Avalon
+ 12469 4Runner
+ 18896 Prius
+ 19331 Tacoma
+ 19541 Sienna
+ 26667 Corolla
+ 33378 Camry
+ 35260 RAV4
+ 44760 Highlander
+----
+
+d.  For this question (only), consider instead the leads.csv file, and identify the top 10 makes of cars for which there is a lead.  Please note that the cars do not have a uniform capitalization, so it is necessary for you to standardize the capitalization before you make your tally.
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { print tolower($5) } END{ }' leads.csv | sort | uniq -c | sort -n | tail
+ 82654 jeep
+ 91612 bmw
+ 95021 chevrolet
+ 98358 mazda
+105005 hyundai
+115203 subaru
+141438 nissan
+169958 ford
+395879 toyota
+406738 honda
+----
+
+
+Question 4
+
+a.  If we classify the click dates in the shopping file, how many shopping entries were made per year?
+
+b.  Now consider only the year and the month but not the day.  How many shopping entries were made per each year-and-month pair?
+
+c.  During which year-and-month pair were the most shopping entries made?
+
+Solution:
+
+a.  If we classify the click dates in the shopping file, how many shopping entries were made per year?
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { print $2 } END{ }' shopping.csv | awk -F- 'BEGIN{ } { print $1 } END{ }' | sort | uniq -c
+  30328 2013
+1792586 2014
+ 287246 2015
+      1 click_date
+----
+
+b.  Now consider only the year and the month but not the day.  How many shopping entries were made per each year-and-month pair?
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { print $2 } END{ }' shopping.csv | awk -F- 'BEGIN{ } { print $1, $2 } END{ }' | sort | uniq -c
+ 30328 2013 12
+122958 2014 01
+116435 2014 02
+134709 2014 03
+117080 2014 04
+127792 2014 05
+147894 2014 06
+172329 2014 07
+192786 2014 08
+172518 2014 09
+171845 2014 10
+145645 2014 11
+170595 2014 12
+153998 2015 01
+127347 2015 02
+  5901 2015 03
+     1 click_date
+----
+
+c.  During which year-and-month pair were the most shopping entries made?
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { print $2 } END{ }' shopping.csv | awk -F- 'BEGIN{ } { print $1, $2 } END{ }' | sort | uniq -c | sort -n | tail -n1
+192786 2014 08
+----
+
+
+Question 5
+
+a.  Back to the visitor file, if you look at the first_referring_url, what are the top 10 URL's that people used when first getting a reference to the site?  (It is necessary to only use the first part of an address, e.g., to only use "www.google.com" for example, and to trim the rest of the URL off.)
+
+b.  When people are actually making the purchase, which model year do they tend to buy?  Use the `transactions.csv` to rank the years according to how many cars were bought in that model year.
+
+c.  Same question, but this time, limit yourself to the 381 cars bought in Indiana (abbreviation IN)
+
+d.  For which colors were there 800 or more cars sold with that color?
+
+e.  How many car colors have the word "blue" in the title?
+
+Solution:
+
+a.  Back to the visitor file, if you look at the first_referring_url, what are the top 10 URL's that people used when first getting a reference to the site?  (It is necessary to only use the first part of an address, e.g., to only use "www.google.com" for example, and to trim the rest of the URL off.)
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { print $190 } END{ }' visitor.csv | awk -F/ 'BEGIN{ } { print $3 } END{ }' | sort | uniq -c | sort -n | tail -n11
+  2855 www.swagbucks.com
+  5300 search.aol.com
+  5616 www.newcar-leases.com
+  7342 c.autoaffiliatenetwork.com
+  7377 search.yahoo.com
+  8303 www.googleadservices.com
+  9769 www.edmunds.com
+ 24433 r.search.yahoo.com
+ 36131 www.bing.com
+250074
+314811 www.google.com
+----
+
+b.  When people are actually making the purchase, which model year do they tend to buy?  Use the transactions.csv to rank the years according to how many cars were bought in that model year.
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { print $9 } END{ }' transactions.csv | sort | uniq -c | sort -n      1 1980
+     1 1991
+     1 1993
+     1 model_year_bought
+     3 1983
+     3 1995
+     6 1996
+    10 1994
+    10 1997
+    11 1990
+    11 2016
+    18 1998
+    20 1999
+    31 2000
+    62 2001
+    89 2002
+   125 2003
+   180 2004
+   263 2005
+   289 2006
+   488 2009
+   527 2007
+   611 2008
+  1056 2010
+  3071 2011
+  3901 2012
+  6900 2013
+ 32854 2015
+ 57290 2014
+----
+
+c.  Same question, but this time, limit yourself to the 381 cars bought in Indiana (abbreviation IN)
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { if ($8 == "IN") print $9 } END{ }' transactions.csv | sort | uniq -c | sort -n
+     1 2003
+     1 2005
+     2 2004
+     2 2007
+     4 2008
+     7 2009
+     7 2010
+    13 2012
+    15 2011
+    33 2013
+    96 2015
+   200 2014
+----
+
+d.  For which colors were there 800 or more cars sold with that color?
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { print $15 } END{ }' transactions.csv | sort | uniq -c | sort -n | tail
+   840 ICE SILVER METALLIC
+  1180 MODERN STEEL METALLIC
+  1628 CRYSTAL BLACK PEARL
+  3132 BLUE
+  3190 RED
+  4901
+  5574 SILVER
+  7297 GRAY
+  7958 WHITE
+  9620 BLACK
+----
+
+e.  How many car colors have the word "blue" in the title?
+
+[source,bash]
+----
+awk -F, 'BEGIN{ } { print $15 } END{ }' transactions.csv | sort | uniq -c | sort -n | grep "BLUE" | wc
+   316    1138    7741
+----
+
+
+Question 6
+
+Consider the file yow.lines, which is distributed with `emacs 21.4`. It can be downloaded from the llc server or you can access it directly from `/proj/www/2015/29000/projects/yow.lines` if you prefer.
+
+a. Consider the number of fields on each line of the file.  What is the maximum number of fields on a line?
+
+b. Print the lines that have at least 15 fields.
+
+c. Do any lines contain the word pizza?  Print all such lines, regardless of how the word pizza is capitalized.
+
+Solution:
+
+Consider the file `yow.lines`, which is distributed with `emacs 21.4`. It can be downloaded from the llc server or you can access it directly from `/proj/www/2015/29000/projects/yow.lines` if you prefer.
+
+a. Consider the number of fields on each line of the file. What is the maximum number of fields on a line?
+
+`awk 'BEGIN{ } { print NF } END { }' /proj/www/2015/29000/projects/yow.lines | sort -n | tail -n1`
+
+b. Print the lines that have at least 15 fields.
+
+`awk 'BEGIN{ } { if (NF >= 15) print $0 } END { }' /proj/www/2015/29000/projects/yow.lines | sort -n`
+
+c. Do any lines contain the word pizza?  Print all such lines, regardless of how the word pizza is capitalized.
+
+`awk 'BEGIN{ } { if (tolower($0) ~ /pizza/) print $0 } END { }' /proj/www/2015/29000/projects/yow.lines`
+
+
+Question 7
+
+Consider the file `/usr/share/dict/words`
+
+a.  How many words contain 2 or more consecutive vowels?
+
+b.  How many words contain the pattern `n't` or the pattern `'ve` ?
+(Hint:  Use '\'' for the single quote in your pattern.)
+
+[source,bash]
+----
+'\''
+----
+
+c.  Print all of the words that contain 5 or more consecutive vowels.
+
+d.  Print the following words from the file `/usr/share/dict/words`
+The 1st word, the 10001st word, the 20001st word, the 30001st word, etc.  I.e., print every 10000th word, starting with the first word.  There should be 48 words in the resulting list.
+
+Solution:
+
+Consider the file `/usr/share/dict/words`
+
+a.  How many words contain 2 or more consecutive vowels?
+
+[source,bash]
+----
+awk 'BEGIN{ } { if (tolower($0) ~ /[aeiou][aeiou]/) print $0 } END{ }' /usr/share/dict/words | wc
+179408  179408 2000804
+----
+
+b.  How many words contain the pattern n't or the pattern 've ?
+(Hint:  Use '\'' for the single quote in your pattern.)
+
+[source,bash]
+----
+awk 'BEGIN{ } { if ($0 ~ /n'\''t|'\''ve/) print $0 } END{ }' /usr/share/dict/words | wc
+42      42     295
+----
+
+c.  Print all of the words that contain 5 or more consecutive vowels.
+
+[source,bash]
+----
+awk -W posix 'BEGIN{ } { if (tolower($0) ~ /[aeiou]{5,}/) print $0 } END{ }' /usr/share/dict/words
+AAAAAA
+Aeaea
+Aeaean
+AIEEE
+cadiueio
+Chaouia
+cooeeing
+euouae
+Guauaenok
+miaoued
+miaouing
+Pauiie
+queueing
+----
+
+d.  Print the following words from the file `/usr/share/dict/words`
+
+The 1st word, the 10001st word, the 20001st word, the 30001st word, etc.  I.e., print every 10000th word, starting with the first word.  There should be 48 words in the resulting list.
+
+`awk 'BEGIN{ } { if (NR % 10000 == 1) print $0 } END{ }' /usr/share/dict/words | wc`
+
+
+
+Question 8
+
+a.  Print the names of all of the files and directories in the `/etc` directory that were modified in the current month (i.e., in October 2015).
+
+b.  Make a list of all the file names in the three directories:
+
+[source,bash]
+----
+    /usr/local/bin
+    /bin
+    /usr/bin 
+----
+
+Then sort the list, remove any duplicate file names, and store the results in a file called `myprograms.txt`.
+
+Solution:
+
+a.  Print the names of all of the files and directories in the /etc directory that were modified in the current month (i.e., in October 2015).
+
+(We use the colon in the 8th field because we want the year to be the current year.)
+
+`ls -la /etc | awk 'BEGIN{ } { if (($6 == "Oct") && ($8 ~ /\:/)) print $0 } END{ }'`
+
+b.  Make a list of all the file names in the three directories:
+
+[source,bash]
+----
+    /usr/local/bin
+    /bin
+    /usr/bin 
+----
+
+Then sort the list, remove any duplicate file names, and store the results in a file called myprograms.txt.
+
+`ls -la /usr/local/bin /bin /usr/bin | awk 'BEGIN{ } { print $9 } END{ }' | sort | uniq >myprograms.txt`
+
+
+
+
+== Project 7
+
+Question 1.
+
+a.  In R, use the `system` function with the parameter `intern=TRUE` to solve question 1a from project 3.  Inside the system function, you can use any method from bash that you like.  The goal is to be able to solve this question relatively quickly, without having to import the complete file `allyears.csv` into R.
+
+b.  In R, use the `pipe` function, wrapped inside the `read.csv` function, to solve question 1a in a different way, without using the `system` function.
+
+c.  Use `system.time` to see which of these two methods is faster.  By the way, both methods should be MUCH faster than importing the entire `allyears.csv` file, as we naively did back in project 3.
+
+Solution:
+
+a. For the `DepTime`, there are 2302136 values that are `NA` values
+
+`system("cut -d, -f5 /data/public/dataexpo2009/allyears.csv | grep NA | wc")`
+
+and there are 123534970 `DepTime` values altogether.
+
+`system("cut -d, -f5 /data/public/dataexpo2009/allyears.csv | wc")`
+
+so the fraction of NA values is `2302136 / 123534970 = 0.0186355`
+
+b. Now we use the pipe instead of the system functions.
+
+[source,r]
+----
+dim(read.csv(pipe("cut -d, -f5 /data/public/dataexpo2009/allyears.csv | grep NA"),header=F))[1]
+dim(read.csv(pipe("cut -d, -f5 /data/public/dataexpo2009/allyears.csv"),header=F))[1]
+----
+
+We get the same results as in part 1a.
+
+c. The times required for the 2 system calls in 1a are:
+
+[source,r]
+----
+system.time(system("cut -d, -f5 /data/public/dataexpo2009/allyears.csv | grep NA | wc"))
+   user  system elapsed 
+415.703   4.350 417.814 
+
+system.time(system("cut -d, -f5 /data/public/dataexpo2009/allyears.csv | wc"))
+   user  system elapsed 
+442.151   4.025 428.428
+----
+
+These times may vary, of course, depending on the load of system jobs at the time the calls are made.
+
+The times required for the 2 system calls in 1b are:
+
+[source,r]
+----
+system.time(dim(read.csv(pipe("cut -d, -f5 /data/public/dataexpo2009/allyears.csv | grep NA"),header=F))[1])
+   user  system elapsed
+422.942   4.194 423.715
+
+system.time(dim(read.csv(pipe("cut -d, -f5 /data/public/dataexpo2009/allyears.csv"),header=F))[1])
+   user  system elapsed 
+484.114  34.339 463.846
+----
+
+The solutions in 1a, using the system function,
+are just a little bit faster than the solutions in 1b, using the pipe function.
+
+Similar answers to 1a, 1b, 1c can be found by just changing `-f5` to `-f7`,
+if we want to analyze the `ArrTime` instead of the `DepTime`
+
+
+Question 2.
+
+See what is the quickest method that you can use to solve question 4c from project 3, using your knowledge of bash and/or awk tools, as well as the system or pipe functions in R.
+
+Solution:
+
+We extract fields 17 and 18 using the cut function, and then sort the output, and pipe it to the uniq function, printing the number of unique lines, along with the associated counts, and then we sort those counted lines into order, and we conclude by taking the greatest 5 such counts of origins and destinations
+
+`system("cut -d, -f17,18 /data/public/dataexpo2009/allyears.csv | sort | uniq -c | sort -n | tail -n5")`
+
+As a result, we get:
+
+[source,bash]
+----
+279716 PHX,LAX
+286328 LAS,LAX
+292125 LAX,LAS
+336938 LAX,SFO
+338472 SFO,LAX
+----
+
+
+Question 3.
+
+Solve questions 8a and 8c from project 3 again, using your knowledge of bash and/or awk tools, as well as the system or pipe functions in R.
+
+Solution:
+
+a.
+
+[source,r]
+----
+originDF <- read.csv(pipe("cut -d, -f9,17 /data/public/dataexpo2009/1987.csv"),header=T)
+v <- originDF$Origin
+names(v) <- originDF$UniqueCarrier
+tapply(v, names(v), function(x) {names(sort(table(x),decreasing=T)[1])} )
+----
+
+b.
+
+[source,r]
+----
+w <- originDF$UniqueCarrier
+names(w) <- originDF$Origin
+tapply(w, names(w), function(x) {names(sort(table(x),decreasing=T)[1])} )
+----
+
+
+Question 4.
+
+Use `awk` (and the `system` or `pipe` function in R) to solve question 1 from project 5 again.  How much faster is your solution, using these tools, as compared to the method you used from project 5?
+
+Solution:
+
+Everything can be done the same as before, but using:
+
+[source,r]
+----
+system.time(smallDF <- read.csv(pipe("awk -F, 'BEGIN{ } { if(NR % 1000 == 1) {print $15, \",\", $16, \",\", $19} } END{ }' /data/public/dataexpo2009/2008.csv"),header=T))
+dim(smallDF)
+----
+
+(This solution uses line 1 for the headers, as opposed to the solution from project 5, in which line 1 starts with the first line of the actual data.)
+
+The time taken for this command is:
+
+[source,bash]
+----
+user  system elapsed 
+1.589   0.207   1.887
+----
+
+This is much, much faster than the code from Project 5.
+
+The solution from Project 5 took the following time (and notice that we previously read into R all of the 2008 data).
+
+[source,r]
+----
+system.time(bigDF <- read.csv("/data/public/dataexpo2009/2008.csv"))
+  user  system elapsed 
+90.696 116.722 228.198
+system.time(smallDF <- bigDF[seq(1,dim(bigDF)[1],by=1000), ])
+  user  system elapsed 
+ 0.048   0.002   0.050
+dim(smallDF)
+----
+
+
+Question 5.
+
+a.  Use `awk` to find the lengths of the lines in the `yow.lines` file, and then use R to make a plot of the distribution of the lengths.
+
+b.  Is it faster to (a) use awk to find the lengths of the lines, and then import these lengths in R (instead of the whole lines themselves), or (b) is it faster use R to import all of the lines and find the lengths within R?
+
+c.  Find the distribution of the words in the `/usr/share/dict/words` file, according to the starting character.  The letters should be treated as case insensitive.
+
+d.  Use R to plot the distribution from part c.  Plot the letters in decreasing order, according to how many words start with those letters.
+
+Solution:
+
+a.
+
+[source,r]
+----
+yowDF <- read.csv(pipe("awk -F=\"\\n\" 'BEGIN{ } { print length($1) } END{ }' yow.lines"),header=F)
+plot(table(yowDF[[1]]))
+table(yowDF[[1]])
+----
+
+b.
+The solution in 5a used time:
+
+[source,r]
+----
+system.time(yowDF <- read.csv(pipe("awk -F=\"\\n\" 'BEGIN{ } { print length($1) } END{ }' yow.lines"),header=F))
+  user  system elapsed 
+ 0.004   0.047   0.050
+
+system.time(filename <- "yow.lines")
+system.time(con <- file(filename,open="r"))
+system.time(v <- readLines(con))
+system.time(table(sapply(v, nchar)))
+----
+
+Only the readLines takes any significant time, but it takes much longer in R than using awk:
+
+[source,bash]
+----
+ user  system elapsed 
+0.064   0.003   0.066
+----
+
+c.
+
+[source,r]
+----
+wordsDF <- read.csv(pipe("awk 'BEGIN{FS=\"\" } { print tolower($1) } END{ }' /usr/share/dict/words"),header=F)
+sort(table(wordsDF[[1]]),decreasing=T)
+----
+
+d.
+
+[source,r]
+----
+v <- sort(table(wordsDF[[1]]),decreasing=T)
+dotchart(v)
+----
+
+
+Question 6.
+
+Working with the DataFest 2015 `visitor.csv` file, use question 1c from project 6 to make a dotchart in R of the twenty cities with the most entries, showing the number of entries per city.  Please put the data in the dotchart into numerical order, according to the number of entries for the city.
+
+[source,r]
+----
+citiesDF <- read.csv(pipe("awk -F, 'BEGIN{ } { print $198 } END{ }' /data/public/datafest2015/visitor.csv | sort | uniq -c | sort -n | tail -n21"),header=F)
+mylist <- strsplit(as.character(citiesDF[[1]][1:20]), "\\s+")
+mycounts <- as.numeric(sapply(mylist, function(x) x[[2]]))
+names(mycounts) <- as.character(citiesDF[[1]][1:20])
+class(mycounts)
+dotchart(mycounts)
+----
+
+Question 7.
+
+For parts a, b, c, use `bash` or `awk` tools.
+
+a.  The file `babynames.txt` has 134 years of data, with all of the baby names from 1880 to 2013.  Extract a list of all of the names (regardless of gender).
+
+b.  Remove the duplicates from the list in part a.
+
+c.  Count the number of (unique) names that remain, according to the length of the name.
+
+d.  Finally, import the resulting distribution of lengths to R, and make a plot of the distribution of the number of names, according to the length of the name.
+
+e.  Redo parts 7a through 7d using only R functions, without resorting to bash or awk.
+
+f.  Which method was faster?  The method that blended bash/awk/R tools, or the method that used only tools from R?
+
+Solution:
+
+a.
+
+`read.csv(pipe("awk 'BEGIN{ } { print $3; print $5 } END{ }' babynames.txt"),header=F)`
+
+b.
+
+`read.csv(pipe("awk 'BEGIN{ } { print $3; print $5 } END{ }' babynames.txt | sort | uniq"),header=F)`
+
+c.
+
+`lengthDF <- read.csv(pipe("awk 'BEGIN{ } { print $3; print $5 } END{ }' babynames.txt | sort | uniq | awk 'BEGIN{ } { print length($0) } END{ }' | sort -n | uniq -c | awk 'BEGIN{ } { print $1, \",\", $2 } END{ }'"),header=F)`
+
+d.
+
+`plot( lengthDF[[2]], lengthDF[[1]])`
+
+e.
+
+[source,r]
+----
+allnames <- read.delim("babynames.txt",header=F,sep=" ")
+class(allnames)
+plot(table(nchar(unique(c(as.character(allnames[[3]]), as.character(allnames[[5]]))))))
+----
+
+f. It is faster to use a blend of tools.
+

@@ -1,0 +1,954 @@
+= STAT-LLC 2017 bash and awk Exercises
+
+== Project 1
+
+Question 1.
+
+a.  Read a little about the data from the ASA DataExpo 2009:
+
+http://stat-computing.org/dataexpo/2009/
+
+b.  Navigate to the scratch directory for your group using the cd command. Then use a for loop and the wget command to download the airline data, and bzip2 to unzip the data.  Try to understand what these commands are doing.
+
+[source,bash]
+----
+for ((x = 1987 ; x <= 2008 ; x++)); do
+  wget http://stat-computing.org/dataexpo/2009/$x.csv.bz2
+  bzip2 -d $x.csv.bz2
+done
+----
+
+Question 2.
+
+a.  Use the ls command to learn which of the resulting .csv files is biggest in terms of bytes.  How many bytes does this largest file have?
+
+b.  Use the wc command to learn which of the resulting .csv files has the most lines.  How many lines does this largest file have?
+
+c.  Use the cat command to concatenate all of the files together into one big file.  How many lines does this new file have?
+
+Solution:
+
+a. `2007.csv` has 702878193 bytes
+
+`ls  -la *.csv | sort -n | tail -n1`
+
+b. `2007.csv` has 7453216 lines
+
+`wc -l *.csv | grep -v total | sort -n | tail -n1`
+
+c. The new big file has 123534991 lines.
+
+[source,bash]
+----
+cat *.csv >bigfile.csv
+wc -l bigfile.csv
+----
+
+
+Question 3.
+
+a.  Use the head command to get information about the first 10 rows of the file.  Pipe the results to the cut command and extract the 17th and 18th fields (using comma as the delimiter), to get information about the first several origin-to-destination pairs.
+
+b.  Try the same concept with the tail of the file.
+
+Solution:
+
+a. The first several origin-to-destination pairs are:
+
+[source,bash]
+----
+head bigfile.csv  | cut -d, -f17-18
+Origin,Dest
+SAN,SFO
+SAN,SFO
+SAN,SFO
+SAN,SFO
+SAN,SFO
+----
+
+b. The last several lines are:
+
+`tail bigfile.csv  | cut -d, -f17-18`
+
+
+Question 4.
+
+a.  Now extract the 17th and 18th fields from the entire file.  Pipe the results to the sort command, and then pipe those results to the uniq command (with a certain flag), to find out how many flights occurred between each pair of cities.
+
+b.  Same question as 4a, but now pipe the results to the sort command again, this time with a -n flag, to put the results into sorted order.
+
+Solution:
+
+a. These are the counts of the number of flights between each pair of cities.
+
+`cat bigfile.csv | cut -d, -f17-18 | sort | uniq -c`
+
+For example, here are the last 10 entires in this list:
+
+[source,bash]
+----
+      1 YKM,SFO
+      1 YKM,SJC
+    750 YKM,SLC
+      1 YUM,GJT
+   1454 YUM,IPL
+    479 YUM,LAS
+   6929 YUM,LAX
+  13588 YUM,PHX
+      3 YUM,PSP
+    469 YUM,SLC
+----
+
+b. Here are is the sorted output.
+
+`cat bigfile.csv | cut -d, -f17-18 | sort | uniq -c | sort -n`
+
+For example, here are the last 10 entires in this list:
+
+[source,bash]
+----
+ 239183 LAS,PHX
+ 240587 PHX,LAS
+ 249250 MSP,ORD
+ 249960 ORD,MSP
+ 279116 LAX,PHX
+ 279716 PHX,LAX
+ 286328 LAS,LAX
+ 292125 LAX,LAS
+ 336938 LAX,SFO
+ 338472 SFO,LAX
+----
+
+Question 5.
+
+a.  How many origin-to-destination pairs are there?
+
+b.  Which is the most popular origin-to-destination pair?
+
+c.  Which is the 100th most popular origin-to-destination pair?  (Hint: use tail with a flag that specifies 100 results, and then pipe the results to the head command.)
+
+Solution:
+
+a. There are 8607 origin-to-destination pairs.
+
+`cat bigfile.csv | cut -d, -f17-18 | grep -v Origin | sort | uniq | wc -l`
+
+b. The most popular origin-to-destination pair is `338472 SFO,LAX`
+
+`cat bigfile.csv | cut -d, -f17-18 | grep -v Origin | sort | uniq -c | sort -n | tail -n1`
+
+c. The 100th most popular origin-to-destination pair is `119452 ORD,IAH`
+
+`cat bigfile.csv | cut -d, -f17-18 | grep -v Origin | sort | uniq -c | sort -n | tail -n100 | head -n1`
+
+
+Question 6.
+
+a.  For which origin-to-destination pair were there exactly 10000 flights from 1987 to 2008 ?
+
+b.  Which airplane flew exactly 10000 flights from 1987 to 2008 ?
+
+Solution:
+
+a. There were exactly 10000 flights on this origin-to-destination pair: DFW,GSP
+
+`cat bigfile.csv | cut -d, -f17-18 | sort | uniq -c | grep 10000`
+
+b. The airplane that flew exactly 10000 flights from 1987 to 2008 is: N494CA
+
+`cat bigfile.csv | cut -d, -f11 | sort | uniq -c | grep 10000`
+
+Question 7.
+
+a.  Were there more flights arriving in ORD or departing from ORD ?
+
+b.  Compare the number of flights from ORD to IND versus the number of flights from IND to ORD.
+
+Solution:
+
+a. The number of flights departing from ORD is:  6597442
+
+`cat bigfile.csv | cut -d, -f17 | grep ORD | wc -l`
+
+The number of flights arriving in ORD is:  6638035
+
+`cat bigfile.csv | cut -d, -f18 | grep ORD | wc -l`
+
+So there were more flight arriving in ORD.
+
+b. There were 79334 flights from ORD to IND.
+
+`cat bigfile.csv | cut -d, -f17,18 | grep ORD,IND | wc -l`
+
+There were 80498 flights from IND to ORD.
+
+`cat bigfile.csv | cut -d, -f17,18 | grep IND,ORD | wc -l`
+
+
+Question 8.
+
+8.  Which airplane flew the greatest number of flights from 1987 to 2008 ?
+
+http://stat-computing.org/dataexpo/2009/supplemental-data.html
+
+Solution:
+
+The tailnum N528 flew 34526 flights
+
+`cat bigfile.csv | cut -d, -f11 | sort | uniq -c | sort -n`
+
+
+Question 9.
+
+Use the supplemental data to make a listing of the total number of airports in each state.
+
+Solution:
+
+First we download the data about the airports
+
+`wget http://stat-computing.org/dataexpo/2009/airports.csv`
+
+Then we extract the data about the states from the 4th column and we see how many occur in each state.
+
+[source,bash]
+----
+cat airports.csv | cut -d, -f4 | sort | uniq -c
+   263 "AK"
+    73 "AL"
+    74 "AR"
+     3 "AS"
+    59 "AZ"
+----
+
+Question 10.
+
+a.  Make a list of how many flights arrived at IND in each year.
+
+b.  Make a list of how many flights occurred during each month/year pair, e.g., how many in October 1987, how many in November 1987, etc.
+
+Solution:
+
+a. We find the number of flights that arrive at IND each year.
+
+`cat [1-2]*.csv | cut -d, -f1,18 | grep IND | sort | uniq -c`
+
+We note that, in this case, the "sort" is not really needed, because the lines we want to count are already in the desired order, but we use the sort anyway, just for consistency.
+
+[source,bash]
+----
+  8707 1987,IND
+ 36961 1988,IND
+ 40042 1989,IND
+ 43437 1990,IND
+ 42508 1991,IND
+----
+
+etc.
+
+b. The same idea works, if we want to show the number of flights according to month and year.  We just use the 1st and 2nd fields.
+
+[source,bash]
+----
+cat [1-2]*.csv | cut -d, -f1,2 | sort | uniq -c
+448620 1987,10
+422803 1987,11
+440403 1987,12
+436950 1988,1
+441670 1988,10
+----
+etc.
+
+
+Question 11.
+
+On which day of the week (Monday through Sunday) are people most likely to fly to ORD?
+
+Solution:
+
+People are most likely to fly to O'Hare on the 3rd day which means Wednesday, according to the data dictionary:
+
+`http://stat-computing.org/dataexpo/2009/the-data.html`
+
+[source,bash]
+----
+cat [1-2]*.csv | cut -d, -f4,18 | grep ORD | sort | uniq -c | sort -n
+851290 6,ORD
+915345 7,ORD
+970601 5,ORD
+972314 4,ORD
+975216 1,ORD
+976395 2,ORD
+976874 3,ORD
+----
+
+Question 12.
+
+During the years 2004 to 2008 (inclusive), which airplane has landed in Chicago O'Hare the largest number of times?
+
+Solution:
+
+The airplane that has landed at O'Hare the most times between 2004 to 2008 is N670AE
+
+[source,bash]
+----
+cat 200[4-8].csv | cut -d, -f11,18 | grep ORD | sort | uniq -c | sort -n
+  3603 N656AE,ORD
+  3660 N674RJ,ORD
+  3680 N672AE,ORD
+  3742 N670AE,ORD
+  9644 000000,ORD
+  9974 ,ORD
+ 36255 0,ORD
+----
+
+
+Broader questions:
+
+Question 13.
+
+Do the seasons of the year significantly affect where people can fly?
+
+Question 14.
+
+How many of the flights in 1992 had nonnegative departure delay (i.e., did not depart early)?
+
+Solution:
+
+There were 3743719 flights in 1992 with nonnegative departure delay, i.e., without a negative sign in the DepDelay
+
+`cat 1992.csv | cut -d, -f16 | grep -v "-" | wc -l`
+
+
+== Project 2
+
+Question 1.
+
+a.  Read a little about the New York City Yellow Taxi Data
+
+http://www.nyc.gov/html/tlc/html/about/trip_record_data.shtml
+
+b.  Navigate to the scratch directory for your group using the cd command. Then use a double for loop and the wget command to download the airline data.
+
+Note:  There are 228 GB in this data set!
+
+[source,bash]
+----
+for year in {2009..2017}; do
+  for month in {01..12}; do
+    wget https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_$year-$month.csv
+  done
+done
+----
+
+c.  You will see that the various files have various numbers of columns. Please make a version of the files in which the data is consistent, i.e., in which all of the files have the same number (and type) of columns.
+
+Solution:
+
+c. We only need 6 fields for this project.
+
+The pickup date/time is always the 2nd field.
+
+The dropoff date/time is always the 3rd field.
+
+The passenger count is always the 4th field.
+
+The trip distance is always the 5th field.
+
+The payment type is the 12th field for the first 7.5 years, i.e., from January 2009 through June 2016 but is the 10th field for the last 1 year, i.e., from July 2016 to June 2017.
+
+The total amount is always the last field.  In awk, NF is the number of fields, so $NF refers to the last field.
+
+[source,bash]
+----
+cat yellow_tripdata_2009-*.csv yellow_tripdata_201[0-5]-*.csv yellow_tripdata_2016-0[1-6].csv | awk -F, 'BEGIN{OFS=","} {print $2, $3, $4, $5, $12, $NF}' >>bigfile.csv
+cat yellow_tripdata_2016-0[7-9].csv yellow_tripdata_2016-1*.csv yellow_tripdata_2017*.csv | awk -F, 'BEGIN{OFS=","} {print $2, $3, $4, $5, $10, $NF}' >>bigfile.csv
+----
+
+We used the double right arrow because it appends to the previous data, i.e., the results of the second command will not destroy the results from the first command. This makes a file that is about 94 GB.
+
+Question 2.
+
+a.  What was the largest number of passengers in a single trip?
+
+b.  On which days did those trips occur?
+
+Solution:
+
+a. We can see how many taxi cab rides occurred, with each possible number of passengers.
+
+[source,bash]
+----
+cat bigfile.csv | awk -F, '{ countpassengers[$3] = countpassengers[$3] + 1 } END{ for (key in countpassengers) { print key, countpassengers[key] }}' | sort -n >myresults.txt
+tail myresults.txt
+----
+
+It looks like a total of 255 passengers were listed on 10 of the taxi cab rides. This is probably erroneous, but nonetheless, 10 such taxi cab rides are given.
+
+[source,bash]
+----
+213 4
+223 1
+225 1
+229 1
+232 1
+247 1
+249 1
+250 3
+254 1
+255 10
+----
+
+If you prefer, we can solve this problem without awk:
+
+`cat bigfile.csv | cut -d, -f3 | sort -n | tail`
+
+and we get a similar answer.
+
+b. Those big rides (which supposedly had 255 passengers each) happened on these dates:
+
+[source,bash]
+----
+cat yellow*.csv | awk -F, '{if ($4 == 255) {print $2} }' >big10.txt &
+cat big10.txt
+2009-04-04 19:37:00
+2009-07-18 19:41:00
+2009-07-19 09:30:00
+2009-07-16 20:51:00
+2009-08-24 23:44:00
+2010-09-14 23:36:00
+2010-09-23 10:45:00
+2011-07-25 22:18:00
+2013-01-08 10:16:00
+2013-03-23 22:55:00
+----
+
+Question 3.
+
+What percentage of taxi cab trips arrived on a different day than they departed (i.e., the trip lasted past midnight)?
+
+Solution:
+
+3. In this solution, we note that sometimes there are erroneous dates, for instance, in which the departure time is listed after the arrival time, and we do not correct for such dates here. We do, however, remove the header from each file, but we do not check (for instance) for blank lines or other errors. Notice that we are using the comma and blank space as two (simultaneous) delimiters. The percentage of dates where the departure and arrival date are different is: 0.00971386, in other words, roughly 1 percent of the taxi cab rides have this property.
+
+`cat bigfile.csv | awk -F[,\ ] '{totaldates = totaldates + 1; if ($1 != $3) {wrongdates = wrongdates + 1}} END {print wrongdates/totaldates}'`
+
+Question 4.
+
+How many passengers traveled on each day?
+
+Solution:
+
+4. We keep track of the datecount for each day. Note that we again use the comma and blank space as two (simultaneous) delimiters. We put the results into the file `passengersperday.txt`
+
+[source,bash]
+----
+cat bigfile.csv | awk -F[,\ ] '{ datecount[$1] = datecount[$1] + $5} END{ for (key in datecount) { print key, datecount[key] } }' | sort -n >passengersperday.txt
+tail passengersperday.txt
+----
+
+The last several such counts are:
+
+[source,bash]
+----
+2017-06-26 471265
+2017-06-27 515074
+2017-06-28 506192
+2017-06-29 502654
+2017-06-30 491689
+----
+
+Question 5.
+
+a.  How much money was collected from passengers on each day (total amount)?
+
+b.  Same question, but restrict attention to the rides in which the passengers paid with a credit card.
+
+Solution:
+
+a. Similar to the last problem, we keep track of the datetotalamount for each day. We put the results into the file totalamountperday.txt
+
+`cat bigfile.csv | awk -F[,\ ] '{ datetotalamount[$1] = datetotalamount[$1] + $8} END{ for (key in datetotalamount) { print key, datetotalamount[key] } }' | sort -n >totalamountperday.txt`
+
+The last several such daily total amounts are:
+
+[source,bash]
+----
+tail totalamountperday.txt
+2017-06-21 5.76079e+06
+2017-06-22 5.77223e+06
+2017-06-23 5.69886e+06
+2017-06-24 4.91986e+06
+2017-06-25 4.43787e+06
+2017-06-26 4.93678e+06
+2017-06-27 5.34543e+06
+2017-06-28 5.41506e+06
+2017-06-29 5.4581e+06
+2017-06-30 4.96178e+06
+----
+
+b. We first find out how many types of ways that credit cards are denoted in the data:
+
+`cat bigfile.csv | awk -F[,\ ] '{ print $7 }' | sort | uniq -c >paymenttypes.txt`
+
+We see that there is some erroneous organization of a small amount of the data, which corrupts this column a little bit, but nonetheless, we can still make sense of the payment types.  The most important ones are:
+
+[source,bash]
+----
+26053917 Cas
+30792006 CAS
+56282593 Cash
+69117503 CASH
+382212709 CRD
+27416052 Cre
+3369965 CRE
+42561382 Credit
+2330599 CREDIT
+389969596 CSH
+  43596 Dis
+ 365825 DIS
+  94784 Dispute
+  39986 NA
+ 709645 No
+1195881 NOC
+1070012 UNK
+----
+
+So we want to sum the payments as in 5a, but first we restrict to payment type CRD, Cre, CRE, Credit, or CREDIT. Starting in 2015, we need to search for credit card type "1", according to the data dictionary:
+
+http://www.nyc.gov/html/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pdf
+
+`cat bigfile.csv | awk -F[,\ ] '{ if (($7 == "CRD") || ($7 == "Cre") || ($7 == "CRE") || ($7 == "Credit") || ($7 == "CREDIT") || ($7 == "1")) {datetotalamount[$1] = datetotalamount[$1] + $8}} END{ for (key in datetotalamount) { print key, datetotalamount[key] } }' | sort -n >credittotalamountperday.txt`
+
+The tail of the result, for instance, is:
+
+[source,bash]
+----
+2017-06-21 4.17415e+06
+2017-06-22 4.32423e+06
+2017-06-23 4.20328e+06
+2017-06-24 3.43718e+06
+2017-06-25 3.17072e+06
+2017-06-26 3.61466e+06
+2017-06-27 3.9682e+06
+2017-06-28 4.04539e+06
+2017-06-29 4.08786e+06
+2017-06-30 3.57488e+06
+----
+
+Question 6.
+
+How much travel occurred (altogether) on each day?
+
+Solution:
+
+Again, similar to 4 and 5a, we keep track of the totalmiles for each day. We put the results into the file `totalmilesperday.txt`
+
+`cat bigfile.csv | awk -F[,\ ] '{ totalmiles[$1] = totalmiles[$1] + $6} END{ for (key in totalmiles) { print key, totalmiles[key] } }' | sort -n >totalmilesperday.txt`
+
+The last several such daily total amounts are:
+
+[source,bash]
+----
+tail totalmilesperday.txt
+2017-06-21 962384
+2017-06-22 994709
+2017-06-23 988385
+2017-06-24 932349
+2017-06-25 895173
+2017-06-26 925446
+2017-06-27 945232
+2017-06-28 939698
+2017-06-29 930352
+2017-06-30 884978
+----
+
+
+Question 7.
+
+a.  How much travel occurred in miles (altogether) on trips with 1 passenger?
+
+b.  How much travel occurred in miles (altogether) on trips with 2 passenger?
+
+c.  For each integer, how much travel occurred in miles (altogether) on trips with that many passengers?
+
+Solution:
+
+We group the amount of miles traveled according to the number of passengers. We go back to (only) using a comma as a delimiter, since we are no longer using the dates. We store the results in a file called `totalmilesperpassengercount.txt`
+
+`cat bigfile.csv | awk -F, '{ milestraveled[$3] = milestraveled[$3] + $4} END{ for (key in milestraveled) { print key, milestraveled[key] } }' | sort -n >totalmilesperpassengercount.txt`
+
+[source,bash]
+----
+head totalmilesperpassengercount.txt
+ 0
+0 9.00201e+06
+ passenger_count 0
+passenger_count 0
+Passenger_Count 0
+1 5.36054e+09
+2 1.00499e+09
+3 2.95196e+08
+4 1.24224e+08
+5 2.51568e+08
+----
+
+a.  So there were 5.36054e+09 miles altogether for the trips with 1 passenger,
+
+b.  and there were 1.00499e+09 miles altogether for the trips with 2 passengers,
+
+c.  etc., etc.  We see the head of the file with all of the results, given above.
+
+
+Question 8.
+
+Returning to the airline data set:
+
+a.  How far has each airplane flown?  (I.e., group the flights by tailnum, and add the total distances of the flights for each tailnum.)
+
+b.  How far have each airline's planes flown altogether?
+
+Solution:
+
+For questions 8 through 11, the "bigfile.csv" refers to a file with all of the airline data (as opposed to all of the taxi data)
+
+a. We group the amount of miles flown according to the tailnum. We store the results in a file called totalmilesflown.txt
+
+`cat bigfile.csv | awk -F, '{ milesflown[$11] = milesflown[$11] + $19} END{ for (key in milesflown) { print key, milesflown[key] } }' | sort -n >totalmilesflown.txt`
+
+[source,bash]
+----
+tail totalmilesflown.txt
+91869E 337675
+91879E 363405
+96009E 76734
+96019E 110140
+96029E 112893
+96049E 91183
+96059E 175471
+96069E 166937
+96079E 166177
+ 81199937
+----
+
+b. Same concept, but now we group according to the carrier. We store the results in a file called totalmilesflownpercarrier.txt
+
+`cat bigfile.csv | awk -F, '{ milesflownpercarrier[$9] = milesflownpercarrier[$9] + $19} END{ for (key in milesflownpercarrier) { print key, milesflownpercarrier[key] } }' | sort -n >totalmilesflownpercarrier.txt`
+
+[source,bash]
+----
+head totalmilesflownpercarrier.txt
+AA 14237240059
+AQ 52022302
+AS 2138434915
+B6 970096179
+CO 7290881290
+DH 259805885
+DL 11782682821
+EA 557435834
+EV 764868753
+F9 299595575
+----
+
+Question 9.
+
+On each day of the year, what was/were the most popular origin-to-destination pair(s)?
+
+Hint:  Dr Ward started this way:
+
+`cat *.csv | awk -F, '{print $1"-"$2"-"$3" "$17"-"$18}' | sort | uniq -c | sort -k2,2 -k1,1nr | awk -F" " ....`
+
+and you can try to fill in the ....
+
+This groups the dates and the flight paths and gets the counts for each. In my awk, I do this:
+
+[source,bash]
+----
+if $2 does not equals the previous date, then:
+   print the current flight (since it is a max)
+   and update the current count to $1
+   and update the current date to $2
+ else
+   if $1 equals the current count, then print the current flight
+----
+
+That's it!
+
+Solution:
+
+First we make a listing of all dates and origin-to-destination pairs, with the associated counts.
+
+`cat bigfile.csv | cut -d, -f1,2,3,17,18 | sort -n | uniq -c >dateflights.txt`
+
+Then, for each date, we find the highest count. To do this, since the data is already sorted, we just process the data line by line in the sorted order:
+
+[source,bash]
+----
+if $2 does not equals the previous date, then:
+  print the current flight (since it is a max)
+  and update the current count to $1
+  and update the current date to $2
+else
+  if $1 equals the current count, then print the current flight
+cat bigfile.csv | awk -F, '{print $1"-"$2"-"$3" "$17"-"$18}' | sort | uniq -c | sort -k2,2 -k1,1nr | awk -F" " '{if($2 != prevdate) {prevdate=$2;prevcount=$1;print $0} else{if($1==prevcount){print $0} } }' >mostpopular.txt
+----
+
+Question 10.
+
+Consider the Friday immediately after Thanksgiving 2008.
+
+a. How many airplanes departed from each airport on that day?
+
+b. Sort the flight data for that day according to two keys simultaneously:  first according to the tailnum, and then according to the departure time.
+
+c. For each tailnum, print the departure delay of the first flight that the tailnum made on that day.
+
+d. Among the initial flight of the day that departed late, how many arrived late as well?
+
+Solution:
+
+a.  We can extract the origin airports for November 28, 2008, and then sort and use uniq -c to get a count for how many airplanes departed from each such airport:
+
+`cat 2008.csv | awk -F, '{if ($1==2008 && $2==11 && $3==28) {print $17}}' | sort | uniq -c`
+
+Here is the head, for instance:
+
+[source,bash]
+----
+     8 ABE
+     7 ABI
+    82 ABQ
+     2 ABY
+     4 ACT
+     7 ACV
+     1 ADQ
+     4 AEX
+     3 AGS
+    27 ALB
+----
+
+b.  We can extract the Tailnum, DepTime, DepDelay, and ArrDelay for each flight from November 28, 2008:
+
+`cat 2008.csv | awk -F, '{if ($1==2008 && $2==11 && $3==28) {print $11,$5,$16,$15}}' >dayafterthanksgiving.txt`
+
+Then we can sort the output, first with respect to the tailnum, and then with respect to the departure time, sorted as a number:
+
+`sort -k1,1 -k2,2n dayafterthanksgiving.txt`
+
+The first few lines are:
+
+[source,bash]
+----
+1155 -5 NA
+80009E 620 -5 -2
+80009E 939 -1 -2
+80009E 1123 -2 -5
+80009E 1506 -4 -20
+80009E 1828 -5 -13
+80009E 2216 -5 -10
+80019E 618 -2 -26
+80019E 917 -3 -3
+80019E 1128 -5 -3
+----
+
+c.  We just check to see if the current tailnum equals the previous tailnum, and if it does not, then we are looking at the first flight of the day, so we print the information for that flight.
+
+I opted to print the Tailnum, DepDelay, and ArrDelay for each such flight
+
+`sort -k1,1 -k2,2n dayafterthanksgiving.txt | awk -F" " '{if($1 != prevtailnum) {prevtailnum=$1;print $0}}' >firstflights.txt`
+
+d.  If those DepDelays and ArrDelays are negative, we print the result:
+
+`awk -F" " '{if (($3 > 0) && ($4 > 0)) {print $0}}' firstflights.txt | wc`
+
+There were about 399 such flights.
+
+This includes some NA values, but it is approximately correct, and we could further refine the answer if desired.
+
+
+Question 11.
+
+For each origin-to-destination pair, what percentage of flights had departure delays?  Hint: For each origin-to-destination pair, you may add the departure delays and divide by the number of flights.  You will probably need to utilize two separate types of counters in awk.
+
+Solution:
+
+For each origin-to-destination pair, what percentage of flights had departure delays?  Hint: For each origin-to-destination pair, you may add the departure delays and divide by the number of flights.  You will probably need to utilize two separate types of counters in awk.
+
+`cat bigfile.csv | awk -F, '{print $17"-"$18","$16}' | awk -F, '{ flightcounter[$1] = flightcounter[$1] + 1; if($2>0) {delaycounter[$1] = delaycounter[$1] + 1}} END{ for (key in flightcounter) {print delaycounter[key] / flightcounter[key], key }}' | sort -n  >flightdelaypercentages.txt`
+
+For instance, we see that the IND to ORD percentage is:
+
+`0.41642 IND-ORD`
+
+and the ORD to IND percentage is:
+
+`0.541836 ORD-IND`
+
+
+
+== Project 3
+
+Question 5.
+
+Consider the 2008 flights in the ASA DataExpo 2009. Tabulate how many flights departed from each airport. Solve the question in two ways:
+
+a. use either `cut` or `awk` (in UNIX)
+
+b. use the `table` function in R
+
+Solution:
+
+a.  In bash, we can download the data (these are for the bash shell, not for R)
+
+`wget http://stat-computing.org/dataexpo/2009/2008.csv.bz2`
+
+and then uncompress the data
+
+`bzip2 -d 2008.csv.bz2`
+
+then we can count how many flights depart from each airport. The use of awk at the end is just to put a comma between the two fields. The grep is used to remove lines that have the word "Origin"; there is just one such line, and we do not want it.
+
+`cat 2008.csv | cut -d, -f17 | sort | uniq -c | awk '{print $1","$2}' | grep -v Origin >origins.csv`
+
+an alternative approach is:
+
+`cat 2008.csv | awk -F, '{print $17}' | sort | uniq -c | awk '{print $1","$2}' | grep -v Origin >alternativeorigins.csv`
+
+Inside R, we can import the data this way:
+
+`originsDF <- read.csv("origins.csv",header=F)`
+
+Then we can create a vector of the data
+
+`v <- originsDF$V1`
+
+and name it with the airports:
+
+[source,r]
+----
+names(v) <- originsDF$V2
+v
+length(v)
+----
+
+b.  Using the table function, we can do:
+
+[source,r]
+----
+myDF <- read.csv("2008.csv")
+w <- table(myDF$Origin)
+----
+
+Question 6.
+
+Save the output from 5a into a comma-separated file. Import it to R, and use R to rigorously check (i.e., not just with your eyeballs) that the results are exactly the same.
+
+Solution:
+
+To see that these are the same, we can check that there are no entries for which v and w are different.
+
+`sum(v!=w)`
+
+
+Question 7.
+
+On Thanksgiving Day 2015 (2015-11-26) there should be almost no taxi pickups where the parade route takes place:
+
+http://www.marching.com/news/2015/2015-macys-parade-lineup/2015_macys_parade_route_map.jpg
+
+a. Use awk to extract the taxi cab data from Nov 26, 2015. Use three delimiters for the data: comma, space, and colon [That way, you can easily determine the hour in which a taxi cab ride starts.] It suffices to extract the taxi cab rides that started between 9 AM and 12 noon, i.e., those rides in which the hour of departure is 9, 10, or 11.
+
+b. Save this data into a comma-separated file.
+
+c. Import the data about the longitudes and latitudes to R.
+
+Solution:
+
+On Thanksgiving Day 2015 (2015-11-26). There should be almost no taxi pickups where the parade route takes place:
+
+`http://www.marching.com/news/2015/2015-macys-parade-lineup/2015_macys_parade_route_map.jpg`
+
+ab. In bash, we can download the file as follows:
+
+[source,bash]
+----
+wget https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2015-11.csv
+cat yellow_tripdata_2015-11.csv | awk -F[,:\ ] '{if (($2 == "2015-11-26") && (($3=="09")||($3=="10")||($3=="11"))) {print $12","$13}}' >thanksgivinglonglat.csv
+----
+
+c. Now we import the data
+
+`myDF <- read.csv("thanksgivinglonglat.csv", header=F)`
+
+
+Question 8.
+
+Make a map of New York City at a zoom level of 14 that shows the entire parade route. (Use the data from question 7.) Are you able to see that taxi cab rides were unable to pickup passengers along the parade route?
+
+Solution:
+
+#8. Now we make the map
+
+[source,r]
+----
+library(ggmap)
+mypoints <- data.frame(lon=myDF$V1,lat=myDF$V2)
+----
+
+In preparation for making a map, we get the center of New York City from Google:
+
+`nyc_center = as.numeric(geocode("Carnegie Hall"))`
+
+Then we build a map of New York
+
+[source,r]
+----
+NYCMap = ggmap(get_googlemap(center=nyc_center,zoom=14), extent="normal")
+NYCMap
+NYCMap <- NYCMap + geom_point(
+  data=mypoints[mypoints$lat>40.746 & mypoints$lat<40.785 & mypoints$lon> -74.01 & mypoints$lon< -73.95, ])
+  NYCMap
+----
+
+Question 9.
+
+Use the tapply and summary functions to learn about the distribution of trip distances of taxi cab rides in New York City. Please give a summary statistics of trip distances for each day of the year 2015.
+
+Solution:
+
+First, in bash, we concatenate all of the 2015 taxi cab data into one large file, which has the dates and the trip distances:
+
+`cat yellow_tripdata_2015-*.csv | grep -v VendorID | awk -F[,\ ] '{print $2","$7}' >2015.csv`
+
+Now we import the data:
+
+[source,r]
+----
+myDF <- read.csv("2015.csv")
+names(myDF) <- c("date","distance")
+tapply(myDF$distance, myDF$date, summary)
+----
+
+Question 10.
+
+Same question as 9, but for the summary statistics of flights distances for each day of the year 2008.
+
+Solution:
+
+First we read in the 2008 airline data:
+
+`myDF <- read.csv("2008.csv")`
+
+Then we extract the dates and distances
+
+[source,r]
+----
+mydates <- paste(myDF$Year, myDF$Month, myDF$DayofMonth, sep="-")
+mydistances <- myDF$Distance
+----
+
+and finally we use the tapply function
+
+`tapply(mydistances, mydates, summary)`
+
+
+

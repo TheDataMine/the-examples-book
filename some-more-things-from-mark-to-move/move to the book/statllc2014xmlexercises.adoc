@@ -1,0 +1,267 @@
+= STAT-LLC 2014 XML Exercises
+
+== Project 10
+
+Please answer questions 4 to 6 in R, by using XML tools.
+
+Question 4.
+
+Consider the 11 pages of college rankings found at the US News and World Report page: `http://colleges.usnews.rankingsandreviews.com/best-colleges/rankings/national-universities/data`
+
+a. Which 10 universities have the highest enrollments?
+
+b. Extract the states where the colleges are located. Then use this information to make a list that shows, for each state, how many colleges (from this list) are contained in that state.
+
+c. Which 10 universities have the highest tuition charges? (For universities with both in-state and out-of-state tuitions listed, use the out-of-state listing.)
+
+Solution:
+
+We load the RCurl library
+
+`library(RCurl)`
+
+a.  First we get the URL data from each of the 11 pages of colleges
+
+`myURLdata <- sapply(1:11, function(x) getURL(paste("http://colleges.usnews.rankingsandreviews.com/best-colleges/rankings/national-universities/data/page+", x, sep="")))`
+
+Then we write the data to 11 separate files
+
+`sapply(1:11, function(x) writeLines(myURLdata[x], paste("collegedata", x, ".html", sep="") ) )`
+
+Then we close the files
+
+`sapply(1:11, function(x) close(file( paste("collegedata", x, ".html", sep=""))))`
+
+Now we load the XML library:
+
+`library(XML)`
+
+We parse the XML data in each file
+
+`mydocs <- sapply(1:11, function(x) htmlParse( paste("collegedata", x, ".html", sep="")))`
+
+Now we extractthe data with the enrollments:
+
+`myresults <- sapply(1:11, function(x) xpathSApply(mydocs[[x]], "//*/td[@class='column-even table-column-even  total_all_students  ']/child::text()", xmlValue))`
+
+and we unlist the results into a vector:
+
+`v <- unlist(myresults)`
+
+Then we remove the spaces, the new line characters, the commas, and change each "N/A" to NA
+
+[source,r]
+----
+v <- gsub(" *", "", v)
+v <- gsub("\n", "", v)
+v <- gsub(",", "", v)
+v <- gsub("N/A", NA, v)
+v <- as.numeric(v)
+v
+----
+
+Finally, we only want the odd-numbered entries:
+
+[source,r]
+----
+enrollments <- v[seq(1,length(v),by=2)]
+enrollments
+----
+
+Now we get the university names
+
+[source,r]
+----
+nameresults <- sapply(1:11, function(x) xpathSApply(mydocs[[x]], "//*/a[@class='school-name']/child::text()", xmlValue))
+mynames <- unlist(nameresults)
+----
+
+We use the names of the universities as the names of the enrollments vector
+
+`names(enrollments) <- mynames`
+
+Now we have an enrollments vector that we are ready to sort:
+
+`enrollments`
+
+The 10 largest universities, according to enrollment, are:
+
+`sort(enrollments, decreasing=T)[1:10]`
+
+b.  Now we extract the state data:
+
+[source,r]
+----
+stateresults <- sapply(1:11, function(x) xpathSApply(mydocs[[x]], "//*/p[@class='location']/child::text()", xmlValue))
+mystates <- unlist(stateresults)
+----
+
+There are various ways to get the state abbreviations.
+
+One way is to substitute everything before the comma, and the comma itself, and the next space, and replace it with nothing.
+
+Precisely, what we do is remove any number of alphabetic characters, dashes, spaces, or periods, which are followed by a comma and a space, and we replace all of this with nothing.
+
+`abbreviations <- gsub("([[:alpha:]]|-| |.)*, ", "", mystates)`
+
+The number of universities per state is then found by making a table:
+
+`table(abbreviations)`
+
+c.  Now we extract the tuition data:
+
+`tuitionresults <- sapply(1:11, function(x) xpathSApply(mydocs[[x]], "//*/td[@class='column-odd table-column-odd  search_tuition_display  ']/child::text()", xmlValue))`
+
+and we unlist the results
+
+`v <- unlist(tuitionresults)`
+
+then we remove spaces and new line characters and commas
+
+[source,r]
+----
+v <- gsub(" ", "", v)
+v <- gsub("\n", "", v)
+v <- gsub(",", "", v)
+----
+
+finally we remove all of the unwanted symbols that appear before a dollar sign, and we replace with nothing
+
+[source,r]
+----
+v <- gsub("([[:alpha:]]|[0-9]|-|\\$|:)*\\$", "", v)
+v <- gsub("N/A", NA, v)
+v <- as.numeric(v)
+v
+----
+
+We only want the odd-numbered entries:
+
+`tuition <- v[seq(1,length(v),by=2)]`
+
+We use the names of the universities as the names of the tuition vector
+
+`names(tuition) <- mynames`
+
+Now we have an enrollments vector that we are ready to sort:
+
+`tuition`
+
+The 10 most expensive universities, according to tuition, are:
+
+`sort(tuition, decreasing=T)[1:10]`
+
+
+Question 5.
+
+Consider Dr. Ward's `iTunesMusicLibrary.xml` file (the listing of the songs), located in `/data/public/iTunes/iTunesMusicLibrary.xml` (this has not been updated for a few years, but it is still relatively large and perhaps is interesting).
+
+a. According to their numbers of songs in the playlist, what are the top 10 artists who appear in the playlist?
+
+b. According to their numbers of songs in the playlist, what are the top 3 genres?
+
+There are several ways that you could work on problem 5. One possible method is to extract all of the keys, as follows:
+
+`iTunesDoc <- xmlParse("/data/public/iTunes/iTunesMusicLibrary.xml")`
+
+`iTunesvec <- xpathSApply(iTunesDoc, "//*/dict/dict/dict/child::*/child::text()", xmlValue)`
+
+Warning: This code takes several minutes to run.
+
+Solution:
+
+
+a.  First we extract the iTunes data
+
+[source,r]
+----
+iTunesDoc <- xmlParse("/data/public/iTunes/iTunesMusicLibrary.xml")
+iTunesvec <- xpathSApply(iTunesDoc, "//*/dict/dict/dict/child::*/child::text()", xmlValue)
+----
+
+We extract the indices that are equal to "Artist", and then we add 1 (to move to the next element) and extract the values
+
+Then we build a table with those artists:
+
+`sort(table(iTunesvec[which(iTunesvec == "Artist") + 1]),decreasing=T)[1:10]`
+
+b.  We use a similar method as in 5a, but looking for the genre instead of the artist.
+
+`sort(table(iTunesvec[which(iTunesvec == "Genre") + 1]),decreasing=T)[1:3]`
+
+
+Question 6.
+
+Consider the example with the Presidential votes in Indiana.
+
+a. Build your own county-by-county summaries, in each State. Try to do this as efficiently as possible.
+
+b. Do the summaries agree with Politico's State-by-State summaries? If not, what are the differences?
+
+Solution:
+
+Now we extract the data for each of the states. We first get the state names, replacing the capital letters by lowercase, and using dashes instead of spaces
+
+[source,r]
+----
+statenames <- gsub(" ", "-", tolower(row.names(state.x77)))
+mydocs <- sapply(statenames, function(x) htmlParse(paste("http://www.politico.com/2012-election/results/president/", x, sep="")))
+----
+
+We extract the names of the candidates for President, within each state
+
+`names <- sapply(1:50, function(x) xpathSApply(mydocs[[x]], "//*/th[@scope='row' and @class='results-candidate']/child::text()", xmlValue))`
+
+We also extract the votes from each county of each state
+
+`votes <- sapply(1:50, function(x) xpathSApply(mydocs[[x]], "//*/td[@class='results-popular']/child::text()", xmlValue))`
+
+We clean up the names of the candidates, removing spaces at the start or end, and removing any trailing "(i)", etc.
+
+[source,r]
+----
+names <- sapply(1:50, function(x) gsub("^ *", "", names[[x]]))
+names <- sapply(1:50, function(x) gsub(" *$", "", names[[x]]))
+names <- sapply(1:50, function(x) gsub(" *\\(i*\\)", "", names[[x]]))
+names
+----
+
+similarly, we remove the spaces and commas from the votes, and convert them each to numeric values:
+
+[source,r]
+----
+votes <- sapply(1:50, function(x) gsub(" *", "", votes[[x]]))
+votes <- sapply(1:50, function(x) gsub(",", "", votes[[x]]))
+votes <- sapply(1:50, function(x) as.numeric(votes[[x]]))
+votes
+----
+
+now we extract the number of candidates in each state:
+
+`candidatecounts <- sapply(1:50, function(x) length(levels(as.factor(names[[x]]))))`
+
+so the number of counties in each state, plus the summary, is:
+
+`sapply(1:50, function(x) length(votes[[x]]))/candidatecounts`
+
+In each state, we remove the summary values. (In Alaska, this will mean that we remove all of the votes, because Alaska only has a summary given.)
+
+Finally, we remove the first several entries of the votes and the names, since they each contain the summary data. (For example, in Indiana, there were 3 candidates, so we remove the first 3 entries, which summarize each candidate's performance.) The reason for doing this is that we don't want to double-count, i.e., we don't want to count the summaries and the county data too.
+
+[source,r]
+----
+countycandidatenames <- sapply(1:50, function(x) names[[x]][-(1:candidatecounts[x])])
+countyvotes <- sapply(1:50, function(x) votes[[x]][-(1:candidatecounts[x])])
+----
+
+Finally, here are the sums of the results, tabulated over the counties, for each state.
+
+[source,r]
+----
+bigresults <- sapply(1:50, function(x) tapply(countyvotes[[x]], countycandidatenames[[x]], sum))
+names(bigresults) <- statenames
+bigresults
+----
+
+
+

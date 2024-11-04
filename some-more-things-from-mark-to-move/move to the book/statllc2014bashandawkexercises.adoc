@@ -1,0 +1,505 @@
+= STAT-LLC 2014 bash and awk Exercises
+
+== Project 7
+
+The following resources might be helpful for you:
+
+* Dr Ward's notes: `week9.txt` on Introduction and immersion into the UNIX Operating System and the bash shell
+* http://en.wikipedia.org/wiki/List_of_Unix_programs[List of Unix utilities (Wikipedia)]
+* http://linuxcommand.org/tlcl.php[The Linux Command Line] official direct link for http://sourceforge.net/projects/linuxcommand/files/TLCL/13.07/TLCL-13.07.pdf[pdf download] of the book by William Shotts (No Starch Press, 2012)
+
+Question 1.
+
+a.  How many lines are found in the file `/etc/passwd`?
+
+b.  Remember (from the notes) that the command: `cat /etc/passwd | cut -f5 -d:` is used to find each person's name who is a user in the system.  Instead of printing the full names of the users, print their usernames (e.g., `mdw`).
+
+Solution:
+
+a. There are 100 lines in /etc/passwd right now.
+
+(Your answer might be slightly different, since new users are occasionally getting added to the llc machine.)
+
+`wc -l /etc/passwd`
+
+b. Here are the usernames from the /etc/passwd file:
+
+`cat /etc/passwd | cut -f1 -d:`
+
+Alternatively, we could type
+
+`ls /home`
+
+
+Question 2.
+
+a.  How many users have her/his directory in the `/home` filesystem?  (This is described in the 6th of the 7 fields on each line.)
+
+b.  Now extract the first names of each such user who has her/his directory in the `/home` filesystem.
+
+c.  Save the results into a file in your home directory, named `firstnames.txt`
+
+Solution:
+
+a. Approximately 69 users have their directory in the /home filesystem:
+
+`cat /etc/passwd | cut -f6 -d: | grep "/home" | wc`
+
+Alternatively, we could type:
+
+`ls /home | wc -l`
+
+b. To get these first names, we can first search for /home on the person's line (this is not foolproof, but it is probably pretty good), and then cut out the fifth field of the line (using : for a delimiter), and then get the first name by using another cut, with " " for a delimiter.
+
+`cat /etc/passwd | grep "/home" | cut -f5 -d: | cut -f1 -d" "`
+
+c. We can save the results to a file in our home directory:
+
+`cat /etc/passwd | grep "/home" | cut -f5 -d: | cut -f1 -d" " >~/firstnames.txt`
+
+
+Question 3.
+
+a.  How many words in the file `/usr/share/dict/words` contain the letter `q`?
+
+b.  Convince yourself that the command:  `awk '{print length}'` will print the length of the words in a file.  [Feb 2023 note: I think this should say "length of the lines in a file".]
+
+c.  Find the length of the words, line by line, in the file `/usr/share/dict/words`
+
+Solution:
+
+a. There are 7723 words in the /usr/share/dict/words file that contain the letter q:
+
+`grep q /usr/share/dict/words | wc -l`
+
+b./c. For instance, to convince yourself, you can see the lengths of the words in /usr/share/dict/words
+
+`awk '{print length}' /usr/share/dict/words`
+
+
+Question 4.
+
+a.  What is the longest word length, among all word lengths in the file `/usr/share/dict/words`? Hint: you might need to use `awk '{print length}'` and `sort`, with a certain flag on the sort command.  Such a flag comes in handy when you are sorting text that is numeric.  It would be helpful to read the manual for the sort command, to see which flag to use.
+
+b.  Instead of looking for the longest word length, after you sort the word lengths numerically, pipe the output to the `uniq` command, and use a flag on the `uniq` command to count the number of words of each length.
+
+Solution:
+
+a. The longest word in /usr/share/dict/words has length 45
+
+`awk '{print length}' /usr/share/dict/words | sort -n | tail -n1`
+
+Alternatively, instead of using sort -n
+
+we could use sort -g
+
+`awk '{print length}' /usr/share/dict/words | sort -g | tail -n1`
+
+b. We can sort and then use uniq to get the number of words of each length (please note that uniq usually needs to run immediately after a sort command, to do the thing that you expect it to do).
+
+We used the -c flag on uniq to count the words of each length.
+
+`awk '{print length}' /usr/share/dict/words | sort -n | uniq -c`
+
+
+Question 5.
+
+In the directory `/data/public/election2008` there is some data related to the 2008 election.  There are 49 files, namely, one for each of the 48 mainland states, and one for `DC`.  Each line has seven pieces of data, namely, the percent and number of people who voted for Obama in 2008, the percent and number who voted for McCain in 2008, the overall percent of registered votes, the state, and the county.
+
+a.  How many counties are represented in these 49 files?
+
+b.  What is the largest number of votes in one county for Obama?
+
+c.  What is the largest number of votes in one county for McCain?
+
+d.  How many counties have one or more of the following words in the title:  `north`, `east`, `south`, `west`?
+
+e.  How many characters are found in the longest county name?
+
+Solution:
+
+a. There are 3131 lines among the 49 files altogether:
+
+`cat /data/public/election2008/*.txt | wc -l`
+
+BUT there is a header line in each file, so there are not 3131 counties. There are only 3131 - 49 = 3082 counties altogether in the 49 files.
+
+b. The large number of votes in one county for Obama is 2075842:
+
+`cut -f2 -d, /data/public/election2008/*.txt | sort -n | tail -n1`
+
+c. The large number of votes in one county for McCain is 889594:
+
+`cut -f4 -d, /data/public/election2008/*.txt | sort -n | tail -n1`
+
+Incidentally, just FYI:  both of the counties in 5b and 5c are Los Angeles!
+
+d. There are 20 counties with north, east, south, or west in the title:
+
+`cut -f7 -d, /data/public/election2008/*.txt | grep "north\|east\|south\|west" | wc -l`
+
+e. The longest county name is 24 characters:
+
+`cut -f7 -d, /data/public/election2008/*.txt | awk '{print length}' | sort -n | tail -n1`
+
+Incidentally, just FYI, we can use:
+
+`cut -f7 -d, /data/public/election2008/*.txt | awk '{if (length($0) == 24) print}'`
+
+to show that this county is called:
+
+`san juan:san juan island`
+
+
+Question 6.
+
+In the directory `/data/public/dataexpo2009` there is the airline flight data, which we are already familiar with.
+
+a.  How many flights were taken in 2006?
+
+b.  How many flights were taken altogether, from 1987 to 2008?
+
+c.  How many flights had `IND` as the `Origin` city in 2006?
+
+d.  How many flights had `IND` as the `Origin` city altogether, from 1987 to 2008?
+
+Solution:
+
+a. There are 7141923 lines in the 2006.csv file:
+
+`cat /data/public/dataexpo2009/2006.csv | wc -l`
+
+BUT one line is a header, so there are 7141922 flights altogether in 2006.
+
+b. There are altogether  123534991  lines in the 22 csv files in the dataexpo directory:
+
+`cat /data/public/dataexpo2009/*.csv | wc -l`
+
+BUT each file has a 1-line header, so there are 123534991 - 22 = 123534969 flights total.
+
+c. There are 37615 flights from 2006 that had IND as the origin city:
+
+`cut -f17 -d, /data/public/dataexpo2009/2006.csv | grep IND | wc -l`
+
+Alternatively, we could have written:
+
+`cat /data/public/dataexpo2009/2006.csv | cut -f17 -d, | grep IND | wc -l`
+
+d. There are 824844 flights altogether (across all years) that had IND as the origin city:
+
+`cat /data/public/dataexpo2009/*.csv | cut -f17 -d, | grep IND | wc -l`
+
+
+Question 7.
+
+a.  In the airline data, how many unique carriers are there, in the 2006 data set?
+
+b.  In the airline data, how many unique carriers are there altogether, from 1987 to 2008?
+
+c.  What was the longest flight taken in 2006, in terms of miles?
+
+d.  What was the longest flight taken altogether, from 1987 to 2008, in terms of miles?
+
+e.  How many flights had this longest flight distance (in terms of miles), from 1987 to 2008?
+
+Solution:
+
+a. There are 21 unique carriers in 2006.
+
+`cut -f9 -d, /data/public/dataexpo2009/2006.csv | sort | uniq | wc -l`
+
+Alternatively, we could have written:
+
+`cat /data/public/dataexpo2009/2006.csv | cut -f9 -d, | sort | uniq | wc -l`
+
+b. There are 30 unique carriers, across all years.
+
+`cat /data/public/dataexpo2009/*.csv | cut -f9 -d, | sort | uniq | wc -l`
+
+c. The longest flight taken in 2006, in terms of miles, was 4962  miles.
+
+`cut -f19 -d, /data/public/dataexpo2009/2006.csv | sort -n | uniq | tail -n1`
+
+Alternatively, we could have written:
+
+`cat /data/public/dataexpo2009/2006.csv | cut -f19 -d, | sort -n | uniq | tail -n1`
+
+d. The longest flight taken (across all years), in terms of miles, was 4983 miles.
+
+`cat /data/public/dataexpo2009/*.csv | cut -f19 -d, | sort -n | uniq | tail -n1`
+
+e. There were exactly 109 flights (across all years) that were 4983 miles long.
+
+`cat /data/public/dataexpo2009/*.csv | cut -f19 -d, | grep 4983 | wc -l`
+
+
+Question 8.
+
+Most of the `UNIX` commands you can access are contained in one of three places, namely:
+
+* `/usr/local/bin`
+* `/bin`
+* `/usr/bin`
+
+Print a list of the names of the programs (be sure to check programs in all three of these places) that have the word `zip` somewhere in the title of the program.
+
+Solution:
+
+There are 18 such programs.  The list of such programs can be generated with:
+
+`ls /usr/local/bin /bin /usr/bin | grep zip | sort | uniq`
+
+
+
+== Project 8
+
+The code found in the `Week 10 examples` should be helpful in this problem set.
+
+Question 1.
+
+Consider the file `yow.lines`, which is distributed with emacs 21.4. It can be downloaded from the llc server or you can access it directly from `/proj/www/2014/29000/projects/yow.lines` if you prefer. (Some of the lines in this file are very strange, but this is a standard text file, which is widely known and widely distributed too, on every Linux and UNIX system that contains emacs 21 and earlier.)
+
+a. How many lines start with a capital letter I?
+
+b. How many lines end with a question mark?
+
+c. How many lines end with an exclamation point?
+
+d. How many lines contain 3 or more exclamation points in a row (which may or may not be at the end of the phrase)?
+
+Solution:
+
+a.  There are 245 lines that begin with a capital I.
+
+`awk 'BEGIN{ } {if ($0 ~ /^I/) print $0} END{ }' /proj/www/2014/29000/projects/yow.lines | wc -l`
+
+b.  There are 4 lines that end with a question mark.
+
+`awk 'BEGIN{ } {if ($0 ~ /?$/) print $0} END{ }' /proj/www/2014/29000/projects/yow.lines | wc -l`
+
+This is only because there is one extra character at the end of each line, which can be seen, for instance, by typing:
+
+`awk 'BEGIN{ } {print $0, "***"} END{ }' /proj/www/2014/29000/projects/yow.lines`
+
+It is a null character, which is encoded as \0, so you can find the 137 lines like this as:
+
+`awk 'BEGIN{ } {if ($0 ~ /?\0$/) print $0} END{ }' /proj/www/2014/29000/projects/yow.lines | wc -l`
+
+So there are really 4 + 137 = 141 lines altogether with a question mark at the end.  Of course if you only discovered the 4 lines in the first part of this answer, that is OK too.
+
+c.  There are 21 lines that end with an exclamation point.
+
+`awk 'BEGIN{ } {if ($0 ~ /!$/) print $0} END{ }' /proj/www/2014/29000/projects/yow.lines | wc -l`
+
+Again, some of the lines have a null character at the end, which is encoded as \0, and there are exactly 467 such lines, which you can find this way:
+
+`awk 'BEGIN{ } {if ($0 ~ /!\0$/) print $0} END{ }' /proj/www/2014/29000/projects/yow.lines | wc -l`
+
+So there are really 21 + 467 = 488 lines with an exclamation mark at the end.  If you only discovered the 21 lines in the first part of this answer, that is OK too.
+
+d.  There are 20 lines with 3 or more exclamation points in a row:
+
+`awk 'BEGIN{ } {if ($0 ~ /!!!/) print $0} END{ }' /proj/www/2014/29000/projects/yow.lines | wc -l`
+
+
+
+Question 2.
+
+Continuing to study `yow.lines`:
+
+a. How many lines from contain 3 or more exclamation points altogether (which may or may not be consecutive)?
+
+b. Print `yow.lines` with all uppercase letters converted to lowercase letters.
+
+c. On how many lines does the word `yow` appear (regardless of capitalization)?
+
+Solution:
+
+a.  There are 109 lines with 3 or more exclamation points which may or may not be consecutive:
+
+`awk 'BEGIN{ } {if ($0 ~ /![^!]*![^!]*!/) print $0} END{ }' /proj/www/2014/29000/projects/yow.lines | wc -l`
+
+b.  The yow.lines can be printed in lowercase this way:
+
+`awk 'BEGIN{ } {print tolower($0)} END{ }' /proj/www/2014/29000/projects/yow.lines`
+
+c.  The word "yow" appears 48 times, if we disregard capitalization:
+
+`awk 'BEGIN{ } {if (tolower($0) ~ /yow/) print $0} END{ }' /proj/www/2014/29000/projects/yow.lines | wc -l`
+
+
+
+Question 3.
+
+Consider the file `/usr/share/dict/words` on the llc server.
+
+a. How many words have exactly 6 characters?
+
+b. How many words have an occurrence of dog as a subword?
+
+c. How many words have the letters dog, in that order, but not necessary in consecutive order?
+
+Solution:
+
+a.  There are 41699 words in /usr/share/dict/words with exactly 6 characters:
+
+`awk 'BEGIN{ } {if (length($0) == 6) print $0} END{ }' /usr/share/dict/words | wc -l`
+
+b.  There are 498 words with an occurrence of dog as a subword:
+
+`awk 'BEGIN{ } {if ($0 ~ /dog/) print $0} END{ }' /usr/share/dict/words | wc -l`
+
+c.  There are 3201 words with the letters d, o, g, in that order, but not necessarily consecutive.
+
+`awk 'BEGIN{ } {if ($0 ~ /d[^o]*o[^g]*g/) print $0} END{ }' /usr/share/dict/words | wc -l`
+
+
+Question 4.
+
+Continuing to study `/usr/share/dict/words` on the llc server:
+
+a. How many words start with the 2-letter phrase `de`?
+
+b. How many words end with the 2-letter phrase `ly`?
+
+c. How many words do not start with the 3-letter phrase `con`?
+
+Solution:
+
+
+a.  There are 6859 words that start with de:
+
+`awk 'BEGIN{ } {if ($0 ~ /^de/) print $0} END{ }' /usr/share/dict/words | wc -l`
+
+b.  There are 17881 words that end with ly:
+
+`awk 'BEGIN{ } {if ($0 ~ /ly$/) print $0} END{ }' /usr/share/dict/words | wc -l`
+
+c.  There are 476619 words that do not start with con:
+
+`awk 'BEGIN{ } {if ($0 !~ /^con/) print $0} END{ }' /usr/share/dict/words | wc -l`
+
+
+Question 5.
+
+This question is based on the Social Security baby names data set. You can read about the Social Security baby names at: `http://www.ssa.gov/OACT/babynames/namesbystate.html`  The data set itself can be downloaded from the llc server or you can access it directly from `/proj/www/2014/29000/projects/babynames.txt` if you prefer. The data set contains 134 years of data (1880 to 2013), with 1000 boy names and 1000 girl names per year. The rank of each name is given within each year. The number of boys or girls born with each name is given in each year.
+
+a. How many children were named Mary during 1880-2013?
+
+b. What are the ranks of Mary's name during each of these 134 years?
+
+c. How many different girl names (from this data set) start with the letter A? Be sure to remove duplicated names, i.e., count each name just once.
+
+d. How many different boy names (from this data set) have 4 letters? Be sure to remove duplicated names, i.e., count each name just once.
+
+Solution:
+
+a.  There are 13814 boys named Mary in the data:
+
+`awk -F" " 'BEGIN{ } {if ($3 == "Mary") counter += $4} END{ print counter}' /proj/www/2014/29000/projects/babynames.txt`
+
+and there are 4112464 girls named Mary in the data:
+
+`awk -F" " 'BEGIN{ } {if ($5 == "Mary") counter += $6} END{ print counter}' /proj/www/2014/29000/projects/babynames.txt`
+
+or we could have combined all boys and girls named Mary as follows; there are 4126278 children named Mary altogether:
+
+`awk -F" " 'BEGIN{ } {if ($3 == "Mary") counter += $4; if ($5 == "Mary") counter += $6} END{ print counter}' /proj/www/2014/29000/projects/babynames.txt`
+
+b.  These are the years and ranks for Mary's name as a girl's name (which probably makes the most sense for answering this question)
+
+`awk -F" " 'BEGIN{ } {if ($5 ~ /^Mary$/) print $1, $2} END{ }' /proj/www/2014/29000/projects/babynames.txt`
+
+c.  There are 418 different girl names that start with the letter A:
+
+`awk -F" " 'BEGIN{ } {if ($5 ~ /^A/) print $5} END{ }' /proj/www/2014/29000/projects/babynames.txt | sort | uniq | wc -l`
+
+d.  There are 493 different boy names that have 4 letters:
+
+`awk -F" " 'BEGIN{ } {if (length($3) == 4) print $3} END{ }' /proj/www/2014/29000/projects/babynames.txt | sort | uniq | wc -l`
+
+
+Question 6.
+
+Continuing to study the baby names:
+
+a. What are the names (in alphabetic order, without duplicates) that have a double consecutive vowel, e.g., Aa or aa or Ee or ee or Ii or ii or Oo or oo or Uu or uu? Be sure to remove duplicated names, i.e., display each name just once. [Hint: We saw `&&` is used for `and`; similarly, `||` is used for `or`.]
+
+b. Which names have an occurrence of q that is not followed by a u? Be sure to remove duplicated names, i.e., display each name just once.
+
+c. Which names have two or more z's (regardless of uppercase or lowercase), which are not necessary consecutive? Be sure to remove duplicated names, i.e., display each name just once.
+
+Solution:
+
+a.  We accomplish this question by changing the letters to lowercase (for convenience) only while doing the search, but of course we print the names in their original form.  The list of names is printed as follows:
+
+`awk -F" " 'BEGIN{ } {if (tolower($3) ~ /aa|ee|ii|oo|uu/) print $3; if (tolower($5) ~ /aa|ee|ii|oo|uu/) print $5} END{ }' /proj/www/2014/29000/projects/babynames.txt | sort | uniq`
+
+b.  There are only 3 such names:
+
+`awk -F" " 'BEGIN{ } {if (tolower($3) ~ /q[^u]|q$/) print $3; if (tolower($5) ~ /q[^u]|q$/) print $5} END{ }' /proj/www/2014/29000/projects/babynames.txt | sort | uniq`
+
+c.  The names with two or more z's (not necessarily consecutive) are:
+
+`awk -F" " 'BEGIN{ } {if (tolower($3) ~ /z[^z]*z/) print $3; if (tolower($5) ~ /z[^z]*z/) print $5} END{ }' /proj/www/2014/29000/projects/babynames.txt | sort | uniq`
+
+
+
+Question 7.
+
+Consider the airline flight files stored in this directory: `/data/public/dataexpo2009` on the llc server. We reconsider a few questions that we solved earlier in R. The advantage of using awk is that the speed is faster, and we do not have to input all of the data at the start (recall we had to pre-load all of the data in R).
+
+a. Which 10 airports have the most departures? [It might help to use `awk` and `sort` and `uniq` and another `sort` in conjunction, with a count flag for `uniq`.]
+
+b. Which 10 airports have the most arrivals?
+
+c. Which are the 10 most popular pairs of departure/arrival city pairs? (For instance, IND-to-ORD might be one such popular pair.)
+
+Solution:
+
+a.  The 10 airports with the most departures can be found by:
+
+`cat /data/public/dataexpo2009/*.csv | awk -F, 'BEGIN{ } {print $17} END{ }' | sort | uniq -c | sort -n | tail`
+
+b.  The 10 airports with the most arrivals can be found by:
+
+`cat /data/public/dataexpo2009/*.csv | awk -F, 'BEGIN{ } {print $18} END{ }' | sort | uniq -c | sort -n | tail`
+
+c.  The 10 most popular pairs of departure/arrival city pairs can be found by:
+
+`cat /data/public/dataexpo2009/*.csv | awk -F, 'BEGIN{ } {print $17"-to-"$18} END{ }' | sort | uniq -c | sort -n | tail`
+
+
+Question 8.
+
+Continuing to study the airline data:
+
+a. Make a new file called `weekend1995.csv` that contains only the flights that were on a weekend, from the 1995 flights file.
+
+b. Make a new file called `longdelays1995.csv` that contains only the flights that had a departure delay of 1 hour or more, from the 1995 flights file.
+
+c. Make a new file called `JFKtoLAX1995.csv` that contains only the flights that were from JFK to LAX, for the 1995 flights file.
+
+Solution:
+
+
+a.  The data from the flights that were on a weekend in 1995 can be extracted by:
+
+`awk -F, 'BEGIN{ } {if ($4 ~ /6|7/) print $0} END{ }' /data/public/dataexpo2009/1995.csv`
+
+b.  The data from the flights that were in 1995 with a departure delay of 1 hour or more are:
+
+`awk -F, 'BEGIN{ } {if ($16 >= 60) print $0} END{ }' /data/public/dataexpo2009/1995.csv`
+
+c.  The data from the flights that were in 1995 from JFK to LAX are:
+
+`awk -F, 'BEGIN{ } {if ($17 == "JFK" && $18 == "LAX") print $0} END{ }' /data/public/dataexpo2009/1995.csv`
+
+
+
+
+Questions 9 and 10.
+
+I might provide another couple of questions soon, as usual, depending on how students seem to be doing with these questions.... BUT I want to see how things go with the problems outlined above. I like to be flexible, as you know!
+
+
