@@ -1,0 +1,245 @@
+= TDM 20100: Project 12 -- SQL
+
+**Motivation:** We have used two SQL databases but we have not (yet) built a database of our own.
+
+**Context:** It is straightforward to build a new database from a collection of csv files.
+
+**Scope:** In SQLite, we demonstrate the setup for building a new database.
+
+.Learning Objectives:
+****
+- We will learn how to build a new SQL database.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about project submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+This project will use the following dataset:
+
+- `/anvil/projects/tdm/data/flights/subset/*` (flight data)
+
+
+== Questions
+
+
+=== Question 1 (2 pts)
+
+First, open a terminal and combine the data from the subset flight csv files as follows.  (We are storing the resulting file in the `$SCRATCH` directory because it is very large.  We are also removing NA values (using `awk`) and removing the header from each file (using `grep`).
+
+[source,bash]
+----
+cat /anvil/projects/tdm/data/flights/subset/[12]*.csv | awk -F, -v OFS=, '{for (i=1; i<=NF; i++) if ($i == "NA") $i=""};1' | grep -v Year >$SCRATCH/myflightdata.csv
+----
+
+The `plane-data.csv` sometimes only has 1 column, and sometimes has 9 columns.  We clean this up too:
+
+[source,bash]
+----
+cat /anvil/projects/tdm/data/flights/subset/plane-data.csv | awk -F, '{if (NF == 9) {print $0} else {print $1",,,,,,,,"}}' >$SCRATCH/mycleanplanedata.csv
+----
+
+Now, also in the terminal, make a new SQLite file.  We also make this file in the `$SCRATCH` directory, so that we do not fill up your home directory:
+
+[source,bash]
+----
+sqlite3 $SCRATCH/newflightdatabase.db
+----
+
+(Whenever we want to quit the `sqlite3` program, we can hit CONTROL-D but do NOT YET hit CONTROL-D, because we still need to build the database.)
+
+Now we tell SQLite that our files are in ASCII format:
+
+[source,bash]
+----
+.mode ascii
+----
+
+and we make tables for the data, first for the flight data:
+
+[source,bash]
+----
+CREATE TABLE flights(
+  "Year" INTEGER,
+  "Month" INTEGER,
+  "DayofMonth" INTEGER,
+  "DayOfWeek" INTEGER,
+  "DepTime" INTEGER,
+  "CRSDepTime" INTEGER,
+  "ArrTime" INTEGER,
+  "CRSArrTime" INTEGER,
+  "UniqueCarrier" TEXT,
+  "FlightNum" INTEGER,
+  "TailNum" TEXT,
+  "ActualElapsedTime" INTEGER,
+  "CRSElapsedTime" INTEGER,
+  "AirTime" INTEGER,
+  "ArrDelay" INTEGER,
+  "DepDelay" INTEGER,
+  "Origin" TEXT,
+  "Dest" TEXT,
+  "Distance" INTEGER,
+  "TaxiIn" INTEGER,
+  "TaxiOut" INTEGER,
+  "Cancelled" INTEGER,
+  "CancellationCode" INTEGER,
+  "Diverted" INTEGER,
+  "CarrierDelay" INTEGER,
+  "WeatherDelay" INTEGER,
+  "NASDelay" INTEGER,
+  "SecurityDelay" INTEGER,
+  "LateAircraftDelay" INTEGER
+);
+----
+
+and for the airports data:
+
+[source,bash]
+----
+CREATE TABLE airports(
+  "iata" TEXT,
+  "airport" TEXT,
+  "city" TEXT,
+  "state" TEXT,
+  "country" TEXT,
+  "lat" NUMERIC,
+  "long" NUMERIC
+);
+----
+
+and for the carriers data:
+
+[source,bash]
+----
+CREATE TABLE carriers(
+  "Code" TEXT,
+  "Description" TEXT
+);
+----
+
+and for the plane data:
+
+[source,bash]
+----
+CREATE TABLE planes(
+  "tailnum" TEXT,
+  "type" TEXT,
+  "manufacturer" TEXT,
+  "issue_date" TEXT,
+  "model" TEXT,
+  "status" TEXT,
+  "aircraft_type" TEXT,
+  "engine_type" TEXT,
+  "year" INTEGER
+);
+----
+
+Finally, import the data into the tables:
+
+[source,bash]
+----
+.import --skip 1 $SCRATCH/myflightdata.csv flights
+----
+
+and the airports data:
+
+[source,bash]
+----
+.import --skip 1 /anvil/projects/tdm/data/flights/subset/airports.csv airports
+----
+
+and the carriers data:
+
+[source,bash]
+----
+.import --skip 1 /anvil/projects/tdm/data/flights/subset/carriers.csv carriers
+----
+
+and the planes data:
+
+[source,bash]
+----
+.import --skip 1 $SCRATCH/mycleanplanedata.csv planes
+----
+
+Finally, you can exit from SQLite by typing:  `CONTROL-D`.
+
+Afterwards, check the size of the file that you created, and indicate the size of the file
+
+[source,bash]
+----
+du -bs $SCRATCH/newflightdatabase.db
+----
+
+
+
+.Deliverables
+====
+- From the `basics` table, display the entry for Friends.
+- Find all of the entries of the `principals` table that correspond to people in Friends.
+- Use the `episode` table to discover how many episodes occurred during each season of Friends.  For each season, print the season number and the number of episodes in that season.
+====
+
+
+=== Question 2 (2 pts)
+
+Join the `ratings` and the `basics` table, to find the 13 titles that each have more than 2 million ratings.  For each such title, output these values: `tconst`, `averageRating`, `numVotes`, `primaryTitle`, `startYear`, `runtimeMinutes`, and `genres`
+
+.Deliverables
+====
+- For each of the 13 titles that each have more than 2 million ratings, output these values: `tconst`, `averageRating`, `numVotes`, `primaryTitle`, `startYear`, `runtimeMinutes`, and `genres`
+====
+
+
+
+=== Question 3 (2 pts)
+
+Using the `startYear` values from the `basics` table, find the total number of entries in each `startYear`.
+
+.Deliverables
+====
+- For each `startYear` value from the `basics` table, print the `startYear` and the total number of entries in corresponding to that `startYear`.
+====
+
+
+=== Question 4 (2 pts)
+
+a.  From the `name` table, find the nconst value for Emma Watson.   (Notice that there are several entries with this name, but probably only one of them is the one that you want to analyze.)
+
+b.  How many entries in the `principals` table correspond to Emma Watson (using only the correct value of `nconst` that you found in part a)?
+
+.Deliverables
+====
+- From the `name` table, find the nconst value for Emma Watson.  (Although several values appear, just find the 1 value that is correct for her.)
+- How many entries in the `principals` table correspond to Emma Watson?
+====
+
+
+=== Question 5 (2 pts)
+
+Join the `basics` and the `ratings` table to find the 3 entries that have `startYear = 2024` and `numVotes > 100000` and `averageRating > 8`.  (Print all of the columns from both tables, for these 3 entries.)
+
+.Deliverables
+====
+- Join the `basics` and the `ratings` table to find the 3 entries that have `startYear = 2024` and `numVotes > 100000` and `averageRating > 8`.  (Print all of the columns from both tables, for these 3 entries.)
+====
+
+
+== Submitting your Work
+
+We see that the SQL skills that we learned for the Lahman baseball database are directly applicable to analyzing the movies and TV database too!  It is a good feeling to be able to apply what we have learned in a new setting!
+
+
+
+.Items to submit
+====
+- firstname-lastname-project11.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, comments (in markdown or with hashtags), and code output, even though it may not. **Please** take the time to double check your work. See xref:submissions.adoc[the instructions on how to double check your submission].
+
+You **will not** receive full credit if your `.ipynb` file submitted in Gradescope does not **show** all of the information you expect it to, including the output for each question result (i.e., the results of running your code), and also comments about your work on each question. Please ask a TA if you need help with this.  Please do not wait until Friday afternoon or evening to complete and submit your work.
+====
+
