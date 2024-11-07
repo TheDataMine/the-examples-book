@@ -27,6 +27,11 @@ This project will use the following dataset:
 
 First, open a terminal and combine the data from the subset flight csv files as follows.  (We are storing the resulting file in the `$SCRATCH` directory because it is very large.  We are also removing NA values (using `awk`) and removing the header from each file (using `grep`).
 
+[WARNING]
+====
+The file that we are about to build on the next line will be large, and so it will take a few minutes to run.
+====
+
 [source,bash]
 ----
 cat /anvil/projects/tdm/data/flights/subset/[12]*.csv | awk -F, -v OFS=, '{for (i=1; i<=NF; i++) if ($i == "NA") $i=""};1' | grep -v Year >$SCRATCH/myflightdata.csv
@@ -134,7 +139,12 @@ CREATE TABLE planes(
 );
 ----
 
-Finally, import the data into the tables:
+Next, import the actual data into the tables that we created above.  The first one will take a few minutes to run!
+
+[WARNING]
+====
+The first import statement will take all of the data from the huge file we built at the start, and put that data into our database.  So it will take a few minutes to run.
+====
 
 [source,bash]
 ----
@@ -161,6 +171,35 @@ and the planes data:
 ----
 .import --skip 1 $SCRATCH/mycleanplanedata.csv planes
 ----
+
+Next, we want to build indices for the flight data:
+
+[source,bash]
+----
+CREATE INDEX ix_flights_covering ON flights(Year,Month,DayofMonth,DayOfWeek,DepTime,CRSDepTime,ArrTime,CRSArrTime,UniqueCarrier,FlightNum,TailNum,ActualElapsedTime,CRSElapsedTime,AirTime,ArrDelay,DepDelay,Origin,Dest,Distance,TaxiIn,TaxiOut,Cancelled,CancellationCode,Diverted,CarrierDelay,WeatherDelay,NASDelay,SecurityDelay,LateAircraftDelay);
+----
+
+and for the airports data:
+
+[source,bash]
+----
+CREATE INDEX ix_airports_covering ON airports(iata,airport,city,state,country,lat,long);
+----
+
+and for the carriers data:
+
+[source,bash]
+----
+CREATE INDEX ix_carriers_covering ON carriers(Code,Description);
+----
+
+and for the planes data:
+
+[source,bash]
+----
+CREATE INDEX ix_planes_covering ON planes(tailnum,type,manufacturer,issue_date,model,status,aircraft_type,engine_type,year);
+----
+
 
 Finally, you can exit from SQLite by typing:  `CONTROL-D`.
 
