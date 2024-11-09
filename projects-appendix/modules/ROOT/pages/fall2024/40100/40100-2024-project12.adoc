@@ -1,0 +1,230 @@
+= 401 Project 12 - Regression: Bayesian Ridge Regression
+:page-mathjax: true
+
+== Project Objectives
+
+In this project, we will be exploring Bayesian Ridge Regression using the scikit-learn library. We will use the beer review dataset to implement Bayesian Ridge Regression and evaluate the performance of the model using various metrics.
+
+.Learning Objectives
+****
+- Understand the concept of Bayesian Ridge Regression
+- Implement Bayesian Ridge Regression using scikit-learn
+- Evaluate the performance of a Bayesian Ridge Regression model on the beer review dataset
+****
+
+== Supplemental Reading and Resources
+
+- https://medium.com/intuition/gentle-introduction-of-bayesian-linear-regression-c83da6b0d1f7[Medium Article on Bayesian Linear Regression]
+
+== Dataset
+
+- `/anvil/projects/tdm/data/beer/reviews_sample.csv`
+
+== Questions
+
+=== Question 1 (2 points)
+
+Bayes Theorem is a fundamental theorem in probability theory. Bayes Theorem allows us to invert conditional probabilities, eg. if we know the probability of event A given event B occured, we can calculate the probability of event B given event A occured. This theorem can be used in machine learning to estimate the probability of a model parameter given the data. Traditionally, our model parameters are estimated by minimizing our loss function. However, with Bayesian Ridge Regression, the model parameters are treated as random variables, and the posterior distribution of the model parameters is estimated. This allows the model to not only make predictions, but also provide a measure of uncertainty in its predictions. Due to the heavy mathematical nature of Bayesian Ridge Regression, we will not be writing it from scratch in this project. Instead, we will be using the scikit-learn library to implement it. If you would like to learn about the mathematical details of this model, please read the supplemental reading.
+
+Firstly, let's load the boston housing dataset like usual by running the code below. We will be looking at the `MEDV` column as our target variable, and the 'TAX' column as our feature variable.
+
+[source,python]
+----
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+df =  pd.read_csv('/anvil/projects/tdm/data/beer/reviews_sample.csv')
+
+df.dropna(subset=['look','smell','taste','feel','overall', 'score'], inplace=True)
+X = df[['look','smell','taste','feel', 'overall']]
+y = df[['score']]
+
+
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=7)
+
+y_train = y_train.to_numpy().ravel()
+y_test = y_test.to_numpy().ravel()
+----
+
+Additionally, load our metric functions by running the code below.
+[source,python]
+----
+import numpy as np
+def get_mse(y, y_pred):
+            return np.mean((y - y_pred) ** 2)
+        
+def get_rmse(y, y_pred):
+    return np.sqrt(get_mse(y,y_pred))
+
+def get_mae(y, y_pred):
+    return np.mean(np.abs(y - y_pred))
+
+def get_r_squared(y, y_pred):
+    return 1 - np.sum((y - y_pred) ** 2) / np.sum((y - np.mean(y)) ** 2)
+----
+
+Next, we will create an instance of scikit-learn's `BayesianRidge` class and fit the model to the training data. We will then use the model to make predictions on the test data.
+[source,python]
+----
+from sklearn.linear_model import BayesianRidge
+
+model = BayesianRidge()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+----
+
+Please calculate and print the mean squared error of the Bayesian Ridge Regression model on the test data.
+
+.Deliverables
+====
+- Mean Squared Error of the Bayesian Ridge Regression model on the test data
+====
+
+=== Question 2 (2 points)
+
+A powerful ability of the Bayesian Ridge Regression model, as mentioned earlier, is its ability to provide uncertainty estimates in its predictions. Through scikit-learn, we can access the standard deviation of the posterior distribution of the model parameters. From this, we know the uncertainty in our prediction, allowing us to graph confidence intervals around our predictions.
+
+Firstly, train the Bayesian Ridge Regression model with only the 'smell', 'taste', and 'feel' columns as our features, using the below code:
+[source,python]
+----
+X_train_3 = X_train[:,[1,2,3]]
+X_test_3 = X_test[:,[1,2,3]]
+
+model = BayesianRidge()
+model.fit(X_train_3, y_train)
+----
+
+Now, write code to get the y_predictions on the test set, and graph the y_test values and y_pred values on a single graph using matplotlib (you should be familiar with this syntax from previous projects, look back to those if you need a refresher). 
+[IMPORTANT]
+====
+If we leave these unsorted and try to graph it, it will be a complete mess due to the points be randomly selected by the train_test_split function. By sorting one of the arrays, we can graph the points in a more orderly fashion. You can run the below code to sort both the y_test and y_pred arrays based on the y_test values from smallest to largest.
+====
+[source,python]
+----
+# sort the y_test array from smallest to largest, and use that order to sort the y_pred array
+y_test_sorted = y_test[np.argsort(y_test)]
+y_pred_sorted = y_pred[np.argsort(y_test)]
+----
+
+You may notice that the graph is a bit messy as the predictions are not perfect. To get a better visualization, we can overlay our confidence intervals on the graph. A confidence interval is a range of values that is some percentage likely to contain the true value. For example, a 95% confidence interval around a predicted value means that we are 95% confident that the true value lies within that range. The number of standard deviations away from the mean (or predicted value) determines the confidence level. Below is a table of the number of standard deviations and their corresponding confidence levels. Additionally, you can use the following formula to calculat the number of standard deviations away from the mean for a given confidence level:
+[cols="2,2,2,2", options="header"]
+|====
+|Number of Standard Deviations | Confidence Level
+|1 | 68.27%
+|2 | 95.45%
+|3 | 99.73%
+|4 | 99.994%
+|====
+
+How do we get these confidence levels from the model? scikit_learn makes it very easy, by providing an optional argument to the `predict`` method. By setting the `return_std` argument to True, the predict method will return a tuple of the list of predictions and a list of the standard deviations for each prediction. Then, we can use the standard deviations to calculate the confidence intervals.
+
+In order to graph the confidence intervals, you will need to calculate the upper and lower bounds of the confidence interval for each prediction. Then, you can use the matplotlib `fill_between` function to fill in the area between the upper and lower bounds. Please graph the y_test values and the 68.27% confidence intervals of the y_pred values on the same graph.
+.Deliverables
+====
+- Output of the RMSE of the model
+- Graph of the y_test values against the y_pred values
+- Graph displaying the y_test values and the 68.27% confidence intervals of the y_pred values
+====
+
+=== Question 3 (2 points)
+
+Now that you know how to use the Bayesian Ridge Regression model to get uncertainty estimates in your predictions, let's see how changing other model parameters can affect both our model's performance and uncertainty. The `BayesianRidge` class has several parameters that can be tuned to improve the model's performance. A list of these parameters can be found in the scikit-learn documentation: https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.BayesianRidge.html. For the next 3 questions, we will be exploring the following parameters:
+Question 3: `n_iter` - The number of iterations to run the optimization algorithm. The default value is 300.
+Question 4: `alpha_1` and `alpha_2 - The shape and inverse scale parameters for the Gamma distribution prior over the alpha parameter. The default values are 1e-6.
+Question 5: `lambda_1` and `lambda_2` - The shape and inverse scale parameters for the Gamma distribution prior over the lambda parameter. The default values are 1e-6.
+
+For this question, please generate 5 models with different values of `n_iter` ranging from 100 to 500 in increments of 100. For each model, train the model on the training data and calculate the RMSE on the test data. Please print the RMSE for each model. Then, plot the y_test values vs the 95.45% confidence intervals of the y_pred values for all models. Graph each confidence interval as a different color on the same graph.
+
+.Deliverables
+====
+- RMSE for each model
+- Graph of the y_test values and the 95.45% confidence intervals of the y_pred values for all models
+- How does the n_iter parameter affect the model's rmse and uncertainty?
+====
+
+=== Question 4 (2 points)
+
+For this question, please select 5 different `alpha_1` values. Then, for each of these values, train the model on the training data and calculate the RMSE on the test data. Please print the RMSE for each model. Then, plot the y_test values vs the 95.45% confidence intervals of the y_pred values for all models. Graph each confidence interval as a different color on the same graph. Do the same for the `alpha_2` parameter.
+
+.Deliverables
+====
+- RMSE for each model with a different alpha_1 value
+- RMSE for each model with a different alpha_2 value
+- Graph of the y_test values and the 95.45% confidence intervals of the y_pred values for each model with a different alpha_1 value
+- Graph of the y_test values and the 95.45% confidence intervals of the y_pred values for each model with a different alpha_2 value
+- How do the alpha_1 and alpha_2 parameters affect the model's rmse and uncertainty?
+====
+
+=== Question 5 (2 points)
+
+For this question, please select 5 different `lambda_1` values. Then, for each of these values, train the model on the training data and calculate the RMSE on the test data. Please print the RMSE for each model. Then, plot the y_test values vs the 95.45% confidence intervals of the y_pred values for all models. Graph each confidence interval as a different color on the same graph. Do the same for the `lambda_2` parameter.
+
+.Deliverables
+====
+- RMSE for each model with a different lambda_1 value
+- RMSE for each model with a different lambda_2 value
+- Graph of the y_test values and the 95.45% confidence intervals of the y_pred values for each model with a different lambda_1 value
+- Graph of the y_test values and the 95.45% confidence intervals of the y_pred values for each model with a different lambda_2 value
+- How do the lambda_1 and lambda_2 parameters affect the model's rmse and uncertainty?
+====
+
+=== Question 6 (2 points)
+
+Now that you've seen how changing the model parameters can affect the model's performance and uncertainty, write a function that finds the best model parameters for the Bayesian Ridge Regression model. The function should take in a list of valid values for each parameter and returns a tuple of the best parameters and the RMSE of the model with those parameters. You can use the `itertools.product` function to generate all possible combinations of the parameters. The function should also be able to choose the "best" based on an input metric from the common metrics used before (mse, rmse, mae, r_squared), or uncertainty. You can use model.sigma_ to get the standard deviation of the posterior distribution of the model parameters as a measure of uncertainty for the model as a whole.
+
+The function should look something like this:
+[source,python]
+----
+def get_best_params(n_iter_values, alpha_1_values, alpha_2_values, lambda_1_values, lambda_2_values, metric='rmse'):
+    # your code here
+    combinations = # your code here
+    best_params = None
+    best_value = None
+    for params in combinations:
+        # train the model with the current parameters
+
+        # calculate the metric value
+
+
+        # check if the current model is better than the best model so far
+        # if it is, update the best model and best value
+
+    return best_params
+----
+
+To test if your function works, please run the function with the following parameters:
+[source,python]
+----
+n_iter_values = [100, 200, 300, 400, 500]
+alpha_1_values = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2]
+alpha_2_values = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2]
+lambda_1_values = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2]
+lambda_2_values = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2]
+
+print(get_best_params(n_iter_values, alpha_1_values, alpha_2_values, lambda_1_values, lambda_2_values, metric='rmse'))
+print(get_best_params(n_iter_values, alpha_1_values, alpha_2_values, lambda_1_values, lambda_2_values, metric='uncertainty'))
+print(get_best_params(n_iter_values, alpha_1_values, alpha_2_values, lambda_1_values, lambda_2_values, metric='r_squared'))
+----
+
+.Deliverables
+====
+- Output of the best parameters for the Bayesian Ridge Regression model based on RMSE, uncertainty, and r_squared
+====
+
+== Submitting your Work
+
+.Items to submit
+====
+- firstname_lastname_project12.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, comments (in markdown or with hashtags), and code output, even though it may not. **Please** take the time to double check your work. See xref:submissions.adoc[the instructions on how to double check your submission].
+
+You **will not** receive full credit if your `.ipynb` file submitted in Gradescope does not **show** all of the information you expect it to, including the output for each question result (i.e., the results of running your code), and also comments about your work on each question. Please ask a TA if you need help with this.  Please do not wait until Friday afternoon or evening to complete and submit your work.
+====
