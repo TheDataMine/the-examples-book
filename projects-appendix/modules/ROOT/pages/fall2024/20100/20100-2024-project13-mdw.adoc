@@ -1,0 +1,167 @@
+= TDM 20100: Project 13 -- SQL
+
+**Motivation:** We have used three SQL databases directly, from the SQL prompt.  Now we demonstrate how to make SQL calls from R, so that we can (for example) make plots related to our SQL queries.
+
+**Context:** When we make a SQL call in R, the data is returned as an R database.
+
+**Scope:** This project will synthesize what you have learned about how to make database calls from SQL and how to use R to visualize data from data frames.
+
+.Learning Objectives:
+****
+- We will make SQL calls from R.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about project submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+This project will use the following three databases:
+
+- `/anvil/projects/tdm/data/lahman/lahman.db` (Lahman baseball database)
+- `/anvil/projects/tdm/data/movies_and_tv/imdb2024.db` (Internet Movie DataBase (IMDB))
+- `/anvil/scratch/x-mdw/newflightdatabase.db` (the flight database that you built in Project 12)
+
+[NOTE]
+====
+Please change `mdw` to your username in the location of the flight database.
+====
+
+
+
+== Questions
+
+You can load data from a SQL query into R (using the `seminar-r` kernel in Jupyter Lab) as follows, for example:
+
+[source,r]
+----
+library(RSQLite)
+conn <- dbConnect(RSQLite::SQLite(), "/anvil/projects/tdm/data/lahman/lahman.db")
+myDF <- dbGetQuery(conn, "SELECT * FROM batting LIMIT 5;")
+head(myDF)
+----
+
+Once you have the connection to the database loaded, you can make more queries, without needing to re-run the `dbConnect` line.  You can go directly to another `dbGetQuery` line, like this:
+
+[source,r]
+----
+myDF <- dbGetQuery(conn, "SELECT * FROM pitching LIMIT 5;")
+head(myDF)
+----
+
+If your kernel dies at any point, or if you start a new session, you will obviously need to go back and re-load your `RSQLite` library and also re-connect to the database, using the `dbConnect` command.
+
+You can even make complex queries, for instance:
+
+[source,r]
+----
+myDF <- dbGetQuery(conn, "SELECT * FROM batting as b JOIN people as p 
+                   ON b.playerID = p.playerID 
+                   WHERE p.nameFirst = 'Rickey'
+                   AND p.nameLast = 'Henderson';")
+head(myDF)
+----
+
+and we can plot the data, for instance, like this:
+[source,r]
+----
+myDF <- dbGetQuery(conn, "SELECT b.R as myruns, b.yearID as myyears
+                   FROM batting as b JOIN people as p 
+                   ON b.playerID = p.playerID 
+                   WHERE p.nameFirst = 'Rickey'
+                   AND p.nameLast = 'Henderson'
+		   GROUP BY b.yearID;")
+plot(myDF$myyears, myDF$myruns)
+----
+
+
+
+=== Question 1 (2 pts)
+
+Using the `seminar-r` kernel in Jupyter Lab, open a connection to the Lahman database using the `dbConnect` process that is outlined above.
+
+Revisit your work from Project 8, Question 4, but this time, make a `dotchart`, as follows:
+
+Use the Batting table to find the top 5 players of all time, in terms of their total number of hits, in other words, according to SUM(H).  Instead of printing the output, this time make a dotchart with 5 rows.  Each row should show the `playerID` of each player and the total number of hits in each of their careers.
+
+
+.Deliverables
+====
+Make a dotchart with 5 rows for the top 5 players of all time, in terms of their total number of hits, `SUM(H)`.  Each row should show the `playerID` of each player and the total number of hits in each of their careers.
+====
+
+
+=== Question 2 (2 pts)
+
+[NOTE]
+====
+Back in the regular Jupyter Lab notebook, using the `seminar` kernel, you can load the database that you created like this:
+
+`%sql sqlite:////anvil/scratch/x-mdw/newflightdatabase.db`
+
+but (of course) change the `mdw` to your ACCESS username.
+====
+
+Join the `flights` and the `airports` table, matching the `Origin` column to the `iata` column.  Find the total number of flights in the database for each `Origin` airport that is located in Texas.  For each `Origin` airport in Texas, print the total number of flights and the 3-letter `Origin` airport code.
+
+.Deliverables
+====
+- For each `Origin` airport in Texas, print the total number of flights and the 3-letter `Origin` airport code.
+====
+
+
+
+=== Question 3 (2 pts)
+
+a.  From the `flights` table, find the 10 most popular `TailNum` values, according to how many times that each `TailNum` appears in the `flights` table.  For each of these top 10 `TailNum`, list the `TailNum` and the number of flights on that `TailNum`.
+
+b.  Notice that the 5 most popular `TailNum` values are:  (blank), UNKNOW, 0, NKNO, 000000.  Ignoring these top 5 most popular values, in part b, we want you to consider (only) the 6th most popular `TailNum` value, which should be `N525`.  You can read about this 6th most popular airplane here:  https://www.flightaware.com/live/flight/N525  For *only* this 6th most popular airplane, with `TailNum` equal to `N525`, please make a separate query of the `flights` table that shows the top 5 `Origin` airports for this plane's flights.  (Hint:  This airplane has departed 2952 times from Dallas Love Field `DAL` and also 2146 times from Phoenix's Sky Harbor International Airport `PHX`.)
+
+.Deliverables
+====
+- For each of these top 10 `TailNum`, list the `TailNum` and the number of flights on that `TailNum`.
+- After identifying the 6th most popular airplane (from part a; which is the first *valid* airplane; it should have `tailnum` equal to `N525`), now find the top 5 `Origin` airports for this specific plane's flights.  For each of these top 5 `Origin` airports for this plane, find the three-letter code of the `Origin` airport and the number of times that this specific airplane departed from each such `Origin`.
+====
+
+
+=== Question 4 (2 pts)
+
+Now let's revisit question 3, but this time we will JOIN the `flights` table and the `planes` table ON the `TailNum` value.  Group the results according to the `TailNum` and find the 10 most popular values, listing the `TailNum` value and the number of flights for each such `TailNum`.
+
+[NOTE]
+====
+Notice that the invalid tail numbers from question 3 are gone (because they do not appear in the `planes` table) and also the `TailNum` that you discovered in question 3 is gone too (because it does not appear in the `planes` table either).  Hint:  The top `TailNum` for this question is `N908DE` which had `25050` flights altogether.
+====
+
+.Deliverables
+====
+- JOIN the `flights` table and the `planes` table, to find the 10 most popular values, listing the `TailNum` value and the number of flights for each such `TailNum`.
+====
+
+
+=== Question 5 (2 pts)
+
+Join the `flights` and the `carriers` table, matching the `UniqueCarrier` column to the `Code` column.  Find the total number of flights in the database for each `UniqueCarrier`.  For each `UniqueCarrier`, print the `UniqueCarrier` value, the `Description` value, and also the total number of flights for that `UniqueCarrier`.  (Hint:  Your query results should have 29 rows altogether.)
+
+.Deliverables
+====
+- For each `UniqueCarrier`, print the `UniqueCarrier` value, the `Description` value, and also the total number of flights for that `UniqueCarrier`.
+====
+
+
+== Submitting your Work
+
+We have now built on the same skills that we learned for the movies database and the baseball database, but this time, we developed our own database of airplane flights and answered questions about the database that we built!
+
+
+.Items to submit
+====
+- firstname-lastname-project12.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, comments (in markdown or with hashtags), and code output, even though it may not. **Please** take the time to double check your work. See xref:submissions.adoc[the instructions on how to double check your submission].
+
+You **will not** receive full credit if your `.ipynb` file submitted in Gradescope does not **show** all of the information you expect it to, including the output for each question result (i.e., the results of running your code), and also comments about your work on each question. Please ask a TA if you need help with this.  Please do not wait until Friday afternoon or evening to complete and submit your work.
+====
+
