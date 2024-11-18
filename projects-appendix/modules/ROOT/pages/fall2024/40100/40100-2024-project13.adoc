@@ -1,0 +1,341 @@
+= 401 Project 13 - Hyperparameter Tuning
+:page-mathjax: true
+
+== Project Objectives
+
+In this project, we will be exploring different methods for hyperparameter tuning, and applying them to models from previous projects.
+
+.Learning Objectives
+****
+- Understand the concept of hyperparameters
+- Learn different methods for hyperparameter tuning
+- Apply hyperparameter tuning to a Random Forest Classifier and a Bayesian Ridge Regression model
+****
+
+== Supplemental Reading and Resources
+
+== Dataset
+
+- `/anvil/projects/tdm/data/iris/Iris.csv`
+- `/anvil/projects/tdm/data/boston_housing/boston.csv`
+
+== Questions
+
+=== Question 1 (2 points)
+
+Hyperparameters are parameters that are not learned by the model, but are rather set by the user before training. They include parameters you should be familiar with, such as the learning rate, the number of layers in a neural network, the number of trees in a random forest, etc. There are many different methods for tuning hyperparameters, and in this project we will explore a few of the common methods.
+
+[NOTE]
+====
+Typically, hyperparameter tuning would be performed with a small subset of the data, and the best or top n models would be selected for further evaluation on the full dataset. For the purposes of this project, we will be using the full dataset for hyperparameter tuning, as the dataset is small enough to do so.
+====
+
+Firstly, let's load both the iris dataset and boston housing dataset. 
+
+[source,python]
+----
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+
+df = pd.read_csv('/anvil/projects/tdm/data/iris/Iris.csv')
+X = df.drop(['Species','Id'], axis=1)
+y = df['Species']
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+X_train_iris, X_test_iris, y_train_iris, y_test_iris = train_test_split(X_scaled, y, test_size=0.2, random_state=20)
+y_train_iris = y_train_iris.to_numpy()
+y_test_iris = y_test_iris.to_numpy()
+
+df = pd.read_csv('/anvil/projects/tdm/data/boston_housing/boston.csv')
+X = df.drop(columns=['MEDV'])
+y = df[['MEDV']]
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+X_train_boston, X_test_boston, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=7)
+y_train_boston = y_train.to_numpy()
+y_test_boston = y_test.to_numpy()
+y_train_boston = y_train_boston.ravel()
+y_test_boston = y_test_boston.ravel()
+----
+
+Random search is a hyperparameter optimization algorithm that, as you might guess from the name, randomly selects hyperparameters to evaluate from a range of possible values. This algorithm is very simple to implement, but greatly lacks the efficiency of other search algorithms. It is often used as the baseline to compare more advanced algorithms against.
+
+The algorithm is as follows:
+
+1. Define a set of values for each hyperparameter to search over
+2. For a set number of iterations, randomly select values from the set for each hyperparameter
+3. Train the model with the selected hyperparameter values
+4. Evaluate the model
+5. Repeat steps 2-4 for the specified number of iterations
+6. Pick the best model
+
+For this question, you will implement the following function:
+[source,python]
+----
+import numpy as np
+def random_search(model, param_dict, X_train, y_train, X_test, y_test, n_iter=10):
+    np.random.seed(2)
+    # Initialize best score
+    best_score = -np.inf
+    best_model = None
+    best_params = None
+
+    # Loop over number of iterations
+    for i in range(n_iter):
+        # Randomly select hyperparameters with np.random.choice. for each param: valid_choices_list pair in param_dict
+        # this should result in a dictionary of hyperparameter: value pairs
+        params = {}
+        # your code here to fill in params
+        
+        # Create model with hyperparameters
+        model.set_params(**params)
+        
+        # Train model with model.fit
+        # your code here
+        
+        # Evaluate model with model.score
+        # your code here
+
+        # Update best model if necessary
+        # your code here
+        
+    return best_model, best_params, best_score
+----
+
+After creating the function, run the following test cases to ensure that your function is working correctly.
+[source,python]
+----
+# Test case 1 with iris dataset
+from sklearn.linear_model import BayesianRidge
+model = BayesianRidge()
+param_dict = {'max_iter': [100, 200, 300, 400, 500], 'alpha_1': [1e-6, 1e-5, 1e-4, 1e-3, 1e-2], 'alpha_2': [1e-6, 1e-5, 1e-4, 1e-3, 1e-2], 'lambda_1': [1e-6, 1e-5, 1e-4, 1e-3, 1e-2], 'lambda_2': [1e-6, 1e-5, 1e-4, 1e-3, 1e-2]}
+
+best_model, best_params, best_score = random_search(model, param_dict, X_train_boston, y_train_boston, X_test_boston, y_test_boston, n_iter=10)
+# print the best parameters and score
+print(best_params)
+print(best_score)
+
+# Test case 2 with boston housing dataset
+from sklearn.ensemble import RandomForestClassifier
+model = RandomForestClassifier()
+param_dict = {'n_estimators': [10, 50, 100, 200, 500], 'max_depth': [None, 5, 10, 20, 50], 'min_samples_split': [2, 5, 10, 20, 50], 'min_samples_leaf': [1, 2, 5, 10, 20]}
+best_model, best_params, best_score = random_search(model, param_dict, X_train_iris, y_train_iris, X_test_iris, y_test_iris, n_iter=10)
+# print the best parameters and score
+print(best_params)
+print(best_score)
+----
+
+.Deliverables
+====
+- Outputs of running test cases for Random Search
+====
+
+=== Question 2 (2 points)
+
+Grid search is another hyperparameter optimization algorithm that is more systematic than random search. It evaluates all possible combinations of hyperparameters within a specified range. This algorithm is very simple to implement, but can be computationally expensive, especially with a large number of hyperparameters and values to search over.
+
+[NOTE]
+====
+This is what you implemented in question 6 of project 12, so use that as a reference for this question if needed.
+====
+
+The algorithm is as follows:
+1. Compute every combination of hyperparameters
+2. Train the model with a combination
+3. Evaluate the model
+4. Repeat steps 2-3 for every combination
+5. Pick the best 
+
+[source,python]
+----
+from itertools import product
+
+def grid_search(model, param_dict, X_train, y_train, X_test, y_test, n_iter=10):
+    # Initialize best score
+    best_score = -np.inf
+    best_model = None
+    best_params = None
+
+    # find every combination and store it as a list
+    # HINT: if you put * before a list, it will unpack the list into individual arguments
+    combinations = # your code here
+
+    # now that we have every combination of values, repack it into a list of dictionaries (param: value pairs) using zip
+    param_combinations = # your code here
+
+    # Loop over every combination
+    for params in param_combinations:
+        # Create model with hyperparameters
+        model.set_params(**params)
+        
+        # Train model with model.fit
+        # your code here
+        
+        # Evaluate model with model.score
+        # your code here
+
+        # Update best model if necessary
+        # your code here
+
+    return best_model, best_params, best_score
+----
+
+After creating the function, run the following test cases to ensure that your function is working correctly.
+[source,python]
+----
+# Test case 1 with iris dataset
+from sklearn.linear_model import BayesianRidge
+model = BayesianRidge()
+param_dict = {'max_iter': [100, 200, 300], 'alpha_1': [1e-6, 1e-5, 1e-4], 'alpha_2': [1e-6, 1e-5, 1e-4], 'lambda_1': [1e-6, 1e-5, 1e-4], 'lambda_2': [1e-6, 1e-5, 1e-4]}
+
+best_model, best_params, best_score = random_search(model, param_dict, X_train_boston, y_train_boston, X_test_boston, y_test_boston, n_iter=10)
+# print the best parameters and score
+print(best_params)
+print(best_score)
+
+# Test case 2 with boston housing dataset
+from sklearn.ensemble import RandomForestClassifier
+model = RandomForestClassifier()
+param_dict = {'n_estimators': [100, 200, 500], 'max_depth': [10, 20, 50], 'min_samples_split': [2, 5, 10], 'min_samples_leaf': [1, 2, 5]}
+best_model, best_params, best_score = random_search(model, param_dict, X_train_iris, y_train_iris, X_test_iris, y_test_iris, n_iter=10)
+# print the best parameters and score
+print(best_params)
+print(best_score)
+----
+
+.Deliverables
+====
+- Outputs of running test cases for Grid Search
+====
+
+=== Question 3 (2 points)
+
+Bayesian optimization is a more advanced hyperparameter optimization algorithm that uses a probabilistic model to predict the performance of a model with a given set of hyperparameters. It then uses this model to select the next set of hyperparameters to evaluate. This algorithm is more efficient than random search and grid search, but significantly more complex to implement.
+
+The algorithm is as follows:
+1. Define a search space for each hyperparameter to search over
+2. Define an object function that takes hyperparameters as an input and scores the model (set_params, fit, score)
+3. Run the optimization algorithm to find the best hyperparameters
+
+For this question, we will be using scikit-optimize, a library designed for model-based optimization in python. Please run the following code cell to install the library.
+[source,python]
+----
+pip install scikit-optimize
+----
+
+[NOTE]
+====
+You may need to restart the kernel after the installation is complete.
+====
+
+For this question, you will implement the following function:
+[source,python]
+----
+from skopt import gp_minimize
+from skopt.space import Real, Integer
+from skopt.utils import use_named_args
+
+def bayesian_search(model, param_dict, X_train, y_train, X_test, y_test, n_iter=10):
+    # For each hyperparameter in param_dict, we need to create a Real or Integer object and add it to the space list.
+    # both of these classes have the following parameters: low, high, name. Real is for continuous hyperparameters that have floating point values, and Integer is for discrete hyperparameters that have integer values.
+    # so, for example, if {'max_iter': (1,500), 'alpha_1': (1e-6,1e-2)} is passed in for param_dict:
+    # We should create an Integer(low=1, high=500, name='max_iter') object for the first param, as it uses integer values
+    # and a Real(low=1e-6, high=1e-2, name='alpha_1') object for the second param, as it uses floating point values
+    # 
+    # All of these objects should be added to the space list
+
+    space = []
+    # your code here
+    
+    # Define the objective function
+    @use_named_args(space)
+    def objective(**params):
+        # Create model with hyperparameters
+        model.set_params(**params)
+        
+        # Train model with model.fit
+        # your code here
+        
+        # Evaluate model with model.score
+        # your code here
+
+        # as this is a minimization algorithm, it thinks lower scores are better. Therefore, we need to return the negative score
+        return -score
+
+    # Run the optimization
+    res = gp_minimize(objective, space, n_calls=n_iter, random_state=0)
+
+    # Get the best parameters
+    best_params = dict(zip(param_dict.keys(), res.x))
+    best_score = -res.fun
+
+    return model, best_params, best_score
+----
+
+After creating the function, run the following test cases to ensure that your function is working correctly.
+
+[source,python]
+----
+from sklearn.linear_model import BayesianRidge
+model = BayesianRidge()
+param_dict = {'max_iter': (1,50), 'alpha_1': (1e-6,1e-2), 'alpha_2': (1e-6,1e-2), 'lambda_1': (1e-6,1e-2), 'lambda_2': (1e-6,1e-2)}
+
+best_model, best_params, best_score = bayesian_search(model, param_dict, X_train_boston, y_train_boston, X_test_boston, y_test_boston, n_iter=10)
+# print the best parameters and score
+print(best_params)
+print(best_score)
+
+# Test case 2 with boston housing dataset
+from sklearn.ensemble import RandomForestClassifier
+model = RandomForestClassifier()
+param_dict = {'n_estimators': (100,500), 'max_depth': (5,50), 'min_samples_split': (1,20), 'min_samples_leaf': (1,10)}
+best_model, best_params, best_score = bayesian_search(model, param_dict, X_train_iris, y_train_iris, X_test_iris, y_test_iris, n_iter=10)
+# print the best parameters and score
+print(best_params)
+print(best_score)
+----
+
+.Deliverables
+====
+- Outputs of running test cases for Bayesian Search
+====
+
+=== Question 4 (2 points)
+
+Now that we have implemented these three hyperparameter tuning algorithms, let's compare their performance to eachother. For this question, please apply all three tuning algorithms to a Bayesian Ridge Regression model on the boston housing dataset. In addition to their scores, please also compare the time it takes to run each algorithm. Graph these results using 2 bar charts, one for score and one for time.
+
+[NOTE]
+====
+The Bayseian Ridge Regression model will have a very similar accuracy for all three tuning algorithms. Please have the y-axis of the score plot be adjusted to be from 0.690515 to 0.690517 with axis.set_ylim(0.690515, 0.690517)
+====
+
+.Deliverables
+====
+- Bar charts displaying the scores and times for each hyperparameter tuning algorithm
+====
+
+=== Question 5 (2 points)
+
+There are still many other hyperparameter methods that we have not explored. For example, you could have a more complex grid search, a more advanced Bayesian optimization algorithm, or even a genetic algorithm. For this question, please identify, explain, and implement another hyperparameter tuning algorithm. Repeat your code from question 4, but include the new algorithm. How does this algorithm compare to the other three?
+
+.Deliverables
+====
+- Explanation of your new hyperparameter tuning algorithm
+- Bar charts displaying the scores and times for each hyperparameter tuning algorithm, including the new algorithm
+- Explanation of how the new algorithm compares to the other three
+====
+
+== Submitting your Work
+
+.Items to submit
+====
+- firstname_lastname_project13.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, comments (in markdown or with hashtags), and code output, even though it may not. **Please** take the time to double check your work. See xref:submissions.adoc[the instructions on how to double check your submission].
+
+You **will not** receive full credit if your `.ipynb` file submitted in Gradescope does not **show** all of the information you expect it to, including the output for each question result (i.e., the results of running your code), and also comments about your work on each question. Please ask a TA if you need help with this.  Please do not wait until Friday afternoon or evening to complete and submit your work.
+====
