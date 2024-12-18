@@ -1,0 +1,307 @@
+= Filtering and Selecting
+
+== Basics and Simple Accessing Methods
+It is implausible that you will always need an entire dataset when doing analysis, so being able to efficiently pick subsets of data is an important skill. `pandas` has some vital indexing functions that add logical parameters when working with a `DataFrame` or `Series`. 
+
+{sp}+
+
+=== `[]` and `.`
+
+Using brackets and periods to index in `pandas` are the most basic methods of indexing, and thus allow for simpler subset selection. Both are limited to *column* selection, so you won't be able to select the first row of an object with `df[1]` or `df.1`.
+
+This indexing is done based on the column name -- if we had a column named "columnA", we could select it using `df['columnA']` or `df.columnA`.
+
+Selecting multiple columns is also possible by nesting a list within your brackets: `df[['columnA', 'columnB', 'columnC']]`. This is _not_ possible when using `.` to select attributes -- you are additionally unable to use `.` to select:
+
+* Columns that match names of `pandas` methods -- `max`, `head`, `describe`, etc.
+* xref:https://docs.python.org/3/reference/lexical_analysis.html#identifiers[Identifiers], including keywords, whitespace, and literals. _If your column has a space in its name (which can happen often), you cannot select it with `.`_
+
+{sp}+
+
+=== Slicing
+
+If we consider simple `[]` and `.` indexing to be column selection, we can consider `:` indexing to be row selection. You still start by using brackets, but when `:` is included, the *rows* are now selected instead of columns. _Only_ our rows can be selected when using simple slicing, but as you will soon see, slicing is a tool that is used heavily in more complex indexing.
+
+`:` slicing is inclusive, with an implied 0 for the start and the object's last index implied for the end. Thus, the input `print(df[:])` selects all rows and is the same as `print(df)`. You can add a negative sign to the end index to _exclude_ the last n elements.
+
+If you want to skip certain elements, you can add another colon after the stop index, which would take the following form: `df[0:4:2]`. There is an implied skip of 1 (meaning no skip at all), meaning `print(df[:]) == print(df[::]) == print(df)`. You can add a negative sign in front of the skip parameter to slice the object in reverse order.
+
+{sp}+
+
+=== `isin()`
+
+The `isin` method (derived from *is in*) is a `pandas` method that mirrors the `in` keyword in other programming languages. It's a `Series` method that is passed a list (or list-like object), returning `True` or `False` depending on the value's inclusion in the list.
+
+The potential applications are simple to imagine -- what if I only wanted to select certain states from a `DataFrame` containing information on the United States? How about information when the records include the day of the week, and I only want Mondays and Thursdays? These desires are very easily translated into code.
+
+[source,python]
+----
+days = pd.Series(['Monday', 'Thursday', 'Wednesday', 'Saturday', 'Saturday', 'Monday'])
+print(days.isin(['Monday', 'Thursday']))
+----
+----
+0     True
+1     True
+2    False
+3    False
+4    False
+5     True
+----
+
+[source,python]
+----
+print(days[days.isin(['Monday', 'Thursday'])])
+----
+----
+0      Monday
+1    Thursday
+5      Monday
+----
+
+`DataFrames` have their own `isin` method, but as we'll demonstrate in the next section, using the `Series` method is better when combined with the `loc`/`iloc` functions.
+
+{sp}+
+
+=== Examples
+
+For the following, we use the code `np.random.randn(num_rows, num_columns)` to generate a random `DataFrame`. The point is not for the output values to match, but rather the rows/columns.
+
+
+==== Return the column `A` from `DataFrame df`.
+
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+# method 1: []
+print(df['A'])
+# method 2: .
+print(df.A)
+----
+----
+0   -2.676859
+1    0.110410
+2    1.263104
+3    0.161416
+4   -0.213868
+----
+====
+
+
+==== Return columns `A`, `B`, and `D` from `DataFrame df`.
+
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+print(df[['A', 'B', 'D']])
+----
+----
+          A         B         D
+0  0.461834  0.456688 -1.061509
+1  1.003698  1.115509  0.120536
+2  0.814746  2.793606 -0.281329
+3  0.766533  0.138788  0.479603
+4 -0.084290 -0.141935  0.755774
+----
+====
+
+
+==== Return every other row in `DataFrame numbers`.
+
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+print(numbers[::2])
+----
+----
+          A         B         C         D
+0 -0.234193 -0.775527 -1.250210  1.421642
+2 -3.402812  0.388646  1.199761  1.366917
+4 -0.373406  0.868126 -0.063795  1.202232
+6 -0.872389  1.717326 -0.709681 -0.339897
+----
+====
+
+==== Return all of `numbers` except the last 3 rows.
+
+.Click to see solution
+[%collapsible]
+====
+[source,python]
+----
+print(numbers[:-3])
+----
+----
+          A         B         C         D
+0 -0.293664 -0.072110  0.937070  1.611655
+1 -0.431300  1.992882  0.175886 -0.777462
+2 -0.014344 -0.018958  0.085689  1.749314
+3  0.577731 -0.505912  1.576066 -0.688136
+4 -1.125129  1.710249  1.230097  0.634027
+----
+====
+
+{sp}+
+
+== Multi-dimensional Indexing: `loc` and `iloc`
+
+
+Fortunately, there are many ways to select multiple dimensions for subsetting, and they generally allow conditionals to further specify the data points you want.
+
+The `loc` method allows for label-based indexing, while `iloc` is primarily integer-based. These are two of the best functions to use when indexing, so we'll be using plenty of examples to demonstrate their versatility.
+
+We can use either `loc` or `iloc` to isolate a single column or `Series`. The differences between the two are strict; if you try to use row/column indices for `loc` or row/column names with `iloc`, you'll get an error.
+
+There are many ways to select and view data from a pandas DataFrame. We will use the following dataset(s) to understand filtering and selecting:
+
+`/anvil/projects/tdm/data/death_records/DeathRecords.csv`
+
+
+
+**Indexing Options with DataFrame**
+
+
+The following table comes from the O'Reily textbook _Python for Data Analysis:_
+[cols="2*"]
+|===
+^|Type ^|Notes
+^|`df[columns]` 
+| Select single column or sequence of columns from the DataFrame; special case conveniences: Boolean array (filter rows), (slice rows), or Boolean DataFrame (set values based on some criterion)
+
+^|`df.loc[rows]` 
+| Select single row or subset of rows from the DataFrame by label
+
+^|`df.loc[:, cols]` 
+| Select single colum or subset of columns by label
+
+^|`df.loc[rows, cols]` 
+| Select both row(s) and column(s) by label
+
+^|`df.iloc[rows]` 
+| Select both row(s) and column(s) by label
+
+^|`df.iloc[:, cols]` 
+| Select both row(s) and column(s) by integer position
+
+^|`df.iloc[rows, cols]` 
+| Select both row(s) and column(s) by integer position
+
+^|`df.at[row, col]` 
+| df.iat[row, col]
+
+^|`reindex method` 
+| Select either rows or columns by labels
+|===
+
+== Extracting Rows/Columns from the DataFrame
+
+
+Let's use our dataset to try the first indexing option.
+
+[source,python]
+----
+import pandas as pd
+myDF = pd.read_csv("/anvil/projects/tdm/data/death_records/DeathRecords.csv")
+----
+
+
+[source,python]
+----
+myDF['ResidentStatus']
+----
+
+The output of selecting one columns using `[]` is a pandas Series:
+----
+0          20
+1           1
+2           1
+3           1
+4           1
+           ..
+2631166     3
+2631167     3
+2631168     3
+2631169     4
+2631170     3
+Name: ResidentStatus, Length: 2631171, dtype: int64
+----
+
+If we wanted to extract multiple columns we, can use a list of the column names inside the double brackets `[[]]. 
+
+
+[source,python]
+----
+myDF[['ResidentStatus', 'Age']]
+----
+The output of selecting multiple columns using the double brackets is a pandas DataFrame:
+
+----
+ResidentStatus 	Age
+0 	1 	87
+1 	1 	58
+2 	1 	75
+3 	1 	74
+4 	1 	64
+... 	... 	...
+2631166 	3 	84
+2631167 	3 	74
+2631168 	3 	7
+2631169 	4 	49
+2631170 	3 	39
+
+2631171 rows × 2 columns
+----
+
+== The loc function 
+DataFrames in pandas allow for label-based indexing and integer-based indexing. The `loc` function is for **label-based indexing**. 
+
+In our dataset, our rows are integers, so we can use integers as our row labels. 
+
+[source,python]
+----
+myDF.loc[0, 'Age']
+----
+
+----
+87
+----
+
+== The iloc function 
+
+The `iloc` function allows us to do **integer-based indexing** (an easy way to remember this is that the i in iloc stands for integer!)
+
+For example, let's select `ResidentStatus` of the very first observation (index 0). 
+
+[source,python]
+----
+myDF.iloc[0, 1]
+----
+
+----
+1
+----
+
+Now let's select multiple columns of the first obervation: 
+
+[source,python]
+----
+myDF.iloc[0,1:10]
+----
+
+----
+ResidentStatus             1
+Education1989Revision      0
+Education2003Revision      2
+EducationReportingFlag     1
+MonthOfDeath               1
+Sex                        M
+AgeType                    1
+Age                       87
+AgeSubstitutionFlag        0
+Name: 0, dtype: object
+----

@@ -1,0 +1,650 @@
+= Basics of Programming 
+
+== Variables and Data Types
+
+Python variables are very similar to how variables are used in R. The primary difference is that instead of using `<-` or `->` to assign variables, Python uses a single `=`. 
+
+Python has a few key differences from R in regards to variable behavior. Information on variable assignment in Python can be found in the <<variable assignment, Variable Assigment>> section below. 
+
+Similar to other programming languages Python has several core variable types. Overview of each variable type are included below:
+
+* <<None, None>>
+* <<NaN, NaN>>
+* <<bool, bool>>
+* <<str, str>>
+* <<int, int>>
+* <<float, float>>
+* <<complex, complex>>
+
+
+== Variable Assigment 
+
+[source, python]
+----
+my_var = 4
+----
+
+This declares a variable with a value of 4. 
+
+[IMPORTANT]
+====
+Actually this is technically not true. Numbers between -5 and 256 (inclusive) are already pre-declared and exist within Python's memory before you assigned the value to my_var. The = operator simply forces my_var to point to that value that already exists! That is right, my_var is technically a pointer.
+====
+
+One of the most important differences between variables in R and Python is what is happening in the background. Take the code example below: 
+
+[source, python]
+----
+my_var = 4
+new_variable = my_var
+my_var = my_var + 1
+print(f"my_var: {my_var}\nnew_variable: {new_variable}")
+----
+----
+my_var: 5
+my_var: 4
+----
+[source, python]
+----
+my_var = [4,]
+new_variable = my_var
+my_var[0] = my_var[0] + 1
+print(f"my_var: {my_var}\nnew_variable: {new_variable}")
+----
+----
+my_var: [5]
+new_variable: [5]
+----
+
+The first chunk of code behaves as you'd expect because `int` values are immutable, meaning the values cannot be changed. As a result, when we assign `my_var = my_var + 1`, `my_vars` value isn't changing. Instead `my_var` is just being pointed to a different value (in this case 5). In comparison `new_variable` still points to the value of 4. 
+
+The second chunk of code is different because it is dealing with a mutable `list`. We first assign the first value (0 index) of the list to a value of 4. We then assign `my_var` to `new_variable`. Unlike the first example, this does **not** copy the values. Instead both `my_var` and `new_variable` point to the same mutable list object. When we then change the value of the list by 1 the change is reflected in each variable since they are pointing to the same object. 
+
+An excellent article goes into more detail and can be found https://realpython.com/pointers-in-python/[here]. 
+
+== None
+
+`None` is a keyword used to define a null value. This would be the Python equivalent to R's `NULL`. If used in an if statement, `None` represents `False`. This does not mean `None` == `False`, in fact: 
+
+[source, python]
+----
+print(None == False)
+----
+
+----
+False
+----
+
+Even though `None` can represent `False` in an if statement Python does not evaluate the two as equivalent. 
+
+== NaN
+
+The difference between `NaN` and `None` in Python can be somewhat confusing. The `NaN` value stand for `not a number` and is commonly used to reference missing data. Python will often convert `None` values to `NaN` dynamically, especially when working with numbers. There are lots of methods to identify and remove or fill `NaN` values, but it is worth noting that Python will evaluate them with no issues for many operations. 
+
+For example, if I wanted to sum the rows below and then remove any `NaN` values we could try the initial code snippet. 
+
+[source, python]
+----
+col_1 = [np.nan, 50, 100]
+ccol_2 = [np.nan, 100, 50]
+
+example_dataframe = pd.DataFrame(list(zip(col_1, col_2)), columns=['Value 1', 'Value 2'])
+example_dataframe['example_sum'] = np.sum(example_dataframe, axis=1)
+----
+
+However, Python would evaluate this as the table below:
+|====
+|Value 1 |Value 2 |example_sum
+|NaN |NaN |0
+|50 |100 |150
+|100 |50 |150
+|====
+
+If we were to try to remove `NaN` values based on the `example_sum` column no rows would be removed. In this case we'd want to remove or fill the `Nan` values prior to the aggregation (sum). 
+
+== bool
+
+A `bool` has two possible values: `True` and `False`. It is important to understand that technically they also correspond to integers:
+
+[source, python]
+----
+print(True == 1)
+----
+
+----
+True
+----
+
+[source, python]
+----
+print(False == 0)
+----
+
+----
+True
+----
+
+The `True` and `False` values only correspond to 1 and 0 respectively. They will not evaulate in the same way for other numbers:
+
+[source, python]
+----
+print(True == 2)
+----
+
+----
+False
+----
+
+However, if used in an if statement numbers that do not equal 1 or 0 can evaulate to `True`. Think of the if statement below as asking the question `Does this value equal 3?` and returning `True` or `False` as a result. 
+
+[source, python]
+----
+if 3:
+    print("3 evaluates to True")
+----
+
+----
+3 evaluates to True
+----
+
+== str
+
+`str` indicate string in Python. String are "immutable sequences of Unicode code points". Strings can be surrounded in single quotes, double quotes, or triple quoted (with either single or double quotes):
+
+[source, python]
+----
+print(f"Single quoted text is type: {type('test')}")
+----
+
+----
+Single quoted text is type: <class 'str'>
+----
+
+[source, python]
+----
+print(f"Double quoted text is type: {type("test")}")
+----
+
+----
+Double quoted text is type: <class 'str'>
+----
+
+[source, python]
+----
+print(f"Triple quoted with single quotes is type: {type('''test''')}")
+----
+
+----
+Triple quoted with single quotes is type: <class 'str'>
+----
+
+[source, python]
+----
+print(f"Triple quoted with double quotes is type: {type("""test""")}")
+----
+
+----
+Triple quoted with double quotes is type: <class 'str'>
+----
+
+The benefit of triple quoting a string is that it can span multiple lines in the code. These lines will include the whitespace between the text: 
+
+[source, python]
+----
+my_string = """This text
+spans multiple
+lines."""
+print(my_string)
+----
+
+----
+This text
+spans multiple
+lines.
+----
+
+However, if we tried the same thing without triple quotes: 
+
+[source, python]
+----
+my_string = "This text,
+will throw an error"
+print(my_string)
+----
+
+In Python you do have the ability for other code to span multiple lines using `\`, but newlines won't be maintained: 
+
+[source, python]
+----
+my_string = "This text, \
+will throw an error"
+print(my_string)
+----
+
+----
+This text, will throw an error
+----
+
+== int
+
+`int` values are whole numbers. For instance: 
+
+[source, python]
+----
+my_var = 5
+print(type(my_var))
+----
+
+----
+<class 'int'>
+----
+
+`int` values can be added, subtracted, or multiplied without changing the variable type. However, divison of `int` values will change the variable type to <<float, float>> whether or not the result of the division is a whole number: 
+
+[source, python]
+----
+print(type(6+2-2*2))
+----
+
+----
+<class 'int'>
+----
+
+[source, python]
+----
+print(type(6/2))
+----
+
+----
+<class 'float'>
+----
+
+Similarly, any calculation between an `int` and a `float` results in a `float`: 
+
+[source, python]
+----
+print(type(6+2.0)) ## 2.0 is a float
+----
+
+----
+<class 'float'>
+----
+
+== float
+
+`float` values are floating point numbers. Also known as numbers with decimals.
+
+[source, python]
+----
+my_var = 5.0
+print(type(my_var))
+----
+
+----
+<class 'float'>
+----
+
+`float` values can be converted back to `int` using the `int` function. This _coercion_ causes the `float` value to be truncated, regardless of how close to the "next" number the float is. *Note:* This will not round a number in the way that you would expect. There are `round` functions in Python that have the more expected functionality. 
+
+[source, python]
+----
+print(int(5.5))
+----
+
+----
+5
+----
+
+[source, python]
+----
+print(int(5.9999))
+----
+
+----
+5
+----
+
+== complex
+
+`complex` values represent complex numbers. For example, `j` can be used to represent an imaginary number. In order for Python to understand this `j` must be preceded by a number. For example `1j`. 
+
+[source, python]
+----
+my_var = 1j
+print(my_var)
+----
+
+----
+1j
+----
+
+[source, python]
+----
+print(type(my_var))
+----
+
+----
+<class 'complex'>
+----
+
+Arithmetic with a `complex` value always results in a `complex`: 
+
+[source, python]
+----
+print(type(1j * 2))
+----
+
+----
+<class 'complex'>
+----
+
+Unlike the other types mentioned above, you cannot convert a `complex` value to an `int` or `float`: 
+
+[source, python]
+----
+print(int(1j*1j))
+print(float(1j*1j))
+----
+
+----
+Python error :(
+----
+
+Let's try another example. Let's execute the command x = "Hello World", and have the variable x hold a string. You can use the `type` function in Python to check what data type your object is.
+
+[source,python]
+----
+x = "Hello World"
+print(x)
+type(x) 
+----
+
+
+----
+<class 'str' >
+----
+
+If you wanted to get the length of the string, you could use the `len` function. 
+
+[source,python]
+----
+len(x)
+----
+
+----
+11
+----
+
+
+Now let's say we wanted to divide two integers and then check what the resulting data type is 
+
+[source,python]
+----
+x = 15 / 2
+type(x)
+----
+
+----
+float
+----
+
+If you wanted to return an integer, you can use the '//' operator which returns an integer.
+
+[source,python]
+----
+x = 15 // 2
+type(x)
+----
+
+----
+int
+----
+
+
+
+== Logical Operators
+
+Logical operators in Python evaluate Boolean expressions (True/False values) and return a result based on the operator used.
+
+[cols="2*"]
+|===
+^|Operator ^|Description
+^|`==` 
+| equal to
+
+^|`!=` 
+| not equal to
+
+^|`x + y` 
+| Add x and y
+
+^|`x - y` 
+| Subtract y from x
+
+^|`x * y` 
+| Multiply x by y
+
+^|`x / y` 
+| Divide x by y
+
+^|`not x` 
+| negation, not x
+
+^|`x or y` 
+| x OR y
+
+^|`x and y` 
+| x AND y
+
+^|`x is y` 
+| x and y both point to the same objects in memory
+
+^|`x == y` 
+| x and y have the same values
+|===
+
+Let's demonstrate how you can perform arithmetic operations. 
+
+[source,python]
+----
+# using the and operator
+x = 10
+y = 20
+print(a > 5 and b > 15) 
+----
+----
+True
+----
+
+
+
+[source,python]
+----
+# using and, or and not operators
+x = 10
+y = 20
+x = 30
+
+print(not (x > y or y < 25) and z == 30) 
+
+----
+
+----
+False
+----
+
+
+
+Now, let's use the `input()` function to prompt the user to enter a number. Input() returns a string, so you need to convert it to an integer using int() to perform arithmetic operations:
+
+[source,python]
+----
+`num1 = int(input("Enter an integer: "))`
+----
+You can have a user input a second integer, and assign it to a variable named `num2`:
+
+[source,python]
+----
+`num2 = int(input("Enter a second integer: "))`
+----
+
+Now let's add the values of `num1` and `num2` and print a string that says: `The sum of the two numbers is: [result here]`
+
+[source,python]
+----
+sum_result = num1 + num2
+print("The sum of the two numbers is:", sum_result)
+----
+
+----
+The sum of the two numbers is: 10
+----
+
+
+
+== Exploring Data Types using a Dataset
+
+We will use the following dataset(s) to explore data types. 
+
+`/anvil/projects/tdm/data/flights/subset/airports.csv`
+
+**Reading the Data**
+
+The beginning step of most projects is reading a file and storing it. We can use the Pandas library and use `read_csv`, which *reads* in *.csv* files and outputs a xref:pandas-dataframes[`DataFrame`]. A `DataFrame` is the star of the `pandas` package.  Many of our `pandas` guides are simply building blocks for understanding `DataFrames`.
+
+The standard practice for `DataFrames` is xref:pandas-read-write-data.adoc[reading a file] and saving it, taking a glimpse at its contents, and using a wide variety of methods to manipulate the data to achieve whatever goal you have.
+
+
+As with any package, we must import the `pandas` library, and the customary import statement is `import pandas as pd`. Let's use `read_csv` to save the file "airports.csv" into the variable `myDF`:
+
+
+[source, python]
+----
+import pandas as pd
+myDF = pd.read_csv("/anvil/projects/tdm/data/flights/subset/airports.csv")
+----
+
+
+Now let's examine the first five rows of our DataFrame to understand the structure of our data using the .head() function, including the available columns and the information they contain. 
+
+[source, python]
+----
+myDF.head()
+----
+[source, python]
+----
+  iata               airport              city state country        lat        long
+0  00M              Thigpen        Bay Springs    MS     USA  31.953765  -89.234505
+1  00R  Livingston Municipal        Livingston    TX     USA  30.685861  -95.017928
+2  00V           Meadow Lake  Colorado Springs    CO     USA  38.945749 -104.569893
+3  01G          Perry-Warsaw             Perry    NY     USA  42.741347  -78.052081
+4  01J      Hilliard Airpark          Hilliard    FL     USA  30.688012  -81.905944
+----
+
+Now let's examine the last five rows of our DataFrame using the .tail() function. 
+[source, python]
+----
+     iata                    airport         city state country        lat        long
+3371  ZEF            Elkin Municipal        Elkin    NC     USA  36.280024  -80.786069
+3372  ZER  Schuylkill Cty/Joe Zerbey   Pottsville    PA     USA  40.706449  -76.373147
+3373  ZPH      Zephyrhills Municipal  Zephyrhills    FL     USA  28.228065  -82.155916
+3374  ZUN                 Black Rock         Zuni    NM     USA  35.083227 -108.791777
+3375  ZZV       Zanesville Municipal   Zanesville    OH     USA  39.944458  -81.892105
+>>> 
+----
+
+
+**Examining the Data Types of the Dataset**
+
+We can display the dataset information, using the '.info()' function which returns the data types and columns of the dataset. 
+
+[source, python]
+----
+myDF.info()
+----
+
+[source, python]
+----
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 3376 entries, 0 to 3375
+Data columns (total 7 columns):
+ #   Column   Non-Null Count  Dtype  
+---  ------   --------------  -----  
+ 0   iata     3376 non-null   object 
+ 1   airport  3376 non-null   object 
+ 2   city     3364 non-null   object 
+ 3   state    3364 non-null   object 
+ 4   country  3376 non-null   object 
+ 5   lat      3376 non-null   float64
+ 6   long     3376 non-null   float64
+dtypes: float64(2), object(5)
+memory usage: 184.8+ KB
+----
+
+From the output above, we can observe that our dataset contains seven columns, with their data types listed under `Dtype`. The columns `'iata'`, `'airport'`, `'city'`, `'state'`, and `'country'` are categorized as object types, while `'lat'` and `'long'` are float variables. In Python, particularly when working with pandas, the object data type is used as a container for various types of Python objects, including strings. Pandas generally classifies columns containing textual data as objects. We can convert the object columns into strings.
+
+**Handling Missing Values**
+
+Before performing data conversion, let's identify missing values in the dataset. Missing values (NaN) in numeric or textual columns can lead to issues during data type conversion so it's good to check before we start to do data type conversion.
+
+[source, python]
+----
+missing_data = myDF[myDF.isnull().any(axis=1)]
+print(missing_data)
+
+----
+
+[source, python]
+----
+     iata                       airport  city state                         country        lat        long
+1136  CLD    MC Clellan-Palomar Airport  <NA>  <NA>                             USA  33.127231 -117.278727
+1715  HHH                   Hilton Head  <NA>  <NA>                             USA  32.224384  -80.697629
+2251  MIB                     Minot AFB  <NA>  <NA>                             USA  48.415769 -101.358039
+2312  MQT      Marquette County Airport  <NA>  <NA>                             USA  46.353639  -87.395361
+2752  RCA                 Ellsworth AFB  <NA>  <NA>                             USA  44.145094 -103.103567
+2759  RDR               Grand Forks AFB  <NA>  <NA>                             USA  47.961167  -97.401167
+2794  ROP                   Prachinburi  <NA>  <NA>                        Thailand  14.078333  101.378334
+2795  ROR              Babelthoup/Koror  <NA>  <NA>                           Palau   7.367222  134.544167
+2900  SCE               University Park  <NA>  <NA>                             USA  40.851206  -77.846302
+2964  SKA                 Fairchild AFB  <NA>  <NA>                             USA  47.615058 -117.655803
+3001  SPN  Tinian International Airport  <NA>  <NA>               N Mariana Islands  14.996111  145.621384
+3355  YAP             Yap International  <NA>  <NA>  Federated States of Micronesia   9.516700  138.100000
+>>> 
+----
+
+We can see that the columns `city` and `state` have <NA> values. Let's replace missing Values with a placeholder like "Missing":
+
+[source, python]
+----
+df['city'].fillna('Missing', inplace=True)
+df['state'].fillna('Missing', inplace=True)
+----
+**Changing Data Types**
+
+Next, let's explore how to change data types using astype(). Let's convert the `object` variables to strings. The `lat` and `long` variables can remain unchanged, as the float data type is suitable for them.
+
+[source, python]
+----
+columns_to_string = ['iata', 'airport', 'city', 'state', 'country']
+
+myDF[columns_to_string] = myDF[columns_to_string].astype('string')
+
+myDF.info()
+----
+[source, python]
+----
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 3376 entries, 0 to 3375
+Data columns (total 7 columns):
+ #   Column   Non-Null Count  Dtype  
+---  ------   --------------  -----  
+ 0   iata     3376 non-null   string 
+ 1   airport  3376 non-null   string 
+ 2   city     3364 non-null   string 
+ 3   state    3364 non-null   string 
+ 4   country  3376 non-null   string 
+ 5   lat      3376 non-null   float64
+ 6   long     3376 non-null   float64
+dtypes: float64(2), string(5)
+memory usage: 184.8 KB
+----
