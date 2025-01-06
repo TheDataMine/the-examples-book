@@ -1,0 +1,230 @@
+= TDM 40200: Project 5 -- 2023
+
+**Motivation:** Dashboards are everywhere -- many of our corporate partners' projects are to build dashboards (or dashboard variants)! Dashboards are used to interactively visualize some set of data. Dashboards can be used to display, add, remove, filter, or complete some customized operation to data. Ultimately, a dashboard is really a website focused on displaying data. Dashboards are so popular, there are entire frameworks designed around making them with less effort, faster. Two of the more popular examples of such frameworks are https://shiny.rstudio.com/[`shiny`] (in R) and https://dash.plotly.com/introduction[`dash`] (in Python). While these tools are incredibly useful, it can be very beneficial to take a step back and build a dashboard (or website) from scratch (we are going to utilize many powerfuly packages and tools that make this far from "scratch", but it will still be more from scratch than those dashboard frameworks).
+
+**Context:** This is the fourth in a series of projects focused around slowly building a dashboard. Students will have the opportunity to: create a backend (API) using `fastapi`, connect the backend to a database using `aiosql`, use the `jinja2` templating engine to create a frontend, use `htmx` to add "reactivity" to the frontend, create and use forms to insert data into the database, containerize the application so it can be deployed anywhere, and deploy the application to a cloud provider. Each week the project will build on the previous week, however, each week will be self-contained. This means that you can complete the project in any order, and if you miss a week, you can still complete the following project using the provided starting point.
+
+**Scope:** Python, dashboards
+
+.Learning Objectives
+****
+- Continue to develop skills and techniques using `fastapi` to build a backend.
+- Learn how to use `pydantic` for data validation and type hints.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Questions
+
+[WARNING]
+====
+Interested in being a TA? Please apply: https://purdue.ca1.qualtrics.com/jfe/form/SV_08IIpwh19umLvbE
+====
+
+=== Question 1
+
+In the previous projects, our functions would typically return a `dict`, which, if we paired it with a `JSONResponse`, would return a clean JSON object, displayed in the browser. 
+
+However, crafting every response in this manner is not a great idea. API's need to be consistent and predictable. It is very easy to make a mistake and return a value that is the wrong type, or a value that is not expected. This is where `pydantic` can greatly help us out. `fastapi` is structured specifically to work with `pydantic` models. In addition, one of the _most_ critical parts of any application is the data model. One should take a lot of time considering how data is structured and flows through your application. Working with `pydantic` and `fastapi` will help you to do this.
+
+[TIP]
+====
+https://docs.pydantic.dev/[Here] are the official docs for `pydantic`.
+https://fastapi.tiangolo.com/python-types/#python-types-intro[Here] is the section of the `fastapi` docs that discusses Python types as well as `pydantic` models (towards the bottom of the page).
+====
+
+[NOTE]
+====
+In both the `pydantic` and `fastapi` docs, you will sometimes have the choice of choosing which version of Python you are using. Please choose "Python 3.10 and above", however, due to the version of `pydantic` we are currently using, you may have to choose "Python 3.7 and above". For example, in "Python 3.10 and above" you should be able to have something like this.
+
+[source,python]
+----
+class User(BaseModel):
+    id: int | str
+----
+
+Here, the `id` field can be either an `int` or a `str`. However, due to the version of `pydantic` we are using, this behavior isn't supported. However, in "Python 3.7 and above", you will have to do something like this.
+
+[source,python]
+----
+from typing import Union
+
+class User(BaseModel):
+    id: Union[int, str]
+----
+
+This would work using our `f2022-s2023` Python. The point here is, if there is an error saying something about "some type not supported" -- please try an "older" method of doing things.
+====
+
+Use the code below as a starting point. Create a `pydantic` model to handle titles like we would have in our `titles` table from the previous project. Unpack the following set of data into the `pydantic` model. What happens when you try to load it into a `Title` object? Modify your `pydantic` `Title` model to accept the data.
+
+For this project, you can use Jupyter Lab. No need to use our VS Code setup. Please make sure to run all cells so the results are displayed.
+
+[source,python]
+----
+# create pydantic model for titles here.
+
+def main():
+    # load data into pydantic model here.
+
+if __name__ == "__main__":
+    main()
+----
+
+.first set of data
+----
+first = {"title_id": "tt3581920", "type": "tvseries", "primary_title": "The Last of Us", "original_title": "The Last of Us", "is_adult": False, "premiered": 2023, "ended": None, "runtime_minutes": 60, "genres": "Action,Adventure,Drama"}
+----
+
+Great! There are a lot of ways you can craft your `pydantic` models. You can make certain fields "optional" where the value can either be _some type_ or `None`. You can use https://docs.pydantic.dev/usage/types/#unions[Unions] to specify multiple valid types. You can even specify good default values!
+
+[TIP]
+====
+Hint hint: https://docs.pydantic.dev/usage/types/#unions[Here] is a link to the docs for `Unions`, which will be useful for loading up the first set of data.
+====
+
+Try loading the following set of data into your `Title` type. Pay close attention to the `is_adult` field _before_ and _after_ you load the data into the `Title` type. Same for the `premiered` field. Do your best to explain what is happening.
+
+.second set of data
+----
+second = {"title_id": "tt3581920", "type": "tvseries", "primary_title": "The Last of Us", "original_title": "The Last of Us", "is_adult": 0, "premiered": "2023", "ended": None, "runtime_minutes": 60, "genres": "Action,Adventure,Drama"}
+----
+
+Finally, `pydantic` models _validate_ your data -- this means that you'll get a very nice description of _why_ your data is incorrect, if it is incorrect. Try loading the following set of data into your `Title` type. Does it give you an easy to understand error message?
+
+.third set of data
+----
+third = {"title_id": "tt3581920", "type": "tvseries", "primary_title": "The Last of Us", "original_title": "The Last of Us", "is_adult": 0, "premiered": "2023", "ended": None, "runtime_minutes": "60 minutes", "genres": "Action,Adventure,Drama"}
+----
+
+[TIP]
+====
+The very first code example https://docs.pydantic.dev/[here] will demonstrate how to take a `dict` and load it into a `pydantic` model.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+As you may have gathered after experimenting with `pydantic` in the previous question, `pydantic` will _try_ to convert to the desired, correct type, if possible. Otherwise you will "fail fast" and receive a nice, detailed error message. If you didn't use a tool like `pydantic`, a customer using your API may receive some _very_ unexpected behavior. For example, if your API would normally return an integer, but for some reason it returned a string instead, your customer's code, which could be written in a completely different programming language, could break. This is why it is important to validate your data.
+
+Take the following set of data containing the title info for "The Last of Us".
+
+[source,python]
+----
+first = {"title_id": "tt3581920", "type": "tvseries", "primary_title": "The Last of Us", "original_title": "The Last of Us", "is_adult": False, "premiered": 2023, "ended": None, "runtime_minutes": 60, "genres": "Action,Adventure,Drama"}
+----
+
+While you built a `pydantic` model to handle this data, your model is _likely_ not ideal, yet. Take a look at the `genres`. In our example it is: "Action,Adventure,Drama". However, the way our data is stored it could also be "Drama,Adventure,Action" or "Action,Romance", or any combination of a variety of different genres. `genres` is really a _list_, not a string. Why don't we build up our data model to handle this?
+
+Modify your `Title` model so that `genres` is a _list_ of `str`. Take the `first` `dict` above, and make any modifications that are needed so the data is loaded into the `Title` model correctly. Once you have done this, print out the `Title` object to show that it is working correctly.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+So far so good. While this project may be underwhelming in terms of a "wow" factor -- we are just messing around with data and types -- it is very important, and a good habit to practice. Using tools that validate your data will save you a lot of time and headaches in the future.
+
+Well, our plan is to utilize `pydantic` as a part of our backend, right? Well, where will our data come from? Our database! What are we using to get data from our database? `aiosql`! The next task is to use `aiosql` to load data from our database, and then use `pydantic` to convert that data into a `Title` object.
+
+Start by establishing a connection to the database, and making a query.
+
+[source,ipython]
+----
+%%bash
+
+cp /anvil/projects/tdm/data/movies_and_tv/imdb.db $SCRATCH
+----
+
+.queries.sql
+----
+-- name: get-title-by-id
+-- Given a title id, return the matching title.
+SELECT * FROM titles WHERE title_id=:title_id;
+----
+
+[source,python]
+----
+import aiosql
+import sqlite3
+
+queries = aiosql.from_path("queries.sql", "sqlite3")
+conn = sqlite3.connect("/anvil/scratch/x-kamstut/imdb.db") # replace x-kamstut with your username
+    
+results = queries.get_title_by_id(conn, title_id="tt0108778")
+----
+
+Now, take `results` and convert it to a `Title` `pydantic` model. Print out the `Title` object to show that it is working correctly.
+
+[TIP]
+====
+First, you will want to end up creating a `dict` where the keys are the same as the keys in the `Title` model. The follow code is a way to access the keys of the `Title` model.
+
+[source,python]
+----
+Title.__fields__.keys()
+----
+====
+
+[TIP]
+====
+Don't forget to convert the `genres` field to a list of strings. You can use the `split` method to do this.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+`pydantic` makes it easy to export your data to a variety of useful formats. Take your resulting `Title` object from the previous question, and demonstrate converting the model to a `dict`, a `json` string, and finally, demonstrate saving the model using the `pickle` package. Be sure to print out the results of each conversion.
+
+[TIP]
+====
+There is a https://docs.pydantic.dev/usage/exporting_models/[whole page] about this functionality in the documentation.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+Finally, one other useful feature of `pydantic`, is the ability to write _custom_ validators for your data. For example, if you wanted to make sure that the `premiered` date was before the `ended` date, you could write a custom validator to do this. In fact, this is exactly what we are going to do!
+
+Read https://docs.pydantic.dev/usage/validators/[this page] in the documentation. Update your `Title` model to include a custom validator called `sane_dates` that will check that the `premiered` date is before the `ended` date. Test out your validator by attempting to load the following two sets of data into a `Title` object. The first one should fail with a clear message, and the last one should succeed. Be sure to include the output in your notebook cells.
+
+.failure data
+----
+failure = {"title_id": "tt3581920", "type": "tvseries", "primary_title": "The Last of Us", "original_title": "The Last of Us", "is_adult": False, "premiered": 2023, "ended": 2000, "runtime_minutes": 60, "genres": "Action,Adventure,Drama".split(",")}
+----
+
+.success data
+----
+success = {"title_id": "tt3581920", "type": "tvseries", "primary_title": "The Last of Us", "original_title": "The Last of Us", "is_adult": False, "premiered": 2023, "ended": 2030, "runtime_minutes": 60, "genres": "Action,Adventure,Drama".split(",")}
+----
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====
