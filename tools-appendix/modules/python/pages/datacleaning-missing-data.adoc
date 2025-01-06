@@ -1,0 +1,512 @@
+= Data Cleaning and Handling Missing Data
+
+In this document, we will:
+
+* Understanding how to handle missing data
+
+* Learn why managing missing data is crucial for maintaining accuracy and reliability in data analysis.
+
+* Filtering out missing data: Use functions like `dropna()` to remove rows or columns with missing values, including options like applying thresholds.
+
+* Filling in missing data: Replace missing values using methods such as constants, statistical measures (mean/median), or interpolation techniques.
+
+We will use the following dataset(s) to understand how to handle missing data:
+
+`/anvil/projects/tdm/data/zillow/Metro_time_series.csv`
+
+== Handling Missing Data in Pandas
+
+Pandas simplifies managing missing data for both numeric and non-numeric datasets. By default, descriptive statistics exclude missing values, ensuring accurate calculations.
+
+For numeric data, pandas uses NaN (Not a Number) to represent missing values, while for non-numeric data, it may use None or NaN, depending on the data type. While pandas handles missing values by default, it is crucial to understand the data that is missing and how it might impact your analysis. Properly addressing missing data is essential for maintaining accuracy and ensuring data validation in your workflows.
+
+
+Before identifying the missing data, let's try to understand how big our dataset actually is. 
+
+[source, python]
+----
+import pandas as pd
+myDF = pd.read_csv("/anvil/projects/tdm/data/zillow/Metro_time_series.csv")
+rows, columns = myDF.shape
+print(f"Total rows: {rows}")
+print(f"Total columns: {columns}")
+----
+
+----
+Total rows: 211182
+Total columns: 95
+----
+
+Now, let's summarize the number of missing values per column. We will use the `pd.set_option` function in pandas to adjust the display settings for how data is presented. Since by default, pandas limits the number of rows displayed when printing a DataFrame or Series. 
+
+[source, python]
+----
+pd.set_option('display.max_rows', None)
+missing_summary = myDF.isnull().sum()
+print(missing_summary)
+----
+
+----
+Date                                                                  0
+RegionName                                                            0
+AgeOfInventory                                                   186486
+DaysOnZillow_AllHomes                                            186200
+InventorySeasonallyAdjusted_AllHomes                             142830
+InventoryRaw_AllHomes                                            142830
+InventorySeasonallyAdjusted_BottomTier                           171715
+InventorySeasonallyAdjusted_MiddleTier                           169004
+InventorySeasonallyAdjusted_TopTier                              165669
+MedianListingPricePerSqft_1Bedroom                               203737
+MedianListingPricePerSqft_2Bedroom                               172797
+MedianListingPricePerSqft_3Bedroom                               151062
+MedianListingPricePerSqft_4Bedroom                               166676
+MedianListingPricePerSqft_5BedroomOrMore                         189536
+MedianListingPricePerSqft_AllHomes                               139414
+MedianListingPricePerSqft_CondoCoop                              193400
+MedianListingPricePerSqft_DuplexTriplex                          201602
+MedianListingPricePerSqft_SingleFamilyResidence                  139639
+MedianListingPrice_1Bedroom                                      206071
+MedianListingPrice_2Bedroom                                      178938
+MedianListingPrice_3Bedroom                                      157181
+MedianListingPrice_4Bedroom                                      173576
+MedianListingPrice_5BedroomOrMore                                194056
+MedianListingPrice_AllHomes                                      143712
+MedianListingPrice_CondoCoop                                     196537
+MedianListingPrice_DuplexTriplex                                 202966
+MedianListingPrice_SingleFamilyResidence                         143683
+MedianPctOfPriceReduction_AllHomes                               152838
+MedianPctOfPriceReduction_CondoCoop                              200622
+MedianPctOfPriceReduction_SingleFamilyResidence                  153190
+MedianPriceCutDollar_AllHomes                                    152838
+MedianPriceCutDollar_CondoCoop                                   200622
+MedianPriceCutDollar_SingleFamilyResidence                       153190
+MedianRentalPricePerSqft_1Bedroom                                202843
+MedianRentalPricePerSqft_2Bedroom                                196267
+MedianRentalPricePerSqft_3Bedroom                                194592
+MedianRentalPricePerSqft_4Bedroom                                203685
+MedianRentalPricePerSqft_5BedroomOrMore                          208512
+MedianRentalPricePerSqft_AllHomes                                190257
+MedianRentalPricePerSqft_CondoCoop                               204331
+MedianRentalPricePerSqft_DuplexTriplex                           206190
+MedianRentalPricePerSqft_MultiFamilyResidence5PlusUnits          196292
+MedianRentalPricePerSqft_SingleFamilyResidence                   190806
+MedianRentalPricePerSqft_Studio                                  203875
+MedianRentalPrice_1Bedroom                                       202020
+MedianRentalPrice_2Bedroom                                       195328
+MedianRentalPrice_3Bedroom                                       194864
+MedianRentalPrice_4Bedroom                                       204249
+MedianRentalPrice_5BedroomOrMore                                 208852
+MedianRentalPrice_AllHomes                                       191841
+MedianRentalPrice_CondoCoop                                      205136
+MedianRentalPrice_DuplexTriplex                                  203760
+MedianRentalPrice_MultiFamilyResidence5PlusUnits                 194944
+MedianRentalPrice_SingleFamilyResidence                          191947
+MedianRentalPrice_Studio                                         203171
+ZHVIPerSqft_AllHomes                                              34619
+PctOfHomesDecreasingInValues_AllHomes                            167893
+PctOfHomesIncreasingInValues_AllHomes                            167893
+PctOfHomesSellingForGain_AllHomes                                210378
+PctOfHomesSellingForLoss_AllHomes                                210378
+PctOfListingsWithPriceReductionsSeasAdj_AllHomes                 147734
+PctOfListingsWithPriceReductionsSeasAdj_BottomTier               197894
+PctOfListingsWithPriceReductionsSeasAdj_CondoCoop                198774
+PctOfListingsWithPriceReductionsSeasAdj_MiddleTier               196750
+PctOfListingsWithPriceReductionsSeasAdj_SingleFamilyResidence    147822
+PctOfListingsWithPriceReductionsSeasAdj_TopTier                  194110
+PctOfListingsWithPriceReductions_AllHomes                        147734
+PctOfListingsWithPriceReductions_BottomTier                      197348
+PctOfListingsWithPriceReductions_CondoCoop                       198774
+PctOfListingsWithPriceReductions_MiddleTier                      196345
+PctOfListingsWithPriceReductions_SingleFamilyResidence           147822
+PctOfListingsWithPriceReductions_TopTier                         193158
+PriceToRentRatio_AllHomes                                        153683
+Sale_Counts_Msa                                                  200580
+Sale_Counts_Seas_Adj_Msa                                         200580
+Sale_Prices_Msa                                                  201793
+InventoryTierShare_BottomTier_AllHomes                           171715
+InventoryTierShare_MiddleTier_AllHomes                           169004
+InventoryTierShare_TopTier_AllHomes                              165669
+ZHVI_1bedroom                                                    121824
+ZHVI_2bedroom                                                     67888
+ZHVI_3bedroom                                                     39562
+ZHVI_4bedroom                                                     44115
+ZHVI_5BedroomOrMore                                               75668
+ZHVI_AllHomes                                                     36803
+ZHVI_BottomTier                                                   61978
+ZHVI_CondoCoop                                                   115924
+ZHVI_MiddleTier                                                   36797
+ZHVI_SingleFamilyResidence                                        36740
+ZHVI_TopTier                                                      33776
+ZRI_AllHomes                                                     153154
+ZRI_AllHomesPlusMultifamily                                      152961
+ZriPerSqft_AllHomes                                              154370
+Zri_MultiFamilyResidenceRental                                   164451
+Zri_SingleFamilyResidenceRental                                  153178
+dtype: int64
+----
+
+Some columns have a significant number of missing values, but it's important to assess this in relation to the entire dataset. Calculating the proportion of missing values compared to the total dataset provides better context and helps us evaluate the severity of the missing data. 
+
+== Calculate the percentage of missing values for each column
+
+[source, python]
+----
+missing_percentage = myDF.isnull().mean() * 100
+print(missing_percentage)
+----
+
+----
+Date                                                              0.000000
+RegionName                                                        0.000000
+AgeOfInventory                                                   88.305822
+DaysOnZillow_AllHomes                                            88.170393
+InventorySeasonallyAdjusted_AllHomes                             67.633605
+InventoryRaw_AllHomes                                            67.633605
+InventorySeasonallyAdjusted_BottomTier                           81.311381
+InventorySeasonallyAdjusted_MiddleTier                           80.027654
+InventorySeasonallyAdjusted_TopTier                              78.448447
+MedianListingPricePerSqft_1Bedroom                               96.474605
+MedianListingPricePerSqft_2Bedroom                               81.823735
+MedianListingPricePerSqft_3Bedroom                               71.531665
+MedianListingPricePerSqft_4Bedroom                               78.925287
+MedianListingPricePerSqft_5BedroomOrMore                         89.750073
+MedianListingPricePerSqft_AllHomes                               66.016043
+MedianListingPricePerSqft_CondoCoop                              91.579775
+MedianListingPricePerSqft_DuplexTriplex                          95.463629
+MedianListingPricePerSqft_SingleFamilyResidence                  66.122586
+MedianListingPrice_1Bedroom                                      97.579813
+MedianListingPrice_2Bedroom                                      84.731653
+MedianListingPrice_3Bedroom                                      74.429165
+MedianListingPrice_4Bedroom                                      82.192611
+MedianListingPrice_5BedroomOrMore                                91.890407
+MedianListingPrice_AllHomes                                      68.051254
+MedianListingPrice_CondoCoop                                     93.065223
+MedianListingPrice_DuplexTriplex                                 96.109517
+MedianListingPrice_SingleFamilyResidence                         68.037522
+MedianPctOfPriceReduction_AllHomes                               72.372645
+MedianPctOfPriceReduction_CondoCoop                              94.999574
+MedianPctOfPriceReduction_SingleFamilyResidence                  72.539326
+MedianPriceCutDollar_AllHomes                                    72.372645
+MedianPriceCutDollar_CondoCoop                                   94.999574
+MedianPriceCutDollar_SingleFamilyResidence                       72.539326
+MedianRentalPricePerSqft_1Bedroom                                96.051273
+MedianRentalPricePerSqft_2Bedroom                                92.937372
+MedianRentalPricePerSqft_3Bedroom                                92.144217
+MedianRentalPricePerSqft_4Bedroom                                96.449982
+MedianRentalPricePerSqft_5BedroomOrMore                          98.735688
+MedianRentalPricePerSqft_AllHomes                                90.091485
+MedianRentalPricePerSqft_CondoCoop                               96.755879
+MedianRentalPricePerSqft_DuplexTriplex                           97.636162
+MedianRentalPricePerSqft_MultiFamilyResidence5PlusUnits          92.949210
+MedianRentalPricePerSqft_SingleFamilyResidence                   90.351450
+MedianRentalPricePerSqft_Studio                                  96.539951
+MedianRentalPrice_1Bedroom                                       95.661562
+MedianRentalPrice_2Bedroom                                       92.492731
+MedianRentalPrice_3Bedroom                                       92.273016
+MedianRentalPrice_4Bedroom                                       96.717050
+MedianRentalPrice_5BedroomOrMore                                 98.896686
+MedianRentalPrice_AllHomes                                       90.841549
+MedianRentalPrice_CondoCoop                                      97.137067
+MedianRentalPrice_DuplexTriplex                                  96.485496
+MedianRentalPrice_MultiFamilyResidence5PlusUnits                 92.310898
+MedianRentalPrice_SingleFamilyResidence                          90.891743
+MedianRentalPrice_Studio                                         96.206590
+ZHVIPerSqft_AllHomes                                             16.392969
+PctOfHomesDecreasingInValues_AllHomes                            79.501567
+PctOfHomesIncreasingInValues_AllHomes                            79.501567
+PctOfHomesSellingForGain_AllHomes                                99.619286
+PctOfHomesSellingForLoss_AllHomes                                99.619286
+PctOfListingsWithPriceReductionsSeasAdj_AllHomes                 69.955773
+PctOfListingsWithPriceReductionsSeasAdj_BottomTier               93.707797
+PctOfListingsWithPriceReductionsSeasAdj_CondoCoop                94.124499
+PctOfListingsWithPriceReductionsSeasAdj_MiddleTier               93.166084
+PctOfListingsWithPriceReductionsSeasAdj_SingleFamilyResidence    69.997443
+PctOfListingsWithPriceReductionsSeasAdj_TopTier                  91.915978
+PctOfListingsWithPriceReductions_AllHomes                        69.955773
+PctOfListingsWithPriceReductions_BottomTier                      93.449252
+PctOfListingsWithPriceReductions_CondoCoop                       94.124499
+PctOfListingsWithPriceReductions_MiddleTier                      92.974307
+PctOfListingsWithPriceReductions_SingleFamilyResidence           69.997443
+PctOfListingsWithPriceReductions_TopTier                         91.465182
+PriceToRentRatio_AllHomes                                        72.772774
+Sale_Counts_Msa                                                  94.979686
+Sale_Counts_Seas_Adj_Msa                                         94.979686
+Sale_Prices_Msa                                                  95.554072
+InventoryTierShare_BottomTier_AllHomes                           81.311381
+InventoryTierShare_MiddleTier_AllHomes                           80.027654
+InventoryTierShare_TopTier_AllHomes                              78.448447
+ZHVI_1bedroom                                                    57.686735
+ZHVI_2bedroom                                                    32.146679
+ZHVI_3bedroom                                                    18.733604
+ZHVI_4bedroom                                                    20.889564
+ZHVI_5BedroomOrMore                                              35.830705
+ZHVI_AllHomes                                                    17.427148
+ZHVI_BottomTier                                                  29.348145
+ZHVI_CondoCoop                                                   54.892936
+ZHVI_MiddleTier                                                  17.424307
+ZHVI_SingleFamilyResidence                                       17.397316
+ZHVI_TopTier                                                     15.993787
+ZRI_AllHomes                                                     72.522279
+ZRI_AllHomesPlusMultifamily                                      72.430889
+ZriPerSqft_AllHomes                                              73.098086
+Zri_MultiFamilyResidenceRental                                   77.871694
+Zri_SingleFamilyResidenceRental                                  72.533644
+dtype: float64
+----
+
+
+== Remove rows or columns containing missing values
+
+There are different ways to filter out missing data in pandas. One approach is using `pandas.isnull()` combined with boolean indexing to manually exclude rows or columns with missing values. This method offers control over how and where you handle missing data. Alternatively, pandas provides built-in functions that allow you to efficiently remove rows or columns containing missing values, making it easier to clean the dataset based on specific criteria.
+
+Let's show we can filter out missing Data using the `dropna()` function. The `dropna()` function in pandas is used for removing rows or columns with missing data. By default, `dropna()` removes rows where any value is missing. The code below removes all rows that have at least one missing value.
+
+[source, python]
+----
+dropna_df = myDF.dropna()
+----
+
+We can also drop columns with all missing values. `Axis=1` applies the operation to columns,  `how='all'` ensures only columns where all values are missing are dropped.
+
+[source, python]
+----
+dropna_df_axis = myDF.dropna(axis=1, how='all')
+
+----
+
+
+If we wanted to apply a threshold for removing misisng values, we can use the `thresh` function to drop columns with a minimum number of non-missing values. Let's say we wanted to drop columns with 10,000 or more missing values. We could type:
+
+[source, python]
+----
+filtered_df_10000 = myDF.dropna(axis=1, thresh=10000)
+
+rows, columns = filtered_df_10000.shape
+
+print(f"Total rows: {rows}")
+print(f"Total columns: {columns}")
+----
+
+----
+Total rows: 211182
+Total columns: 76
+
+----
+
+Notice how the number of columns went down from 95 colums to 76 columns. 
+
+== Addressing Missing Data 
+
+Instead of removing missing data and potentially losing valuable information, you can handle gaps by filling them using various techniques. The `fillna()` function is commonly used for this purpose.
+
+For instance, you can fill missing values with a specific constant by providing the desired value to fillna():
+
+[source, python]
+----
+filled_df_constant = myDF.fillna(0)
+----
+
+== Interpolation
+
+Interpolation is also a technique for estimating missing values based on surrounding data points. In pandas, the `interpolate()` function provides several methods to fill gaps, such as linear and other methods. It's usually applied to numeric variables. 
+
+**Using linear method:**
+
+[source, python]
+----
+interpolate_linear = myDF.select_dtypes(include='number').interpolate(method='linear')
+
+----
+
+You can also interpolate missing values using previous or next values.
+
+**Using forward method:**
+
+[source, python]
+----
+interpolated_df_forward = myDF.ffill()
+
+----
+
+**Using backwards method:**
+
+[source, python]
+----
+interpolated_df_back = myDF.bfill()
+
+----
+
+Let's demonstrate how the forward-fill method works by selecting a sample of the data and comparing it before and after applying the method.
+
+[source, python]
+----
+sample_data_age_inventory = myDF[['AgeOfInventory']].tail(30)
+
+print("Original Data:")
+print(sample_data_age_inventory)
+
+filled_data_age_inventory = sample_data_age_inventory.ffill()
+
+# Display the data after forward fill
+print("\nData After Forward Fill:")
+print(filled_data_age_inventory)
+
+----
+
+----
+Original Data:
+        AgeOfInventory
+211152           134.0
+211153           155.0
+211154             NaN
+211155           137.0
+211156            76.0
+211157             NaN
+211158           105.0
+211159             NaN
+211160             NaN
+211161           112.0
+211162             NaN
+211163             NaN
+211164            94.0
+211165             NaN
+211166             NaN
+211167            95.0
+211168            94.0
+211169             NaN
+211170            62.0
+211171            76.0
+211172             NaN
+211173            88.0
+211174             NaN
+211175             NaN
+211176             NaN
+211177            60.0
+211178            64.0
+211179             NaN
+211180             NaN
+211181            92.0
+
+Data After Forward Fill:
+        AgeOfInventory
+211152           134.0
+211153           155.0
+211154           155.0
+211155           137.0
+211156            76.0
+211157            76.0
+211158           105.0
+211159           105.0
+211160           105.0
+211161           112.0
+211162           112.0
+211163           112.0
+211164            94.0
+211165            94.0
+211166            94.0
+211167            95.0
+211168            94.0
+211169            94.0
+211170            62.0
+211171            76.0
+211172            76.0
+211173            88.0
+211174            88.0
+211175            88.0
+211176            88.0
+211177            60.0
+211178            64.0
+211179            64.0
+211180            64.0
+211181            92.0
+
+----
+
+== Mean or Median
+
+The `fillna()` function can also fill missing data using statistical measures like the `mean` or  `median` of a column. These methods are often preferred because they provide a reasonable estimate of the missing values. Using the mean or median helps to avoid introducing bias that could occur with other methods, like filling with a constant value. Some argue that the median is ideal, as it is less affected by outliers. 
+
+Let's show how you can fill in the `median` with sample data (last 30 rows). Let's fill in the column 'AgeofInventory' with the `median`:
+
+[source, python]
+----
+sample_data_age_inventory = myDF[['AgeOfInventory']].tail(30)
+
+print("Original Data:")
+print(sample_data_age_inventory)
+
+filled_data_age_inventory = sample_data_age_inventory.fillna(sample_data_age_inventory.median())
+
+print("Data After Filling with Median:")
+print(filled_data_age_inventory)
+
+----
+
+
+----
+Original Data:
+        AgeOfInventory
+211152           134.0
+211153           155.0
+211154             NaN
+211155           137.0
+211156            76.0
+211157             NaN
+211158           105.0
+211159             NaN
+211160             NaN
+211161           112.0
+211162             NaN
+211163             NaN
+211164            94.0
+211165             NaN
+211166             NaN
+211167            95.0
+211168            94.0
+211169             NaN
+211170            62.0
+211171            76.0
+211172             NaN
+211173            88.0
+211174             NaN
+211175             NaN
+211176             NaN
+211177            60.0
+211178            64.0
+211179             NaN
+211180             NaN
+211181            92.0
+
+Data After Filling with Median:
+        AgeOfInventory
+211152           134.0
+211153           155.0
+211154            94.0
+211155           137.0
+211156            76.0
+211157            94.0
+211158           105.0
+211159            94.0
+211160            94.0
+211161           112.0
+211162            94.0
+211163            94.0
+211164            94.0
+211165            94.0
+211166            94.0
+211167            95.0
+211168            94.0
+211169            94.0
+211170            62.0
+211171            76.0
+211172            94.0
+211173            88.0
+211174            94.0
+211175            94.0
+211176            94.0
+211177            60.0
+211178            64.0
+211179            94.0
+211180            94.0
+211181            92.0
+----

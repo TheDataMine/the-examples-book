@@ -1,0 +1,253 @@
+= Data Transformations
+
+In this document, we will:
+
+* Explore how to transform data using Python's pandas library.
+* Learn to apply functions or mappings to modify and categorize data.
+* Use the `apply()` method to create new columns based on custom logic.
+* Leverage the `map()` function to map values using dictionaries.
+* Understand how to bin continuous data into categories with `pd.cut()` and `pd.qcut()`.
+* Practice quantile-based binning to divide data into evenly distributed groups.
+
+
+Transforming data involves modifying the existing data by applying a function or mapping. This process is useful for creating new features, or cleaning raw data.
+
+
+== Applying Functions or Mappings to Transform Data in Python
+
+It is often necessary to transform data based on the values in an array, Series, or DataFrame column. This transformation could involve applying mathematical operations, formatting text, mapping categorical values, or deriving new features.
+
+We will use the following dataset(s) to understand how to transform data:
+
+`/anvil/projects/tdm/data/zillow/Metro_time_series.csv`
+
+
+Let's say we wanted to transform the column `DaysOnZillow_AllHomes` into a new column. The `DaysOnZillow_AllHomes` column represents the number of days houses remain listed on Zillow. Let's create a new column that is based on these rules: 
+
+* Homes listed for fewer than 30 days could be categorized as "New Listing".
+
+* Homes listed between 30 and 90 days as "Moderate Listing". 
+* Homes listed for more than 90 days as "Old Listing".
+
+[source, python]
+----
+import pandas as pd
+myDF = pd.read_csv("/anvil/projects/tdm/data/zillow/Metro_time_series.csv")
+----
+
+Let's remove some columns to make the dataset smaller and easier to work with. We will only keep columns that are the most relevant columns for real estate analysis in order to create a smaller DataFrame. 
+
+[source, python]
+----
+relevant_columns = [
+    'Date',
+    'AgeOfInventory',
+    'DaysOnZillow_AllHomes',
+    'InventorySeasonallyAdjusted_AllHomes',
+    'InventoryRaw_AllHomes',
+    'MedianListingPrice_AllHomes',
+    'MedianListingPricePerSqft_AllHomes',
+    'MedianRentalPrice_AllHomes',
+    'MedianRentalPricePerSqft_AllHomes',
+    'ZHVI_AllHomes',
+    'ZRI_AllHomes',
+    'PriceToRentRatio_AllHomes',
+    'PctOfHomesSellingForGain_AllHomes',
+    'PctOfHomesSellingForLoss_AllHomes'
+]
+
+real_estate_data = myDF[relevant_columns].copy()
+
+real_estate_data = real_estate_data.dropna() #remove na rows for now 
+
+
+real_estate_data.columns
+----
+
+List of the columns we kept:
+----
+Index(['Date', 'AgeOfInventory', 'DaysOnZillow_AllHomes',
+       'InventorySeasonallyAdjusted_AllHomes', 'InventoryRaw_AllHomes',
+       'MedianListingPrice_AllHomes', 'MedianListingPricePerSqft_AllHomes',
+       'MedianRentalPrice_AllHomes', 'MedianRentalPricePerSqft_AllHomes',
+       'ZHVI_AllHomes', 'ZRI_AllHomes', 'PriceToRentRatio_AllHomes',
+       'PctOfHomesSellingForGain_AllHomes',
+       'PctOfHomesSellingForLoss_AllHomes'],
+      dtype='object')
+----
+
+Now let's create a function called `categorize_listings` to create a new column for `DaysonZillow_AllHomes`: 
+
+[source, python]
+----
+def categorize_listings(days):
+    if days < 30:
+        return "New Listing"
+    elif 30 <= days <= 90:
+        return "Moderate Listing"
+    else:
+        return "Old Listing"
+
+
+real_estate_data.loc[:, 'ListingCategory'] = real_estate_data['DaysOnZillow_AllHomes'].apply(categorize_listings)
+
+print(real_estate_data[['DaysOnZillow_AllHomes', 'ListingCategory']].head(10))
+
+----
+
+----
+                DaysOnZillow_AllHomes   ListingCategory
+145937                 116.75       Old Listing
+146840                 115.25       Old Listing
+147743                 105.00       Old Listing
+148647                  89.75  Moderate Listing
+149552                  82.75  Moderate Listing
+150458                  82.75  Moderate Listing
+151364                  83.00  Moderate Listing
+152271                  83.50  Moderate Listing
+153178                  86.00  Moderate Listing
+154085                  90.75       Old Listing
+
+----
+
+With the new `ListingCategory` column, we have successfully categorized homes based on how long they have been listed on Zillow. This new column adds interpretability to the dataset and can be used for further analysis.
+
+== Map Function
+
+The `map()` function is another tool for transforming data in a pandas Series. It allows you to apply changes by using either a function or a dictionary-like object to map values.
+
+Here’s an example:
+
+First, let's extract the year from the Date column:
+[source, python]
+----
+real_estate_data['Year'] = pd.to_datetime(real_estate_data['Date']).dt.year
+----
+
+Next, define a mapping dictionary to group years into decades:
+
+[source, python]
+----
+year_to_decade = {
+    1996: "1990s",
+    1997: "1990s",
+    1998: "1990s",
+    1999: "1990s",
+    2000: "2000s",
+    2001: "2000s",
+    2002: "2000s",
+    2003: "2000s",
+    2004: "2000s",
+    2005: "2000s",
+    2006: "2000s",
+    2007: "2000s",
+    2008: "2000s",
+    2009: "2000s",
+    2010: "2010s",
+    2011: "2010s",
+    2012: "2010s",
+    2013: "2010s",
+    2014: "2010s",
+    2015: "2010s",
+    2016: "2010s",
+    2017: "2010s",
+}
+
+----
+
+Now, let's use the `.map()` method to create a new column called Decade by applying the mapping:
+
+[source, python]
+----
+real_estate_data['Decade'] = real_estate_data['Year'].map(year_to_decade)
+print(real_estate_data[['Year', 'Decade']].head(10))
+----
+
+----
+        Year Decade
+145937  2012  2010s
+146840  2012  2010s
+147743  2012  2010s
+148647  2012  2010s
+149552  2012  2010s
+150458  2012  2010s
+151364  2012  2010s
+152271  2012  2010s
+153178  2012  2010s
+154085  2012  2010s
+----
+
+== Binning 
+
+In data analysis, continuous data is often discretized or grouped into categories, or “bins,” to simplify analysis and reveal patterns. For instance, instead of analyzing individual values of `AgeOfInventory`, we can group these values into meaningful ranges like "Low," "Moderate," or "High."
+
+Using Python, we can create bins with pandas functions like `pd.cut()` and `pd.qcut()`. Let’s explore how this works with our `AgeOfInventory` column:
+
+[source, python]
+----
+# Define the bins
+bins = [0, 50, 100, 150, 200]  
+labels = ["Very Low", "Low", "Moderate", "High"]  
+
+real_estate_data['InventoryAgeBin'] = pd.cut(
+    real_estate_data['AgeOfInventory'], bins=bins, labels=labels)
+
+print(real_estate_data[['AgeOfInventory', 'InventoryAgeBin']].head(20))
+----
+
+----
+            AgeOfInventory InventoryAgeBin
+145937           109.0        Moderate
+146840            98.0             Low
+147743            72.0             Low
+148647            65.0             Low
+149552            66.0             Low
+150458            65.0             Low
+151364            68.0             Low
+152271            70.0             Low
+153178            76.0             Low
+154085            80.0             Low
+154992            83.0             Low
+155899            88.0             Low
+156601           104.0        Moderate
+156806            89.0             Low
+157508           109.0        Moderate
+157713            73.0             Low
+158415           100.0             Low
+158621            56.0             Low
+159323            86.0             Low
+159529            53.0             Low
+
+
+----
+
+Binning is a technique used in data analysis to simplify continuous data by grouping it into categories.
+
+== Data Transformation with quantiles 
+
+Quantile-based binning is another technique that divides continuous data into intervals, or "bins," but it is such that each bin contains an approximately equal number of data points. We can use `pd.qcut()` to divide the column 'AgeofInventory` in our data into bins based on quantiles. 
+
+[source, python]
+----
+real_estate_data['InventoryQuantile'] = pd.qcut(
+    real_estate_data['AgeOfInventory'], 
+    q=4,  
+    labels=["Q1 (Lowest)", "Q2", "Q3", "Q4 (Highest)"]
+)
+
+print(real_estate_data[['AgeOfInventory', 'InventoryQuantile']].head(20))
+----
+
+Remember:
+
+* Q1 (Lowest): Represents the lowest quartile (smallest 25% of values).
+
+* Q2: Represents the second quartile (25-50% range).
+
+* Q3: Represents the third quartile (50-75% range).
+
+* Q4 (Highest): Represents the highest quartile (largest 25% of values).
+
+
+These techniques are good for preparing, simplifying, and transforming data for analysis. By mastering these methods, you can handle a wide variety of data transformation challenges in real-world projects.
+
