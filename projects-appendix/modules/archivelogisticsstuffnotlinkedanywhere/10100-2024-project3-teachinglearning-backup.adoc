@@ -1,0 +1,244 @@
+= TDM 10100: R Project 3 -- 2024
+
+**Motivation:** So far, we've learned how to set up and run code in a Jupyter Notebook IDE (integrated development environment), perform operations, and set up basic decision structures (_conditionals_) in our code. However, all we've really done so far is just define one value at a time to pass into our conditionals and then changed that value by hand. As you probably realized, this is inefficient and completely impractical if we want to handle lots of data, either iteratively (aka one-by-one) or in some other efficient method (i.e in parallel, by grouping, etc. More on this later...). This project will be dedicated to learning about looping structures and vectorization, some common approaches that we use to iterate through and process data instead of doing it by hand.
+
+**Context:** At this point, you should know how to read data into an R dataframe from a .csv file, understand and be able to write your own basic conditionals, and feel comfortable using operators for logic, math, comparison, and assignment.
+
+**Scope:** For Loops, While Loops, Vectorized operations, conditionals, R 
+
+.Learning Objectives:
+****
+- Learn to design and write your own `for` loops in R
+- Learn to design and write your own `while` loops in R
+- Learn about "vectorization" and how we can use it to process data efficiently
+- Apply looping and vectorization concepts to real-world data
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about project submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+This project will use the following dataset(s):
+
+- `/anvil/datasets/tdm_temp/data/whin/observations.csv`
+
+== Questions
+
+=== Question 1 (2 pts)
+
+Let's first discuss two key foundational concepts to understand when working with loops: lists and indexing. Lists are relatively intuitive: they are a list of elements. In R, lists can contain elements of different data types like strings (`x \<- "Hello World"`) and integers (`y \<- 7`). It is oftentime good practice to have all of the data in a list be the same type of data. When we want this to be enforced by our kernel/interpreter, we can use `vectors` instead of `lists. We will talk more about vectors in a future project. Lists in R are constructed like so:
+
+[source, r]
+----
+# create a list with three integer elements
+list1 <- list(23, 49, 5)
+
+# create a list with three string elements
+list2 <- list("hello", "Mister", "Foobar")
+
+# create an empty list
+list3 <- list()
+----
+
+Now we should talk about the interesting part of lists: adding, subtracting, and accessing elements in lists! Adding and removing elements from lists in R can be done a number of ways, often by using built in functions like `append()`. More exhaustive descriptions of how lists function in R can be found https://www.w3schools.com/r/r_lists.asp[here].
+
+Accessing elements of a list, also called _indexing_, is different from language to language. In R, lists are _1-indexed_, meaning the first element in a list is at **index 1**. Accessing elements of a list can be done using square brackets. We can also _slice_ a list, which is simply indexing in such a way that we grab a chunk of elements from the list, as opposed to just one. Some basic examples are shown below, and the link on lists provided in the above paragraph has more detailed descriptions of indexing and slicing in R.
+
+[source, r]
+----
+# create our list, then append a new element
+list1 <- list("Jackson", "is terrified of", "spiders")
+list1 <- append(list1, "and cockroaches")
+print(list1)
+print("--------------------------------")
+
+# print a few elements of our list using indexing
+print(list1[1]) # prints "Jackson"
+print(list1[3]) # prints "spiders"
+print(list1[4]) # prints "and cockroaches"
+print("--------------------------------")
+
+# slice our list to get the two middle elements
+print(list1[2:3]) # prints ['is terrified of', 'spiders']
+print("--------------------------------")
+----
+
+In a more "big data" sense, you can also index into R dataframes! This can be done numerically, like we did with regular lists, or by the name of the column! Below is an example of how we did this in a previous project:
+
+[source, r]
+----
+# read in our data
+olympics_df <- read.csv("/anvil/datasets/tdm_temp/data/olympics/athlete_events.csv")
+    
+# index into the dataframe and get the "Year" column
+year_list <- olympics_df$"Year"
+----
+
+[IMPORTANT]
+====
+Not all data is the same! `.csv` stands for `comma-separated-values`, and as such, the `read.csv` function that we've been using is looking for commas between each bit of data. However, commas are only one valid separator, and many data files will use pipes `|` or even just spaces to separate data instead. Our `read.csv()` function can still read these in, but you'll have to specify the separator if its not commas. For pipe-separated data (like in this project), you can use something that looks like `read.csv("data.csv", sep="|")`
+====
+
+For this problem, we are going to introduce some new data from https://data.whin.org/[WHIN], a large weather analysis organization that helps integrate weather and agricultural data in the Wabash Heartland region (that's all around Purdue!). Your tasks are as follows:
+
+- read the data from `/anvil/datasets/tdm_temp/data/whin/observations.csv` into a dataframe called `obs_df`(Hint: Don't forget to specify the separator! This file uses pipes `|`.)
+- index into your `obs_df` dataframe, and store the "temperature_high" column to a new variable called `tempF_list`
+- With your newly formed `tempF_list`, print the 101st element
+
+[NOTE]
+====
+If you want to take a look at a small summary of your dataframe, the `head()` function will print the first 5 rows of your data, along with the names of the columns of your data (if they exist). The syntax for this is `head(obs_df)`
+====
+
+.Deliverables
+====
+- a new R dataframe called `obs_df`
+- a new list that is the `temperature_high` column of `obs_df` called `tempF_list`
+- the 101st element in the `tempF_list`
+====
+
+=== Question 2 (2 pts)
+
+Now that we have some idea about how we can store lists of data, let's talk about repetitive tasks. To put it concisely: repetition is bad. When writing code, there should be a focus on avoiding unnecessary repititions, which will help ensure readability and good formatting along with improving our code's speed. When it comes to avoiding repititions, looping structures save the day!
+
+There are two basic kinds of loops in R: `for` loops, and `while` loops. Their names also encapsulate how they work; `for` loops do some actions _for_ each item in some set/list of items. `while` loops perform some actions _while_ some condition is true. Below are a few basic examples of how these structures can be used with lists.
+
+[source, r]
+----
+ourlist <- list("One-eyed", "One-horned", "Flying Purple", "People Eater")
+
+# this goes through each number from 0 to 4 and uses it to index into our list
+for (i in (1:4)) {
+    print(paste("The value of i:", i))
+    print(paste("List element", i, ":", ourlist[i]))
+}
+    
+# we can also iterate directly through a list in R, like this
+for (j in ourlist) {
+    print(j)
+}
+
+# if we introduce a counter variable, we can do the same thing with a while loop!
+counter <- 0
+while (counter < length(ourlist)) { # length(ourlist) gives us the length of ourlist
+    print(paste("The value of counter:", counter))
+    print(paste("List element", counter, ":", ourlist[counter]))
+    counter <- counter + 1 # if you don't update counter, the loop runs forever!
+}    
+----
+
+While `for` and `while` loops can often be used to perform the same tasks, one of them will often present a more intuitive approach to completing a task that is worth thinking about before diving straight into the problem.
+
+Here are a few basic tasks to complete for this problem to get you more familiar with looping:
+
+- Construct a list of length 10. Call it `mylist`. The elements can be anything you want.
+- Using a `for` loop, change all of the even-index elements of the list to be the string "foo" (You can consider `0` to be even)
+- Using a `while` loop, change all of the odd-index elements of the list to be the string "bar"
+- Using a `for` loop, change all of the elements whose index are divisible by 3 to be "buzz"
+- print the final list `mylist` after making all of the above changes
+
+[NOTE]
+====
+Your final list should be `['bar', 'foo', 'buzz', 'foo', 'bar', 'buzz', 'bar', 'foo', buzz', 'foo']`
+====
+
+.Deliverables
+====
+- a list, `mylist`, of length 10, where each element is either foo, bar, or buzz based on the above instructions
+- the final list `mylist` after making `foobarbuzz` changes
+====
+
+=== Question 3 (2 pts)
+
+Let's bring the looping we just learned to the real-world data we read into our `obs_df` dataframe from Question 1! In this problem, we're going to use looping to perform two tasks. One of these tasks is better suited for a `while` loop, and the other is better suited for a `for` loop. You can get full credit no matter which loop you use for which task. Just ensure that you use each loop only once, and that you complete the tasks' deliverables. 
+
+. If you're an in-state student, you likely didn't have any problem with the temperatures we looked at earlier. However, for most of the rest of the world, it certainly would be a concern to see a number like `63` on their thermometer! For this task, we want you to take the list you created in question 1, `tempF_list`, convert the first 10,000 values to celsius, and store them to a new list called `tempC_list`. (Conversion from Fahrenheit to Celsius is simply `Cels = (Fahr - 32) * 5/9`) 
+
+. With our newly created `tempC_list`, we now have a list of temperatures around the Wabash heartland that are in a more accessible form. However, we want to do more than just unit conversion with this data! For this task, print a count of how many times in `tempC_list` the temperatures are higher than 24 degrees Celsius in the first 10,000 elements in the list. Also print what percentage of those elements are greater than 24 degrees Celsius (Hint: % = (count / total) * 100)
+
+[NOTE]
+====
+Appending to a list using the `append` function can actually be pretty slow, and there are some vastly better ways of performing these tasks in R than using loops. We'll cover those in the next two questions, but if your code is taking a long time to run, try adding new values to `tempC_list` by just using `tempC_list[i] \<- # conversion stuff` instead of `append()`.
+====
+
+
+.Deliverables
+====
+- The `tempF_list` from Question 1 converted to Celsius
+- The number of temperatures in `tempC_list` greater than or equal to 24 degrees Celsius
+- The percentage of `tempC_list` greater than or equal to 24 degrees celsius
+====
+
+=== Question 4 (2 pts)
+
+Fantastic! We learned what loops were, used them on a few small lists of our own creation, and then successfully applied them to real-world data in order to complete practical tasks! At this point, you're probably thinking "Wow! Lists are super useful! I'm so glad I learned all there is to know and I never have to learning anything else again!"
+
+...But what if I told you there was an even better way to work with lists? Introducing: vectorization. When we want to perform common actions to every element in a list, array, dataframe, or similar, R presents us with easy ways to do that action, in parallel, to all the items in our list. This is not only a lot easier to read than a loop (it takes about 1 line of vectorized code to do the same task as the 3-4 lines of looping we wrote earlier), its also a lot more efficient, as there are some neat tricks going on behind the scenes to speed things up.
+
+In the same vein of thinking, we can also slice our lists/arrays/dataframes based on conditions. This also ends up being a lot more readable and efficient than looping, and is only a slight extension to the idea of slicing we covered earlier in this project.
+
+Below are some examples that are relevant to the tasks you'll be working on during this problem.
+
+[source, r]
+----
+# read in the data
+obs_df <- read.csv("/anvil/datasets/tdm_temp/data/whin/observations.csv", sep="|")
+
+# use vectorized operations to create a new column in our
+# dataframe with temperatures converted to the rankine scale
+obs_df$"temperature_Rankine_high" <- obs_df$"temperature_high" + 459.67
+
+# use vectorized operations to create a list as a subset of the temperature_high column
+temperature_under75_high <- obs_df$"temperature_high"[obs_df$"temperature_high" < 75]
+
+# print the first few entries in our new column
+print(head(obs_df$"temperature_Rankine_high", 3))
+print(head(temperature_under75_high, 3))
+----
+
+For this problem, create a new column in your dataframe called `myaverage_temp`. This column should be the sum of the `temperature_high` and `temperature_low` divided by 2.
+
+[NOTE]
+====
+If you run `head(obs_df$myaverage_temp)`, the first six elements in the column should be 70.5, 69.5, 76.5, 76, and 76, 75.5.
+====
+
+.Deliverables
+====
+- a new column, `myaverage_temp`, that is the average of the `temperature_high` and `temperature_low` columns
+====
+
+=== Question 5 (2 pts)
+
+Let's finish up this project by taking the loops we wrote in Question 3 and rewriting them as one-line vectorized operations. Let's briefly rehash the loops we need to vectorize for this problem.
+
+. Write a one-line vectorized operation that creates a new column in our dataframe, `temperature_high_celsius`, that is the `temperature_high` column with its values converted from Fahrenheit to Celsius.
+. Write a one-line vectorized operation that creates a new list, `my_hightemps`, with all of the values from the `temperature_high_celsius` that are greater than or equal to 24 degrees celsius
+. Print the head of your new column and list (hint: this is demonstrated in the previous question)
+
+The example code provided in the previous problem is quite similar to what you're being asked to do in this problem, so feel free to use it as a starting point!
+
+.Deliverables
+====
+- The `temperature_high_celsius` column as described above
+- The `my_hightemps` list as described above
+- The heads of each column/list
+====
+
+== Submitting your Work
+
+Whew! That project was tough! Looping, indexing, and vectorization are extremely important and powerful concepts, and its no small feat that you made it through this project! If you still feel that it would be tough for you to write a loop or vectorized operation from scratch, consider going back and slightly modifying questions, coming up with your own problems and solutions as practice.
+
+Next week we will slow down a bit and talk about _semantic structure_, the art of writing and commenting your code so it is beautiful, readable, and easy to understand. If these last couple projects have been a bit intense, this next one should be a welcome relief. As always, attend seminar, post to Piazza, and otherwise come to some office hours and get any and all the help you need! I hope that you are enjoying the class so far, and I look forward to continuing to learn with you all next week.
+
+.Items to submit
+====
+- firstname_lastname_project3.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====

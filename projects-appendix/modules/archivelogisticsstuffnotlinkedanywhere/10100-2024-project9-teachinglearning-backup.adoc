@@ -1,0 +1,181 @@
+= TDM 10100: R Project 9 -- 2024
+
+**Motivation:** Knowing how to write our own functions in R truly opens up a lot of functionality to us, and allows us to design and create a lot of more complicated operations. Code that those other people write can be made available in "packages" and used by others, and being able to leverage packages in R will truly boost your data abilities. In this project, we'll explore some commonly used packages in R and how to use them along with introducing a few packages that we'll focus on in greater detail in the coming weeks.
+
+**Context:** Previous syntax for functions along with more basic control and looping structures in R will be useful for this project.
+
+**Scope:** Packages, data.table, tidyverse, dplyr, tidyr, ggplot2, stringr, lubridate
+
+.Learning Objectives:
+****
+- Learn what a package is
+- Learn how to import a package and check its existence and version
+- Learn how to use packages and resolve conflicts between packages
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about project submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+This project will use the following dataset(s):
+
+- `/anvil/projects/tdm/data/movies_and_tv/*`
+
+== Questions
+
+=== Question 1 (2 pts)
+
+As mentioned in the introduction to this project, code is almost always a collaborative effort that involves relying and building on the work that came before us. In R, packages is how we do this. At a high-level, you can conceptualize packages as bundles of pre-written functions, object definitions, and other code that we can use in our own projects to lighten our own workload. In this question, let's read in some data, load our first package, and prepare for the rest of the project.
+
+For this question, start by loading the `data.table` package by running
+
+[source, r]
+----
+library(data.table)
+----
+
+As simple as that, we now have access to all the various code that `data.table` has to offer! (For a comprehensive overview of data.table, refer https://cran.r-project.org/web/packages/data.table/index.html[here]) You can think of `data.table` as an efficient, fast extension to the `data.frame` objects we've used thus far in the class.
+
+The `movies_and_tv` directory that we'll be working with this during this project contains several different `.csv` files that we'll be looking at, namely, `titles.csv`, `episodes.csv`, `people.csv`, and `ratings.csv` respectively. Because we'll be reading in so much data, our trusty `read.csv()` function just won't do. Instead, we'll be using the _wicked fast_ `fread()` function from the data.table library we just imported. Below is the required code to read the data in the 'titles.csv' file into a data.table called titles. In order to get full credit for this problem, please read in the four files mentioned above to data.tables with names that match the files they come from (i.e. read "episodes.csv" into "episodes"), and print the head of each one.
+
+[source, r]
+----
+# read 
+titles <- fread("/anvil/projects/tdm/data/movies_and_tv/titles.csv")
+----
+
+[NOTE]
+====
+One important thing to note is that the objects that we just read our data into are `data.table` objects, and not the `data.frame` objects we've been using thus far. This won't be a problem, as `data.table` has relatively the same functionality as `data.frame`, but it is good to recognize that they are different types.
+====
+
+.Deliverables
+====
+- 4 new data.tables, and their heads, named titles, episodes, ratings, and people
+====
+
+=== Question 2 (2 pts)
+
+There's a lot of data here, so for the sake of not killing our kernel, let's work with a subset of it. Let's narrow down our data to just episodes of one of (in this author's opinion) the best T.V. shows of all time: "Game of Thrones" (at least until the last 2 seasons). First off, you can recognize that the ID for the show is "tt0944947". (If you're wondering how I got this, visit the IMDb page for the show https://www.imdb.com/title/tt0944947/?ref_=fn_al_tt_1[here] and take a look at the URL).
+
+Use logical indexing the same way we have in previous projects to get just the rows in our `episodes` table where the "show_title_id" is "tt0944947", and store it to a new data.table called GoT_dat, and print the head.
+
+Next, use a function from a previous project to get a count of how many episodes there are in each season using our GoT_dat. As we've already done this a few times in this class, we're not going to put exactly what you need to do for this, but feel free to take a look at the note below if you need a small hint.
+
+[NOTE]
+====
+If you're having trouble with this question, take a look at Project 8, Question 1 for a reminder on getting counts of each value. The "season_number" column should help with this.
+====
+
+.Deliverables
+====
+- A new data.table, `GoT_dat`, of the "Game of Thrones" episodes
+- The number of episodes in each season of "Game of Thrones"
+====
+
+=== Question 3 (2 pts)
+
+We've already got a pretty useful subset of our data, but putting all these episode_title_id's into our URLs every time we want to see the name of an episode is super tedious. Let's fix this with a new function, `merge()`.
+
+[NOTE]
+====
+`merge()` is a function in both standard R and `data.table`, and the `data.table` version is often faster. This is our first example of "package conflict". In this case, the conflict will resolve itself because we are storing our data in a `data.table`, so our kernel will know to use the `data.table merge()` automatically.
+====
+
+`merge()` takes a few arguments. Take a look at the below example
+
+[source, r]
+----
+# table 1 is the first table we want to merge
+# table 2 is the second table we want to merge
+# the tables will merge by lining up the two columns specified as
+# "by.x" for the column name in table1,
+# and "by.y" for the column name in table2
+merged_table <- merge(table1, table2, by.x="table1_column", by.y="table2_column")
+----
+
+For this problem, merge your `GoT_dat` data.table with the titles data.table and store the result back to your `GoT_dat`. Print the head to be sure you made the changes you wanted to.
+
+Then, do the same thing but with the ratings table so that we get the review score of each episode.
+
+Print the head of your final `GoT_dat` data.table to be sure that you made the changes you wanted.
+
+.Deliverables
+====
+- The head of your `GoT_dat` data.table, but now with the titles and ratings tables merged in.
+====
+
+=== Question 4 (2 pts)
+
+Let's explore another useful improvement in `data.table`: subsetting. While this won't technically be a huge increase in functionality or speed, especially with the rather small amount of data we're currently looking at, its important to note that it _is_ noticeably cleaner than regular indexing in addition to being noticeably faster at-scale.
+
+`data.table` subsetting essentially allows us to do the logical indexing we've been doing for a while now, without having to repeat the name of our data.table over and over again. As an example, take a look at the below (and consider running it on your own to see how it works):
+
+[source, r]
+----
+# regular R subsetting
+GoT_df[GoT_df$episode_number > 8 & GoT_df$votes > 20000]
+
+# _fancy_ new data.table subsetting
+GoT_df[episode_number > 8 & votes > 20000]
+----
+
+Use data.table subsetting to get the episodes with a rating of at least 8.5, then figure out the mean runtime in minutes of those well-rated episodes.
+
+.Deliverables
+====
+- The average runtime of Game of Thrones episodes with a rating of at least 8.5.
+====
+
+=== Question 5 (2 pts)
+
+For this last question, let's just barely start to look at an extremely useful library when it comes to visualizing your data: ggplot2. ggplot2 is one of the go-to libraries for plotting in R.
+
+We'll provide a pretty substantial amount of code for you to build off of in this question, as this is just a teaser for what we'll be working on in greater detail soon. 
+
+Our end goal is to create a bar plot of the average rating of an episode for each season of Game of Thrones. Take a look at https://ggplot2.tidyverse.org/reference/[this documentation], along with the below sample code, to create this plot.
+
+[NOTE]
+====
+To solve this problem, you only have to replace things in the below example that are within triple quotes!
+====
+
+[source, r]
+----
+library(ggplot2)
+
+ggplot("""dataframe name""",
+        aes(x = """x col name""",
+            y = ave("""y col name""", """x col name""")) +
+        stat_summary(fun="mean", geom="bar") + 
+        labs(title="TITLE HERE",
+             x = "X AXIS LABEL"
+             y = "Y AXIS LABEL")
+       )
+----
+
+Finally, write in a markdown cell which season of Game of Thrones got the highest reviews and which got the lowest. Is this what you would expect?
+
+.Deliverables
+====
+- A bar plot of average ratings per season
+- In a markdown cell, which season of GoT was the highest and which was the lowest.
+====
+
+== Submitting your Work
+
+Well, this project was a lot of topics in a very very wide range. Hopefully you have a bit more of a feel for just how powerful packages are. 
+
+In the next few weeks we'll do a deep dive on some of the most used packages in R, and then work on making data visualizations to summarize and demonstrate patterns in data that can be a bit easy to miss otherwise.
+
+.Items to submit
+====
+- firstname_lastname_project9.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====

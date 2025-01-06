@@ -1,0 +1,320 @@
+= TDM 20100: Project 12 -- SQL
+
+**Motivation:** We have used two SQL databases but we have not (yet) built a database of our own.
+
+**Context:** It is straightforward to build a new database from a collection of csv files.
+
+**Scope:** In SQLite, we demonstrate the setup for building a new database.
+
+.Learning Objectives:
+****
+- We will learn how to build a new SQL database.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about project submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+This project will use the following dataset:
+
+- `/anvil/projects/tdm/data/flights/subset/*` (flight data)
+
+
+== Questions
+
+
+=== Question 1 (2 pts)
+
+First, open a terminal and combine the data from the subset flight csv files as follows.  (We are storing the resulting file in the `$SCRATCH` directory because it is very large.  We are also removing NA values (using `awk`) and removing the header from each file (using `grep`).
+
+[WARNING]
+====
+The file that we are about to build on the next line will be large, and so it will take a few minutes to run.
+====
+
+[source,bash]
+----
+cat /anvil/projects/tdm/data/flights/subset/[12]*.csv | awk -F, -v OFS=, '{for (i=1; i<=NF; i++) if ($i == "NA") $i=""};1' | grep -v Year >$SCRATCH/myflightdata.csv
+----
+
+The `airports.csv` data has a few extra commas:
+
+[source,bash]
+----
+cat /anvil/projects/tdm/data/flights/subset/airports.csv | sed 's.Union County, Troy Shelton .Union County Troy Shelton.g' | sed 's.Savage, Sr.Savage Sr.g' | sed 's.Baton Rouge Metropolitan, Ryan .Baton Rouge Metropolitan Ryan.g' | sed 's.Lawrence County Airpark,Inc.Lawrence County Airpark Inc.g' | sed 's.Westport, NY.Westport NY.g' | sed 's.Pullman/Moscow,ID.Pullman/Moscow ID.g' | sed 's.Reading Muni,Gen Carl A Spaatz.Reading Muni Gen Carl A Spaatz.g' | sed 's.Richard Lloyd Jones, Jr.Richard Lloyd Jones Jr.g' | sed 's.Toccoa, R G Le Tourneau .Toccoa R G Le Tourneau .g' | sed 's.\\"Bud\\" Barron .Bud Barron.g' | sed 's."..g' >$SCRATCH/mycleanairports.csv
+----
+
+The `carriers.csv` data has double quotes that we do not want:
+
+[source,bash]
+----
+cat /anvil/projects/tdm/data/flights/subset/carriers.csv | sed 's."..g' | awk -F, '{if (NF == 3) {print $1","$2 $3} else {print $0}}' >$SCRATCH/mycleancarriers.csv
+----
+
+The `plane-data.csv` sometimes only has 1 column, and sometimes has 9 columns.  We clean this up too:
+
+[source,bash]
+----
+cat /anvil/projects/tdm/data/flights/subset/plane-data.csv | awk -F, '{if (NF == 9) {print $0} else {print $1",,,,,,,,"}}' >$SCRATCH/mycleanplanedata.csv
+----
+
+Now, also in the terminal, make a new SQLite file.  We also make this file in the `$SCRATCH` directory, so that we do not fill up your home directory:
+
+[source,bash]
+----
+sqlite3 $SCRATCH/newflightdatabase.db
+----
+
+(Whenever we want to quit the `sqlite3` program, we can hit CONTROL-D but do NOT YET hit CONTROL-D, because we still need to build the database.)
+
+Now we tell SQLite that our files are in ASCII format:
+
+[source,sql]
+----
+.mode ascii
+----
+
+and the files to be imported are comma separated:
+
+[source,sql]
+----
+.separator "," "\n"
+----
+
+and we make tables for the data, first for the flight data:
+
+[source,sql]
+----
+CREATE TABLE flights(
+  "Year" INTEGER,
+  "Month" INTEGER,
+  "DayofMonth" INTEGER,
+  "DayOfWeek" INTEGER,
+  "DepTime" INTEGER,
+  "CRSDepTime" INTEGER,
+  "ArrTime" INTEGER,
+  "CRSArrTime" INTEGER,
+  "UniqueCarrier" TEXT,
+  "FlightNum" INTEGER,
+  "TailNum" TEXT,
+  "ActualElapsedTime" INTEGER,
+  "CRSElapsedTime" INTEGER,
+  "AirTime" INTEGER,
+  "ArrDelay" INTEGER,
+  "DepDelay" INTEGER,
+  "Origin" TEXT,
+  "Dest" TEXT,
+  "Distance" INTEGER,
+  "TaxiIn" INTEGER,
+  "TaxiOut" INTEGER,
+  "Cancelled" INTEGER,
+  "CancellationCode" INTEGER,
+  "Diverted" INTEGER,
+  "CarrierDelay" INTEGER,
+  "WeatherDelay" INTEGER,
+  "NASDelay" INTEGER,
+  "SecurityDelay" INTEGER,
+  "LateAircraftDelay" INTEGER
+);
+----
+
+and for the airports data:
+
+[source,sql]
+----
+CREATE TABLE airports(
+  "iata" TEXT,
+  "airport" TEXT,
+  "city" TEXT,
+  "state" TEXT,
+  "country" TEXT,
+  "lat" NUMERIC,
+  "long" NUMERIC
+);
+----
+
+and for the carriers data:
+
+[source,sql]
+----
+CREATE TABLE carriers(
+  "Code" TEXT,
+  "Description" TEXT
+);
+----
+
+and for the plane data:
+
+[source,sql]
+----
+CREATE TABLE planes(
+  "tailnum" TEXT,
+  "type" TEXT,
+  "manufacturer" TEXT,
+  "issue_date" TEXT,
+  "model" TEXT,
+  "status" TEXT,
+  "aircraft_type" TEXT,
+  "engine_type" TEXT,
+  "year" INTEGER
+);
+----
+
+Next, import the actual data into the tables that we created above.  The first one will take a few minutes to run!
+
+[WARNING]
+====
+The first import statement will take all of the data from the huge file we built at the start, and put that data into our database.  So it will take a few minutes to run.
+====
+
+[WARNING]
+====
+In all 4 of these import statements, `mdw` is Dr Ward's username.  You need to (instead) change `mdw` to your username from Anvil in each of the following 4 input lines!
+====
+
+[source,sql]
+----
+.import --skip 1 /anvil/scratch/x-mdw/myflightdata.csv flights
+----
+
+and the airports data:
+
+[source,sql]
+----
+.import --skip 1 /anvil/scratch/x-mdw/mycleanairports.csv airports
+----
+
+and the carriers data:
+
+[source,sql]
+----
+.import --skip 1 /anvil/scratch/x-mdw/mycleancarriers.csv carriers
+----
+
+and the planes data:
+
+[source,sql]
+----
+.import --skip 1 /anvil/scratch/x-mdw/mycleanplanedata.csv planes
+----
+
+Next, we want to build indices for the flight data:
+
+[source,sql]
+----
+CREATE INDEX ix_flights_covering ON flights(Year,Month,DayofMonth,DayOfWeek,DepTime,CRSDepTime,ArrTime,CRSArrTime,UniqueCarrier,FlightNum,TailNum,ActualElapsedTime,CRSElapsedTime,AirTime,ArrDelay,DepDelay,Origin,Dest,Distance,TaxiIn,TaxiOut,Cancelled,CancellationCode,Diverted,CarrierDelay,WeatherDelay,NASDelay,SecurityDelay,LateAircraftDelay);
+----
+
+and for the airports data:
+
+[source,sql]
+----
+CREATE INDEX ix_airports_covering ON airports(iata,airport,city,state,country,lat,long);
+----
+
+and for the carriers data:
+
+[source,sql]
+----
+CREATE INDEX ix_carriers_covering ON carriers(Code,Description);
+----
+
+and for the planes data:
+
+[source,sql]
+----
+CREATE INDEX ix_planes_covering ON planes(tailnum,type,manufacturer,issue_date,model,status,aircraft_type,engine_type,year);
+----
+
+
+Finally, you can exit from SQLite by typing:  `CONTROL-D`.
+
+Afterwards, check the size of the file that you created, and indicate the size of the file in your solutions (it should be approximately 17 GB)
+
+[source,bash]
+----
+ls -la --block-size=G $SCRATCH/newflightdatabase.db
+----
+
+
+.Deliverables
+====
+- Because all of the work for Question 1 happens in the terminal, the *only* thing that we are asking you to put into the Jupyter Lab notebook for Question 1 is the output from this command:  `ls -la --block-size=G $SCRATCH/newflightdatabase.db` which prints the file size for the database that you built in Question 1.  This line should show that your database is approximately 17 GB.
+====
+
+
+=== Question 2 (2 pts)
+
+[NOTE]
+====
+Back in the regular Jupyter Lab notebook, using the `seminar` kernel, you can load the database that you created like this:
+
+`%sql sqlite:////anvil/scratch/x-mdw/newflightdatabase.db`
+
+but (of course) change the `mdw` to your ACCESS username.
+====
+
+Join the `flights` and the `airports` table, matching the `Origin` column to the `iata` column.  Find the total number of flights in the database for each `Origin` airport that is located in Texas.  For each `Origin` airport in Texas, print the total number of flights and the 3-letter `Origin` airport code.
+
+.Deliverables
+====
+- For each `Origin` airport in Texas, print the total number of flights and the 3-letter `Origin` airport code.
+====
+
+
+
+=== Question 3 (2 pts)
+
+a.  From the `flights` table, find the 10 most popular `TailNum` values, according to how many times that each `TailNum` appears in the `flights` table.  For each of these top 10 `TailNum`, list the `TailNum` and the number of flights on that `TailNum`.
+
+b.  Notice that the 5 most popular `TailNum` values are:  (blank), UNKNOW, 0, NKNO, 000000.  Ignoring these top 5 most popular values, in part b, we want you to consider (only) the 6th most popular `TailNum` value, which should be `N525`.  You can read about this 6th most popular airplane here:  https://www.flightaware.com/live/flight/N525  For *only* this 6th most popular airplane, with `TailNum` equal to `N525`, please make a separate query of the `flights` table that shows the top 5 `Origin` airports for this plane's flights.  (Hint:  This airplane has departed 2952 times from Dallas Love Field `DAL` and also 2146 times from Phoenix's Sky Harbor International Airport `PHX`.)
+
+.Deliverables
+====
+- For each of these top 10 `TailNum`, list the `TailNum` and the number of flights on that `TailNum`.
+- After identifying the 6th most popular airplane (from part a; which is the first *valid* airplane; it should have `tailnum` equal to `N525`), now find the top 5 `Origin` airports for this specific plane's flights.  For each of these top 5 `Origin` airports for this plane, find the three-letter code of the `Origin` airport and the number of times that this specific airplane departed from each such `Origin`.
+====
+
+
+=== Question 4 (2 pts)
+
+Now let's revisit question 3, but this time we will JOIN the `flights` table and the `planes` table ON the `TailNum` value.  Group the results according to the `TailNum` and find the 10 most popular values, listing the `TailNum` value and the number of flights for each such `TailNum`.
+
+[NOTE]
+====
+Notice that the invalid tail numbers from question 3 are gone (because they do not appear in the `planes` table) and also the `TailNum` that you discovered in question 3 is gone too (because it does not appear in the `planes` table either).  Hint:  The top `TailNum` for this question is `N908DE` which had `25050` flights altogether.
+====
+
+.Deliverables
+====
+- JOIN the `flights` table and the `planes` table, to find the 10 most popular values, listing the `TailNum` value and the number of flights for each such `TailNum`.
+====
+
+
+=== Question 5 (2 pts)
+
+Join the `flights` and the `carriers` table, matching the `UniqueCarrier` column to the `Code` column.  Find the total number of flights in the database for each `UniqueCarrier`.  For each `UniqueCarrier`, print the `UniqueCarrier` value, the `Description` value, and also the total number of flights for that `UniqueCarrier`.  (Hint:  Your query results should have 29 rows altogether.)
+
+.Deliverables
+====
+- For each `UniqueCarrier`, print the `UniqueCarrier` value, the `Description` value, and also the total number of flights for that `UniqueCarrier`.
+====
+
+
+== Submitting your Work
+
+We have now built on the same skills that we learned for the movies database and the baseball database, but this time, we developed our own database of airplane flights and answered questions about the database that we built!
+
+
+.Items to submit
+====
+- firstname-lastname-project12.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, comments (in markdown or with hashtags), and code output, even though it may not. **Please** take the time to double check your work. See xref:submissions.adoc[the instructions on how to double check your submission].
+
+You **will not** receive full credit if your `.ipynb` file submitted in Gradescope does not **show** all of the information you expect it to, including the output for each question result (i.e., the results of running your code), and also comments about your work on each question. Please ask a TA if you need help with this.  Please do not wait until Friday afternoon or evening to complete and submit your work.
+====
+
