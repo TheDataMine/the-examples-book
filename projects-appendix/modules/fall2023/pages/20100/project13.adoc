@@ -1,0 +1,175 @@
+= TDM 20100: Project 13 -- 2023
+
+**Motivation:** We've covered a lot about SQL in a relatively short amount of time, but we still haven't touched on some other important SQL topics. In this project, we will touch on some other important SQL topics.
+
+**Context:** In the previous project, you had the opportunity to take the time to insert data into a `sqlite3` database. There are still many common tasks that you may need to perform using a database: triggers, views, transaction, and even a few `sqlite3`-specific functionalities that may prove useful.
+
+**Scope:** SQL
+
+.Learning Objectives
+****
+- Create a trigger on your `sqlite3` database and demonstrate that it works.
+- Create one or more views on your `sqlite3` database and demonstrate that they work.
+- Describe and use a database transaction. Rollback a transaction.
+- Optionally, use the `sqlite3` "savepoint", "rollback to", and "release" commands.
+- Optionally, use the `sqlite3` "attach" and "detach" commands to execute queries across multiple databases.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+For this project, we will be using the `lahman` sqlite database. This database contains the data in the directory  
+
+- `/anvil/projects/tdm/data/lahman`
+
+You may get some more `lahman` database information from this youtube video: http://youtube.com/watch?v=tS_-oTbsDzs[2023 SABR Analytics:Sean Lahman, "introduction to Baseball Databases"]
+
+For every following cell where you want to run a SQL query, prepend `%%sql` to the top of the cell -- just like we do for R or bash cells.
+
+== Questions
+
+=== Question 1 (2 pts)
+
+.. Following the instructions to create a new column and a trigger for table "teams"
+.. Update the table "teams" and display the updated information
+
+[NOTE]
+====
+Begin by copying the database from the previous project to your `$HOME` directory. Open up a terminal and run the following.
+
+[source,bash]
+----
+cp /anvil/projects/tdm/data/lahman/lahman.db $HOME
+----
+
+Go ahead and launch `sqlite3` and connect to the database from your home directory.
+
+[source,bash]
+----
+sqlite3 $HOME/lahman.db
+----
+
+From within `sqlite3`, test things out to make sure the data looks right.
+
+[source, sql]
+----
+
+SELECT * FROM teams LIMIT 5;
+----
+ 
+
+With any luck, things should be working just fine.
+
+Let's go ahead and create a trigger. A trigger is what it sounds like, given a specific action, _do_ a specific action. This is a powerful tool. One of the most common uses of a trigger that you will see in the wild is the "updated_at" field. This is a field that stores a datetime value, and uses a _trigger_ to automatically update to the current date and time anytime a record in the database is updated.
+
+First, we need to create a new column called "updated_at", and set the default value to something. In our case, lets set it to January 1, 1970 at 00:00:00. 
+
+[source, sql]
+----
+ALTER TABLE teams ADD COLUMN updated_at DATETIME DEFAULT '1970-01-01 00:00:00';
+----
+
+If you query the table now, you will see all of the values have been properly added, great!
+
+[source, sql]
+----
+SELECT * FROM teams LIMIT 5;
+----
+
+Now add a trigger called "update_teams_updated_at" that will update the "updated_at" column to the current date and time whenever a record is updated. Check out the official documentation https://www.sqlite.org/lang_createtrigger.html[here] for examples of triggers.
+
+Once your trigger has been written, go ahead and test it out by updating the following record.
+
+[source, sql]
+----
+UPDATE teams SET teamRank = 3 WHERE YearID = 2022 AND TEAMID ='ARI';
+----
+
+[source, sql]
+----
+SELECT * FROM TEAMS WHERE YearID = 2022 AND TEAMID ='ARI' ;
+----
+
+If it worked right, your `updated_at` column should have been updated to the current date and time, cool!
+====
+
+=== Question 2 (2 pts)
+
+[NOTE]
+====
+Next, we will touch on _views_. A view is essentially a virtual table that is created from some query and given a name. Why would you want to create such a thing? Well, there could be many reasons.
+
+Maybe you have a complex query that you need to run frequently, and it would just be easier to see the final result with a click? Maybe the database has horrible naming conventions and you want to rename things in a view to make it more readable and/or queryable?
+
+After some thought, it may occur to you that we've had such an instance where a view could be nice using our `lahman.db` database! 
+
+You may get more information about "view" here: https://www.sqlitetutorial.net/sqlite-create-view/
+====
+
+.. Create a _view_ called "players_with_awards_2020" that will provide information for a player.  It should include the player's name, height, weight, and if the play has an award in 2020; use the year 2020 data, joining the "people" and "awardsplayers" tables.
+.. Display 5 records from the view "players_with_awards_2020"
+[TIP]
+====
+- use "playerID" to join two tables
+====
+
+=== Question 3 (2 pts)
+
+
+Read the official `sqlite3` documentation for transactions https://www.sqlite.org/lang_transaction.html[here]. As you will read, you've already been using transactions each time you run a query! What we will focus on is how to use transactions to _rollback_ changes, as this is probably the most useful use case you'll run into.
+
+Connect to our "lahman.db" database from question (1), start a _deferred_ transaction, and update a row, similar to what we did before, using the following query.
+
+[source, sql]
+----
+UPDATE teams SET teamRank = 30 WHERE yearID = 2022 AND teamID = 'ARI';
+----
+
+Now, query the record to see what it looks like.
+
+[source, sql]
+----
+SELECT * FROM teams WHERE yearID = 2022 AND teamID ='ARI' and teamRank = 30;
+----
+
+[NOTE]
+====
+You'll notice our _trigger_ from before is still working, cool!
+====
+
+This is pretty great, until you realized that the teamRank was not right! Oh no! Well, at this stage you haven't committed your transaction yet, so you can just _rollback_ the changes and everything will be back to normal. Give it a try (again, following the official documentation).
+
+After rolling back, run the following query.
+
+[source, sql]
+----
+SELECT * FROM teams WHERE yearID = 2022 AND teamID = 'ARI' ;
+----
+
+As you can see, the data changed back to the original one! As you can imagine, this is pretty powerful stuff, especially if you are writing to a database and want to make sure things look right before _committing_ the changes.
+
+
+=== Question 4 (2 pts)
+
+SQL and `sqlite3` are powerful tools, and we've barely scratched the surface. Check out the https://www.sqlite.org/docs.html[offical documentation], and demonstrate another feature of `sqlite3` that we haven't yet covered.
+
+Some suggestions, if you aren't interested in browsing the documentation: https://www.sqlite.org/windowfunctions.html#biwinfunc[window functions], https://www.sqlite.org/lang_mathfunc.html[math functions], https://www.sqlite.org/lang_datefunc.html[date and time functions], and https://www.sqlite.org/lang_corefunc.html[core functions] (there are many we didn't use!)
+
+Please make sure the queries you run are run from an sql cell in your Jupyter notebook.
+
+
+Project 13 Assignment Checklist
+====
+* Jupyter Lab notebook with your code, comments and output for the assignment
+    ** `firstname-lastname-project13.ipynb` 
+* Submit the copy of the `lahman.db` file that you made in your home directory.
+* Submit files through Gradescope
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====

@@ -1,0 +1,266 @@
+= TDM 40100: Project 5 -- 2023
+
+**Motivation:** The ability to use SQL to query data in a relational database is an extremely useful skill. What is even more useful is the ability to build a `sqlite3` database, design a schema, insert data, create indexes, etc. This series of projects is focused around SQL, `sqlite3`, with the opportunity to use other skills you've built throughout the previous years.
+
+**Context:** In TDM 20100, you had the opportunity to learn some basics of SQL, and likely worked (at least partially) with `sqlite3` -- a powerful database engine. In this project (and following projects), we will branch into SQL and `sqlite3`-specific topics and techniques that you haven't yet had exposure to in The Data Mine.
+
+**Scope:** `sqlite3`, lmod, SQL
+
+.Learning Objectives
+****
+* [x] Create your own sqlite3 database file.
+* [x] Analyze a large dataset and formulate CREATE TABLE statements designed to store the data.
+* [ ] Run one or more queries to test out the end result.
+* [x] Demonstrate the ability to normalize a series of database tables.
+* [ ] Wrangle and insert data into database.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/anvil/projects/tdm/data/goodreads/goodreads_book_authors.json`
+- `/anvil/projects/tdm/data/goodreads/goodreads_book_series.json`
+- `/anvil/projects/tdm/data/goodreads/goodreads_books.json`
+- `/anvil/projects/tdm/data/goodreads/goodreads_reviews_dedup.json`
+
+== Questions
+
+As you can see from the "Learning Objectives" section above, we are already almost done with our learning objectives for this portion of the course! We are going to be focusing on our last two uncovered learning objectives in this project, where we will first populate our database and then run some queries on it to test it out.
+
+The way that we actually go about our insertion is a bit open-ended. While we do all have a common goal of filling our database with out dataset sample, there are many ways to approach this in Python. In the second half of this project, we will be talking briefly about time complexity, which is an extremely important concept in computer science that will help us optimize our code before we move into the next project and work with 'parallel processing'.
+
+In the next project, we will run some more experiments that will time insertion and then project the time it would take to insert all of the data in order to gauge the effectiveness of our data ingestion methods. Finally, we will adjust some database settings to create a final product with polish that we can feel good about.
+
+=== Question 1 (1 pt)
+[upperalpha]
+.. Write a function, `scrape_image_from_url`, that takes an image URL and returns a bytes object of the image.
+.. Run the code snippet provided to test your function, and recieve the "Correct Output" message.
+
+[NOTE]
+====
+Before we start, make sure you have the 'Goodreads_samples' directory that we created in Project 2 (and created again in Project 3) in your Project 4 directory. You can just copy it over from the previous project using `cp`. If you were unable to do the previous two projects for any reason, the code used to generate the Goodreads Samples is included in the introduction section of Project 3 (the code snippet that starts with `rm -rf`). Make sure you understand what the code is doing before you run it (this is always good practice).
+====
+
+Let's start by copying over our database file from the previous project. If you were following our instructions about naming, it should be called `project03.db`. You can use some `bash` like below in order to do so, and you can rerun this code as many times as you need to in order to get a fresh start.
+
+[source,ipython]
+----
+%%bash
+
+rm $HOME/project04.db # removes the file if it exists
+cp /anvil/projects/tdm/data/goodreads/project03.db $HOME/project04.db # copies our project 3 database to our project 4 directory
+----
+
+Let's get started with our data ingestion/insertion. We will split this over a few different questions where we test our ability to ingest different types of data, and then wrap it all into one big ingestion/insertion function later in the project. This is good practice whenever developing, and we at The Data Mine strongly recommend this sort of iterative testing as you continue to grow and develop in your career. It will save you lots of time!
+
+Firstly, we should be able to fully recover all the `book_cover` images from our database alone. This means we'll need to handle scraping the image from the `image_url` in our JSON file and converting the image to `bytes` before inserting into the database. Take a look at https://the-examples-book.com/projects/project-archive/30100-2022-project04#question-2[this question] from TDM 30100, and write a function that, given an image url, returns the image as a bytes object.
+
+Verify that your function works by running the following code snippet:
+
+[source,ipython]
+----
+import shutil
+import requests
+import os
+import uuid
+import hashlib
+
+url = 'https://images.gr-assets.com/books/1310220028m/5333265.jpg'
+my_bytes = scrape_image_from_url(url)
+m = hashlib.sha256()
+m.update(my_bytes)
+out = m.hexdigest()
+correct = 'ca2d4506088796d401f0ba0a72dda441bf63ca6cc1370d0d2d1d2ab949b00d02'
+
+if m.hexdigest() == correct:
+    print("Correct Output")
+else:
+    print("Incorrect Output:\n")
+    print(f"Expected: {correct}")
+    print(f"Recieved: {out}")
+----
+
+.Items to submit
+====
+- Function `scrape_image_from_url` that returns bytes object of given image URL.
+- Output of running the testing code snippet (should be "Correct Output").
+====
+
+=== Question 2 (2 pts)
+[upperalpha]
+.. 4 functions to insert a book, author, series, or review into our database from the appropriate JSON file.
+.. Print the head of your four 'main' tables to validate your functions.
+
+Okay, now that we've handled the main 'difficult' data we will be ingesting, we can start writing some subfunctions for each file.
+
+We will start with the simpler functions. For this question, write 4 functions, one for each file. They should be as follows:
+****
+* `insert_books` -- takes all rows from `goodreads_books.json` and inserts it into the database.
+* `insert_authors` -- takes all rows from `goodreads_book_authors.json` and inserts it into the database.
+* `insert_seriess` -- takes all rows from `goodreads_book_series.json` and inserts it into the database.
+* `insert_reviews` -- takes all rows from `goodreads_reviews_dedup.json` and inserts it into the database.
+****
+
+[NOTE]
+====
+Do not worry about handling the _weird_ columns of our data yet (i.e. `popular_shelves`, `similar_books`, etc.). We will handle those in a later question.
+====
+
+If you are struggling on where to start with this question, slow down and consider things in very small steps. Our function outline should be something akin to:
+****
+. Open the file.
+. Iterate over each line in the file.
+. Parse the line into a dictionary of values to insert.
+. Insert the values into the database.
+****
+
+The small code snippet below should give you a small idea of how to start doing this, and https://www.sqlitetutorial.net/sqlite-python/insert/[this article] can provide more insight into how to insert the data into your database.
+
+[source,python]
+----
+import json
+
+with open("/anvil/projects/tdm/data/goodreads/goodreads_books.json") as f:
+    for line in f:
+        print(line)
+        parsed = json.loads(line)
+        print(f"{parsed['isbn']=}")
+        print(f"{parsed['num_pages']=}")
+        break
+----
+
+You might be wondering why we want your functions to work line-by-line. This is because if we want to break out dataset into chunks and _parallelize_ our ingestion, this approach makes it much easier to do. We will not be covering paralel processing in this project, but the next project will have a huge focus on it, so take the time to get this right this week.
+
+Finally, print the head of your `books`, `authors`, `series`, and `reviews` tables to make sure that your functions are working as expected. (After running a function on the first line of a file, you should see a single row in each table.)
+
+.Items to submit
+====
+- 4 functions as described above.
+- The head of your `books`, `authors`, `series`, and `reviews` tables (with at least 1 row of data in them).
+====
+
+=== Question 3 (2 pts)
+[upperalpha]
+.. Modify your `insert_book` function to insert `popular_shelves` and `similar_books` into their respective tables in our database.
+.. Modify any functions necessary to update junction tables when inserting a book, author, series, or review.
+.. Print the first 3 rows of each of your tables to validate your work.
+
+This process should be very similar to what you did in the last question, with the big exception being that now you will have to worry about inserting data into multiple tables and updating junction tables, along with iterating through lists of data to insert multiple rows into the database from one line in the file (as in the case of `similar books`). I would recommend drawing out your tables and how they connect to one another prior to trying to write code. This is a great way to visualize the problem, and is so common that most people in the industry have designated programs to create these diagrams for them (called "database viewers"). The actual diagram itself is called a "database schema diagram" or just a "schema" for short.
+
+Remember to post on Piazza, show up/call in to seminar or office hours, or email Dr. Ward if you are struggling with this question. We are here to help!
+
+.Items to submit
+====
+- Modified functions to insert `popular_shelves` and `similar_books` into their respective tables, and to update junction tables when inserting a book, author, series, or review.
+- The head of your `books`, `authors`, `series`, and `reviews` tables (with at least 3 rows of data in them).
+====
+
+=== Question 4 (1 pt)
+[upperalpha]
+.. Fully recover a `book_cover` and display it in your notebook.
+
+Demonstrate your database works by doing the following.
+
+. Fully recover a `book_cover` and display it in your notebook.
++
+[NOTE]
+====
+[source,ipython]
+----
+%%bash
+
+rm $HOME/test.db || true
+sqlite3 $HOME/test.db "CREATE TABLE test (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+	my_blob BLOB
+);"
+----
+
+[source,python]
+----
+import shutil
+import requests
+import os
+import uuid
+import sqlite3
+
+url = 'https://images.gr-assets.com/books/1310220028m/5333265.jpg'
+my_bytes = scrape_image_from_url(url)
+
+# insert
+conn = sqlite3.connect('/home/x-jaxmattfair/test.db')
+cursor = conn.cursor()
+query = f"INSERT INTO test (my_blob) VALUES (?);"
+dat = (my_bytes,)
+cursor.execute(query, dat)
+conn.commit()
+cursor.close()
+
+# retrieve
+conn = sqlite3.connect('/home/x-jaxmattfair/test.db')
+cursor = conn.cursor()
+
+query = f"SELECT * from test where id = ?;"
+cursor.execute(query, (1,))
+record = cursor.fetchall()
+img = record[0][1]
+tmp_filename = str(uuid.uuid4())
+with open(f"{tmp_filename}.jpg", 'wb') as file:
+    file.write(img)
+    
+from IPython import display
+display.Image(f"{tmp_filename}.jpg")
+----
+====
++
+. Run a simple query to `SELECT` the first 5 rows of each table.
++
+[NOTE]
+====
+[source,ipython]
+----
+%sql sqlite:////home/my-username/my.db
+----
+
+[source,ipython]
+----
+%%sql
+
+SELECT * FROM tablename LIMIT 5;
+----
+====
++
+[IMPORTANT]
+====
+Make sure to replace "my-username" with your Anvil username, for example, x-jaxmattfair is mine.
+====
+
+.Items to submit
+====
+- The printed, recovered image, and the code you used to do so, in your Jupyter notebook.
+====
+
+=== Submitting your Work
+Nicely done, you've made it to the end of Project 4! This project was quite intensive, and we hope you learned a lot. If you have any questions or would like to learn more in-depth about topics covered in this project, please come to seminar. Dr. Ward and the TA team love talking to students, and we find that everyone learns from our shared conversations. As always, double, triple, and maybe even **quadruple** check that all your work is visible in your submission to ensure you get the full points you deserve.
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output, when in fact it does not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/current-projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or it does not render properly in gradescope. Please ask a TA if you need help with this.
+====
+
+.Items to submit
+====
+- `firstname-lastname-project05.ipynb`.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====

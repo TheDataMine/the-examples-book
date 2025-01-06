@@ -1,0 +1,164 @@
+= TDM 30100: Project 11 -- 2023
+
+**Motivation:** In general, scraping data from websites has always been a popular topic in The Data Mine. In addition, it was one of the requested topics. We will continue to use "books.toscrape.com" to practice scraping skills
+
+**Context:** This is a second project focusing on web scraping combined with the BeautifulSoup library
+
+**Scope:** Python, web scraping, selenium, BeautifulSoup
+
+.Learning Objectives
+****
+- Use Selenium and XPath expressions to efficiently scrape targeted data.
+- Use BeautifulSoup to scrape data from web pages
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+
+In the previous project, you learned how to get the 'Music' category link in the webpage of "books.toscrape.com", and how to use `Selenium` to scrape books' information. The follow is the sample code for the solution for question 1.
+
+[source,python]
+----
+import time
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.common.by import By
+ 
+firefox_options = Options()
+firefox_options.add_argument("--window-size=810,1080")
+# Headless mode means no GUI
+firefox_options.add_argument("--headless")
+firefox_options.add_argument("--disable-extensions")
+firefox_options.add_argument("--no-sandbox")
+firefox_options.add_argument("--disable-dev-shm-usage")
+
+driver = webdriver.Firefox(options=firefox_options)
+
+driver.get("https://books.toscrape.com")
+e_t = driver.find_element("xpath",'//article[@class="product_pod"]/h3/a')
+e_p = driver.find_element("xpath",'//p[@class="price_color"]')
+fst_b_t = e_t.text
+fst_b_p =e_p.text
+
+# find book entitled "how music works"
+book_link = driver.find_element(By.LINK_TEXT, "How Music Works")
+book_link.click()
+time.sleep(5)
+
+#scrape and print book information : product description, UPC and availability
+product_desc=driver.find_element(By.CSS_SELECTOR,'meta[name="description"]').get_attribute('content')
+product_desc
+table = driver.find_element(By.XPATH, "//table[@class='table table-striped']")
+upc= table.find_element(By.XPATH, ".//th[text()='UPC']/following-sibling::td[1]")
+upc_value = upc.text
+upc_value
+
+availability = table.find_element(By.XPATH, ".//th[text()='Availability']/following-sibling::td[1]")
+availability_value = availability.text
+availability_value
+driver.quit()
+----
+[NOTE]
+In this project we will include BeautifulSoup in our webscraping journey. BeautifulSoup is a python library. You can use it to extract data from HTML or XML files. You may find more BeautifulSoup information here:  https://www.crummy.com/software/BeautifulSoup/bs4/doc/
+ 
+== Questions
+
+=== Question 1 (2 pts)
+
+.. Please create a function called "get_category" to extract all categories' names in the website.  The function does not need any arguments.  The function returns a list of categories' names.
+
+[TIP]
+====
+* Use BeautifulSoup for this question
+[source,python]
+from bs4 import BeautifulSoup
+====
+[TIP]
+====
+* You can parse the page with BeautifulSoup
+[source,python]
+bs = BeautifulSoup(driver.page_source,'html.parser')
+====
+[TIP]
+====
+* Review the page source of the website's homepage, including categories located at the sidebar.  The BeautifulSoup "select" method is useful to get names, like this:
+
+[source,python]
+categories = [c.text.strip() for c in bs.select('.nav-list li a')]
+====
+
+=== Question 2 (2 pts)
+
+.. Please create a function called "get_all_books" to get first page books for a given category name from question 1. Use "Music_14" to test the function. The argument is a category name. The function returns a list of book objects with book titles, book price and book availability from the first webpage.
+
+[TIP]
+====
+* Review the page source, you may find one "article" tag holds one book information. You may use find_all to find all "article" tags, like
+
+[source, python]
+articles=bs.find_all("article",class_="product_pod") 
+====
+
+[TIP]
+====
+* You may create an object to hold the book information, like:
+[source,python]
+book = {
+    "title":title,
+    "price":price,
+    "availability":availability
+}
+====
+
+[TIP]
+====
+* You may use a loop to go through the books, like
+[source,python] 
+for article in articles:
+    title = article.h3.a.attrs['title']
+    price = article.find('p',class_='price_color').text
+    availability = article.find('p',class_='instock availability').text
+# create a book object with the extract information
+    ....
+====
+[TIP]
+====
+* You may need a list to hold all book objects, and add all books to it, like
+[source,python]
+all_books=[]
+...
+all_books.append(book)
+====
+[NOTE]
+====
+* You may use different ways to solve the question, like use function "map" etc.  
+====
+
+=== Question 3 (2 pts)
+
+You may have noticed that some categories like "fantasy_19" have more than one page of books.  
+
+.. Please update the function "get_all_books" from question 2 so that the function can be used to get all books, even if there are multiple pages for the category.
+
+[TIP]
+====
+* Look for pagination link "next" 
+====
+
+=== Question 4 (2 pts)
+
+.. Look through the website "books.toscrape.com", and pick anything that interests you, and scrape and display those data.
+
+Project 11 Assignment Checklist
+====
+* Jupyter Lab notebook with your code, comments and output for the assignment
+    ** `firstname-lastname-project11.ipynb` 
+* Submit files through Gradescope
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====
