@@ -1,0 +1,211 @@
+= TDM 20200: Project 10 -- 2024
+ 
+**Motivation:** Machine learning and AI are huge buzzwords in industry.  In this project, we will delve into an introduction of some machine learning related libraries in Python, like `tensorflow` and `scikit-learn`.  We aim to understand some basic machine learning workflow concepts.   
+
+**Context:** The purpose of these projects is to give you exposure to machine learning tools, some basic functionality, and to show _why_ they are useful, without needing any special math or statistics background. We will try to build a model to predict the arrival delay (ArrDelay) of flights, based on features like departure delay, distance of the flight, departure time, arrival time, etc. 
+
+**Scope:** Python, tensorflow, scikit-learn
+
+== Dataset
+
+`/anvil/projects/tdm/data/flights/2014.csv`
+
+== Readings and Resources
+
+[NOTE]
+====
+- Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+- https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html[Pandas read_csv]
+- https://scikit-learn.org/stable/documentation.html[scikit-learn documentation]
+- https://scikit-learn.org/stable/tutorial/index.html[scikit-learn tutorial]
+- https://www.tensorflow.org/tutorials[tensorflow tutorial]
+- https://www.youtube.com/tensorflow[youtube for tensorflow]
+
+====
+
+[WARNING]
+====
+You need to use 2 cores for your Jupyter Lab session for Project 10 this week.
+====
+
+[TIP]
+====
+You can use `pd.set_option('display.max_columns', None)` if you want to see all of the columns in a very wide data frame.
+====
+
+[IMPORTANT]
+====
+We added https://the-examples-book.com/programming-languages/python/hints-for-TDM-20200-project-10[five new videos] to help you with Project 10.  BUT the example videos are about a data set with beer reviews.  You need to (instead) work on the flight data given here:  `/anvil/projects/tdm/data/flights/2014.csv`
+====
+
+== Questions
+
+=== Question 1 (2 points)
+
+For this project, we will only need these rows of the data set:
+
+[source, python]
+----
+mycols = [
+    'DepDelay', 'ArrDelay', 'Distance',
+    'CarrierDelay', 'WeatherDelay',
+    'DepTime', 'ArrTime', 'Diverted', 'AirTime'
+]
+----
+
+[loweralpha]
+.. Load just a few rows of the data set.  Explore the dataset columns, and figure out the data types for the following specific columns.  Based on your exploration, define a dictionary variable called `my_col_types` that hold the column names and the types of each of the columns listed in `mycols`.
+.. Now load the first 10,000 rows of the data set (but only the columns specified in `mycols`) into a data frame called `myDF`.
+
+[TIP]
+====
+- You may refer to https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html[pandas read_csv] to know how to read partial data.
+- You may use the parameter `nrows=10000` in the `read_csv()` method.
+====
+ 
+=== Question 2 (2 points)
+
+.. Import the following libraries
++
+[source,python]
+----
+import tensorflow as tf
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+import pandas as pd
+import numpy as np
+import time
+----
+
+.. For each column, fill in the missing values within that column, using the median value of that column.
+
+(Note:  This works in this situation, because all of our columns contain numerical data.  In the future, if you want to fill in missing values in a column that contains an `object` data type, we need to use a different procedure.)
+
+(Another note:  We are filling in missing values because a machine learning model can be confused by missing values.  Some machine learning models depend on every item, to make a decision.)
+
+
+ 
+=== Question 3 (2 points)
+
+Now let's look into how to prepare our features and labels for the machine learning model.  You may use the following example code.
+
+[source,python]
+----
+# Splitting features and labels
+features = myDF.drop('ArrDelay', axis=1)
+labels = myDF['ArrDelay']
+----
+
+.. What is the difference between features and labels?
+.. Considering the following example code, why do we need to have our data split into training and testing sets?
+
+[source,python]
+----
+# Split
+X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
+----
+
+[TIP]
+====
+- In machine learning, `features` are the information used to make predictions, and `labels` are the outcomes for predictions.  For instance, if we predict whether it will rain, the features might be wind speed, pressure, humidity, etc., and label would be rain or no rain.
+- In the example code at the start of question 3, we are setting things up in this way:  The features include all variables except the `ArrDelay`, and the only label is the variable `ArrDelay`.
+====
+
+[NOTE]
+====
+- You may need to understand what are training and testing sets. The training set is used to train the model.  The testing set will validate the model's predictive power.
+- When we use `test_size=0.2`, we are specifying that 80% of the data will be used as training data, and 20% of the data will be used to test the model's performance.
+- When we use `random_state=42` we are ensuring that the random number generator's sequence of numbers is reproducible across multiple runs of the code.  Thus, we ensure that we get the same split of data into training and testing sets.  This is basically seeding a random number generator, so that (by using the same seed each time) we get the same split each time.  The value 42 is often used by convention; in other words, many people just use the value 42 to seed the random number generator.
+====
+
+=== Question 4 (2 points)
+
+.. Now let us standardize our data, using this example code.
++
+[source,python]
+----
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train).astype(np.float32)
+X_test_scaled = scaler.transform(X_test).astype(np.float32)
+----
++
+[NOTE]
+====
+This is what scaling does to the data, and the reason why we need it for machine learning models:
+
+- Machine learning models usually assume all features are on a similar scale. So data need to be standardized to be in a common scale
+.. Standardizing is like to translate and rescale every point on a graph to fit within a new frame, so the machine learning model can understand better
+.. StandardScaler() is a function used to pre-process data before feeding it into a machine learning model
+.. The StandardScaler adjusts data features so they have a mean of 0 and a standard deviation of 1, making models like neural networks perform better because they're sensitive to the scale of input data.
+====
+.. Now let us slice our data, using this example code.
++
+[source,python]
+----
+train_dataset = tf.data.Dataset.from_tensor_slices((X_train_scaled, y_train)).batch(14)
+test_dataset = tf.data.Dataset.from_tensor_slices((X_test_scaled, y_test)).batch(14)
+----
++
+[NOTE]
+====
+This is a brief description about how TensorFlow slices data:
+
+- `from_tensor_slices()` is a function that takes tuples of arrays (or tensors) as input, and outputs a dataset.  Each element is a slice from these arrays in tuples format.  Each element is a tuple of one row from `X` (features), and a corresponding row from `Y` (labels).  This technique allows the model to match each input with a corresponding output.
+- `batch(14)` divides the dataset into batches of 14 elements.  Instead of feeding all of the data to the model at one time, the data then (instead) be processed iteratively, so that the computation is not too memory-intensive.
+.. We can choose how many pieces of data are used at a time.  For instance, we can use 14 slices at a time.  The number of slices can impact the model's performance and how long it takes the model to learn. You may need to try different numbers, to figure out which works best.
+====
+
+=== Question 5 (2 points)
+
+.. Now (finally!) we will build a machine learning model, we will train it, and we will evaluate it using TensorFlow. The following example code defines a model architecture, compiles the model, trains the model on a dataset, and evaluates it on a separate dataset, to ensure the model's effectiveness. Please create and run the whole program, named: load the dataset, clean the data, specify the features and labels, specify the training and testing data, define the model, compile and train the model, and clean things up, after building the model.
++
+[source,python]
+----
+# Define model
+model = tf.keras.Sequential([
+    tf.keras.layers.Dense(128, activation='relu', input_shape=(X_train_scaled.shape[1],)),
+    tf.keras.layers.Dropout(0.2),
+    tf.keras.layers.Dense(1)
+])
+
+# Compile
+model.compile(optimizer='adam',
+              loss='mean_squared_error',
+              metrics=['mean_absolute_error'])
+
+# Train
+history = model.fit(train_dataset, epochs=10, validation_data=test_dataset)
+ 
+# Cleanup
+del X_train_scaled, X_test_scaled, train_dataset, test_dataset
+
+----
+
+In the next project, we will reflect on what we learned during this project.  We will continue to explore!
+
+[NOTE]
+====
+- Building a model includes defining the model structure, training it on data, and testing its performance.
+- The example code defines a simple neural network model with layers, to find patterns in the dataset.
+.. `tf.keras.Sequential()` defines the structure of the model and how it will learn from the data. It sets up the sequence of steps/layers. The model will process the layers to get patterns, and will learn from patterns, to make predictions.
+.. `model.compile` sets up the model's learning method: using the `adam` algorithm to do adjustments, the `mean_squared_error` to measure the accuracy of the model's prediction, and the `mean_absolute_error` to average out how much the predictions differ from the real values.
+.. `model.fit()` is the function that starts the learning process, using training data, and then checks the performance, with testing data.
+.. `Epoch` is one complete pass through the entire training dataset. The model is set to go through 10 epochs. 
+==== 
+
+Project 10 Assignment Checklist
+====
+* Jupyter Lab notebook with your code, comments and outputs for the assignment
+    ** `firstname-lastname-project10.ipynb` 
+* Python file with code and comments for the assignment
+    ** `firstname-lastname-project10.py`
+ 
+* Submit files through Gradescope
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====
