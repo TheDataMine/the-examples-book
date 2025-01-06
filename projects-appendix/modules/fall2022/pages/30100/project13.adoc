@@ -1,0 +1,196 @@
+= TDM 30100: Project 13 -- 2022
+
+**Motivation:** RESTful APIs are everywhere! At some point in time, it will likely be the source of some data that you will want to use. What better way to understand how to interact with APIs than building your own?
+
+**Context:** This is the last project in a series around APIs. In this project, we will use templates and `jinja2` to build a "frontend" for our API.
+
+**Scope:** Python, fastapi, VSCode
+
+.Learning Objectives
+****
+- Understand and use the HTTP methods with the `requests` library.
+- Differentiate between graphql, REST APIs, and gRPC.
+- Write REST APIs using the `fastapi` library to deliver data and functionality to a client.
+- Identify the various components of a URL. 
+- Use a templating engine and HTML to display data from our API.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/anvil/projects/tdm/data/movies_and_tv/imdb.db`
+
+In addition, the following is an illustration of the database to help you understand the data.
+
+image::figure14.webp[Database diagram from https://dbdiagram.io, width=792, height=500, loading=lazy, title="Database diagram from https://dbdiagram.io"]
+
+For this project, we will be using the imdb sqlite database. This database contains the data in the directory listed above.
+
+== Questions
+
+=== Question 1
+
+For this project, we've provided you with a ready-made API, very similar to the results of the previous project, but with a bit more to work with. You'll be relieved to hear, however, that you will be primarily working with a discrete set of HTML template files, and not much else.
+
+Start this project just like you did in the previous project.
+
+. Open VSCode and connect to Anvil.
+. Hold Cmd+Shift+P (or Ctrl+Shift+P) to open the command palette, search for "Terminal: Create new terminal" and hit enter. This will open a terminal in VSCode that is connected to Anvil.
+. Copy over our project template into your `$HOME` directory.
++
+[source,bash]
+----
+cp -r /anvil/projects/tdm/etc/imdb2 $HOME
+----
++
+. Open the `$HOME/imdb` directory in VSCode.
+. Load up our `f2022-s2023` Python environment by running the following in the terminal in VSCode.
++
+[source,bash]
+----
+module use /anvil/projects/tdm/opt/core
+module load tdm
+module load python/f2022-s2023
+----
++
+. Go ahead and test out the provided, minimal API by running the following in the terminal in VSCode.
++
+[source,bash]
+----
+find_port # returns a port, like 7777
+----
++
+[source,bash]
+----
+python3 -m uvicorn imdb.api:app --reload --port 7777 # replace 7777 with the port you got from find_port
+----
++
+. Open a browser on your computer and navigate to `localhost:7777`, but be sure to replace 7777 with the port you got from `find_port`. You should see a message that says "Hello World!". This is a JSON response, which is why your browser is showing it in a nice format.
+
+Finally, check out the new code base and the following new endpoints.
+
+- `localhost:7777/api/titles/tt4236770`
+- `localhost:7777/api/cast/tt4236770`
+- `localhost:7777//api/person/nm0000126`
+
+Like before, these endpoints all return appropriately formatted JSON objects. Within our Python code, we have nice `pydantic` objects to work with. However, we want to display all of this data in a nice, human-readable format. This is often referred to as a _frontend_. Often times a frontend will use a completely different set of technologies, and simply use the API to fetch specially structure data. In this case, we are going to use `fastapi` to build our frontend. We can do this by using a templating engine (built into `fastapi`), and in this case, we will be using `jinja2`.
+
+For this question, you don't need to submit anything, as you'll need to have all of it working to continue.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+Check out the one and only template provided in the `templates` directory, `hithere.html`. When navigating to `localhost:7777/hithere/alice` you'll be greeted with a message saying "Hi there: alice!". 
+
+[IMPORTANT]
+====
+You will need to update the `hithere` function URL to use the port you are using instead of port 7777.
+====
+
+The content of the template is simple.
+
+[source,html]
+----
+<html>
+    <head>
+        <title>Hi there!</title>
+    </head>
+    <body>
+        <h1>Hi there: {{ name.my_name }}!</h1>
+    </body>
+</html>
+----
+
+When you navigate to `localhost:7777/hithere/alice` `fastapi` sends a request to our api endpoint `localhost:7777/api/hithere/alice` and send the response to our template, `hithere.html`. The template can then access the name by surrounding the variable with double curly braces and dot notation. 
+
+This whole process emulates what a regular frontend would do. First make a request to get the data (in our case, in JSON format), then pass the response to some sort of frontend system (in our case a template engine that chooses how to display the data).
+
+Let's start by creating a single new HTML template called `title.html`. This template will be used to display the information about a single title. The template should be located in the `templates` directory. Let's start the template with a basic HTML skeleton.
+
+[source,html]
+----
+<html>
+    <head>
+        <title>Title</title>
+    </head>
+    <body>
+        <h1></h1>
+    </body>
+</html>
+----
+
+Create a new endpoint in `api.py`: `localhost:7777/titles/{some_title_id}`. This endpoint should behave similarly to the `hithere` function. It should first make a request to our api, `localhost:7777/api/titles/{some_title_id}`, and then pass the response along to the `title.html` template.
+
+Once complete, go back to your `title.html` template, and modify it so it displays the `primary_title` in an `h1` tag. In addition, display the rest of the data _except_ the `genres`. You can choose how to display, or rather, what HTML tags to use to display the remaining data.
+
+Test it out by navigating to: `localhost:7777/titles/tt4236770`.
+
+[TIP]
+====
+Check out this post for examples on accessing data, using conditionals (if/else), and loops in `jinja2`.
+
+https://realpython.com/primer-on-jinja-templating/#get-started-with-jinja
+====
+
+.Items to submit
+====
+- A screenshot displaying the webpage for `localhost:7777/titles/tt4236770`.
+====
+
+=== Question 3
+
+In the previous question, you learned how to take a request and modify the template to display the structured data returned from the request (the response) using `jinja2` templating. 
+
+In the previous question, you displayed data for a title _except_ for the genre data. The genre data is a list of strings. To access the genres from within a `jinja2` template, you will need to loop through the genres and display them. See https://realpython.com/primer-on-jinja-templating/#leverage-for-loops[this] article for an example. _How_ you decide to display the data (what HTML tags to use) is up to you!
+
+.Items to submit
+====
+- A screenshot displaying the webpage for `localhost:7777/titles/tt4236770`.
+====
+
+=== Question 4
+
+Practice makes perfect. Create a new template called `person.html`. As you may guess, we want this template to display the name of the person of interest, and a list of the `primary_title` for all of their works. Create a new endpoint at `localhost:7777/person/{some_person_id}`. This endpoint should first make a request to our api at `localhost:7777/api/person/{some_person_id}` and then pass the response along to the `person.html` template.
+
+How you display the data is up to you. I displayed the name of the person in a big h1 tag and listed all of the `primary_title` data in a list of p tags. It doesn't need to be pretty!
+
+.Items to submit
+====
+- A screenshot displaying the webpage for `localhost:7777/person/nm0000126`.
+====
+
+=== Question 5
+
+Create a new template called `cast.html`. As you may guess, we want this template to display the cast for a given a title. Create a new endpoint at `localhost:7777/cast/{some_title_id}`. This endpoint should first make a request to our api at `localhost:7777/api/cast/{some_title_id}` and then pass the response along to the `cast.html` template.
+
+This should be _extremely_ similar to question (3)! Please have a nice h1 header with the name of the title, and a list of cast members. We are only going to include 1 small twist. For every cast member name you display, make the cast member name itself be a link that links back to the person's page (created in the previous question). This way, when you navigate to `localhost:7777/cast/tt4236770`, you can click on any of the cast member names and be taken to their page. Very cool!
+
+.Items to submit
+====
+- A screenshot displaying the webpage for `http://localhost:7777/cast/tt4236770`.
+- A screenshot displaying the webpage for one of the cast members (someone other than Kevin Costner).
+====
+
+=== Question 6 (optional, 0 points)
+
+Update the `title.html` template so that the primary title is displayed in green if the rating of the title is 8.0 or higher, and red otherwise.
+
+.Items to submit
+====
+- A screenshot displaying an instance where the page is displayed in green and an instance where the page is displayed in red.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+
+In addition, please review our xref:projects:submissions.adoc[submission guidelines] before submitting your project.
+====

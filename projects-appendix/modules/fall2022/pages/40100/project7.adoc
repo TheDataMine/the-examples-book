@@ -1,0 +1,206 @@
+= TDM 40100: Project 7 -- 2022
+:page-mathjax: true
+
+**Motivation:** Images are everywhere, and images are data! We will take some time to dig more into working with images as data in this series of projects.
+
+**Context:** In the previous project, we learned to sharpen images using unsharp masking. In this project, we will perform edge detection using Sobel filtering.
+
+**Scope:** Python, images, JAX
+
+.Learning Objectives
+****
+- Process images using `numpy`, `skimage`, and `JAX`. 
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/anvil/projects/tdm/data/images/apple.jpg`
+- `/anvil/projects/tdm/data/images/drward.jpg`
+
+== Questions
+
+=== Question 1
+
+Let's, once again, work with our `apple.jpg` image. In the previous project, we sharpened the image using unsharp masking. In this project, we are going to try to detect edges using a Sobel filter. The first step in this process is to convert our image from color to greyscale.
+
+There are a few ways to do this, we will use the luminosity method. Create a function called `to_greyscale` that accepts the image in numeric numpy ndarray form, and returns the modified image in the numeric numpy ndarray form.
+
+[NOTE]
+====
+The luminosity method of conversion takes into consideration that our eyes don't react to each color the same way. You can read about some of the other methods https://www.baeldung.com/cs/convert-rgb-to-grayscale[here].
+====
+
+$gray = \frac{(0.2989*R + 0.5870*G + 0.1140*B)}{255}$
+
+Confirm your function works.
+
+[source,python]
+----
+img = io.imread("/anvil/projects/tdm/data/images/apple.jpg")
+img = to_greyscale(img)
+io.imsave("grey.jpg", img)
+with open("grey.jpg", "rb") as f:
+    my_bytes = f.read()
+
+m = hashlib.sha256()
+m.update(my_bytes)
+m.hexdigest()
+----
+
+.output
+----
+d3aac435526a98d5d8665c558a96b834b63e5f17531b6e197b14d3b527406970
+----
+
+To display the greyscale image using `imshow`, you must include the `cmap="gray"` option.
+
+[source,python]
+----
+imshow(img, cmap="gray")
+----
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+The big picture with edge detection is detecting sudden changes in pixel intensities. A natural way to find changes is by using gradients/derivatives! That could be time consuming, hence the genius of the Sobel filter.
+
+Write a function called `estimate_gradients` that uses the https://en.wikipedia.org/wiki/Sobel_operator[Sobel filter] to estimate the gradients, `gx` and `gy`. `gx` is the gradient in the x direction and `gy` is the gradient in the y direction. `estimate_gradients` should accept the image and return both `gx` and `gy`.
+
+To calculate the estimated gradients, you must take a pixel and its eight neighbors, multiply them by a 3x3 "kernel", and sum the results. In a lot of ways, this is very similar to what you did manually in the previous project. However, this operation is much more popular -- so popular, it has a name -- https://en.wikipedia.org/wiki/Kernel_(image_processing)#Convolution[_convolution_].
+
+Read https://en.wikipedia.org/wiki/Sobel_operator[the Sobel operator] wikipedia page, and look at the provided kernels used to calculate the gradient estimates. Use https://jax.readthedocs.io/en/latest/_autosummary/jax.scipy.signal.convolve.html#jax-scipy-signal-convolve[this] function to calculate and return both `gx` and `gy`.
+
+[TIP]
+====
+You will want your resulting image to be the same dimesion as _before_ the convolve function.
+====
+
+[TIP]
+====
+You can verify your output.
+
+[source,python]
+----
+img = io.imread("/anvil/projects/tdm/data/images/apple.jpg")
+img = to_greyscale(img)
+gx, gy = estimate_gradients(img)
+io.imsave("gx.jpg", gx)
+with open("gx.jpg", "rb") as f:
+    my_bytes = f.read()
+
+m = hashlib.sha256()
+m.update(my_bytes)
+print(m.hexdigest())
+    
+io.imsave("gy.jpg", gy)
+with open("gy.jpg", "rb") as f:
+    my_bytes = f.read()
+
+m = hashlib.sha256()
+m.update(my_bytes)
+print(m.hexdigest())
+----
+
+.output
+----
+966c8530c02913ccc44b922ce9b42e6b85679a743b5e44757dc88ec2adfd21af
+e06ff1ed6edb589887a52d7fe154b84a12495d0ab487045e26cb0b34fc0b5402
+----
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+What we _really_ want is a single gradient that combines both `gx` and `gy`. We can obtain it using the following formula.
+
+$G = \sqrt{gx^2 + gy^2}$
+
+Alternatively, the following would work as well.
+
+$G = |gx| + |gy|$
+
+Decide which formula to implement. Bring everything you've written so far together into a single function called `get_edges`. `get_edges` should accept the image (as a numeric `np.ndarray`, and return the final result, a greyscale image with edges clearly defined.
+
+You can verify your solution with the following. Note that depending on which method you chose, the resulting hash will be different. We've included both possibilities.
+
+Which method did you choose and why? 
+
+[source,python]
+----
+img = io.imread("/anvil/projects/tdm/data/images/apple.jpg")
+img = get_edges(img)
+io.imsave("edge.jpg", img)
+with open("edge.jpg", "rb") as f:
+    my_bytes = f.read()
+
+m = hashlib.sha256()
+m.update(my_bytes)
+m.hexdigest()
+----
+
+.output options
+----
+6386859f42d9d7664b79d75f2b375058c1d0a61defb9a055caaaa69ad95504ad
+3ac023a3900013e000e40812b96f7c120edd921cc483cec2f3d0d547a6e2675b
+----
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+The Sobel filter is very effective, but like most things, has flaws. One such flaw is the sensitivity to noise. There are some ways around that.
+
+- You could threshold the output. If G is less than a certain value, you can force the value to be 0.
+- You can apply another filter to blur the image _prior_ to calculating the gradient estimates (just like we did with the median filter in the previous project!).
+
+Create two new functions: `get_edgesv1`, and `get_edgesv2`. Version 1 should use the cutoff method and version 2 should use the blur method. 
+
+This question will be graded by looking at the outputted images, since there are many variations of possible result. Play around with the cutoff value in version 1. For version 2, please feel free to use our new `convolve` function to use a _mean_ instead of median blur. 
+
+[TIP]
+====
+The `convolve` function makes it _super_ easy to apply a mean blur. Think about what `convolve` does and you should be able to figure out how to create a mean blur really quickly.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+Apply your favorite edge detection function that you've built to a new image. How did it work? Why did you like the edge detection function you chose best? Write 1-2 sentences about your choice, and make sure to show the results of your image.
+
+Feel free to use `/anvil/projects/tdm/data/images/coke.jpg` -- the results are pretty neat!
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connection, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====
