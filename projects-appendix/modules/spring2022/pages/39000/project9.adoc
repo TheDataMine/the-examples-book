@@ -1,0 +1,364 @@
+= STAT 39000: Project 9 -- Spring 2022
+:page-mathjax: true
+
+**Motivation:** Machine learning and AI are huge buzzwords in industry, and two of the most popular tools surrounding said topics are the `pytorch` and `tensorflow` libraries — `JAX` is another tool by Google growing in popularity. These tools are libraries used to build and use complex models. If available, they can take advantage of GPUs to speed up parallelizable code by a hundred or even thousand fold. 
+
+**Context:** This is the second in a series of 4-5 projects focused on pytorch (and perhaps JAX). The purpose of these projects is to give you exposure to these tools, some basic functionality, and to show why they are useful, without needing any special math or statistics background.
+
+**Scope:** Python, pytorch
+
+.Learning Objectives
+****
+- Demystify a "tensor".
+- Utilize the `pytorch` API to create, modify, and operate on tensors.
+- Use simple, simulated data to create a multiple linear regression model using closed form solutions.
+- Use `pytorch` to calculate a popular uncertainty quantification, the 95% confidence interval. 
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/depot/datamine/data/sim/train.csv`
+- `/depot/datamine/data/sim/test.csv`
+
+== Questions
+
+=== Question 1
+
+[WARNING]
+====
+If you did not attempt the previous project, some of the novelty of `pytorch` may be lost. The following is a note found at the end of question 5 from the previous project.
+
+In this project, we explored a well known model using simulated data from a known distribution. It was pretty boring, but boring can also make things a bit easier to understand.
+
+To give a bit of perspective, the previous project focused on tensor operations so you could get used to `pytorch`. The power of `pytorch` really starts to show itself when the problem you are facing does not have a closed form solution. In _this_ project, we will use an algorithm called gradient descent to estimate our parameters (instead of using the closed form solutions). Since gradient descent is an algorithm and not a technique that offers a simple closed form solutions, and algorithms like gradient descent are used frequently, this project will _hopefully_ give you a good sense on _why_ `pytorch` is useful. In addition, since we fit a regression model using a closed form solution in the previous project, we will be able to easily verify that our work in _this_ project is working as intended!
+
+Lastly, in more complex situations, you may not have formulas to calculate confidence intervals and other uncertainty quantification measures. In the _next_ project, we will use SLURM in combination with `pytorch` to re-sample our data and calculate point estimates, which can then be used to understand the variability.
+====
+
+[NOTE]
+====
+This project will _show_ more calculus than you need to know or understand for this course. It is included for those who are interested, and so the reader can see "oh my, that is a lot of work we are avoiding!". Don't worry _at all_, is is not necessary to understand for this course.
+====
+
+Start by reading in your `train.csv` data into tensors called `x_train` and `y_train`.
+
+[source,python]
+----
+import pandas as pd
+import torch
+
+dat = pd.read_csv("/depot/datamine/data/sim/train.csv")
+x_train = torch.tensor(dat['x'].to_numpy())
+y_train = torch.tensor(dat['y'].to_numpy())
+----
+
+In the previous project, we estimated the parameters of our regression model using a closed form solution. What does this do? At the heart of the regression model, we are _minimizing_ our _loss_. Typically, this _loss_ is the mean squared error (MSE). The formula for MSE is:
+
+$MSE = \frac{1}{n}\sum_{i=1}^{n}(Y_i - \hat{Y_i})^2$
+
+[NOTE]
+====
+You can think of MSE as the difference between the actual y values (from the training data) and the y values our model predicts, squared, summed, and then divided by $n$, or the number of observations. Larger differences, say a difference of 10, is given a stronger penalty (100) than say, a difference of 5 (25). In this way, MSE as the loss function, tries to make the _overall_ predictions good.
+====
+
+Using our closed form solution formulas, we can calculate the parameters such that the MSE is minimized over the entirety of our training data. This time, we will use gradient descent to iteratively calculate our parameter estimates!
+
+By plotting our data, we can see that our data is parabolic and follows the general form:
+
+$y = \beta_{0} + \beta_{1} x + \beta_{2} x^{2}$
+
+If we substitute this into our formula for MSE, we get:
+
+$MSE = \frac{1}{n} \sum_{i=1}^{n} ( Y_{i} - ( \beta_{0} + \beta_{1} x_{i} + \beta_{2} x_{i}^{2} ) )^{2} = \frac{1}{n} \sum_{i=1}^{n} ( Y_{i} - \beta_{0} - \beta_{1} x_{i} - \beta_{2} x_{i}^{2} )^{2}$
+
+The first step in gradient descent is to calculate the partial derivatives with respect to each of our parameters: $\beta_0$, $\beta_1$, and $\beta_2$. 
+
+These derivatives will let us know the _slope_ of the tangent line for the given parameter with the given value. We can then _use_ this slope to adjust our parameter, and eventually reach a parameter value that minimizes our _loss_ function. Here is the calculus.
+
+$\frac{\partial MSE}{\partial \beta_0} = \frac{\partial MSE}{\partial \hat{y_i}} * \frac{\partial \hat{y_i}}{\partial \beta_0}$
+
+$\frac{\partial MSE}{\partial \hat{y_i}} = 1$
+
+$\frac{\partial \hat{y_i}}{\beta_0} = 2(\beta_0 + \beta_1x + \beta_2x^2 - y_i)$
+
+$\frac{\partial MSE}{\partial \beta_1} = \frac{\partial MSE}{\partial \hat{y_i}} * \frac{\partial \hat{y_i}}{\partial \beta_1}$
+
+$\frac{\partial \hat{y_i}}{\partial \beta_1} = 2x(\beta_0 + \beta_1x + \beta_2x^2 - y_i)$
+
+$\frac{\partial MSE}{\partial \beta_2} = \frac{\partial MSE}{\partial \hat{y_i}} * \frac{\partial \hat{y_i}}{\partial \beta_2}$
+
+$\frac{\partial \hat{y_{i}}}{\partial \beta_{2}} = 2x^{2} (\beta_{0} + \beta_{1} x + \beta2_x^{2} - y_{i})$
+
+If we clean things up a bit, we can see that the partial derivatives are:
+
+$\frac{\partial MSE}{\partial \beta_0} = \frac{-2}{n}\sum_{i=1}^{n}(y_i - \beta_0 - \beta_1 - \beta_2x^2) = \frac{-2}{n}\sum_{i=1}^{n}(y_i - \hat{y_i})$
+
+$\frac{\partial MSE}{\partial \beta_1} = \frac{-2}{n}\sum_{i=1}^{n}x(y_i - \beta_0 - \beta_1 - \beta_2x^2) = \frac{-2}{n}\sum_{i=1}^{n}x(y_i - \hat{y_i})$
+
+$\frac{\partial MSE}{\partial \beta_{2}} = \frac{-2}{n}\sum_{i=1}^{n} x^{2} (y_{i} - \beta_{0} - \beta_{1} - \beta_{2} x^{2}) = \frac{-2}{n}\sum_{i=1}^{n} x^{2} (y_{i} - \hat{y_{i}})$
+
+Pick 3 random values -- 1 for each parameter, $\beta_0$, $\beta_1$, and $\beta_2$. For consistency, lets try 5, 4, and 3 respectively. These values will be our random "guess" as to the actual values of our parameters. Using those starting values, calculate the partial derivitive for each parameter.
+
+[TIP]
+====
+Start by calculating `y_predictions` using the formula: $\beta_0 + \beta_1x + \beta_2x^2$, where $x$ is your `x_train` tensor!
+====
+
+[TIP]
+====
+You should now have tensors `x_train`, `y_train`, and `y_predictions`. You can create another new tensor called `error` by subtracting `y_predictions` from `y_train`.
+====
+
+[TIP]
+====
+You can use your tensors and the `mean` method to (help) calculate each of these partial derivatives! Note that these values could vary from person to person depending on the random starting values you gave each of your parameters.
+====
+
+Okay, once you have your 3 partial derivatives, we can _update_ our 3 parameters using those values! Remember, those values are the _slope_ of the tangent line for each of the parameters for the corresponding parameter value. If by _increasing_ a parameter value we _increase_ our MSE, then we want to _decrease_ our parameter value as this will _decrease_ our MSE. If by _increasing_ a parameter value we _decrease_ our MSE, then we want to _increase_ our parameter value as this will _decrease_ our MSE. This can be represented, for example, by the following:
+
+$\beta_0 = \beta_0 - \frac{\partial MSE}{\partial \beta_0}$
+
+This will however potentially result in too big of a "jump" in our parameter value -- we may skip over the value of $\beta_0$ for which our MSE is minimized (this is no good). In order to "fix" this, we introduce a "learning rate", often shown as $\eta$. This learning rate can be tweaked to either ensure we don't make too big of a "jump" by setting it to be small, or by making it a bit larger, increasing the speed at which we _converge_ to a value of $\beta_0$ for which our MSE is minimized, at the risk of having the issue of over jumping.
+
+$\beta_0 = \beta_0 - \eta \frac{\partial MSE}{\partial \beta_0}$
+
+Update your 3 parameters using a learning rate of $\eta = 0.0003$.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+Woohoo! That was a _lot_ of work for what ended up being some pretty straightforward calculations. The previous question represented a single _epoch_. You can define the number of epochs yourself, the idea is that _hopefully_ after all of your epochs, the parameters will have converged, leaving your with the parameter estimates you can use to calculate predictions!
+
+Write code that runs 10000 epochs, updating your parameters as it goes. In addition, include code in your loops that prints out the MSE every 100th epoch. Remember, we are trying to _minimize_ our MSE -- so we would expect that the MSE _decreases_ each epoch. 
+
+Print the final values of your parameters -- are the values close to the values you estimated in the previous project? 
+
+In addition, approximately how many epochs did it take for the MSE to stop decreasing by a significant amount? Based on that result, do you think we could have run fewer epochs?
+
+[NOTE]
+====
+Mess around with the starting values of your parameters, and the learning rate. You will quickly notice that bad starting values can result in final results that are not very good. A learning rate that is too large will diverge, resulting in `nan`. A learning rate that is too small won't learn fast enough resulting in parameter values that aren't accurate.
+
+The learning rate is a hyperparameter -- a parameter that is chosen _before_ the training process begins. The number of epochs is also a hyperparameter. Choosing good hyperparameters can be critical, and there are a variety of methods to help "tune" hyperparameters. For this project, we know that these values work well.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+You may be wondering think at this point that `pytorch` has been pretty worthless, and it still doesn't make any sense how this simplifies anything. There was too much math, and we still performed a bunch of vector/tensor/matrix operations -- what gives? Well, while this is all true, we haven't utilized `pytorch` quite yet, but we are going to here soon.
+
+First, let's cover some common terminology you may run across. In each epoch, when we calculate the newest predictions for our most up-to-date parameter values, we are performing the _forward pass_.
+
+There is a similarly named _backward pass_ that refers (roughly) to the step where the partial derivatives are calculated! Great.
+
+`pytorch` can perform the _backward pass_ for you, automatically, from our MSE. For example, see the following.
+
+[source,python]
+----
+mse = (error**2).mean()
+mse.backward()
+----
+
+Try it yourself!
+
+[TIP]
+====
+If you get an error: 
+
+.error
+----
+RuntimeError: element 0 of tensors does not require grad and does not have a grad_fn
+----
+
+This is likely due to the fact that your starting values aren't tensors! Instead, use tensors.
+
+[source,python]
+----
+beta0 = torch.tensor(5)
+beta1 = torch.tensor(4)
+beta2 = torch.tensor(3)
+----
+
+What? We _still_ get that error. In order for the `backward` method to work, and _automatically_ (yay!) calculate our partial derivatives, we need to make sure that our starting value tensors are set to be able to store the partial derivatives. We can do this very easily by setting the `requires_grad=True` option when creating the tensors.
+
+[source,python]
+----
+beta0 = torch.tensor(5, requires_grad=True)
+beta1 = torch.tensor(4, requires_grad=True)
+beta2 = torch.tensor(3, requires_grad=True)
+----
+
+You probably got the following error now.
+
+.error
+----
+RuntimeError: Only Tensors of floating point and complex dtype can require gradients
+----
+
+Well, let's set the dtype to be `torch.float` and see if that does the trick, then.
+
+[source,python]
+----
+beta0 = torch.tensor(5, requires_grad=True, dtype=torch.float)
+beta1 = torch.tensor(4, requires_grad=True, dtype=torch.float)
+beta2 = torch.tensor(3, requires_grad=True, dtype=torch.float)
+----
+
+Great! Unfortunately, after you try to run your epochs, you will likely get the following error.
+
+.error
+----
+TypeError: unsupported operand type(s) for *: 'float' and 'NoneType'
+----
+
+This is because your `beta0.grad`, `beta1.grad` are None -- why? The partial derivatives (or gradients) are stored in the `beta0`, `beta1`, and `beta2` tensors. If you performed a parameter update as follows.
+
+[source,python]
+----
+beta0 = beta0 - learning_rate * beta0.grad
+----
+
+The _new_ `beta0` object will have _lost_ the partial derivative information, and the `beta0.grad` will be `None`, causing the error. How do we get around this? We can use a Python _inplace_ operation. An _inplace_ operation will actually _update_ our _original_ `beta0` (_with_ the gradients already saved), instead of creating a brand new `beta0` that loses the gradient. You've probably already seen examples of this in the wild.
+
+[source,python]
+----
+# these are equivalent
+a = a - b 
+a -= b
+
+# or
+a = a * b
+a *= b
+
+# or
+a = a + b
+a += b
+
+# etc...
+----
+
+At this point in time, you are probably _once again_ getting the following error.
+
+.error
+----
+RuntimeError: a leaf Variable that requires grad is being used in an in-place operation.
+----
+
+This too is an easy fix, simply wrap your update lines in a `with torch.no_grad():` block. 
+
+[source,python]
+----
+with torch.no_grad():
+    beta0 -= ...
+    beta1 -= ...
+    beta2 -= ...
+----
+
+Woohoo! Finally! But... you may notice (if you are printing your MSE) that the MSE is all over the place and not decreasing like we would expect. This is because the gradients are summed up each iteration unless your clear the gradient out! For example, if during the first epoch the gradient is 603, and the next epoch it is -773. If you do _not_ zero out the gradient, your new gradient after the second epoch will be -169, when we really want -773. To fix _this_, use the `zero_` method from the `grad` attribute. Zero out all of your gradients at the end of each epoch and try again.
+
+[source,python]
+----
+beta0.grad.zero_()
+----
+
+Finally! It should all be looking good right now. Okay, so `pytorch` is quite particular, _but_ the power of the automatic differentiation can't be overstated.
+====
+
+[IMPORTANT]
+====
+Make sure and make a post on Piazza if you'd like some extra help or think there is a question that could use more attention. 
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+Whoa! That is crazy powerful! That _greatly_ reduces the amount of work we need to do. We didn't use our partial derivative formulas anywhere, how cool!
+
+But wait, there's more! You know that step where we update our parameters at the end of each epoch? Think about a scenario where, instead of simply 3 parameters, we had 1000 parameters to update. That would involve a linear increase in the number of lines of code we would need to write -- instead of just 3 lines of code to update our 3 parameters, we would need 1000! Not something most folks are interested in doing. `pytorch` to the rescue.
+
+We can use an _optimizer_ to perform the parameter updates, all at once! Update your code to utilize an optimizer to perform the parameter updates.
+
+There are https://pytorch.org/docs/stable/optim.html[a variety] of different optimizers available. For this project, let's use the `SGD` optimizer. You can see the following example, directly from the linked webpage.
+
+[source,python]
+----
+optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
+optimizer.zero_grad()
+loss_fn(model(input), target).backward()
+optimizer.step()
+----
+
+Here, you can just focus on the following lines.
+
+[source,python]
+----
+optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
+optimizer.step()
+----
+
+The first line is the initialization of the optimizer. Here, you really just need to pass our initialized paramters (the betas) as a list to the first argument to `optim.SGD`. The second argument, `lr`, should just be our learning rate (`0.0003`).
+
+Then, the second line replaces the code where the three parameters are updated. 
+
+[NOTE]
+====
+You will no longer need the `with torch.no_grad()` block at all! This completely replaces that code.
+====
+
+[TIP]
+====
+In addition, you can use the optimizer to clear out the gradients as well! Replace the `zero_` methods with the `zero_grad` method of the optimizer.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+You are probably starting to notice how `pytorch` can _really_ simplify things. But wait, there's more!
+
+In each epoch, you are still calculating the loss manually. Not a huge deal, but it could be a lot of work, and MSE is not the _only_ type of loss function. Use `pytorch` to create your MSE loss function, and use it instead of your manual calculation.
+
+You can find `torch.nn.MSELoss` documentation https://pytorch.org/docs/stable/generated/torch.nn.MSELoss.html#torch.nn.MSELoss[here]. Use the option `reduction='mean'` to get the mean MSE loss. Once you've created your loss function, simply pass your `y_train` as the first argument and your `y_predictions` as the second argument. Very cool! This has been a lot to work on -- the main takeaways here should be that `pytorch` has the capability of greatly simplifying code (and calculus!) like the code used for the gradient descent algorithm. At the same time, `pytorch` is particular, the error messages aren't extremely clear, and it definitely involves a learning curve.
+
+We've barely scraped the surface of `pytorch` -- there is (always) a _lot_ more to learn! In the next project, we will provide you with the opportunity to utilize a GPU to speed up calculations, and SLURM to parallelize some costly calculations.
+
+[NOTE]
+====
+In the next project we will use `pytorch` to build a model to simplify our code even more, in addition, we will incorporate SLURM and use a GPU to train our model.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connect    ion, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====

@@ -1,0 +1,302 @@
+= STAT 29000: Project 4 -- Spring 2022
+
+**Motivation:** Learning to scrape data can take time. We want to make sure you get comfortable with it! For this reason, we will continue to scrape data from Zillow to answer various questions. This will allow you to continue to get familiar with the tools, without having to re-learn everything about the website of interest. 
+
+**Context:** This is the second to last project on web scraping, where we will continue to focus on honing our skills using `selenium`.
+
+**Scope:** Python, web scraping, selenium, matplotlib/plotly 
+
+.Learning Objectives
+****
+- Review and summarize the differences between XML and HTML/CSV.
+- Use the requests package to scrape a web page.
+- Use the lxml package to filter and parse data from a scraped web page.
+- Use the beautifulsoup4 package to filter and parse data from a scraped web page.
+- Use selenium to interact with a browser in order to get a web page to a desired state for scraping. 
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Questions
+
+=== Question 1
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_eqglyxrc?wid=_983291"></iframe>
+++++
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_960qtuk2?wid=_983291"></iframe>
+++++
+
+[TIP]
+====
+If you struggled with Project 3, be sure to check out the solutions for Project 3! They will be posted early Monday, February 7, at the end of each problem, and may be helpful.
+====
+
+Before we get started, the following is the boiler plate code that we provided you in the previous project to help you get started. You may use this again for this project.
+
+[source,python]
+----
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+import uuid
+
+firefox_options = Options()
+firefox_options.add_argument("window-size=1920,1080")
+# Headless mode means no GUI
+firefox_options.add_argument("--headless")
+firefox_options.add_argument("start-maximized")
+firefox_options.add_argument("disable-infobars")
+firefox_options.add_argument("--disable-extensions")
+firefox_options.add_argument("--no-sandbox")
+firefox_options.add_argument("--disable-dev-shm-usage")
+firefox_options.add_argument('--disable-blink-features=AutomationControlled')
+
+# Set the location of the executable Firefox program on Brown
+firefox_options.binary_location = '/depot/datamine/bin/firefox/firefox'
+
+profile = webdriver.FirefoxProfile()
+
+profile.set_preference("dom.webdriver.enabled", False)
+profile.set_preference('useAutomationExtension', False)
+profile.update_preferences()
+
+desired = DesiredCapabilities.FIREFOX
+
+# Set the location of the executable geckodriver program on Scholar
+uu = uuid.uuid4()
+driver = webdriver.Firefox(log_path=f"/tmp/{uu}", options=firefox_options, executable_path='/depot/datamine/bin/geckodriver', firefox_profile=profile, desired_capabilities=desired)
+----
+
+In addition, the following is a function that will create a zillow link from a given search text. This is almost like using the search bar on the home page. This function accepts a search string and returns a link to the results.
+
+[source,python]
+----
+def search_link(text: str) -> str:
+    """
+    Given a string of search text, return a link
+    that is essentially the same result as
+    using Zillow search.
+    """
+    return f"https://www.zillow.com/homes/{text.replace(' ', '-')}_rb/"
+----
+
+In this project, when we say "search for 47906", we mean start scraping using `selenium` in the following manner.
+
+[source,python]
+----
+driver.get(search_link("47906"))
+----
+
+Write a function called `next_page` that will accept your `driver` and returns a string with the URL to the next page if it exists, and `False` otherwise.
+
+Test your function in the following way. Results should closely match the results below, but may change as listings are constantly being updated.
+
+[source,python]
+----
+driver.get("https://www.zillow.com/austin-tx/17_p/")
+print(next_page(driver))
+
+driver.get(next_page(driver))
+print(next_page(driver))
+----
+
+.Output
+----
+https://www.zillow.com/austin-tx/18_p/
+False
+----
+
+[IMPORTANT]
+====
+There may be more or fewer pages of results when you do this project. Change the starting page from "17_p" to the second to last page of results so that we can test that your function returns `False` when there is not a next page.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_f6tc7rsu?wid=_983291"></iframe>
+++++
+
+Search for 47906 and return the median price of the default listings that appear. Unlike in the previous project where we found the mean, this time, be sure to include _all_ pages of listings. The function you wrote from the previous question could be useful!
+
+[TIP]
+====
+There are a _lot_ of ways you can solve this problem.
+====
+
+[TIP]
+====
+Don't forget to scroll so that the cards load up properly! You can use the following function to make sure the driver scrolls through the page so cards are loaded up.
+
+[source,python]
+----
+from selenium.common.exceptions import StaleElementReferenceException
+
+def load_cards(driver):
+    """
+    Given the driver, scroll through the cards
+    so that they all load.
+    """
+    cards = driver.find_elements_by_xpath("//article[starts-with(@id, 'zpid')]")
+    for idx, card in enumerate(cards):
+        if idx % 2 == 0:
+            try:
+                driver.execute_script('arguments[0].scrollIntoView();', card)
+                time.sleep(2)
+
+            except StaleElementReferenceException:
+                # every once in a while we will get a StaleElementReferenceException
+                # because we are trying to access or scroll to an element that has changed.
+                # this probably means we can skip it because the data has already loaded.
+                continue
+----
+====
+
+[TIP]
+====
+On 2/2/2022, the result was $152000. 
+====
+
+[TIP]
+====
+To get the median of a list of values, you can use:
+
+[source,python]
+----
+import statistics
+statistics.median(list_of_values)
+----
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_79h6fbbk?wid=_983291"></iframe>
+++++
+
+Compare median values for (each of) 3 different locations, and use `plotly` to create a plot showing the 3 median prices in these 3 locations. Make sure your plot is well-labeled.
+
+[TIP]
+====
+It may help to pack the solution to the previous question into a clean function.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_f1dlm4ss?wid=_983291"></iframe>
+++++
+
+You may or may not have noticed, however, you can access the home or plot of land details by appending the `zpid` at the end of the URL. For example, if the card had a `zpid` of `50630217`, we could navigate to https://www.zillow.com/homedetails/50630217_zpid/ and be presented with the details of the property with that `zpid`. 
+
+You can extract the `zpid` from the `id` attribute of the cards. 
+
+Write a function called `get_history` that accepts the driver and a `zpid` (like 50630217) and returns a `pandas` DataFrame with a column `date` and column `price`, with a single row entry for each item in the "Price history" section on Zillow.
+
+The following is an example of the expected output -- if your solution doesn't match exactly, that is okay and could be the result of the house changing.
+
+[source,python]
+----
+get_history(driver, '2900086')
+----
+
+.Output
+----
+date 	price
+0 	2022-01-05 	1449000.0
+1 	2021-12-08 	1499000.0
+2 	2021-07-27 	1499000.0
+3 	2021-04-16 	1499000.0
+4 	2021-02-12 	1599000.0
+5 	2006-05-22 	NaN
+6 	1999-06-04 	NaN
+----
+
+To help get you started, here is a skeleton function for you to fill in.
+
+[source,python]
+----
+def get_history(driver, zpid: str):
+    """
+    Given the driver and a zpid, return a 
+    pandas dataframe with the price history.
+    """
+    # get the details page and wait for 5 seconds
+    driver.get(f"https://www.zillow.com/homedetails/{zpid}_zpid/")
+    time.sleep(5)
+    
+    # get the price history table -- it is always the first table
+    price_table = driver.find_element_by_xpath("//table")
+    
+    # get the dates
+    dates = price_table.find_elements_by_xpath(".//FILL HERE")
+    dates = [d.text for d in dates]
+    
+    # get the prices
+    prices = price_table.find_elements_by_xpath(".//FILL HERE")
+    
+    # remove extra percentage data, remove non numeric data from prices
+    prices = [re.sub("[^0-9]","", p.text.split(' ')[0]) for p in prices]
+    
+    # create the dataframe and convert types
+    dat = pd.DataFrame(data={'date': dates, 'price': prices})
+    dat['price'] = pd.to_numeric(dat['price'])
+    dat['date'] = dat['date'].astype('datetime64[ns]')
+    
+    return dat
+----
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_0aclzirm?wid=_983291"></iframe>
+++++
+
+Write a function called `show_me_plots` that accepts the driver and a "search string" and displays a `plotly` plot with 4 subplots, each containing a plot of the price history of 4 random properties from the _complete_ search results (meaning any 4 properties from all of the pages of results could potentially be plotted.
+
+Test out your function on a couple of search strings!
+
+[TIP]
+====
+https://plotly.com/python/subplots/ has some examples of subplots using plotly.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connect    ion, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====

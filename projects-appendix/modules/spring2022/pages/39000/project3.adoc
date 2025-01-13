@@ -1,0 +1,220 @@
+= STAT 39000: Project 3 -- Spring 2022
+
+**Motivation:** When working with large amounts of data, it is sometimes critical to take advantage of modern hardware and _parallelize_ the computation. Depending on the problem, parallelization can massively reduce the amount of time to process something. 
+
+**Context:** This is the second in a series of 3 projects that explore sync vs. async, parallelism, and concurrency. For some, the projects so far may have been a bit intense. This project will slow down a bit, run some fun experiments, and try to _start_ clarifying some confusion that is sometimes present with terms like threads, concurrency, parallelism, cores, etc.
+
+**Scope:** Python, threads, parallelism, concurrency, joblib
+
+.Learning Objectives
+****
+- Distinguish between threads and processes at a high level.
+- Demonstrate the ability to parallelize code.
+- Identify and approximate the amount of time to process data after parallelization.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s):
+
+- `/depot/datamine/data/flights/subset/*.csv`
+
+== Questions
+
+=== Question 1
+
+`joblib` is a Python library that makes many parallelization tasks easier. Run the following code in three separate code cells. But, before you do, look at the code and write down approximately how much time you think each cell will take to run. 1 call to `run_for` will take roughly 2.25 seconds on a Brown cpu. Take note that we currently have 1 cpu for this notebook.
+
+[source,python]
+----
+import time
+import joblib 
+from joblib import Parallel
+from joblib import delayed
+
+def run_for():
+    var = 0
+    while var < 10**7.5:
+        var += 1
+        
+    print(var)
+----
+
+[source,ipython]
+----
+%%time
+test = [run_for() for i in range(4)]
+----
+
+[source,ipython]
+----
+%%time
+test = Parallel(n_jobs=4, backend="multiprocessing")(delayed(run_for)() for i in range(4))
+----
+
+[source,ipython]
+----
+%%time
+test = Parallel(n_jobs=4, backend="threading")(delayed(run_for)() for i in range(4))
+----
+
+Were you correct? Great! We only have 1 cpu, so regardless if we chose to use 2 threads or 2 processes, only 1 cpu would be used and 1 thing executed at a time. 
+
+**threading:** This backend for `joblib` will use threads to run the tasks. Even though we only have a single cpu, we can still create as many threads as we want, however, due to Python's GIL (Global Interpreter Lock), only 1 thread can execute at a time. 
+
+**multiprocessing:** This backend for `joblib` will use processes to run the tasks. In the same way we can create as many threads as we want, we can also create as many processes as we want. A _process_ is created by an os function called `fork()`. A _process_ can have 1 or more _threads_ or _threads of execution_, in fact, typically a process must have at least 1 _thread_. _Threads_ are much faster and take fewer resources to create. Instead of `fork()` a thread is created by `clone()`. A single cpu can have multiple processes or threads, but can only execute 1 task at a time. As a result, we end up with the same amount of time used to run. 
+
+When writing a program, you could make your program create a process that spawns multiple threads. Those threads could then each run in parallel, 1 per cpu. Alternatively, you could write a program that has a single thread of execution, and choose to execute the program _n_ times creating _n_ processes that each run in parallel, 1 per cpu. The advantage of the former is that threads are lighter weight and take less resources to create, an advantage of the latter is that you could more easily distribute such a program onto many systems to run without having to worry about how many threads to spawn based on how many cpus you have available.
+
+Okay, let's take a look at this next example. Run the following (still with just 1 cpu).
+
+[source,ipython]
+----
+%%time
+test = [time.sleep(2) for i in range(4)]
+----
+
+[source,ipython]
+----
+%%time
+test = Parallel(n_jobs=4, backend="multiprocessing")(delayed(time.sleep)(2) for i in range(4))
+----
+
+[source,ipython]
+----
+%%time
+test = Parallel(n_jobs=4, backend="threading")(delayed(time.sleep)(2) for i in range(4))
+----
+
+Did you get it right this time? If not, it is most likely that you thought all 3 would take about 8 seconds. We only have 1 cpu, after all. Let's try to explain.
+
+**threading:** Like we mentioned before, due to Python's GIL, we can only execute 1 thread at a time. So why did our example only take about 2 seconds if only 1 thread can execute at a time? `time.sleep` is a function that will release Python's GIL (Global Interpreter Lock) because it is not actually utilizing the CPU while sleeping. It is _not_ the same as running an intensive loop for 2 seconds (like our previous example). Therefore the first thread can execute, the GIL is released, the second thread begins execution, rinse and repeat. The only execution that occurs is each thread consecutively starting `time.sleep`. Then, after about 2 seconds all 4 `time.sleep` calls are done, even though the cpu was not utilized much at all.
+
+**multiprocessing:** In this case, we are bypassing the restrictions that the GIL imposes on threads, BUT, `time.sleep` still doesn't need the cpu cycles to run, so the end result is the same as the threading backend, and all calls "run" at the same time.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+Okay, let's try something! Save your notebook (and output from question 1), and completely close and delete your ondemand session. Then, launch a new notebook, but instead of choosing 1 core, choose 4. Run the following code, but before you do, guess how much time each will take to run.
+
+[source,python]
+----
+import time
+
+def run_for():
+    var = 0
+    while var < 10**7.5:
+        var += 1
+        
+    print(var)
+----
+
+[source,ipython]
+----
+%%time
+test = [run_for() for i in range(4)]
+----
+
+[source,ipython]
+----
+%%time
+test = Parallel(n_jobs=4, backend="multiprocessing")(delayed(run_for)() for i in range(4))
+----
+
+[source,ipython]
+----
+%%time
+test = Parallel(n_jobs=4, backend="threading")(delayed(run_for)() for i in range(4))
+----
+
+How did you do this time? You may or may not have guessed, but the threading version took the same amount of time, but the multiprocessing backend was just about 4 times faster! What gives?
+
+Whereas Python's GIL will prevent more than a single thread from executing at a time, when `joblib` uses processes, it is not bound by the same rules. A _process_ is something created by the operating system that has its own address space, id, variables, heap, file descriptors, etc. As such, when `joblib` uses the multiprocessing backend, it creates new Python processes to work on the tasks, bypassing the GIL because it is _n_ separate processes and Python instances, not a single Python instance with _n_ threads of execution. 
+
+In general, Python is not a good choice for writing a program that is best written using threads. However, you _can_ write code, especially using certain package (including numpy) that release the GIL.
+
+For example, check out the results of the following code.
+
+[source,python]
+----
+def no_gil():
+    x = np.linalg.inv(np.random.normal(0, 1, (3000,3000)))
+----
+
+[source,ipython]
+----
+%%time
+test = [no_gil() for i in range(4)]
+----
+
+[source,ipython]
+----
+%%time
+test = Parallel(n_jobs=4, backend="multiprocessing")(delayed(no_gil)() for i in range(4))
+----
+
+[source,ipython]
+----
+%%time
+test = Parallel(n_jobs=4, backend="threading")(delayed(no_gil)() for i in range(4))
+----
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+Okay, great, let me parallelize something! Okay, sounds good.
+
+The task is to count all of the lines in all of the files in `/depot/datamine/data/flights/subset/*.csv`, from the `1987.csv` to `2008.csv`, excluding all other csvs.
+
+First, write a non-parallelized solution that opens each file, counts the lines, adds the count to a total, closes the file, and repeats for all files. At the end, print the total number of lines. Put the code into a code cell and time the code cell using `%%time` magic.
+
+Now, write a parallelized solution that does the same thing. Put the code intoa  code cell and time the code cell using `%%time` magic. 
+
+Make sure you are using a Jupyter Lab session with 4 cores.
+
+[TIP]
+====
+Some optional tips:
+
+- Write a function that accepts an absolute path to a file (as a string), as well as an absolute path to a file in directory (as a string).
+- The function should output the count of lines from the file represented by the first argument in the file specified in the second argument.
+- Parallelize the function using `joblib`.
+- After the `joblib` job is done, cycle through all of the output files, sum the counts, and print the total.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+Parallelize the task and function that you have been writing about in the past 2 projects. If you are struggling or need help, be sure to ask for help in Piazza! If after further thinking, what you specified in the previous project is not easily parallelizable, feel free to change the task to some other, actually parallelizable task!
+
+Please time the task using `%%time` magic, both _before_ and _after_ parallelizing the task -- after all, its not any fun if you can't see the difference!
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connect    ion, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====

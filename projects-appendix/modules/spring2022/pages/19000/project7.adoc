@@ -1,0 +1,505 @@
+= STAT 19000: Project 7 -- Spring 2022
+
+**Motivation:** `pandas` provides a lot of very useful functionality when working with data. It provides a method for nearly every common pattern found when data wrangling. In this project, we will utilize some of the most popular methods to solve data driven problems and learn.
+
+**Context:** At this point in the semester, we have a solid grasp on the basics of Python, and are looking to build our skills using `pandas` by using `pandas` to perform some of the most common patterns found when data wrangling.
+
+**Scope:** pandas, Python 
+
+.Learning Objectives
+****
+- Distinguish the differences between numpy, pandas, DataFrames, Series, and ndarrays.
+- Demonstrate the ability to use `pandas` and the built in DataFrame and Series methods to perform some of the most common operations used when data wrangling.
+****
+
+Make sure to read about, and use the template found xref:templates.adoc[here], and the important information about projects submissions xref:submissions.adoc[here].
+
+== Dataset(s)
+
+The following questions will use the following dataset(s): 
+
+- `/depot/datamine/data/disney/*.csv`
+
+== Questions
+
+=== Question 1
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_w1kcnf20?wid=_983291"></iframe>
+++++
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_lap3drst?wid=_983291"></iframe>
+++++
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_ji5b4kbc?wid=_983291"></iframe>
+++++
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_um7d9fr0?wid=_983291"></iframe>
+++++
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_a2hd6grg?wid=_983291"></iframe>
+++++
+
+In this project, you will be using our Disney dataset. There is a single csv file for each ride, as well as a `metadata.csv` file that contains information relevant to all rides, by day.
+
+Each ride file has the following four columns: `date`, `datetime`, `SACTMIN`, and `SPOSTMIN`. Each row in the ride files represents a single observation. The `datetime` is the date and time (to the second) of the observation. `SACTMIN` contains the _actual_ wait time (in minutes) of the given ride. `SPOSTMIN` is the posted wait time. `SPOSTMIN` may have a value of -999, which represents a ride being closed.
+
+While not (on the whole) a particularly large dataset, it can take some work to process the data.
+
+The first, low-hanging fruit would be to combine all of the ride datasets into a single dataset with the following columns: `datetime`, `SACTMIN`, `SPOSTMIN`, and `ride_name`. 
+
+[NOTE]
+====
+The `ride_name` column should be the name of the file without the `.csv` extension.
+====
+
+[NOTE]
+====
+We will expect you to remove the `date` column for now, since that information is contained in the `datetime` column.
+====
+
+As mentioned earlier, `SPOSTMIN` may have a value of -999, which represents a ride being closed. Instead of combining what is really the posted wait time _and_ and indicator variable indicating the _status_ of the ride, let's represent these two things separately. Create a new column called `status` that has the value `closed` if the value of `SPOSTMIN` is -999, and `open` otherwise. Replace occurences of -999 in the `SPOSTMIN` column with `np.nan`.
+
+Finally, let's set each column to the appropriate data type, and "reset" the index.
+
+To summarize the tasks:
+
+- Combine all of the ride files into a single dataframe, and add a column called `ride_name` with the name of the given ride.
++
+[TIP]
+====
+To help you programmatically loop through the files without typing up all of the file names, you could do something like the following.
+
+[source,python]
+----
+import numpy as np
+import pandas as pd
+from pathlib import Path
+
+csv_files = Path('/depot/datamine/data/disney').glob('*.csv')
+
+for csv in csv_files:
+    # skip metadata and entities files
+    if csv.name == 'metadata.csv' or csv.name == 'entities.csv':
+        continue
+    df = pd.read_csv(csv)
+    print(csv.name)
+    print(df.head())
+----
+====
++
+[TIP]
+====
+To create a new column in a dataframe with a single value, is easy. 
+
+[source,python]
+----
+some_df['new_col'] = 'some value'
+----
+
+This will create a new column called `new_col` with the value `some value` in each row.
+====
++
+[TIP]
+====
+To help you combine dataframes, you could use the `pandas` concat function.
+
+See https://pandas.pydata.org/docs/reference/api/pandas.concat.html?highlight=concat#pandas.concat[here].
+====
++
+- Remove the `date` column.
++
+[TIP]
+====
+To remove a column from a dataframe, you can use the https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.drop.html?highlight=drop#pandas.DataFrame.drop[`drop`] method. I like to use the `columns` parameter. Remember, if you have `inplace=False` (the default), you will need to reassign the dataframe with the output. Something like the following.
+
+[source,python]
+----
+some_df = some_df.drop(columns=["some_column"])
+----
+
+If you have `inplace=True`, you can just do the following, and `some_df` will be updated _in place_.
+
+[source,python]
+----
+some_df.drop(columns=["some_column"], inplace=True)
+----
+====
++
+- Create a new column called `status` that has the value `closed` if the value of `SPOSTMIN` is -999, and `open` otherwise.
++
+[TIP]
+====
+You could achieve this by first setting all values of your new column `status` to `open` (see the earlier tip about creating a new column). Then, you can use indexing to isolate all values in the `SPOSTMIN` that are -999, and set them to be `closed`.
+====
++
+- Replace -999 in the `SPOSTMIN` column with `np.nan`.
+- Set each column to the appropriate data type.
++
+[TIP]
+====
+Here is one way to convert each column to the appropriate data type.
+
+[source,python]
+----
+dat["SACTMIN"] = pd.to_numeric(dat["SACTMIN"])
+dat["SPOSTMIN"] = pd.to_numeric(dat["SPOSTMIN"])
+dat["datetime"] = pd.to_datetime(dat["datetime"])
+dat["ride_name"] = dat["ride_name"].astype("category")
+dat["status"] = dat["status"].astype("category")
+----
+====
++
+- Reset the index by running `dat.reset_index(drop=True, inplace=True)`.
++
+[TIP]
+====
+Resetting the index will set your index to 0 for row 1, 1 for row 2, etc. This is important to do after combining dataframes that have different indices. Otherwise, using `.loc` may cause unexpected errors since `.loc` is _label_ based.
+====
+
+[TIP]
+====
+The following is some output to help you determine if you have done this correctly.
+
+[source,python]
+----
+print(dat.dtypes)
+----
+
+.Output
+----
+datetime     datetime64[ns]
+SACTMIN             float64
+SPOSTMIN            float64
+ride_name          category
+status             category
+dtype: object
+----
+
+[source,python]
+----
+print(dat.shape)
+----
+
+.Output
+----
+(3443445, 5)
+----
+
+[source,python]
+----
+dat.sort_values("datetime").head()
+----
+
+.Output
+----
+            datetime 	SACTMIN 	SPOSTMIN 	ride_name 	status
+1209236 	2015-01-01 07:45:15 	NaN 	10.0 	soarin 	open
+2019300 	2015-01-01 07:45:15 	NaN 	5.0 	spaceship_earth 	open
+1741791 	2015-01-01 07:46:22 	NaN 	5.0 	rock_n_rollercoaster 	open
+1484006 	2015-01-01 07:47:26 	NaN 	5.0 	kilimanjaro_safaris 	open
+2618179 	2015-01-01 07:47:26 	NaN 	5.0 	expedition_everest 	open
+----
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 2
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_cuhjvhvk?wid=_983291"></iframe>
+++++
+
+Wow, question 1 was a lot to do. You will find that a lot of up front work spent cleaning up the dataset will pay dividends in the future.
+
+The purpose of this project is to get used to the `pandas` library, and perform tasks that you will likely run into in your data science career. Let's take some time getting a feel for our data with some summaries. 
+
+[TIP]
+====
+In a browser, pull up the https://pandas.pydata.org/docs/reference/index.html[`pandas API reference (click here)`]. The `pandas` library is pretty large and not easy to memorize. I find it very worthwhile to pull up the API documentation, and use its search feature.
+
+By looking in the `DataFrame` section, you can see all of the methods that are available to you when working with the DataFrame.
+
+By looking in the `Series` section, you can see all of the methods that are available to you when working with a Series (a column in your DataFrame).
+====
+
+Use the `describe` method to get a quick summary of the data. While that output is useful, perhaps it would be more useful to see that information broken down by `ride_name`. Use the `groupby` method to first group by the `ride_name` and _then_ use the `describe` method.
+
+The `groupby` method is powerful. By providing a list of column names, `pandas` will group the data by those columns. Any further chained methods will then be applied to the data at that _group_ level. For example, if you had vaccination data that looks similar to the following.
+
+.Data sample
+----
+person_id,state,vaccine_type,age,date_given
+1,OH,Hepatitis A,22,2015-01-01
+1,OH,Hepatitis B,22,2015-01-01
+2,IN,Chicken Pox,12,2015-01-01
+3,IN,Hepatitis A,35,2015-01-01
+4,IN,Hepatitis B,18,2015-01-01
+3,IN,COVID-19,35,2015-01-01
+----
+
+Using `pandas`, we could get the vaccination count by state as follows.
+
+[source,python]
+----
+dat.groupby("state").count()
+----
+
+Or, we could get the average vaccination age by state as follows.
+
+[source,python]
+----
+dat.groupby("state")["age"].mean()
+----
+
+If it makes sense, we can group by multiple columns at once. For instance, if we wanted to get the count of `vaccination_type` by `state` and `age`, we could do the following.
+
+[source,python]
+----
+dat.groupby(["state", "age"])["vaccination_type"].count()
+----
+
+Chain some `pandas` methods together, to get the mean `SACTMIN` and `SPOSTMIN` by `ride_name`, sorted from from highest mean `SACTMIN` to lowest.
+
+[TIP]
+====
+The `groupby`, `mean`, and `sort_values` methods from `pandas` are what you need to solve this problem. Check out the arguments for the https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.sort_values.html[`sort_values`] method to figure out how to sort from largest to smallest. In general, opening up the documentation and looking at the arguments is a good practice -- you never know what useful feature a method may have!
+====
+
+[NOTE]
+====
+When I say "chain" `pandas` methods, I mean that you can continue to call methods on the result of the previous method. For example, something like: `dat.groupby(["some_column"]).mean()`. This would first group by the "some_column" column, calculate the mean values for each column for each group.
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 3
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_lc6j2dvr?wid=_983291"></iframe>
+++++
+
+One key part of working with data is visualizing your data. `pandas` provides some nice built in methods to create plots. Create both a single `matplotlib` bar plot and the equivalent `plotly` plot of the median `SPOSTMIN` for each ride.
+
+[NOTE]
+====
+You can create plots with 2 small 1-line `pandas` method chains. Search for "plot" in the `pandas` API documentation to find the appropriate methods and arguments.
+====
+
+[IMPORTANT]
+====
+Make sure to use the "jpg" renderer for the plotly plot. This would be similar to the following.
+
+[source,python]
+----
+fig = dat.groupby().mean().plot(...)
+fig.show(renderer="jpg")
+----
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 4
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_7x50c0r9?wid=_983291"></iframe>
+++++
+
+Another really powerful feature in `pandas` is the `apply` method. The `apply` method allows you to apply a function to each element of a Series or DataFrame. Each element of a DataFrame is a Series containing either a row or column of data (depending on the value of the `axis` argument). 
+
+In the previous two projects, you learned a lot about writing Python functions. Write a simple Python function that when applied to the dataframe that contains the median `SPOSTMIN` and `SACTMIN` values for each ride, returns the same dataframe but the wait time is shown in hours not minutes. Next, use the `query` method to return only the rides where the `SPOSTMIN` is 1 hour or more.
+
+[NOTE]
+====
+You may or may not have noticed that the result of this questions solution and the previous questions solution are similar in that they both have `ride_name` as the _index_ of our dataframe rather than a column. This is fine for a lot of work, but it is important to be at the very least _aware_ that it is an index. To make `ride_name` a column again, you could do two different things.
+
+[source,python]
+----
+dat.groupby("some_column").mean().reset_index()
+
+# or
+
+dat.groupby("some_column", as_index=False).mean()
+----
+====
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 5
+
+++++
+<iframe class="video" src="https://cdnapisec.kaltura.com/html5/html5lib/v2.79.1/mwEmbedFrame.php/p/983291/uiconf_id/29134031/entry_id/1_kojvdhgo?wid=_983291"></iframe>
+++++
+
+In the "tidyverse" in R, there is a very common pattern of writing code that creates new columns based on existing columns. Of course, this is easy to do in `pandas`, for example, given the following sample of data, you could create a new column that is the result of adding two existing columns together.
+
+.Data sample
+----
+person_id,birth,death,state
+1,1923,2001,IN
+2,1930,1977,IN
+3,1922,2017,IN
+4,1922,2006,OH
+5,1922,1955,OH
+6,1940,2000,MO
+----
+
+[source,python]
+----
+dat["age"] = dat["death"] - dat["birth"]
+----
+
+Not only is that easy, but it is very fast, and vectorized. However, let's say that instead, we want to create an `age_by_state` column that is the average age at death by state. Of course, this could be accomplished using `groupby`.
+
+[source,python]
+----
+dat.groupby("state")["age"].mean()
+----
+
+With that being said, this results in multiple extra columns and the data is no longer on a 1 person per row basis. In the "tidyverse" in R, we could easily produce the following dataset as follows.
+
+.Data sample to produce
+----
+person_id,birth,death,state,age_by_state
+1,1923,2001,IN, 73.3
+2,1930,1977,IN, 73.3
+3,1922,2017,IN, 73.3
+4,1922,2006,OH, 58.5
+5,1922,1955,OH, 58.5
+6,1940,2000,MO, 60.0
+----
+
+[source,r]
+----
+library(tidyverse)
+
+dat %>%
+    group_by(state) %>%
+    mutate(age_by_state = mean(death - birth))
+----
+
+How would we accomplish this using `pandas`? We would do so as follows.
+
+[source,python]
+----
+dat.assign(age = lambda df: df['death'] - df['birth'],
+           age_by_state = lambda df: df.groupby('state')['age'].transform("mean"))\
+   .drop(columns="age")
+----
+
+As you can see, this is not nearly as ergonomic in Python using `pandas` as it is using `tidyverse` in R.
+
+[NOTE]
+====
+You may have noticed some weird "lambda" thing. This is called a lambda function -- in other languages it is sometimes called an anonymous function. It is a function that is defined without a name. It is useful for creating small functions. If instead of lambda functions, we used regular functions, our code would have looked like the following.
+
+[source,python]
+----
+def first(df):
+    return df['death'] - df['birth']
+
+def second(df):
+    return df.groupby('state')['age'].transform("mean")
+
+dat.assign(age = first, age_by_state = second).drop(columns="age")
+----
+====
+
+Create four new columns in the dataframe: `mean_wait_time_act`, `mean_wait_time_post`, `median_wait_time_act`, and `median_wait_time_post`. They should each contain the mean or median posted or actual wait time by `ride_name`.
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+=== Question 6 (optional, 0 pts) 
+
+Heatmaps can be hit or miss when considering their usefulness. Create a heatmap that visualizes the median `SACTMIN` for each ride by day of the week. 
+
+[TIP]
+====
+In the same way you can, in a vectorized way, perform string methods on a Series containing strings using the `.str` attribute (for example `dat["my_column_of_strings"].str.replace("$", "")` would remove the "$" from all of the strings in the column) -- you can do the same with datetimes using the `.dt` attribute. Check out the methods available to operate by searching for "Series.dt" in the `pandas` API documentation. https://pandas.pydata.org/docs/reference/api/pandas.Series.dt.day_name.html#pandas.Series.dt.day_name[This] method will be particularly useful.
+====
+
+[TIP]
+====
+https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.pivot.html?highlight=pivot#pandas.DataFrame.pivot[This] is the documentation on the `pivot` method, which is a powerful method to reshape a dataset.
+====
+
+[TIP]
+====
+Once you have a new column (let's call it `day`), you want to reshape the dataframe so that the `ride_name` is the row index, `day` is the column index, and the values in the cells are the median `SACTMIN` for the given `day` and `ride_name` combination. This can be achieved using `pivot`.
+
+In `pivot` the `index` argument is the name of the column of data that you want to be the row index. The `columns` argument is the name of the column of data that you want to be the column index. The `values` argument is the name of the column of data that you want to be the values in the cell.
+====
+
+[IMPORTANT]
+====
+Make sure to use `groupby` and `median` to first group by both `ride_name` and `day`, then calculate the median for each of those combinations. Directly after calling `median`, make sure to call `reset_index` so the `day` and `ride_name` indices become columns again (before calling `pivot`).
+====
+
+[TIP]
+====
+Once you have your pivoted data, you can plot the heatmap as follows.
+
+[source,python]
+----
+import plotly.express as px
+
+fig = px.imshow(pivoted_data, aspect="auto")
+fig.show(renderer="jpg")
+----
+====
+
+Look at your resulting heatmap. It is not particularly useful, althought you can see that flight of passage is super busy and spaceship earth, not so much. This doesn't really give us a good idea of how busy a _day_ is though, does it?
+
+What if we normalized the median `SACTMIN` by ride? That would let us compare how busy a ride is on a given day compared to how busy that same ride is on all other days.
+
+Normalize your pivoted data by ride. Do this by using the `apply` method.
+
+[source,python]
+----
+def normalize(ride):
+    def _normalize(val, mi, ma):
+        return (val-mi)/(ma-mi)
+
+    return(ride.apply(_normalize, mi=ride.min(), ma=ride.max()))
+
+pivoted_data.apply(normalize, axis=1)
+----
+
+Replot your heatmap with the normalized data. What day looks the most busy (anecdotally)?
+
+.Items to submit
+====
+- Code used to solve this problem.
+- Output from running the code.
+====
+
+[WARNING]
+====
+_Please_ make sure to double check that your submission is complete, and contains all of your code and output before submitting. If you are on a spotty internet connect    ion, it is recommended to download your submission after submitting it to make sure what you _think_ you submitted, was what you _actually_ submitted.
+                                                                                                                             
+In addition, please review our xref:submissions.adoc[submission guidelines] before submitting your project.
+====
