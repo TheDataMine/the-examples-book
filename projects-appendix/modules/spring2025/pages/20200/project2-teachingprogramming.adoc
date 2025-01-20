@@ -1,14 +1,14 @@
 = TDM 20200: Web Scraping Project 2 -- Spring 2025
 
-**Motivation:** Now that we know the basics of web scraping, we will work on wrapping our webscraping tools into some Python functions.
+**Motivation:** Now that we know how to use Beautiful Soup, we will learn comparable methods for web scraping with `lxml`.  This project will look very similar to the previous project.
 
-**Context:** In this project, we will use BeautifulSoup, documented here:  https://pypi.org/project/beautifulsoup4/
+**Context:** In this project, we will use `lxml`, documented here:  https://pypi.org/project/lxml/
 
 **Scope:** Web Scraping in Python
 
 .Learning Objectives:
 ****
-- We learn the basics about web scraping using Beautiful Soup in Python
+- We learn the basics about web scraping using `lxml` in Python
 ****
 
 Make sure to read about, and use the template found xref:ROOT:templates.adoc[here], and the important information about project submissions xref:ROOT:submissions.adoc[here].
@@ -23,65 +23,76 @@ In this project we will scrape data from the following websites:
 - https://www.gocomics.com/peanuts/
 - https://www.scrapethissite.com/pages/forms/
 
+Our scraping will be parallel to the examples from Project 1.
+
 == Questions
 
 === Question 1 (2 pts)
 
-++++
-<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_pyvuq00l&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
-++++
-
-When scraping data from websites using Beautiful Soup, we first import `requests` and `BeautifulSoup`:
+When scraping data from websites using `lxml`, we again import `requests` but this time we also import from `lxml` like this:
 
 [source, python]
 ----
 import requests
-from bs4 import BeautifulSoup
+from lxml import html
 ----
 
-Afterwards, we can use `requests` to scrape the data from a website, such as (for instance) The Data Mine staff directory:
+Afterwards, just like in the previous project, we can use `requests` to scrape the data from a website, such as (for instance) The Data Mine staff directory:
 
 [source, python]
 ----
 myresponse = requests.get("https://datamine.purdue.edu/about/about-welcome/")
 ----
 
-and then we can parse this content using `BeautifulSoup`:
+and then we can parse this content using `html.fromstring` (which comes from `lxml`) like this:
 
 [source, python]
 ----
-mysoup = BeautifulSoup(myresponse.content, 'html.parser')
+mytree = html.fromstring(myresponse.content)
 ----
 
-Afterwards, we can use `select` statements to extract elements from the website.  For instance, the names of The Data Mine staff members are given as the text after the `p` tags with `class` attribute `purdue-home-cta-grid__card-name`.
+When selecting the parts of the webpage where we want to extract elements, this time we will use `xpath`.  The specification looks a lot like the way that we specify a location in BeautifulSoup, but there are a few differences.  We start the string for the location with `//` which indicates that we want to look in the entire document.  We also put an `@` symbol before each attribute.
 
-We can extract the names of all 22 staff members at once, by selecting the data in these `p` tags with `class` attribute `purdue-home-cta-grid__card-name` from the page, as follows:
+We can extract the names of all 22 staff members at once, by selecting the data in `p` tags with `class` attribute `purdue-home-cta-grid__card-name` from the page.  Now that we are using `lxml` instead of Beautiful Soup, we change this statement:
 
 [source, python]
 ----
 mysoup.select('p[class = "purdue-home-cta-grid__card-name"]')
 ----
 
-With a list comprehension, we can get these 22 names into a list:
+to INSTEAD using this statement:
+
+[source, python]
+----
+mytree.xpath('//p[@class = "purdue-home-cta-grid__card-name"]')
+----
+
+which gives us the 22 elements we wanted to find.  Now, just like we did with Beautiful Soup, we can use a list comprehension to get these 22 names into a list.  Our previous statement from Beautiful Soup
 
 [source, python]
 ----
 [element.text for element in mysoup.select('p[class = "purdue-home-cta-grid__card-name"]')]
 ----
 
-Now that you have the 22 staff members' names in a list, *use a similar operation* to extract the 22 staff members' job titles.
+will INSTEAD look like this with `lxml`:
 
-[TIP]
-====
-Just like Dr Ward in the video, you might need to use Command-U (Mac) or Control-U (Windows, Unix) in Firefox to inspect the page and find the attributes that you want.
-====
+[source, python]
+----
+[element.text for element in mytree.xpath('//p[@class = "purdue-home-cta-grid__card-name"]')]
+----
+
+Now that you have the 22 staff members' names in a list, *use a similar operation* to extract the 22 staff members' job titles.
 
 Finally, make a Pandas data frame with 22 rows and 2 columns, namely, 1 row per staff member, with their name in the left column and their job title in the right column.
 
+[IMPORTANT]
+====
+You should NOT import BeautifulSoup for this project.  We are using `lxml` instead, for this project.
+====
 
 .Deliverables
 ====
-- Use Python to make a Pandas data frame with 22 rows and 2 columns, namely, 1 row per staff member, with their name in the left column and their job title in the right column.
+- Use `lxml` INSTEAD of Beautiful Soup to make a Pandas data frame with 22 rows and 2 columns, namely, 1 row per staff member, with their name in the left column and their job title in the right column.  *You should NOT import BeautifulSoup for this project.*
 - Be sure to document your work from Question 1, using some comments and insights about your work.
 ====
 
