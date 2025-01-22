@@ -1,0 +1,171 @@
+= Functions with the Year Dataset
+
+This example is from TDM 102 Project 5 Spring 2024.
+
+These example(s) depend on the database:
+
+* `/anvil/projects/tdm/data/noaa/{year}.csv`
+
+
+The NOAA data set includes weather-related information from multiple weather stations across the United States. It contains daily records for several years in CSV files.
+
+== Function for Average Temperature Calculation
+
+Write a function called `avg_aggreg_temp` that takes 5 parameters: the `file_location` as a string, the `column_title_list` as a list of column titles, the `start_date` as an integer, the `end_date` as an integer, and the temperature `element_code` as a string, with default value `"TAVG"`.  Your function should output the average `value` for rows with that `element_code`.  For instance, in the default case (where `element_code` is `"TAVG"`), your function should output the average `value` which is the average of the average temperatures (as a decimal number).
+
+[NOTE]
+====
+- Remember that the NOAA data does not include column titles, so use `column_title_list=["id","date","element_code","value","mflag","qflag","sflag","obstime"]`
+- The data set is approximately 2.2 GB.  It is OK to use only 1 core for your Jupyter Lab session, if you set chunksize = 10000 as you read in data.
+- Input the `start_date` and the `end_date` as integers in the form `yyyymmdd`
+- You will need to include a docstring that clearly explains how the function is defined.
+====
+
+[source,python]
+----
+import pandas as pd
+
+def avg_aggreg_temp(file_location, column_title_list, start_date, end_date, element_code="TAVG"):
+    data = pd.read_csv(file_location, names=column_title_list, chunksize=10000)
+    filtered_chunks = []
+    for chunk in data:
+        filtered_chunk = chunk[(chunk['date'] >= start_date) & 
+                               (chunk['date'] <= end_date) & 
+                               (chunk['element_code'] == element_code)]
+        filtered_chunks.append(filtered_chunk)
+    filtered_data = pd.concat(filtered_chunks)
+    avg_value = filtered_data['value'].mean()
+    return avg_value
+----
+
+=== Test the Average Temperature Function 
+
+Run the function for on the data set `2018.csv`, using `start_date` 20180101 and `end_date` 20180115, and with `"TAVG"` as the `element_code`.
+
+[source,python]
+----
+avg_aggreg_temp("/anvil/projects/tdm/data/noaa/2018.csv", ["id","date","element_code","value","mflag","qflag","sflag","obstime"],
+                20180101, 20180115, "TAVG")
+----
+
+----
+12.317542410053962
+----
+
+
+== Average Element by Year
+ 
+Create a function that takes a list of years (or, if you prefer, a list of file locations), as a list of column names, and an `element_code` as input, and returns a dictionary with one entry per year.  In the dictionary, for each year, it should have the year as the key and the average value of the specified `element_code` as the value for that year.
+
+[TIP]
+====
+- You can EITHER use a list of years or a list of file locations for the input, but please explain all of your work, and be sure to provide documentation about how a person uses your function.  Documentation is really important!
+- Include column titles `["id","date","element_code","value","mflag","qflag","sflag","obstime"]`
+====
+ 
+
+
+[source,python]
+----
+import pandas as pd
+
+def avg_element_per_year(file_locations, column_names, element_code="TAVG"):
+    result_dict = {}
+    
+    for file_location in file_locations:
+        df = pd.read_csv(file_location, header=None, names=column_names)
+        
+        df['year'] = df['date'].astype(str).str[:4].astype(int)
+        df = df[df['element_code'] == element_code]
+        
+        result_dict.update(df.groupby('year')['value'].mean().to_dict())
+    
+    return result_dict
+----
+
+=== Test the Function Average Element by Year
+
+Test your function for the `element_code` `"TAVG"` and for the range of four years 1880 to 1883 (inclusive), i.e., `range(1880,1884)`.
+
+[source,python]
+----
+files = [f'/anvil/projects/tdm/data/noaa/{year}.csv' for year in range(1880,1884)]
+column_names = ["id", "date", "element_code", "value", "mflag", "qflag", "sflag", "obstime"]
+
+averages = avg_element_per_year(file_locations, column_names, element_code="TAVG")
+
+print(averages)
+----
+
+----
+{1880: 127.30054644808743, 1881: 49.00669116954104, 1882: 58.33541290428501, 1883: 50.54050116550116, 1884: 43.55310794622654}
+----
+
+== Modify Average Element by Year
+Modify the function `avg_element_per_year`, to include an extra parameter for the month. This function should have the same behavior as in Question 2, but for each year, the function should only use the data from that month of the year.
+
+[source,python]
+----
+def monthly_comparison(files, column_title_list,element_code, month):
+    monthly_averages = {}
+    for file_path in files:
+        year = file_path.split('/')[-1].split('.')[0]  # 0.5 pts
+        df = pd.read_csv(file_path, names = column_title_list)
+        df['month'] = pd.to_datetime(df['date'], format='%Y%m%d').dt.month
+        monthly_averages[year] = df[(df['element_code'] == element_code) & (df['month'] == month)]['value'].mean() # +0.5 pts
+    print(monthly_averages)
+----
+
+[source,python]
+----
+files = [f'/anvil/projects/tdm/data/noaa/{year}.csv' for year in range(1880,1884)]
+
+column_title_list = ["id", "date", "element_code", "value", "mflag", "qflag", "sflag", "obstime"]
+
+
+monthly_comparison(files,column_title_list,"TAVG",8)
+----
+
+----
+{'1880': 225.70967741935485, '1881': 188.42227122381476, '1882': 207.34585741811176, '1883': 185.22810060711188}
+----
+
+
+== Year with Most QFlags
+Create a function that takes a list of years as input, and identifies the year that has the most qflags of the type that the user specified.
+
+
+[source,python]
+----
+def year_with_most_qflags(files, column_title_list, qflag):
+    qflag_counts = {}
+    for file_path in files:
+        year = file_path.split('/')[-1].split('.')[0]  
+        df = pd.read_csv(file_path,names = column_title_list)
+        qflag_counts[year] = df[df['qflag'] == qflag].shape[0]
+    return max(qflag_counts, key=qflag_counts.get)
+
+
+----
+
+
+=== Test Year with the Most QFlags Function
+
+Run the function for years in the range 1880 to 1883, and test it with some various qflag values, such as D, G, I, K, L, N, O, S, X.
+
+[source,python]
+----
+print(year_with_most_qflags(files, column_title_list, "D"))
+----
+
+
+[source,python]
+----
+print(year_with_most_qflags(files, column_title_list, "G"))
+----
+
+[source,python]
+----
+print(year_with_most_qflags(files, column_title_list, "I"))
+----
+
