@@ -1,0 +1,294 @@
+= Functions with the Election Dataset
+
+This example is from TDM 102 Project 5 Spring 2024.
+
+These example(s) depend on the database:
+
+* `/anvil/projects/tdm/data/election/`
+
+== Source
+
+The data about campaign donations at the federal level is downloadable from:
+
+https://www.fec.gov/data/browse-data/?tab=bulk-data
+
+under the section on "Contributions by individuals"
+
+== Description of the Data
+
+The names, addresses, and amounts of money donations by individuals is given, during each 2-year election campaign cycle.
+
+
+
+[NOTE]
+====
+When you first read the project, you might think, WOW!, this project is long, but it isn't actually very long at all.  Dr Ward just wanted to make sure that students understand the way to think about functions, namely:  You need to *first* make sure that you understand what to do, and then check it a few times, and then (afterwards) write the function, and (finally) verify the function.  [It is usually too hard to write the function without (first) understanding the work itself.]
+
+Dr Ward broke all of this down into steps, and the sentences look long, but don't be scared.  Dr Ward is just breaking things down into little steps for you, so that the work is easier to do.
+====
+
+Functions should have simple inputs and should create helpful outputs.  That way, a person can use the function to get good things done, without having to remember the details.  For the election data, it is hard to remember where the files are located, and what the column names should be, etc.  This question will create a useful function that only requires the user to start with 1 year as input, and it returns a dataframe as the output.  That dataframe contains all of the election data for that year.
+
+
+== Data Processing Variable Saving
+(1a) First (without a function!) start with a variable called `myyear`.  It can be an election year, and it helps if you try this with a few of the early 1980's elections years, so that they data is not-too-big.  For instance, try `myyear` with each of the years 1980, 1984, and 1988 (one at a time, not a list).  Once you set the value of `myyear`, then make a variable for the path to the data from that year, for instance, `/anvil/projects/tdm/data/election/itcont1984.txt`
+
+
+[source,python]
+----
+import pandas a pd
+myyear = 1984  # You are able to change this yourself
+
+file = f'/anvil/projects/tdm/data/election/itcont{myyear}.txt'
+
+print(file)
+----
+
+
+== Data Import and Formatting
+(1b) Read in the data from the year stored in `myyear`.  Please note that the data does not have column headers built-in, so you need to add the column headers, as in the "tip" below.  Please also note that the elements in the data set has `|` between the data elements, not commas (this is why the file name ends in `.txt` not `.csv` in this case).  So you need to use the parameter `delimiter='|'` in your `read_csv` function.
+
+[source,python]
+----
+myyear = 1984  # Change this to the year you want 
+
+file = f'/anvil/projects/tdm/data/election/itcont{myyear}.txt'
+
+mycolumnnames=["CMTE_ID","AMNDT_IND","RPT_TP","TRANSACTION_PGI","IMAGE_NUM","TRANSACTION_TP","ENTITY_TP","NAME","CITY","STATE","ZIP_CODE","EMPLOYER","OCCUPATION","TRANSACTION_DT","TRANSACTION_AMT","OTHER_ID","TRAN_ID","FILE_NUM","MEMO_CD","MEMO_TEXT","SUB_ID"]
+
+mydictionarytypes = {"CMTE_ID": str, "AMNDT_IND": str, "RPT_TP": str, "TRANSACTION_PGI": str, "IMAGE_NUM": str, "TRANSACTION_TP": str, "ENTITY_TP": str, "NAME": str, "CITY": str, "STATE": str, "ZIP_CODE": str, "EMPLOYER": str, "OCCUPATION": str, "TRANSACTION_DT": str, "TRANSACTION_AMT": float, "OTHER_ID": str, "TRAN_ID": str, "FILE_NUM": str, "MEMO_CD": str, "MEMO_TEXT": str, "SUB_ID": int}
+
+myDF = pd.read_csv("/anvil/projects/tdm/data/election/itcont1980.txt", delimiter='|', names=mycolumnnames, dtype=mydictionarytypes)
+----
+
+
+== Data Inspection and Validation
+(1c) Look at the head of the data set, after you read it in.  Does it look correct?  Does everything make sense?  Try this for each of the years, 1980, then 1984, then 1988, one at a time, storing each of these values into the variable `myyear` and then read in the data for that year, and check the head of the data each time.  This is good practice for making sure that your work is designed properly.
+
+
+[source,python]
+----
+myDF.head()
+----
+
+----
+myDF.head()
+----
+
+[options="header",cols="^1,^1,^1,^1,^1,^1,^1,^1,^1,^1,^1,^1,^1,^1,^1,^1,^1,^1,^1,^1"]
+|===
+| CMTE_ID | AMNDT_IND | RPT_TP | TRANSACTION_PGI | IMAGE_NUM | TRANSACTION_TP | ENTITY_TP | NAME | CITY | STATE | EMPLOYER | OCCUPATION | TRANSACTION_DT | TRANSACTION_AMT | OTHER_ID | TRAN_ID | FILE_NUM | MEMO_CD | MEMO_TEXT | SUB_ID
+
+| C00078279 | A | M11 | P | 80031492155 | 22Y | NaN | MCKENNON, K R | MIDLAND | MI | NaN | NaN | 10031979 | 400.0 | NaN | NaN | NaN | NaN | CONTRIBUTION REF TO INDIVIDUAL | 3062020110011466469
+| C00078279 | A | M11 | NaN | 79031415137 | 15 | NaN | OREFFICE, P | MIDLAND | MI | DOW CHEMICAL CO | NaN | 10261979 | 1500.0 | NaN | NaN | NaN | NaN | NaN | 3061920110000382948
+| C00078279 | A | M11 | NaN | 79031415137 | 15 | NaN | DOWNEY, J | MIDLAND | MI | DOW CHEMICAL CO | NaN | 10261979 | 300.0 | NaN | NaN | NaN | NaN | NaN | 3061920110000382949
+| C00078279 | A | M11 | NaN | 79031415137 | 15 | NaN | BLAIR, E | MIDLAND | MI | DOW CHEMICAL CO | NaN | 10261979 | 1000.0 | NaN | NaN | NaN | NaN | NaN | 3061920110000382950
+| C00078287 | A | Q1 | NaN | 79031231889 | 15 | NaN | BLANCHARD, JOHN A | CHICAGO | IL | NaN | NaN | 03201979 | 200.0 | NaN | NaN | NaN | NaN | NaN |
+|===
+
+== Data Loading Function Creation
+(1d) Now that you are sure that your work is OK, make a function called `read_election_year` that takes one parameter called `myyear` as the input, and returns a data frame that contains the data from that election year.  Make sure to document your function with a docstring to explain how it works.
+
+[source,python]
+----
+import pandas as pd
+def read_election_year(myyear):
+    # We are constructing the file path for the year
+    file = f'/anvil/projects/tdm/data/election/itcont{myyear}.txt'
+
+    # Define column names 
+    mycolumnnames = [
+        "CMTE_ID", "AMNDT_IND", "RPT_TP", "TRANSACTION_PGI", "IMAGE_NUM",
+        "TRANSACTION_TP", "ENTITY_TP", "NAME", "CITY", "STATE", "ZIP_CODE",
+        "EMPLOYER", "OCCUPATION", "TRANSACTION_DT", "TRANSACTION_AMT",
+        "OTHER_ID", "TRAN_ID", "FILE_NUM", "MEMO_CD", "MEMO_TEXT", "SUB_ID"]
+
+    # Specify data types 
+    mydictionarytypes = {
+        "CMTE_ID": str, "AMNDT_IND": str, "RPT_TP": str, "TRANSACTION_PGI": str,
+        "IMAGE_NUM": str, "TRANSACTION_TP": str, "ENTITY_TP": str, "NAME": str,
+        "CITY": str, "STATE": str, "ZIP_CODE": str, "EMPLOYER": str,
+        "OCCUPATION": str, "TRANSACTION_DT": str, "TRANSACTION_AMT": float,
+        "OTHER_ID": str, "TRAN_ID": str, "FILE_NUM": str, "MEMO_CD": str,
+        "MEMO_TEXT": str, "SUB_ID": int}
+
+    # Read the data 
+    myDF = pd.read_csv(file, delimiter='|', names=mycolumnnames, dtype=mydictionarytypes)
+        
+    return myDF
+
+df_1984 = read_election_year(1984)
+----
+
+[TIP]
+====
+
+It might be helpful to have 2 cores for this project.  You might be able to do it with 1 core, but it is probably easier for you with 2 cores when using Anvil.
+====
+
+== Unique Committee Count 
+
+(2a) First (without a function!) start with a variable called `myyear`, such as 1980, and find the number of (unique) committees that appear in the `CMTE_ID` column in that year.  Then do the same for the year 1984, and then do this again for 1988.  Print your results for each of these three years in separate cells.
+
+[source,python]
+----
+df_1980 = read_election_year(1980)
+
+unique_committees = df_1980["CMTE_ID"].nunique()
+
+print(unique_committees)
+----
+
+----
+3856
+----
+
+== Unique Committee Count Function
+(2b) Now that you have part 2a working well, put your work from question 2a into a function.  Namely, create a function called `committees_function` that accepts a year as input, and returns the number of (unique) committees that appear in the `CMTE_ID` column in that year. Use the function designed in Question 1 to help you accomplish this work.
+
+[source,python]
+----
+
+
+def committees_function(myyear):
+    myDF = read_election_year(myyear)
+    
+    unique_committees = myDF["CMTE_ID"].nunique()
+    
+    return unique_committees
+
+
+number_of_committees = committees_function(1984)
+
+print(number_of_committees)
+----
+
+----
+3733
+----
+
+== Function Testing and Validation
+(2c) Test your function for each of the years 1980, 1984, and 1988.  How many (unique) committees appear in each of these 3 individual years?  The output from this question should show, for each year, how many (unique) committees appear in the data for each of those 3 years.  The output for each of these 3 years should agree with your output from question 2a.
+
+
+[source,python]
+----
+number_of_committees_1980 = committees_function(year_1980)
+number_of_committees_1984 = committees_function(year_1984)
+number_of_committees_1988 = committees_function(year_1988)
+print(number_of_committees_1980)
+print(number_of_committees_1984)
+print(number_of_committees_1988)
+----
+
+----
+3856
+3733
+3995
+----
+
+
+== State Transaction Amount Analysis
+
+The goal of this question is to find the top 5 states in a given year, according to the total (sum) of the values in the `TRANSACTION_AMT` column.
+
+(3a) First (without a function!) start with a variable called `myyear`, such as 1980, and find the total (sum) of the values from the `TRANSACTION_AMT` column for each state in the data set.  You only need to print the top 5 results (i.e., the top 5 states and the total of the transaction amounts from those states) for 1980.  Then do this again for 1984, and then do this again for 1988.
+
+[source,python]
+----
+myyear = 1980  # Able to change the year
+
+df_1980 = read_election_year(myyear)
+
+df_1980['TRANSACTION_AMT'] = df_1980['TRANSACTION_AMT'].astype(float)
+
+state_totals = df_1980.groupby('STATE')['TRANSACTION_AMT'].sum()
+
+top_states = state_totals.sort_values(ascending=False).head(5)
+
+print(top_states)
+----
+
+
+== Top State Transactions Function
+(3b) Now that you have your work from Question 3a working well, build a function called `top_five_states`.  This function should take 1 year as input, and should return the top 5 states and the total (sum) of the values for each of the 5 states, from the `TRANSACTION_AMT` column (for that state).
+
+[source,python]
+----
+def top_five_states(year):
+    df_year = read_election_year(year)
+    
+    df_year['TRANSACTION_AMT'] = df_year['TRANSACTION_AMT'].astype(float)
+    
+    state_totals = df_year.groupby('STATE')['TRANSACTION_AMT'].sum()
+    
+    top_states = state_totals.sort_values(ascending=False).head(5)
+    
+    return top_states
+
+top_five_states(1980)
+----
+
+
+== Top Employer Transaction Analysis
+
+The goal of this question is to identify the top 5 employers, according to the total (sum) of the values from the `TRANSACTION_AMT` column for each employer.
+
+(4a) First find the top 5 employers in each year 1980, 1984, and 1988, and print the top 5 for each of those years.  Do this *before* you make a function.
+
+[source,python]
+----
+df = read_election_year(1980)
+
+df['TRANSACTION_AMT']=df['TRANSACTION_AMT'].astype(float)
+df = df.dropna(subset=['EMPLOYER'])
+emp_total = df.groupby('EMPLOYER')['TRANSACTION_AMT'].sum()
+
+sorted(emp_total.items(), key=lambda x: x[1], reverse=True)[:5]
+----
+
+
+== Top Employers Function Creation
+(4b) Once that is working, then build a function called `top_employers` that returns the top 5 employers in each year 1980, 1984, and 1988.  Your results from question 4b should agree with your results from question 4a. 
+
+[source,python]
+----
+def top_employers():
+    years = [1980, 1984, 1988] 
+    results = {}  
+
+    for year in years:
+        df = read_election_year(year)
+        df['TRANSACTION_AMT'] = df['TRANSACTION_AMT'].astype(float)
+        df = df.dropna(subset=['EMPLOYER'])  
+
+        emp_total = df.groupby('EMPLOYER')['TRANSACTION_AMT'].sum()
+
+        top_5 = sorted(emp_total.items(), key=lambda x: x[1], reverse=True)[:5]
+
+        results[year] = top_5
+
+    return results
+
+top_employers_results = top_employers()
+top_employers_results
+----
+
+----
+{1980: [('RETIRED', 8565354.0),
+  ('ATTORNEY', 5689870.0),
+  ('HOUSEWIFE', 5457943.0),
+  ('HOMEMAKER', 4649872.0),
+  ('HOUSE WIFE', 4549216.0)],
+ 1984: [('SELF-EMPLOYED', 19761941.0),
+  ('RETIRED', 9257779.0),
+  ('HOUSEWIFE', 6313918.0),
+  ('SELF EMPLOYED', 3869043.0),
+  ('HOMEMAKER', 3372784.0)],
+ 1988: [('HOUSEWIFE', 14626839.0),
+  ('HOMEMAKER', 9834325.0),
+  ('ATTORNEY', 9488872.0),
+  ('RETIRED', 5865073.0),
+  ('PHYSICIAN', 3104940.0)]}
+----
+
