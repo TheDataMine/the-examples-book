@@ -134,6 +134,11 @@ matched_image = cv2.drawMatchesKnn(matching_image1, YOUR_KEYPOINTS_FOR_IMAGE1, m
 
 Finally, display the matched image. If you did this correctly, you should see both images side by side with lines connecting the detected matched features. 
 
+[NOTE]
+====
+You may need to adjust the `nfeatures` parameter in the SIFT object constructor to be able to see the features being matched, as with too many features the image will be too cluttered to see anything.
+====
+
 .Deliverables
 ====
 - Display the matched image
@@ -153,6 +158,54 @@ Please repeat the process from the previous question, but this time use the FLAN
 - How do the FLANN results compare to the Brute Force results?
 - What is the relationship between time and number of features for Brute Force? For FLANN? Which method would you recommend using for a real-time application?
 ====
+
+=== Question 6 (2 points)
+
+One issue you may have thought of when using computer vision in a real-time application is the perspective of the camera changing in relation to the object we are looking at. A way we can approach this issue is through homography. Homography is a transformation that maps points in one image to corresponding points in another image. This is useful for correcting perspective distortion, which can occur when the camera is not directly facing the object, when the object is not flat, or when the camera is moving. The RANSAC (Random Sample Consensus) method is commonly used to estimate the homography matrix between two images. To start, please run the below code to generate a perspective transformed image from the grayscale image using an opencv transformation, not homography. The original image and the transformed image will be displayed side by side.
+
+[source,python]
+----
+# create perspective transformed image from grayscale image using opencv transformation, not homography
+original_transform = np.array([[1.1, 0.2, 40], [.1, .9, 20], [0, 0, 1]])
+warped_image = cv2.warpPerspective(image_gray, original_transform, (image_gray.shape[1], image_gray.shape[0]))
+
+# plot image_gray and warped_image beside eachother
+plt.figure(figsize=(10,10))
+plt.subplot(1,2,1)
+plt.imshow(image_gray, cmap='gray')
+plt.title('Original Image')
+plt.axis('off')
+
+plt.subplot(1,2,2)
+plt.imshow(warped_image, cmap='gray')
+plt.title('Warped Image')
+plt.axis('off')
+plt.show()
+----
+
+RANSAC (Random Sample Consensus) is a method used to estimate the parameters of a mathematical model from a set of observed data that contains outliers. This method is commonly used in computer vision to estimate the parameters of a model from a set of matching features between images. It works by randomly selecting a subset of the data, estimating the model parameters, and then checking how many other data points fit this model. This process is repeated many times, and the model with the most inliers is chosen as the best model. OpenCV has a built-in function to perform RANSAC, `cv2.findHomography`. This function takes in the keypoints from the first image, the keypoints from the second image, and a method to estimate the model. The method we will use is `cv2.RANSAC`. This function returns the homography matrix, which can be used to warp one image to the other.
+
+To start, please use SIFT to detect keypoints in both the original and warped images. Then, use the BFMatcher to find matches between the two images, using a `k` of 1. Please store your keypoints for the original and warped images in `kp1` and `kp2`, respectively, and your matches in `matches`. The RANSAC method requires the coordinates of the keypoints, not the keypoints themselves, so you will need to extract the coordinates from the keypoints. You can do this by running the below code: 
+
+[source,python]
+----
+source_points = np.float32([kp1[m[0].queryIdx].pt for m in matches]).reshape(-1,1,2)
+destination_points = np.float32([kp2[m[0].trainIdx].pt for m in matches]).reshape(-1,1,2)
+----
+The code above essentially maps the found matches to the original keypoints
+
+Then, please use the OpenCV function `cv2.findHomography` to estimate the homography matrix between the two images using RANSAC. This function simply takes in the source points and destination points, as well as the method to estimate the model (either `cv2.RANSAC` or `cv2.LMEDS`). Finally, use the homography matrix to warp the second image to the first image. Display the warped image.
+
+Please use the RANSAC method to estimate the homography matrix between the two images from the previous question. Then, use the homography matrix to warp the second image to the first image. Display the warped image.
+
+.Deliverables
+====
+- Display the original warped image
+- Display the new warped image
+- How similar are the original homography transformation and the RANSAC homography transformation?
+- How might understanding a perspective transformation between frames be useful in a real-time application?
+====
+
 
 == Submitting your Work
 
