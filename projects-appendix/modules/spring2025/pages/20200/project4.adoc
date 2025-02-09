@@ -23,41 +23,110 @@ In this project we will scrape data from the following website:
 
 === Question 1 (2 pts)
 
-In Project 2, Question 5, we scraped the types, names, and locations of all four parks in Indiana from the National Park Service website:  https://www.nps.gov/state/in/index.htm
+We have now scraped information from the main page of the National Park Service, located at:  https://www.nps.gov/
 
-BUT we did not (yet) scrape the paragraph of information about each park from this webpage.
+and also from each of the 56 states that are listed on the front page of the NPS website.  For instance, we scraped data from the Indiana page:  https://www.nps.gov/state/in/index.htm
 
-If we right-click on such a paragraph and use the Inspect button in Firefox, we will see that such a paragraph is contained in a `p` tag with no attributes.  This `p` tag follows a `div` tag with class attribute equal to `"list_left"`.  Unfortunately, there are several other `p` tags that follow that `div` tag, as we already saw from Project 2, Question 5, namely:
+BUT we did not (yet) scrape the actual webpages of each park!  There are 645 park webpages, and we will scrape these individual park pages in this project.
 
-The park types have the `div` tag, followed by a `p` with class equal to `"list_left__kicker"`.  Similarly, the park locations have the `div` tag, followed by a `p` with class equal to `"list_left__subtitle"`.  So we want to exclude both of those results.
-
-We can do this by using:
+First, to get started, use the main page of the National Park Service website to get the URLs for the 56 state pages, as follows:
 
 [source, python]
 ----
-mytree.xpath('//div[@class="list_left"]/p[not(@class="list_left__kicker") and not(@class="list_left__subtitle")]')
+import requests
+
+from lxml import etree
+from lxml import html
+
+mytree = html.fromstring(requests.get("https://www.nps.gov").content)
+
+mystateurls = ['https://www.nps.gov' + element.attrib['href'] for element in mytree.xpath('//a[@class = "dropdown-item dropdown-state"]')]
+
+mystateurls
 ----
+
+We did something similar to this in Project 3, Question 4, but just to get you started, we are giving you this code directly.  For instance, `mystateurls[16]` is the URL for the parks in Indiana.
+
+Now we extract the webpages for the four parks in Indiana, as follows:
+
+[source, python]
+----
+mytree = html.fromstring(requests.get(mystateurls[16]).content)
+myparksdirectories = [element.attrib['href'] for element in mytree.xpath('//h3/a')]
+----
+
+These four Indiana parks directories are:
+
+[source, python]
+----
+['/gero/', '/indu/', '/lecl/', '/libo/']
+----
+
+We can modify the code above, to put the NPS website before each of these, as follows:
+
+[source, python]
+----
+mytree = html.fromstring(requests.get(mystateurls[16]).content)
+myparksdirectories = ['https://www.nps.gov' + element.attrib['href'] for element in mytree.xpath('//h3/a')]
+----
+
+which gives us the locations of the 4 parks in Indiana:
+
+[source, python]
+----
+['https://www.nps.gov/gero/',
+ 'https://www.nps.gov/indu/',
+ 'https://www.nps.gov/lecl/',
+ 'https://www.nps.gov/libo/']
+----
+
+Now use similar work, to extract the URLs for all 645 parks in all 56 states.  (There will be some duplicates in your list, and that is OK.  We will remove the duplicates in Question 2.)
+
 
 .Deliverables
 ====
-- Use `lxml` with the `xpath` described above, to extract a list with 4 elements about the four respective parks from Indiana.
+- Make a list of the URLs for all 645 parks in all 56 states.
 - Be sure to document your work from Question 1, using some comments and insights about your work.
 ====
 
 === Question 2 (2 pts)
 
-Starting with the data frame from Project 2, Question 5 (which has 4 rows and 3 columns), add the results from Project 3, Question 1, as a new 4th column in this data frame, so that you have a data frame of 4 rows, corresponding to the 4 parks from Indiana.
+If your list in Question 1 is called `mylist`, then you can remove the duplicates and put the list in sorted order as follows:
 
-Now solve Project 2, Question 5, and Project 3, Question 1, again but this time use California instead of Indiana.  You should get a data frame with 34 rows, corresponding to the 34 parks from California, and 4 columns (again, corresponding to the type, name, location, and description of each park).
+[source, python]
+----
+mysortedandcleanedlist = sorted(list(set(mylist)))
+----
 
-Do this one more time for Texas, creating a data frame with 18 rows and 4 columns.
+At this point, `mysortedandcleanedlist` should have 475 URLs for all of the individual parks.
+
+We can ignore 6 of the parks in this project:
+
+'https://www.nps.gov/cbpo/'
+
+'https://www.nps.gov/grsp/'
+
+'https://www.nps.gov/gwmp/'
+
+'https://www.nps.gov/roca/'
+
+'https://www.nps.gov/wwim/'
+
+'https://www.nps.gov/yose/'
+
+because these 6 webpages for these 6 parks either do not have their street address listed, or they have one address in the USA and one in Canada.
+
+Remove these 6 parks from your list, so that (now) you have only 469 URLs for parks.
+
+[TIP]
+====
+In Dr Ward's list of 475 parks, the ones to remove were 82, 202, 208, 373, 468, 471, but this may vary for you!
+====
 
 
 .Deliverables
 ====
-- Use Python to make a Pandas data frame with 4 rows and 4 columns, namely, 1 row per park from Indiana, with the type of park in the first column, the name of the park in the second column, the location of the park in the third column, and the location of the park in the fourth column.
-- Make an analogous data frame for parks from California, with 34 rows and 4 columns.
-- Make an analogous data frame for parks from Texas, with 18 rows and 4 columns.
+- Make a list of 469 parks, by removing duplicates from your list from Question 1, removing duplicates, and also removing the 6 parks listed above.
 - Be sure to document your work from Question 2, using some comments and insights about your work.
 ====
 
