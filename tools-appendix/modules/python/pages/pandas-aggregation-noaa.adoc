@@ -1,0 +1,449 @@
+= Aggregation with the NOAA Dataset
+
+This example is from TDM 102 Project 7 Spring 2024.
+
+These example(s) depend on the database:
+
+* `/anvil/projects/tdm/data/noaa`
+
+== Datasets
+
+`/anvil/projects/tdm/data/noaa`
+
+The NOAA data set includes weather-related information from multiple weather stations across the United States. It contains daily records for several years in CSV files.
+
+
+=== 1. Data Extraction and Aggregation
+**(1a) For the year 1880, find how many rows are for US records.  Then do this again (in separate cells) for the years 1881, 1882, 1883.**
+
+[source,python]
+----
+import pandas as pd
+
+df_1880 = pd.read_csv('/anvil/projects/tdm/data/noaa/1880.csv', header=None, names=["id","date","element_code","value","mflag","qflag","sflag","obstime"])
+
+us_records_1880 = df_1880[df_1880['id'].str.startswith('US')]
+
+print(len(us_records_1880))
+----
+----
+48428
+----
+
+[source,python]
+----
+# 1881
+df_1881 = pd.read_csv('/anvil/projects/tdm/data/noaa/1881.csv', header=None, names=["id","date","element_code","value","mflag","qflag","sflag","obstime"])
+us_records_1881 = df_1881[df_1881['id'].str.startswith('US')]
+print(len(us_records_1881))
+----
+----
+48196
+----
+
+[source,python]
+----
+# 1882
+df_1882 = pd.read_csv('/anvil/projects/tdm/data/noaa/1882.csv', header=None, names=["id","date","element_code","value","mflag","qflag","sflag","obstime"])
+us_records_1882 = df_1882[df_1882['id'].str.startswith('US')]
+print(len(us_records_1882))
+----
+----
+50664
+----
+
+[source,python]
+----
+# 1883
+df_1883 = pd.read_csv('/anvil/projects/tdm/data/noaa/1883.csv', header=None, names=["id","date","element_code","value","mflag","qflag","sflag","obstime"])
+us_records_1883 = df_1883[df_1883['id'].str.startswith('US')]
+print(len(us_records_1883))
+----
+----
+52363
+----
+
+**(1b) Now make a dictionary that has these years as the four keys, and has the counts (that you discovered in question 1a) as the values.**
+
+[source,python]
+----
+newdict = {}
+newdict[1880] = len(us_records_1880)
+newdict[1881] = len(us_records_1881)
+newdict[1882] = len(us_records_1882)
+newdict[1883] = len(us_records_1883)
+print(newdict)
+----
+----
+{1880: 48428, 1881: 48196, 1882: 50664, 1883: 52363}
+----
+
+**(1c) Now that you know how to do the work from questions 1a and 1b, wrap your work into a function that accepts a list of years as input, and returns a dictionary as the output.**
+
+[source,python]
+----
+def calculateNum(years):
+    newdict = {}
+    for year in years:
+        file = '/anvil/projects/tdm/data/noaa/' + str(year) + '.csv'
+        df = pd.read_csv(file, header=None, names=["id","date","element_code","value","mflag","qflag","sflag","obstime"])
+        us_records = df[df['id'].str.startswith('US')]
+        newdict[year] = len(us_records)
+    return newdict
+----
+
+**(1d) Run the function for the years in the range from 1880 to 1883 (inclusive), and make sure that the results agree with your results from question 1a and 1b.**
+
+[source,python]
+----
+# part d
+mylist = [1950,1951,1952,1953]
+calculateNum(mylist)
+----
+----
+{1880: 48428, 1881: 48196, 1882: 50664, 1883: 52363}
+----
+
+
+=== 2. Data Structures and Sorting
+
+**(2a) Revise your work from question 1b (before you built your function!), so that the dictionary is in reverse order.  The code from the tip might help.  Test your work on the years 1880 through 1883, and make sure that the resulting dictionary is in descending order.**
+
+[source,python]
+----
+mydescendingdict = dict([key, newdict[key]] for key in sorted(newdict, key=newdict.get, reverse=True))
+print(mydescendingdict)
+----
+
+----
+{1883: 52363, 1882: 50664, 1880: 48428, 1881: 48196}
+----
+
+
+**(2b) Now that you know how to do the work from questions 2a, wrap your work from question 2a into a function that accepts a list of years as input, and returns a dictionary in descending order as the output.**
+
+[source,python]
+----
+def calculateReverseNum(years):
+    mydict = {}
+    for year in years:
+        file = '/anvil/projects/tdm/data/noaa/' + str(year) + '.csv'
+        df = pd.read_csv(file, header=None, names=["id","date","element_code","value","mflag","qflag","sflag","obstime"])
+        us_records = df[df['id'].str.startswith('US')]
+        mydict[year] = len(us_records)
+    mydescendingdict = dict([key, mydict[key]] for key in sorted(mydict, key=mydict.get, reverse=True))
+    return mydescendingdict
+----
+
+**(2c) Run the function for the years in the range from 1880 to 1883 (inclusive), and make sure that the results agree with your results from question 2a.**
+
+[source,python]
+----
+mylist = [1880,1881,1882,1883]
+calculateReverseNum(mylist)
+----
+
+----
+{1883: 52363, 1882: 50664, 1880: 48428, 1881: 48196}
+----
+
+
+
+=== 3. Snowfall Analysis Function
+
+[loweralpha]
+**(3a) For the year 1880, find how many rows (which are for US records) are `SNOW` days with a positive amount of snowfall.  In other words look for rows with three conditions:  The first field starts with `US`, and the `element_code` is `SNOW`, and the `value` is strictly positive.  Then do this again (in separate cells) for the years 1881, 1882, 1883.**
+
+[source,python]
+----
+import pandas as pd
+name_list = ["id","date","element_code","value","mflag","qflag","sflag","obstime"]
+def get_df(file_path,titles=name_list):
+    df = pd.read_csv(file_path,names = titles,dtype=str)
+    df['value']=pd.to_numeric(df['value'])
+    return df
+
+
+file = '/anvil/projects/tdm/data/noaa/1880.csv'
+year = file.split('/')[-1].split('.')[0]
+df = get_df(file)        
+snow_days = df[(df['value'].notnull())&(df['value']>0)&(df["element_code"]=="SNOW") & (df['id'].str.startswith('US'))].shape[0]
+print(snow_days)
+----
+
+----
+203
+----
+
+[source,python]
+----
+file = '/anvil/projects/tdm/data/noaa/1881.csv'
+year = file.split('/')[-1].split('.')[0]
+df = get_df(file)        
+snow_days = df[(df['value'].notnull())&(df['value']>0)&(df["element_code"]=="SNOW") & (df['id'].str.startswith('US'))].shape[0]
+print(snow_days)
+----
+
+----
+266
+----
+
+[source,python]
+----
+file = '/anvil/projects/tdm/data/noaa/1882.csv'
+year = file.split('/')[-1].split('.')[0]
+df = get_df(file)        
+snow_days = df[(df['value'].notnull())&(df['value']>0)&(df["element_code"]=="SNOW") & (df['id'].str.startswith('US'))].shape[0]
+print(snow_days)
+----
+
+----
+253
+----
+
+[source,python]
+----
+file = '/anvil/projects/tdm/data/noaa/1883.csv'
+year = file.split('/')[-1].split('.')[0]
+df = get_df(file)        
+snow_days = df[(df['value'].notnull())&(df['value']>0)&(df["element_code"]=="SNOW") & (df['id'].str.startswith('US'))].shape[0]
+print(snow_days)
+----
+
+----
+187
+----
+
+
+**(3b) Now make a dictionary that has these years as the four keys, and has the counts (that you discovered in question 3a) as the values.**
+
+[source,python]
+----
+snow_day_count = {}
+files=[f'/anvil/projects/tdm/data/noaa/{i}.csv' for i in range(1880,1885)]
+for file in files:
+    year = file.split('/')[-1].split('.')[0]
+    df = get_df(file)        
+    snow_days = df[(df['value'].notnull())&(df['value']>0)&(df["element_code"]=="SNOW") & (df['id'].str.startswith('US'))].shape[0]
+    snow_day_count[year]= snow_days
+print(snow_day_count)
+----
+
+----
+{'1880': 203, '1881': 266, '1882': 253, '1883': 187, '1884': 394}
+----
+
+**(3c) Now that you know how to do the work from questions 3a and 3b, wrap your work into a function that accepts a list of years as input, and returns a dictionary as the output.**
+
+[source,python]
+----
+def annual_snow_days(years):
+    files=[f'/anvil/projects/tdm/data/noaa/{i}.csv' for i in years]
+    snow_day_count = {}
+    for file in files:
+        year = file.split('/')[-1].split('.')[0]
+        df = get_df(file)        
+        snow_days = df[(df['value'].notnull())&(df['value']>0)&(df["element_code"]=="SNOW") & (df['id'].str.startswith('US'))].shape[0]
+        snow_day_count[year]= snow_days
+    return snow_day_count
+----
+
+
+**(3d) Run the function for the years in the range from 1880 to 1883 (inclusive), and make sure that the results agree with your results from question 3a and 3a.**
+
+[source,python]
+----
+years = [1880, 1881, 1882, 1883, 1884]
+annual_snow_days(years)
+----
+
+----
+{'1880': 203, '1881': 266, '1882': 253, '1883': 187, '1884': 394}
+----
+
+
+=== Snowfall Station Analysis
+
+**(4a) For the year 1880, consider only the types of rows from question 3a (which are for US records, with `element_code` as `SNOW`, and with `value` as strictly positive).  Group those rows according to the `id`, and determine which `id` has the largest number of snowfall days.  Then do this again (in separate cells) for the years 1881, 1882, 1883.**
+
+[source,python]
+----
+def get_df(file_path,titles=name_list):
+    df = pd.read_csv(file_path,names = titles,dtype=str)
+    df['date']=pd.to_datetime(df['date'],format='%Y%m%d')
+    df['month']=df['date'].dt.month
+    df['value']= pd.to_numeric(df['value'],errors='coerce')
+    return df
+----
+
+[source,python]
+----
+file = '/anvil/projects/tdm/data/noaa/1880.csv' #repeat this for 1881 and 1883
+year = file.split('/')[-1].split('.')[0]
+df = get_df(file)
+snow_days_number= df[(df['value'].notnull()) & (df['value'] > 0) & (df["element_code"] == "SNOW") & (df['id'].str.startswith('US'))].groupby(['id']).size()
+print(snow_days_number.idxmax())
+----
+
+----
+USW00024128
+----
+
+**(4b) Now make a dictionary that has these years as the four keys, and has the `id` values with the largest number of snowfall days in each of these individual years.**
+
+[source,python]
+----
+files = [f'/anvil/projects/tdm/data/noaa/{i}.csv' for i in range(1880, 1884)]
+max_snow_days = {}
+for file in files:
+    year = file.split('/')[-1].split('.')[0]
+    df = get_df(file)
+    # Calculate snow days by station
+    snow_days_number = df[(df['value'].notnull()) & (df['value'] > 0) & (df["element_code"] == "SNOW") & (df['id'].str.startswith('US'))].groupby(['id']).size()
+    if not snow_days_number.empty:
+        # Find the station with the maximum snow days
+        max_station = snow_days_number.idxmax()
+        max_count = snow_days_number.max()
+        max_snow_days[year] = {'station': max_station, 'count': max_count}
+    else:
+        max_snow_days[year] = {'station': None, 'count': 0}
+max_snow_days
+----
+
+----
+{'1880': {'station': 'USW00024128', 'count': 35},
+ '1881': {'station': 'USC00464045', 'count': 33},
+ '1882': {'station': 'USC00176902', 'count': 49},
+ '1883': {'station': 'USC00176902', 'count': 43}}
+----
+
+**(4c) Now that you know how to do the work from questions 4a and 4b, wrap your work into a function that accepts a list of years as input, and returns a dictionary as the output.**
+
+[source,python]
+----
+def max_snow_days(years):
+    max_snow_days = {}
+    files=[f'/anvil/projects/tdm/data/noaa/{i}.csv' for i in years]
+    for file in files:
+        year = file.split('/')[-1].split('.')[0]
+        df = get_df(file)
+        # Calculate snow days by station
+        snow_days_number= df[(df['value'].notnull()) & (df['value'] > 0) & (df["element_code"] == "SNOW") & (df['id'].str.startswith('US'))].groupby(['id']).size()
+        if not snow_days_number.empty:
+            # Find the station with the maximum snow days
+            max_station = snow_days_number.idxmax()
+            max_count = snow_days_number.max()
+            max_snow_days[year] = {'station': max_station, 'count': max_count}
+        else:
+            max_snow_days[year] = {'station': None, 'count': 0}  
+    return max_snow_days
+
+----
+
+**(4d) Run the function for the years in the range from 1880 to 1883 (inclusive), and make sure that the results agree with your results from question 4a and 4a.**
+
+[source,python]
+----
+years = [1880, 1881, 1882, 1883, 1884]
+max_snow_days(years)
+----
+
+----
+{'1880': {'station': 'USW00024128', 'count': 35},
+ '1881': {'station': 'USC00464045', 'count': 33},
+ '1882': {'station': 'USC00176902', 'count': 49},
+ '1883': {'station': 'USC00176902', 'count': 43},
+ '1884': {'station': 'USC00176902', 'count': 54}}
+----
+
+
+=== Snowfall Summation Analysis
+
+**(5a) For the year 1880, consider only the types of rows from question 3a/4a (again, which are for US records, with `element_code` as `SNOW`, and with `value` as strictly positive).  Group those rows according to the `id`, and determine which `id` has the largest *amount* of snowfall (in other words, `sum` the snowfall amounts for each `id`).  Then do this again (in separate cells) for the years 1881, 1882, 1883.**
+
+[source,python]
+----
+name_list = ["id", "date", "element_code", "value", "mflag", "qflag", "sflag", "obstime"]
+#titles = ["id","date","element_code","value","mflag","qflag","sflag","obstime"]
+
+def snow_amts_f(file):
+    year = file.split('/')[-1].split('.')[0]
+    df = get_df(file)
+
+    snow_amount = df[
+        (df['value'].notnull()) & 
+        (df['value'] > 0) & 
+        (df["element_code"] == "SNOW") & 
+        (df['id'].str.startswith('US'))
+    ].groupby(['id'])['value'].sum()
+
+    max_station = snow_amount.idxmax()
+    max_snowfall = snow_amount.max()
+
+    return {year: {'station': max_station, 'amount': max_snowfall}}
+
+file_1880 = '/anvil/projects/tdm/data/noaa/1880.csv' #you can change the year here
+snow_amts_f(file_1880)
+----
+
+----
+{'1880': {'station': 'USC00464045', 'amount': 1755}}
+----
+
+
+**(5b) Now make a dictionary that has these years as the four keys, and has the `id` values with the largest amount of snowfall in each of these individual years.**
+
+[source,python]
+----
+def max_snowfall(files):
+    max_snow_amount = {}
+    for file in files:
+        year = file.split('/')[-1].split('.')[0]
+        df = get_df(file)
+        
+        snow_amount = df[(df['value'].notnull()) & (df['value'] > 0) & (df["element_code"] == "SNOW") & (df['id'].str.startswith('US'))].groupby('id')['value'].sum()
+        max_snow_amount[year] = {'station': snow_amount.idxmax(), 'amount': snow_amount.max()}
+    return max_snow_amount
+
+files = [f'/anvil/projects/tdm/data/noaa/{i}.csv' for i in range(1880, 1885)]
+
+max_snowfall(files)
+----
+
+----
+{'1880': {'station': 'USC00464045', 'amount': 1755},
+ '1881': {'station': 'USW00014971', 'amount': 2199},
+ '1882': {'station': 'USC00176902', 'amount': 2622},
+ '1883': {'station': 'USC00464045', 'amount': 3256},
+ '1884': {'station': 'USC00176902', 'amount': 2830}}
+----
+
+**(5c) Now that you know how to do the work from questions 5a and 5b, wrap your work into a function that accepts a list of years as input, and returns a dictionary as the output.**
+
+[source,python]
+----
+def max_snowfall_id(year):
+    file_path = f'/anvil/projects/tdm/data/noaa/{year}.csv'
+    df = get_df(file_path)
+    snowfall_us = df[(df['value'].notnull()) & (df['value'] > 0) & (df["element_code"] == "SNOW") & (df['id'].str.startswith('US'))]
+    max_snowfall_id = snowfall_us.groupby('id')['value'].sum().idxmax()
+    return max_snowfall_id
+----
+
+**(5d) Run the function for the years in the range from 1880 to 1883 (inclusive), and make sure that the results agree with your results from question 5a and 5b.**
+
+[source,python]
+----
+years = list(range(1880, 1885))
+for year in years:
+    result = max_snowfall_id(year)
+    print(result)
+----
+
+----
+USC00464045
+USW00014971
+USC00176902
+USC00464045
+USC00176902
+----
