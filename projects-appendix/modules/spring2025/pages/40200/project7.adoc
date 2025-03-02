@@ -1,9 +1,9 @@
-= TDM 40200: Project 07 - Cross Validation
+= TDM 40200: Project 07 - Cross-Validation
 :page-mathjax: true
 
 == Project Objectives
 
-We will reach to the final product for our model with cross validation. 
+This project aims to explore cross-validation techniques for evaluating model performance, focusing on polynomial regression and support vector machines (SVM). We will explore different cross-validation techniques, including holdout method, repeated holdout, K-fold cross-validation, and bootstrapping to assess model generalizability.
 
 [IMPORTANT]
 ====
@@ -13,13 +13,15 @@ unless otherwise specified.
 
 .Learning Objectives
 ****
-- Model selection (algorith is known, trying to find the "best" parameters)
-- Algorithm selection (parameter is fixed, trying to decide which algorithm fits well for the data)
-- Generalize the performance (algortihm and model is known)
+- Explain the purpose of cross-validation and why it is essential for model evaluation and generalization.
+- Implement polynomial regression using Python and understand the difference between model parameters and hyperparameters.
+- Apply the holdout method to split datasets into training and test sets and assess model performance.
+- Use cross-validation techniques such as repeated holdout, K-fold cross-validation, and bootstrapping to evaluate model stability.
+- Extend cross-validation concepts to classification problems by applying SVM to handwritten digit recognition.
 ****
 
 == Dataset
-- We will work with the `Batting` Table in `Lahman` Baseball Database, which is available at '/anvil/projects/x-cis220051/data/lahman/data/BattingNEW.csv'
+- We will work with the `Batting` table in `Lahman` Baseball Database, which is available at '/anvil/projects/x-cis220051/data/lahman/data/BattingNEW.csv'
 
 == Introduction
 
@@ -31,17 +33,16 @@ One of the most commonly used techniques for this purpose is called **Cross-Vali
 Cross-validation helps in estimating the model’s performance by splitting the dataset into multiple subsets, 
 training the model on some of them, and testing it on the remaining unseen ones. 
 This process is repeated several times to get a more reliable measure of how well the model generalizes to new data.
-
 We covered the topics related to cross-validation, such as hyperparameter tuning before. Now, we will focus on conceptualizing these concepts.
 
-The fact that modeling tools automatically applies cross-validation can somewhat obscure the reality 
+The fact that modeling tools and libraries automatically applies cross-validation can somewhat obscure the reality 
 that the method's results may vary when the technique is adapted to different use cases or data types. 
 It is crucial to conduct further research and understand the logic behind the methods we use, 
 as it helps to gain deeper knowledge.
 
 If you apply a statistical model to your data, you will obtaion your model parameters from the data.
-And the model guarantees it is optimized, generalizable, and you find the same parameter for the same data anywhere in the world. However, some models include not only parameters but also hyperparameters. 
-Unlike parameters, hyperparameters cannot be directly derived from the data and do not have a closed-form equations. Instead, they require tuning through trial and error. Since there is no universal equation to compute these hyperparameters, techniques like cross-validation are used to determine their optimal values.
+And the model guarantees it is optimized, generalizable, and you find the same parameter for the same data anytime you run the model. However, some models include not only parameters but also hyperparameters. 
+Unlike parameters, hyperparameters cannot be directly derived from the data and do not have a closed-form expressions/solutions. Instead, they require tuning through trial and error. Since there is no universal expression to find these hyperparameters, techniques like cross-validation are used to determine their optimal values.
 
 For example:
 
@@ -50,14 +51,14 @@ For example:
 
 [IMPORTANT]
 ====
-The term "parameters" is often used interchangeably with "variables" in machine learning literature, However, in this context, we use "parameters" in its true meaning—referring to terms in the model that are not explicitly known but can be estimated from the data.
+The term *parameter* is often used interchangeably with *variable* in machine learning literature, However, in this context, we use parameter in its true meaning—referring to term in the model that is not explicitly known but can be estimated from the data.
 ====
 
 == Questions
 
 === Question 1 (2 points)
 
-Lets try cross validation with https://en.wikipedia.org/wiki/Polynomial_regression[polynomial regression] which is a type of regression that models the relationship between the independent (explanatory, $x$)  and the dependent (target, $y$) variables using a polynomial function of $x$. For example, the quadratic polynomial regression can be defined as following:
+Lets try cross-validation with https://en.wikipedia.org/wiki/Polynomial_regression[polynomial regression] which is a type of regression that models the relationship between the independent (explanatory, $x$)  and the dependent (target, $y$) variables using a polynomial function of $x$. For example, the quadratic polynomial regression can be defined as following:
 
 $y = \beta_0 + \beta_1x + \beta_2x^2 + \epsilon$
 
@@ -71,7 +72,7 @@ pd.set_option('display.max_columns', None)
 Batting.head()
 ----
 
-Assume that you want to run a polynomial regression with a degree of 3. You can run this model in Python with a very simple code since polynomial regression is already defined in `LinearRegression()` in https://scikit-learn.org/stable/[`sklearn`] library:
+Assume that you want to run a polynomial regression with a degree of 3. You can run this model in Python with a simple code chunck since polynomial regression is already defined in `LinearRegression()` in https://scikit-learn.org/stable/[`sklearn`] library:
 
 [source,python]
 ----
@@ -82,7 +83,7 @@ poly_model = LinearRegression()
 poly_model.fit(X_poly, y)
 ----
 
-In this code, `.fit_transform(X)` takes the original input feature `X` (HR) and expands it into multiple polynomial terms. For example, if $d=3$, this transformation produces:
+In this code, `.fit_transform(X)` takes the original input feature `X` (HR) and expands it into multiple polynomial terms. For example, for $d=3$, this transformation produces:
 
 $X_{poly} = [X, X^2, X^3]$
 
@@ -98,7 +99,7 @@ And when `include_bias=True`, the transformed feature matrix includes an additio
 
 [NOTE]
 ====
-Here are the example libraries can be used for this question:
+Here are the libraries can be used for this question:
 
 [source,python]
 ----
@@ -116,13 +117,13 @@ We can always try different degrees for the polynomial regression. However, at t
 
 If we increase the degree of a polynomial, it can lead to overfitting, so it is important to find a balance between model complexity and accuracy. If a simpler model can effectively explain a relationship, pattern, or dependency, there is no need to choose a more complex one.
 
-There are several ways to test it, one of them is using cross validation by splitting your data into two parts training and test data. The model will learn from the training data and never see the test data until you want to check how model is performing. Then, test data is used to find predictions with estimated parameters.
+There are several ways to find this balance. One of them is using cross-validation by splitting your data into two parts training and test data. The model will learn from the training data and never see the test data until you want to check how model is performing. Then, test data is used to find predictions with estimated parameters.
 
-Lets use the Holdout method to find the polynomial degree for our data:
+As a first step, we can use the Holdout method to find the polynomial degree for our data. It can be visualize as following: 
 
 image::HoldOut.png[width=600, height=450, title="Holdout method"]
 
-In holdout method, the data is splitted in train and test sets. Each value of the hyperparameter generates one algorithm and the train set is used to define parameters of interest of the algorithm. Then, test data is used to find the predictions. These predictions is used to find the model metrics which is https://en.wikipedia.org/wiki/Mean_squared_error[Mean Squared Error (MSE)] in our example.
+This schema says that each value of the hyperparameter generates one algorithm and the train set is used to define parameters of interest of the algorithm. Then, test data is used to find the predictions. These predictions is used to find the model metrics which can be https://en.wikipedia.org/wiki/Mean_squared_error[Mean Squared Error (MSE)] in our example, since we run a regression model with a numeric target.
 
 .Deliverables
 ====
@@ -135,13 +136,9 @@ In holdout method, the data is splitted in train and test sets. Each value of th
 
 Since data splitting process is implemented randomly, the MSE values we obtain in regression (or the accuracy values in classification) will differ from one another. In this case, how do we decide which result to accept as the final outcome?  
 
-Although the literature provides various approaches to this problem, if we were all sitting around a table discussing possible solutions, we would likely consider averaging the MSEs (or any other metric such as accuracy, RMSE or $R^2$). Instead of relying on a single data split, repeating the process multiple times allows us to obtain more *generalizable results* and ensuring that the model performance metric is *generalizable*.
-[TIP]
-====
-The https://en.wikipedia.org/wiki/Median[median] is a more robust statistic than the mean when dealing with outliers. This is because the mean considers all values in a dataset, including extreme ones, as it is calculated by summing all observations and dividing by their count. In contrast, the median is determined by sorting the data and selecting the middle value, making it unaffected by the magnitude of extreme observations. Whenever possible, consider using the median instead of the mean for a more reliable representation of central tendency.
-====
+Although the literature provides various approaches to this problem, if we were all sitting around a table discussing possible solutions, we would likely consider averaging the MSEs (or any other metric such as accuracy, RMSE or $R^2$, etc.). Instead of relying on a single data split, repeating the process multiple times allows us to obtain more *generalizable results* and ensuring that the model performance metric is *generalizable*.
 
-Determining the optimal train-test split ratio is another challenge that can be addressed using cross-validation. In the literature and many applications, we commonly see an 80% training and 20% test split. However, you can experiment with different ratios to observe how performance changes. A key consideration is that a *large test set* may introduce a *pessimistic bias*, while a small test set can lead to *high variance*. The plot below is an illustration from the Raschka's paper using the Iris dataset to fit to KNN where K is 3. You can see how accuracy changes when you change the train-test ratios. On the left plot, the ratio of test data is really high and we can never reach out that accuracy like on the right hand side where the ratio of test is really low. For the low ratio of test data, we observe higher fluctuations on accuracy. Raschka's paper is a good source if you want to learn more about model evaluation.
+Determining the optimal train-test split ratio is another challenge that can be addressed using cross-validation. In the literature and many applications, we commonly see an 80% training and 20% test split. However, you can experiment with different ratios to observe how performance changes. A key consideration is that a *large test set* may introduce a *pessimistic bias*, while a small test set can lead to *high variance*. The plot below is an illustration from the https://arxiv.org/pdf/1811.12808[Raschka's] paper using the Iris dataset to fit to KNN where $K$ is 3. You can see how accuracy changes when you change the train-test ratios. On the left plot, the ratio of test data is high (50%) and we cannot reach out that accuracy reported on the right hand side where the ratio of test is low (10%). For the low ratio of test data, we observe higher fluctuations on accuracy (high variance).
 
 image::TrainTest.png[]
 
@@ -154,35 +151,32 @@ image::RepCVandHoldOut.png[width=600, height=450, title="Holdout method"]
 
 .Deliverables
 ====
-- 3.1. Repeat each steps in Question 2 (2.1 and 2.2) for 100 times (use repeated holdout or K-fold cross validation or both).  
+- 3.1. Repeat each steps in Question 2 (2.1 and 2.2) for 100 times (use repeated holdout or K-fold cross-validation or both)
 - 3.2. Plot randomly selected 10 process
 - 3.3. Find a generalizable MSE for this data.
 ====
 
 === Question 4 (2 points)
 
-Another method used for cross-validation is https://www.jstor.org/stable/2958830[bootstrapping] which was originally developed for other statistical purposes, primarily to estimate the sampling distribution of a statistic. However, it can also be adapted for cross-validation.
+Another method used for cross-validation is https://www.jstor.org/stable/2958830[bootstrapping] which was originally developed for other statistical purposes, primarily to estimate the sampling distribution of a statistic. However, it can also be adapted for cross-validation. Bootstrapping involves repeatedly sampling data *with replacement* to create multiple training datasets. Out-of-bag samples, those not selected for the bootstrap training set, are used as the test set. This allows us to estimate model performance across different subsets of data. 
 
-In this context, bootstrapping involves repeatedly sampling data with replacement to create multiple training datasets. Out-of-bag samples, those not selected for the bootstrap training set, are used as the test set. This allows us to estimate model performance across different subsets of data. 
-
-When you apply bootstrapping instead of repeated hold-out or cross validation, the only difference in here from the previous example is that the sampling will be implemented with replacement. The following figure visually illustrates bootstrapping: 
+When you apply bootstrapping instead of repeated hold-out or cross-validation, the only difference in here from the previous example is that the sampling will be implemented with replacement. The following figure visually illustrates bootstrapping: 
 
 image::Boot.png[width=400, height=250]
 
 
 .Deliverables
 ====
-- 4.1. Repeat each steps in Question 2 (2.1 and 2.2) for 100 times with bootstrapping sampling.  
-- 4.2. Plot degree of polynomial versus MSE including all repeats and also mean MSE (bootstrap).
-- 4.3. Did you noticed any significant changes in your MSE values?
+- 4.1. Repeat each steps in Question 2 (2.1 and 2.2) for 100 times with bootstrapping sampling 
+- 4.2. Plot degree of polynomial versus MSE including all repeats and also mean MSE (bootstrap)
+- 4.3. Did you notice any significant changes in your MSE values from Question 3.3 and bootstrapping?
 ====
 
 === Question 5 (2 points)
 
-Classification methods are also required cross validation to test prediction performances with some metrics such as accuracy. In this example, we will use Support Vector Machines (SVM) in scikit-learn to recognize images of hand-written digits from 0-9.
+Classification methods are also required cross-validation to test prediction performances with some metrics such as accuracy. In this example, we will use Support Vector Machines (SVM) in scikit-learn to recognize images of hand-written digits from 0-9.
 
-The following video briefly give motivation for SVM:
-
+The following video give brief introduction to SVM:
 
 ++++
 <iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_acs0o1gd&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 40200 Project 7 Question 5"></iframe>
@@ -190,11 +184,11 @@ The following video briefly give motivation for SVM:
 
 The hand-written digits from 0-9 dataset consists of $8x8$ pixel images of digits. The images attribute of the dataset stores $8x8$ arrays of grayscale values for each image. There are 10 classes $~180$ samples per class. Total sample is 1797 with 64 dimensionality. 
 
-The Python code below produce one of the hand-written digits:
+The Python code below include necessary libraries, how to load digits data and produce one example of the hand-written digits:
 
 [source,python]
 ----
-# Packages
+# Libraries
 from sklearn.datasets import load_digits
 from sklearn.svm import SVC
 from sklearn.metrics import ConfusionMatrixDisplay, classification_report
@@ -213,7 +207,14 @@ plt.imshow(numbers.images[0], cmap = plt.cm.binary)
 
 image::Handwritten.png[width=300, height=150, title="Example Hand-written Digit"]
 
-The following code used to ...
+The following code used to run SVM in Python
+
+[source,python]
+----
+
+----
+
+
 
 
 
