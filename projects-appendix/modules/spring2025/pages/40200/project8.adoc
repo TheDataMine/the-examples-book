@@ -1,0 +1,218 @@
+= TDM 40200: Project 08 - Feature Selection (Regularization)
+:page-mathjax: true
+
+== Project Objectives
+
+Sentence here
+
+[IMPORTANT]
+====
+For this project, we will use R instead of Python, as it offers a more streamlined and efficient approach to modeling. 
+
+In this project, rather than focusing on which programming language is used, we will emphasize why certain tools and techniques are applied. For ease of understanding, we will demonstrate the concept using a simple linear model. However, the regularization methods we cover here are based on the same principles used in many machine learning algorithms and neural network models, too.
+
+Please use the `seminar-r` kernel (not the `seminar` kernel), unless otherwise specified. When you use the `seminar-r` kernel with R, you do not need to use the `%%R` cell magic.
+====
+
+.Learning Objectives
+****
+- 
+- 
+- 
+****
+
+== Dataset
+We will work with the Lahman Baseball Database, which is available in R through the `Lahman` package. 
+
+== Introduction
+
+One of the fundamental steps in modeling is identifying the relevant variables. While machine learning models can handle large datasets and a high number of features, strong dependencies among variables can reduce the reliability of model parameters. Also, when the number of variables (*p*) exceeds the number of observations (*n*), the difficulties become more significant.
+
+For instance, in linear models, having *p > n* means that the system of equations is underdetermined, leading to infinitely many possible solutions. This can cause instability in parameter estimation and increase the risk of overfitting. To address this issue, regularization techniques such as *Ridge regression (L2), LASSO (L1),* or *Elastic Net* can be used to impose constraints on the model and improve generalization. Additionally, dimensionality reduction techniques like *principal component analysis (PCA)* or *feature selection methods* can help reduce the impact of high-dimensionality.
+
+== Questions
+
+=== Question 1 (2 points)
+
+In `Lahman` data, we used `Batting` table before, which includes batting statistics. More specifically, we focused on  *Homeruns (HR)* and *Runs Batted In (RBI)* varaibles. Remember that the change in RBI can be explained with HR. There are still a lot of possibilities to think about and add more variables into your model. The same table has several other variables and you can see them by typing the following code in R:
+
+[source, R]
+----
+library(Lahman)
+
+names(Batting)
+----
+
+[NOTE]
+====
+It is also a good idea to check for variable descriptions with `?Batting` in R. 
+====
+
+`People` is another table including player names, date of births and demographichs for baseball players. It provides more details about players and it shares unique 'playerID' which can be used to merge `Batting` and `People` data sets. `People` contains 26 variables, but many of them are expected to have a large number of missing (`NA`) values. For instance, since the data includes records up to 2023, the `death-` columns will have many empty entries, as most players in recent years are alive. Additionally, these variables are not meaningfully related to `RBI`, so they do not need to be considered in the modeling process.
+
+Some variables may provide interesting insights about the data but be less important for modeling. For example, while the age at which players make their debut can be an intriguing variable, their actual age might contribute more significantly to the model. Additionally, the most common birthplaces highlight Major League Baseball’s international reach, but its contribution to the model may be less. For curious readers, below are chart and tables related to debut ages and the most common (first ten) birthplaces. (Reproducing the visual and table is not required for the project.)
+
+
+image::Debut.png[width=600, height=450, title="Debut Ages of Players"]
+
+==== Most common birth countries
+[cols="1,1",options="header"]
+|===
+| Birth country | n
+| USA | 18098
+| Dominican Republic | 890
+| Venezuela | 472
+| Puerto Rico | 281
+| Canada | 266
+| Cuba | 237
+| Mexico | 147
+| Japan | 76
+| Panama | 70
+| Ireland | 50
+|===
+
+All those variables in 'Batting' and 'People' tables make us hungry and we want to eat them all in our model! Similar to the linear model we run before, assume that you want to explain the change in your target variable (Runs Batted In, RBI) but this time using more variables of interest. For this aim, lets first merge data sets with a unique ID which is `playerID` for this data.
+
+[source, R]
+----
+library(dplyr)
+
+# Merge all datasets
+full_data <- Batting %>%
+  left_join(People, by = "playerID") %>%
+  na.omit()
+----
+
+In `People` data set, we see birth year of each player. This can be an important variable to be added in the model. But keeping in mind that this data includes records from 1871 through 2023, it maybe not be correct to add year variable into your setting. Instead of year, adding age variable can be a better solution to make sure that we count for the age differences in the model.
+
+.Deliverables
+====
+- 1.1. Check out column names, first six lines and examine summary statistics for Batting and People tables. 
+- 1.2. Merge two data sets by playerID
+- 1.3. Add age of players into your data and named the column as 'age'.
+====
+
+[NOTE]
+====
+For the ease of reading, all variable are added with their codes and explanations in Appendix at the end of this document. 
+====
+
+=== Question 2 (2 points)
+
+Tables includes all variables for 'Batting' and 'People' data respectively. First, lets try to add as much as variable to the model:
+
+Although a linear model provides P-values as evidence for variable selection, shrinkage methods are used for variable selection because P-values alone do not always provide the best approach for model improvement, especially when dealing with high-dimensional data or multicollinearity. P-values can sometimes be misleading, especially when the sample size is large, or when variables are highly correlated with one another. In such cases, a variable with a high P-value might still be relevant for the model, but its contribution isn't significant enough to pass the threshold. Furthermore, many machine learning algorithms, due to their lack of interpretability, do not provide evidence of which variables contribute to the model.
+
+Variable selection (feature engineering) in statistical models is crucial for improving both the model's performance and *interpretability*. By choosing only the most relevant variables, we can simplify the model, making it easier to understand and interpret, which is particularly important in fields where the relationships between variables are essential. Additionally, variable selection helps prevent *overfitting*, a common issue when too many irrelevant variables are included, which can lead to a model that fits the noise in the data rather than the underlying patterns. A more focused model with fewer predictors tends to generalize better to new data, leading to improved prediction accuracy. Furthermore, it addresses issues like multicollinearity, where highly correlated predictors can destabilize the model's estimates. By selecting the right variables, we can also reduce computational costs, as fewer predictors mean less memory and processing power are required, which is especially important in large datasets. Ultimately, variable selection enables us to identify the key drivers of the outcome, providing deeper insights into the data and leading to more robust and reliable models.
+
+Also, If you have $p$ variables in the model, the number of possible models you could try is determined by the subsets of variables that can be included in the model. For each variable, you have two options: include it or exclude it from the model. Therefore, the total number of possible models is: $2^p$. This includes all combinations of variables, ranging from using none (the null model) to using all $p$ variables. 
+
+However, this number can be very large if $p$ is high, leading to an impractical amount of models to test. This is why techniques like https://en.wikipedia.org/wiki/Regularization_(mathematics)[regularization] (e.g., Lasso, Ridge) are often used to reduce the number of models considered and make the selection process more manageable.
+
+
+
+.Deliverables
+====
+- Run a linear model with RBI as dependent (Target) variable and include all the variables you wanted to add as independent variable from both tables.
+====
+
+=== Question 3 (2 points)
+
+.Deliverables
+====
+- 
+====
+
+=== Question 4 (2 points)
+
+.Deliverables
+====
+- 
+====
+
+=== Question 5 (2 points)
+
+
+.Deliverables
+====
+- 
+====
+
+=== Appendix
+
+==== Batting Data Variables
+[cols="1,1",options="header"]
+|===
+| Variable Code | Explanation
+| playerID | Player ID code (links to People dataset)
+| yearID | Year
+| stint | Player's stint (order of appearances within a season)
+| teamID | Team; a factor
+| lgID | League; a factor with levels AA, AL, FL, NL, PL, UA
+| G | Games: number of games in which a player played
+| AB | At Bats
+| R | Runs
+| H | Hits: times reached base because of a batted, fair ball without error by the defense
+| X2B | Doubles: hits on which the batter reached second base safely
+| X3B | Triples: hits on which the batter reached third base safely
+| HR | Homeruns
+| RBI | Runs Batted In
+| SB | Stolen Bases
+| CS | Caught Stealing
+| BB | Base on Balls
+| SO | Strikeouts
+| IBB | Intentional walks
+| HBP | Hit by pitch
+| SH | Sacrifice hits
+| SF | Sacrifice flies
+| GIDP | Grounded into double plays
+|===
+
+==== People Data Variables
+[cols="1,1",options="header"]
+|===
+| Variable Code | Explanation
+| playerID | A unique code assigned to each player. Links to other files.
+| birthYear | Year player was born
+| birthMonth | Month player was born
+| birthDay | Day player was born
+| birthCountry | Country where player was born
+| birthState | State where player was born
+| birthCity | City where player was born
+| deathYear | Year player died
+| deathMonth | Month player died
+| deathDay | Day player died
+| deathCountry | Country where player died
+| deathState | State where player died
+| deathCity | City where player died
+| nameFirst | Player's first name
+| nameLast | Player's last name
+| nameGiven | Player's given name (typically first and middle)
+| weight | Player's weight in pounds
+| height | Player's height in inches
+| bats | Player's batting hand (left (L), right (R), or both (B))
+| throws | Player's throwing hand (left (L) or right (R))
+| debut | Date that player made first major league appearance
+| finalGame | Date that player made first major league appearance (blank if still active)
+| retroID | ID used by Retrosheet, https://www.retrosheet.org/
+| bbrefID | ID used by Baseball Reference website, https://www.baseball-reference.com/
+| birthDate | Player's birthdate, in as.Date format
+| deathDate | Player's deathdate, in as.Date format
+|===
+
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project1.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
