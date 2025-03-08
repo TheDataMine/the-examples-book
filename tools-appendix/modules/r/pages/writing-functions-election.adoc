@@ -1,0 +1,130 @@
+= Writing Functions in R
+
+== Examples
+
+=== Use the `longesttest` function to print the longest name in the `NAME` column of the 1980 election data.
+[source,R]
+----
+longesttest <- function(x) {x[which.max(nchar(x))]}
+----
+
+.Click to see solution
+[%collapsible]
+====
+[source,R]
+----
+library(data.table)
+myDF <- fread("/anvil/projects/tdm/data/election/itcont1980.txt", quote="")
+names(myDF) <- c("CMTE_ID", "AMNDT_IND", "RPT_TP", "TRANSACTION_PGI", "IMAGE_NUM", "TRANSACTION_TP", "ENTITY_TP", "NAME", "CITY", "STATE", "ZIP_CODE", "EMPLOYER", "OCCUPATION", "TRANSACTION_DT", "TRANSACTION_AMT", "OTHER_ID", "TRAN_ID", "FILE_NUM", "MEMO_CD", "MEMO_TEXT", "SUB_ID")
+longesttest <- function(x) {x[which.max(nchar(x))]}
+
+longesttest(myDF$NAME)
+----
+----
+'REPUBLICAN NATIONAL COMMITTEE - CONTRIBUTIONS (AKA REPUBLICAN NATIONAL FINANCE COMMITTEE' 
+----
+====
+
+=== Using the itcont1980.txt file, create your own function called `mostpopulardate` that finds the most popular date in a column of dates, as well as the number of times that date occurs. Use that function to find the most popular transaction date.
+.Click to see solution
+[%collapsible]
+====
+[source,R]
+----
+library(data.table)
+myDF <- fread("/anvil/projects/tdm/data/election/itcont1980.txt", quote="")
+names(myDF) <- c("CMTE_ID", "AMNDT_IND", "RPT_TP", "TRANSACTION_PGI", "IMAGE_NUM", "TRANSACTION_TP", "ENTITY_TP", "NAME", "CITY", "STATE", "ZIP_CODE", "EMPLOYER", "OCCUPATION", "TRANSACTION_DT", "TRANSACTION_AMT", "OTHER_ID", "TRAN_ID", "FILE_NUM", "MEMO_CD", "MEMO_TEXT", "SUB_ID")
+mostpopulardate = function(x) {tail(sort(table(x)), n=1)}
+mostpopulardate(myDF$TRANSACTION_DT)
+----
+----
+x
+12311979 
+    2562 
+----
+====
+
+=== Using the itcont1980.txt file, write a function called myindycities that takes a year as the input and uses tapply to make a table of length 10, containing the top 10 cities in Indiana according to the sum of the amount of donations (in dollars) given in each city.
+.Click to see solution
+[%collapsible]
+====
+[source,R]
+----
+myindycities <- function(myyear) {
+    myDF <- fread(paste0("/anvil/projects/tdm/data/election/itcont", myyear, ".txt"), quote="", select = c(9, 10,15))
+    names(myDF) <- c("city", "state", "donation")
+    myDF <- myDF[myDF$state == "IN", ]
+    city_donations <- tapply(myDF$donation, myDF$city, sum)
+    sorted_cities <- sort(city_donations, decreasing = TRUE)
+    return(head(sorted_cities, 10))
+}
+     
+myindycities(1980)
+myindycities(1986)
+myindycities(1992)
+----
+----
+INDIANAPOLIS
+    753547
+MUNCIE
+    159897
+ELKHART
+    111385
+EVANSVILLE
+    94605
+FORT WAYNE
+    87115
+CARMEL
+    85872
+INDPLS
+    76396
+FT WAYNE
+    70174
+SOUTH BEND
+    68332
+LAFAYETTE
+    49851
+
+INDIANAPOLIS
+    995379
+FORT WAYNE
+    149194
+MUNCIE
+    100433
+ELKHART
+    100350
+EVANSVILLE
+    84815
+SOUTH BEND
+    81841
+CARMEL
+    75993
+TERRE HAUTE
+    62361
+ZIONSVILLE
+    50900
+COLUMBUS
+    40400
+
+INDIANAPOLIS
+    2583618
+FORT WAYNE
+    524980
+CARMEL
+    384683
+EVANSVILLE
+    308566
+SOUTH BEND
+    274397
+MUNCIE
+    251164
+ELKHART
+    196432
+COLUMBUS
+    143096
+BLOOMINGTON
+    121733
+ZIONSVILLE
+    94370
+----
+====

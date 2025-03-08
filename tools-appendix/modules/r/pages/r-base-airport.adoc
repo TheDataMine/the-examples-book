@@ -174,3 +174,150 @@ print(depMissing)
 [1] 0
 ----
 ====
+
+== mean
+
+`mean` is a function that calculates the average of a vector of values.
+
+You will often find yourself using the `na.rm` argument, short for *NA* value **r**e**m**oval. Most real-life data will contain missing values somewhere, and `na.rm = TRUE` will automatically remove those values from consideration during a function call or computation. `na.rm = FALSE` is the default, so make sure to include `na.rm = TRUE` if you're unsure of your data's composition.
+
+
+=== Examples
+
+==== Using the 1990 csv file, give the mean of the DepDelay of all of the flights whose Origin airport is EWR or JFK or LGA.
+
+.Click to see solution
+[%collapsible]
+====
+[source,R]
+----
+flightDF <- read.csv("/anvil/projects/tdm/data/flights/subset/1990.csv")
+mean(flightDF$DepDelay[(flightDF$Origin == "EWR") | (flightDF$Origin == "JFK") | (flightDF$Origin == "LGA")], na.rm = TRUE)
+----
+
+----
+ 9.40006351697211 
+----
+====
+
+== cut
+`cut` breaks a vector into factors specified by the argument `breaks`. `cut` is particularly useful to break Date data into quarters (Q1, Q2), years (1999, 2000, 2001), and so on.
+
+The utility of this function is tied to the possible factors offered by `breaks`. You can see a list of your options by running `?cut.POSIXt`.
+
+=== Examples
+
+==== Using the 1990 csv file, give the table described above, which classifies the number of flights according to the number of hours that the flights are delayed.
+
+The DepDelay values are given in minutes. We will classify the number of flights according to how many hours that the flight was delayed.
+
+Use the cut command to classify the number of flights in each of these categories:
+
+Flight departed early or on time, i.e., DepDelay is negative or 0.
+
+Flight departed more than 0 but less than or equal to 60 minutes late.
+
+Flight departed more than 60 but less than or equal to 120 minutes late.
+
+Flight departed more than 120 but less than or equal to 180 minutes late.
+
+Flight departed more than 180 but less than or equal to 240 minutes late.
+
+Flight departed more than 240 but less than or equal to 300 minutes late.
+
+Etc., etc., and finally:
+
+Flight departed more than 1380 but less than or equal to 1440 minutes late.
+
+.Click to see solution
+[%collapsible]
+====
+[source,R]
+----
+flightDF <- read.csv("/anvil/projects/tdm/data/flights/subset/1990.csv")
+
+breaks <- c(-Inf, 0)
+
+for (i in seq(60, 1440, by = 60)) {
+  breaks <- c(breaks, i)
+}
+
+categories <- cut(flight_data$DepDelay, 
+                        breaks = breaks, 
+                        right = TRUE, 
+                        dig.lab = 4)
+
+flight_delays <- table(categories, useNA = "always")
+
+print(flight_delays)
+----
+
+----
+categories
+   (-Inf,0]      (0,60]    (60,120]   (120,180]   (180,240]   (240,300] 
+    2966433     2111783      104240       24000        7517        2630 
+  (300,360]   (360,420]   (420,480]   (480,540]   (540,600]   (600,660] 
+       1001         366         125          65          35          19 
+  (660,720]   (720,780]   (780,840]   (840,900]   (900,960]  (960,1020] 
+         24          20          24          13           8           6 
+(1020,1080] (1080,1140] (1140,1200] (1200,1260] (1260,1320] (1320,1380] 
+          1           4           3           3          11          28 
+(1380,1440]        <NA> 
+         76       52458 
+----
+====
+
+== merge
+`merge` is a function that can be used to combine data.frames by row or column names. The effects of the function replicate the join operations in SQL.
+
+=== Examples
+
+==== Using airports.csv and 1990.csv files, merge the data according to the iata and Origin values. Then print the average departure delay for all flights that have Origin airport in Indiana.
+
+.Click to see solution
+[%collapsible]
+====
+[source,R]
+----
+library(data.table)
+airportsDF <- fread("/anvil/projects/tdm/data/flights/subset/airports.csv")
+flightdataDF <- fread("/anvil/projects/tdm/data/flights/subset/1990.csv")
+
+mybigDF <- merge(airportsDF, flightdataDF, by.x = "iata", by.y = "Origin")
+flights <- mybigDF[state == "IN"]
+mean(flights$DepDelay, na.rm = TRUE)
+----
+
+----
+ 5.37069064914101 
+----
+====
+
+==== Using airports.csv and 1990.csv files, merge the data according to the iata and Origin values. Then print the average departure delay for all flights that have Origin airport in Houston, Texas.
+
+.Click to see solution
+[%collapsible]
+====
+[source,R]
+----
+library(data.table)
+airportsDF <- fread("/anvil/projects/tdm/data/flights/subset/airports.csv")
+flightdataDF <- fread("/anvil/projects/tdm/data/flights/subset/1990.csv")
+
+mybigDF <- merge(airportsDF, flightdataDF, by.x = "iata", by.y = "Origin")
+
+houston_flights <- mybigDF[state == "TX" & city == "Houston"]
+mean(houston_flights$DepDelay, na.rm = TRUE)
+
+# Other approach:
+table(houston_flights$iata)
+#  EFD   HOU   IAH 
+#  730 58534 91175 
+houston_flights2 <- mybigDF[iata=="EFD" | iata == "HOU" | iata == "IAH"]
+mean(houston_flights2$DepDelay, na.rm = TRUE)    
+# 7.22768727677225 
+----
+----
+7.22768727677225 
+----
+====
