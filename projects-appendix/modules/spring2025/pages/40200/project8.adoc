@@ -16,6 +16,8 @@ Please use the `seminar-r` kernel (not the `seminar` kernel), unless otherwise s
 
 .Learning Objectives
 ****
+- Develop a deeper understanding of the `Batting` and `People` tables within the `Lahman` dataset through data analysis.
+
 - Understand the impact of regularization for feature/variable selection on model performance and interpretability.
 
 - Apply regularization techniques, including Ridge and LASSO.
@@ -36,7 +38,7 @@ For instance, in linear models, having *p > n* means that the system of equation
 
 === Question 1 (2 points)
 
-In `Lahman` data, we used `Batting` table before, which includes batting statistics. More specifically, we focused on *Homeruns (HR)* and *Runs Batted In (RBI)* variables. Remember that the change in RBI can be explained with HR. There are still a lot of possibilities to think about and add more variables into your model. The same table has several other variables, and you can see them by typing the following code in R:
+We've previously utilized the `Batting` table from the `Lahman` dataset, which contains batting statistics. Specifically, we examined the relationship between *Homeruns (HR)* and *Runs Batted In (RBI)*, noting how HR influences RBI. However, the `Batting` table offers numerous other variables that can enhance our models. To explore these variables, execute the following R code first:
 
 [source, R]
 ----
@@ -45,7 +47,7 @@ library(Lahman)
 names(Batting)
 ----
 
-It is also a good idea to check for variable descriptions with `?Batting` in R. 
+To gain detailed information about the variables in the `Batting` table, use the `?Batting` command in R to access the documentation.
 
 `People` is another table including player names, date of births and demographics for baseball players. It provides more details about players and it shares unique 'playerID' which can be used to merge `Batting` and `People` data sets. `People` contains 26 variables, but many of them are expected to have a large number of missing (`NA`) values. For instance, since the data includes records up to 2023, the `death-` columns will have many empty entries, as most players in recent years are alive. Additionally, these variables are not meaningfully related to `RBI`, so they do not need to be considered in the modeling process.
 
@@ -88,37 +90,35 @@ ggplot(people, aes(x = age_at_debut)) +
 
 ====
 
-All those variables in 'Batting' and 'People' tables make us hungry and we want to eat them all in our model! Similar to the linear model we run before, assume that you want to explain the change in your target variable (Runs Batted In, RBI) but this time using more variables of interest. For this aim, lets first merge data sets with a unique ID which is `playerID` for this data.
+The extensive variables within the `Batting` and `People` tables offer numerous opportunities for model development. Building upon our previous linear modeling approach, we aim to explain the variation in our target variable, Runs Batted In (RBI), using a broader set of predictors. To achieve this, we will first merge the datasets using the unique identifier, playerID:
 
 [source, R]
 ----
-library(dplyr)
-
-# Merge all datasets
+# Merge two datasets
 full_data <- Batting %>%
   left_join(People, by = "playerID") %>%
   na.omit()
 ----
 
-In `People` data set, we see birth year of each player. This can be an important variable to be added in the model. But keeping in mind that this data includes records from 1871 through 2023, it maybe not be correct to add year variable into your setting. Instead of year, adding age variable can be a better solution to make sure that we count for the age differences in the model.
+The `People` dataset contains players' birth years, a potentially valuable predictor. However, given the dataset's wide historical range (1871-2023), directly including birth year might not be optimal. Instead, calculating players' ages and incorporating that variable would better account for age-related differences in performance.
 
 .Deliverables
 ====
-- 1.1. Check out column names, first six lines and examine summary statistics for Batting and People tables. 
-- 1.2. Merge two data sets by playerID
-- 1.3. Add age of players into your data and named the column as 'age'.
+- 1.1. Check out column names, display the first six lines and examine summary statistics for `Batting` and `People` datasets. 
+- 1.2. Merge `Batting` and `People` datasets by playerID as the join key.
+- 1.3. Calculate the age of each player (based on birthYear and yearID) and add it as a new column named 'age' to the merged dataset.
 ====
 
 [NOTE]
 ====
-For the ease of reading, all variables are added with their codes and explanations in Appendix at the end of this document. Tables includes all variables for 'Batting' and 'People' data respectively. 
+For the ease of reading, all variables are added with their codes and explanations in Appendix at the end of this document. Tables includes all variables for `Batting` and `People` datasets, respectively. 
 ====
 
 === Question 2 (2 points)
 
-Before starting to model, let’s see the following heat map with numeric variables planned to use in modeling:
+Prior to modeling, let's examine a heatmap of the numeric variables intended for use in our model.
 
-image::HeatMap.png[title="Correlations between numeric variables"]
+image::HeatMap.png[title="Correlations between numeric variables (R Code for reproduction can be found at Appendix 2)"]
 
 Data visualization offers essential clues to understanding your data before initiating the modeling process. For instance: At Bats (AB), Hits (H), and Doubles (X2B) are highly correlated because they follow a natural hierarchy in baseball statistics. AB represents a player's batting opportunities, H is a subset of AB, counting successful hits, and X2B is a further subset, representing only doubles. Since more at-bats generally lead to more hits, and more hits increase the likelihood of doubles, these variables are inherently linked, resulting in strong correlations. In most cases, H (Hits) may be the best choice because it captures a player's ability to reach base successfully, encompassing both singles and extra-base hits while avoiding redundancy. 
 
@@ -126,7 +126,7 @@ image::HitsPhoto.png[width=600, height=450, title = "Pittsburgh Pirates’ Oneil
 
 The source of the picture is https://apnews.com/article/mlb-sports-new-york-pittsburgh-yankees-8b38b65da61ce122b0433886abf8643a[apnews] accessed at 03/08/2025. 
 
-The following linear model uses as much variables as possible to explain the changes in target, RBI variable. 
+The following linear model uses as much variables as possible to explain the changes in target, RBI variable (The `age` variable was generated in Question 1.3). 
 
 [source, R]
 ----
@@ -137,29 +137,31 @@ lm_model <- lm(RBI ~ yearID + lgID + H + X3B + HR + SB + CS + BB + SO + age + he
 summary(lm_model)
 ----
 
-Although a linear model provides P-values as evidence for variable selection, shrinkage or https://en.wikipedia.org/wiki/Regularization_(mathematics)[regularization] (e.g., Lasso, Ridge) methods are used for variable selection because P-values can sometimes be misleading, especially when the sample size is large, or when variables are highly correlated with one another. In such cases, a variable with a high P-value might still be relevant for the model, but its contribution isn't significant enough to pass the threshold. In some cases, especially when dealing with a large number of variables, instead of focusing on interpreting the output, you may want the model to perform both parameter estimation and variable selection simultaneously. Furthermore, many machine learning algorithms, due to their lack of interpretability, do not provide evidence (such as P-values) of which variables contribute to the model.
+Although a linear model provides P-values as evidence for variable selection, shrinkage or https://en.wikipedia.org/wiki/Regularization_(mathematics)[regularization] (e.g., LASSO, Ridge) methods are used for variable selection because P-values can sometimes be misleading, especially when the sample size is large, or when variables are highly correlated with one another. In such cases, a variable with a high P-value might still be relevant for the model, but its contribution isn't significant enough to pass the threshold. In some cases, especially when dealing with a large number of variables, instead of focusing on interpreting the output, you may want the model to perform both parameter estimation and variable selection simultaneously. Furthermore, many machine learning algorithms, due to their lack of interpretability, do not provide evidence (such as P-values) of which variables contribute to the model.
 
 Variable selection (feature engineering) in statistical models is crucial for improving both the model's performance and *interpretability*. By choosing only the most relevant variables, we can simplify the model, making it easier to understand and interpret, which is particularly important in fields where the relationships between variables are essential. Additionally, variable selection helps prevent *overfitting*, a common issue when too many irrelevant variables are included, which can lead to a model that fits the noise in the data rather than the underlying patterns. A more focused model with fewer predictors tends to generalize better to new data, leading to improved prediction accuracy. By selecting the right variables, we can also reduce computational costs, as fewer predictors mean less memory and processing power are required, which is especially important in large datasets.
 
-Also, if you have $p$ variables in the model, the number of possible models you could try is determined by the subsets of variables that can be included in the model. For each variable, you have two options: include it or exclude it from the model. Therefore, the total number of possible models is: $2^p$. This includes all combinations of variables, ranging from using none (the null model) to using all $p$ variables. However, this number can be very large if $p$ is high, leading to an impractical number of models to test. This is why techniques like https://en.wikipedia.org/wiki/Regularization_(mathematics)[regularization] (e.g., Lasso, Ridge) are often used to reduce the number of models considered and make the selection process more manageable.
+While shrinkage methods continue to evolve and new ones (such as https://en.wikipedia.org/wiki/Elastic_net_regularization[Elastic net]) are introduced, understanding *Ridge* and *LASSO* provides a strong foundation for grasping more advanced techniques. Now, let's recall the linear model we discussed earlier and review its mathematical representation with a single predictor.
 
-While these models continue to evolve and new ones (such as https://en.wikipedia.org/wiki/Elastic_net_regularization[Elastic net]) are introduced, understanding *Ridge* and *LASSO* provides a strong foundation for grasping more advanced techniques. Now, let's recall the linear model we discussed earlier and review its mathematical representation with a single predictor.
-
-$RBI_{ij} = \beta_0 + \beta_1 HR_{ij} + \epsilon_{ij}$
+$RBI_{i} = \beta_0 + \beta_1 HR_{i} + \epsilon_{i}$,
 
 where:  
 
 - $\beta_0 =$ Common starting point for all players (overall intercept)
 - $\beta_1 =$ Average effect of HR across all players (overall slope)
-- $\epsilon_{ij} =$ Error term (noise comes from modeling)
+- $\epsilon_{i} =$ Error term (noise comes from modeling)
 
 We can replace the variable names in the model with their symbolic representations:
 
-$y_{ij} = \beta_0 + \beta_1 x_{ij} \epsilon_{ij}$
+$y_{i} = \beta_0 + \beta_1 x_{i} + \epsilon_{i}$.
 
-Since we are looking for the best estimates for the unknown $\beta$ parameters in this model, we want to minimize $\epsilon_{ij}$ as much as possible. The method that provides the best estimates for these parameters is the least squares approach, which finds $\beta$ values that minimize the residual sum of squares (RSS):
+Generalize it for $p$ variables:
 
-$RSS = \sum_{i = 1}^{n}(y_i - \beta_0 - \sum_{j = 1}^{p}\beta_1 x_{ij})^2$
+$y_{ij} = \beta_0 + \sum_{j = 1}^{p}\beta_j x_{ij} + \epsilon_{ij}$.
+
+Since we are looking for the best estimates for the unknown $\beta$ parameters in this model, we want to minimize $\epsilon_{ij}$ as much as possible. The method that provides the best estimates for these parameters is the least squares approach, which finds $\beta$ values that minimize the residual sum of squares (RSS) (for n variables):
+
+$RSS = \sum_{i = 1}^{n}(y_i - \beta_0 - \sum_{j = 1}^{p}\beta_j x_{ij})^2$.
 
 Even without prior knowledge of this method, if we were to discuss how to best predict $y_i$ based on the defined model, we would naturally aim to make both sides of the equation as close as possible. The variables in the model are known, and the parameters are estimated from the model, but $\epsilon$ represents an uncontrollable term arising from inherent uncertainty. Since we cannot eliminate this term, we aim to minimize it. Instead of minimizing $\epsilon$ directly, we minimize its squared value to prevent positive and negative errors from canceling each other out.
 
@@ -178,7 +180,7 @@ coef(lmmodel)
 
 Calculate the *RSS* from the results of this model. However, when performing the calculations, avoid using built-in residual functions in R. Instead, calculate it manually by substituting the values into the following formula:
 
-$RSS = \sum_{i = 1}^{n}(y_i - \beta_0 - \sum_{j = 1}^{p}\beta_1 x_{ij})^2$
+$RSS = \sum_{i = 1}^{n}(y_i - \beta_0 - \sum_{j = 1}^{p}\beta_j x_{ij})^2$
 ====
 
 === Question 3 (2 points)
@@ -189,7 +191,7 @@ Imagine you're packing a suitcase for a trip. You want to bring everything you m
 
 *Ridge regression* adds a penalty term to the least squares objective function. This penalty term (L-2 penalty) is proportional to the squared magnitude of the coefficients, shrinking them towards zero:
 
-$\sum_{i = 1}^{n}(y_i - \beta_0 - \sum_{j = 1}^{p}\beta_1 x_{ij})^2 + \lambda \sum_{j = 1}^{p} \beta_j^2$
+$\sum_{i = 1}^{n}(y_i - \beta_0 - \sum_{j = 1}^{p}\beta_j x_{ij})^2 + \lambda \sum_{j = 1}^{p} \beta_j^2$
 
 where $\lambda$ is a hyperparameter or it is called as *tuning parameter*. Before moving on to the next paragraph, I recommend taking a minute to pause and consider what a hyperparameter is, how it differs from a parameter, and how it can be found in a general model setting.
 
@@ -246,7 +248,7 @@ image::RidgeLambda.png[]
 
 While Ridge Regression effectively shrinks coefficients towards zero, it rarely eliminates them entirely. This means that even with Ridge, you might end up with a model containing many features, some of which may be redundant. To address this, we can use LASSO (Least Absolute Shrinkage and Selection Operator). LASSO, like Ridge, uses a penalty term to regularize the model, but it employs the L1 norm (absolute value) instead of the L2 norm (square). This crucial difference allows LASSO to perform feature selection by driving some coefficients to exactly zero, effectively removing those features from the model. This time, the penalized RSS looks as follows:
 
-$\sum_{i = 1}^{n}(y_i - \beta_0 - \sum_{j = 1}^{p}\beta_1 x_{ij})^2 + \lambda \sum_{j = 1}^{p} |\beta_j|$
+$\sum_{i = 1}^{n}(y_i - \beta_0 - \sum_{j = 1}^{p}\beta_j x_{ij})^2 + \lambda \sum_{j = 1}^{p} |\beta_j|$
 
 image::LASSO.png[]
 
@@ -309,7 +311,7 @@ Fit Ridge and LASSO models using the best lambda for each and compare the result
 - 6.2. Examine and contrast the selected coefficients from both models to assess the impact of each shrinkage method on feature selection.
 ====
 
-=== Appendix
+=== Appendix 1
 
 ==== Batting Data Variables
 [cols="1,1",options="header"]
@@ -370,6 +372,29 @@ Fit Ridge and LASSO models using the best lambda for each and compare the result
 | birthDate | Player's birthdate, in as.Date format
 | deathDate | Player's deathdate, in as.Date format
 |===
+
+
+=== Appendix 2
+R Code for Correlation Hep Map
+
+[source, R]
+----
+library(ggcorrplot)
+
+# Merge Batting and People tables - numeric variables
+corrdata <- Batting %>%
+  left_join(People, by = "playerID") %>%
+  mutate(age = yearID - birthYear) %>%
+  select(RBI, yearID, AB, H, X2B, X3B, HR, SB, CS, BB, SO, age, height, weight) %>%
+  na.omit()  # Remove rows with NA values
+
+# Compute correlation matrix
+cor_matrix <- cor(corrdata, use = "pairwise.complete.obs")
+
+# Plot correlation heatmap
+ggcorrplot(cor_matrix, lab = TRUE, type = "lower", colors = c("blue", "white", "red"))
+----
+
 
 == Submitting your Work
 
