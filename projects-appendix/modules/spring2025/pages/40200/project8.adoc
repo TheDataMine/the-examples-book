@@ -243,27 +243,62 @@ image::RidgeLambda.png[]
 
 === Question 4 (2 points)
 
-While Ridge Regression effectively shrinks coefficients towards zero, it rarely eliminates them entirely. This means that even with Ridge, you might end up with a model containing many features, some of which may be redundant. To address this, we can use LASSO (Least Absolute Shrinkage and Selection Operator). Lasso, like Ridge, uses a penalty term to regularize the model, but it employs the L1 norm instead of the L2 norm. This crucial difference allows Lasso to perform feature selection by driving some coefficients to exactly zero, effectively removing those features from the model.
+While Ridge Regression effectively shrinks coefficients towards zero, it rarely eliminates them entirely. This means that even with Ridge, you might end up with a model containing many features, some of which may be redundant. To address this, we can use LASSO (Least Absolute Shrinkage and Selection Operator). LASSO, like Ridge, uses a penalty term to regularize the model, but it employs the L1 norm (absolute value) instead of the L2 norm (square). This crucial difference allows LASSO to perform feature selection by driving some coefficients to exactly zero, effectively removing those features from the model. This time, the penalized RSS looks as follows:
 
 $\sum_{i = 1}^{n}(y_i - \beta_0 - \sum_{j = 1}^{p}\beta_1 x_{ij})^2 + \lambda \sum_{j = 1}^{p} |\beta_j|$
 
-Also, you can define a grid for $\lambda$ and run your model for the grid you choose
+image::LASSO.png[]
 
+Similar to ridge, we have a tuninig parameter, $\lambda$ and chaging its value changes the magnitude of parameter coeffficients. R code is also exactly the same as the ridge regression, the only difference is that using `alpha = 1` instead of 0 in the `glmnet` function.
 
+The following plot shows how coefficient values are changing with the change in Log Lambda in LASSO regression.
 
-ACABA, plot(ridge_model, xvar...) ile elde ettigim ridge ploti ile LASSO plotu farkli mi? Karsilastir.
+image::LASSOPlot.png[]
+
 
 .Deliverables
 ====
+- 4.1. Run the same linear model with the same variables in question 2.1. with LASSO.
+- 4.2. How many different values of $\lambda$ is tried in the ridge regression you run in 4.1.
 - 
 ====
 
 === Question 5 (2 points)
+Up to this point, we've run the models, but we haven't actually found the optimized model or our final model parameters. Why is that?
 
+image::Think.png[]
+
+In fact, we haven't performed any feature selection yet; we've only run models with both regularization methods for various $\lambda$ values and reported the results. To obtain a final model, we must use cross-validation to rerun the models for each $\lambda$ value and evaluate their performance on unseen test data. We then select the $\lambda$ that yields the best performance. Only after this step can we determine which explanatory variables are most effective in explaining the variation in the dependent variable.
+
+With the coding and cross-validation knowledge we've gained so far, we have the tools to implement cross-validation for regularization in our models. However, R provides the `cv.glmnet` function, which streamlines this process with a concise set of code. If you feel confident in your understanding of shrinkage/regularization and cross-validation, you can use this function to perform feature selection. But if you think you need more practice with these concepts, I recommend implementing cross-validation manually before using `cv.glmnet`.
+
+Let's proceed with feature selection for LASSO:
+
+[source, R]
+----
+# Perform LASSO regression using cross-validation
+set.seed(42) # optional, just for reproducibility
+lasso_cv <- cv.glmnet(X, y, alpha = 1)  # alpha = 1 for LASSO
+
+# Extract the best lambda value
+best_lambda <- lasso_cv$lambda.min
+print(paste("Best Lambda:", best_lambda))
+----
 
 .Deliverables
 ====
-- 
+- 5.1. Fit the final LASSO model using the best lambda gathered from lasso_cv.
+- 5.2. Extract and print the selected coefficients
+====
+
+=== Question 6 (2 points)
+
+Fit Ridge and LASSO models using the best lambda for each, and compare the resulting coefficients. Do these two shrinkage methods yield similar outcomes?
+
+.Deliverables
+====
+- 6.1. Fit Ridge and LASSO regressions using their respective optimal lambda values.
+- 6.2. Examine and contrast the selected coefficients from both models to assess the impact of each shrinkage method on feature selection.
 ====
 
 === Appendix
