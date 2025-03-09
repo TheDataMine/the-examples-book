@@ -43,10 +43,7 @@ library(Lahman)
 names(Batting)
 ----
 
-[NOTE]
-====
 It is also a good idea to check for variable descriptions with `?Batting` in R. 
-====
 
 `People` is another table including player names, date of births and demographichs for baseball players. It provides more details about players and it shares unique 'playerID' which can be used to merge `Batting` and `People` data sets. `People` contains 26 variables, but many of them are expected to have a large number of missing (`NA`) values. For instance, since the data includes records up to 2023, the `death-` columns will have many empty entries, as most players in recent years are alive. Additionally, these variables are not meaningfully related to `RBI`, so they do not need to be considered in the modeling process.
 
@@ -71,6 +68,25 @@ image::Debut.png[width=600, height=450, title="Debut Ages of Players"]
 | Ireland | 50
 |===
 
+[NOTE]
+====
+R code for Debut Age:
+[source, R]
+----
+library(dplyr)
+library(ggplot2)
+
+people <- People %>%
+  mutate(age_at_debut = as.numeric(substr(debut, 1, 4)) - birthYear)
+
+# Plot distribution of debut ages
+ggplot(people, aes(x = age_at_debut)) +
+  geom_histogram(binwidth = 1, fill = "blue", alpha = 0.7) +
+  labs(title = "Distribution of Player Debut Ages", x = "Age", y = "Count")
+----
+
+====
+
 All those variables in 'Batting' and 'People' tables make us hungry and we want to eat them all in our model! Similar to the linear model we run before, assume that you want to explain the change in your target variable (Runs Batted In, RBI) but this time using more variables of interest. For this aim, lets first merge data sets with a unique ID which is `playerID` for this data.
 
 [source, R]
@@ -94,29 +110,83 @@ In `People` data set, we see birth year of each player. This can be an important
 
 [NOTE]
 ====
-For the ease of reading, all variable are added with their codes and explanations in Appendix at the end of this document. 
+For the ease of reading, all variable are added with their codes and explanations in Appendix at the end of this document. Tables includes all variables for 'Batting' and 'People' data respectively. 
 ====
 
 === Question 2 (2 points)
 
-Tables includes all variables for 'Batting' and 'People' data respectively. First, lets try to add as much as variable to the model:
+Before starting to modeling, lets see the following heat map with numeric variables planned to use in modeling:
 
-Although a linear model provides P-values as evidence for variable selection, shrinkage methods are used for variable selection because P-values alone do not always provide the best approach for model improvement, especially when dealing with high-dimensional data or multicollinearity. P-values can sometimes be misleading, especially when the sample size is large, or when variables are highly correlated with one another. In such cases, a variable with a high P-value might still be relevant for the model, but its contribution isn't significant enough to pass the threshold. Furthermore, many machine learning algorithms, due to their lack of interpretability, do not provide evidence of which variables contribute to the model.
+image::HeatMap.png[title="Correlations between numeric variables"]
 
-Variable selection (feature engineering) in statistical models is crucial for improving both the model's performance and *interpretability*. By choosing only the most relevant variables, we can simplify the model, making it easier to understand and interpret, which is particularly important in fields where the relationships between variables are essential. Additionally, variable selection helps prevent *overfitting*, a common issue when too many irrelevant variables are included, which can lead to a model that fits the noise in the data rather than the underlying patterns. A more focused model with fewer predictors tends to generalize better to new data, leading to improved prediction accuracy. Furthermore, it addresses issues like multicollinearity, where highly correlated predictors can destabilize the model's estimates. By selecting the right variables, we can also reduce computational costs, as fewer predictors mean less memory and processing power are required, which is especially important in large datasets. Ultimately, variable selection enables us to identify the key drivers of the outcome, providing deeper insights into the data and leading to more robust and reliable models.
+AB, H, and X2B are highly correlated because they follow a natural hierarchy in baseball statistics. AB represents a player's batting opportunities, H is a subset of AB, counting successful hits, and X2B is a further subset, representing only doubles. Since more at-bats generally lead to more hits, and more hits increase the likelihood of doubles, these variables are inherently linked, resulting in strong correlations. In most cases, H (Hits) may be the best choice because it captures a player's ability to reach base successfully, encompassing both singles and extra-base hits while avoiding redundancy. 
 
-Also, If you have $p$ variables in the model, the number of possible models you could try is determined by the subsets of variables that can be included in the model. For each variable, you have two options: include it or exclude it from the model. Therefore, the total number of possible models is: $2^p$. This includes all combinations of variables, ranging from using none (the null model) to using all $p$ variables. 
+image::HitsPhoto.png[title = "Pittsburgh Pirates’ Oneil Cruz hits a two-run home run against the Milwaukee Brewers during the seventh inning of a baseball game Wednesday, Aug. 3, 2022, in Pittsburgh. (AP Photo/Keith Srakocic)"]
 
-However, this number can be very large if $p$ is high, leading to an impractical amount of models to test. This is why techniques like https://en.wikipedia.org/wiki/Regularization_(mathematics)[regularization] (e.g., Lasso, Ridge) are often used to reduce the number of models considered and make the selection process more manageable.
+The source of the picture is https://apnews.com/article/mlb-sports-new-york-pittsburgh-yankees-8b38b65da61ce122b0433886abf8643a[apnews] accessed at 03/08/2025. 
+
+The following linear model uses as much variables as possible to explain the changes in target, RBI variable. 
+
+[source, R]
+----
+# Fit a linear model
+lm_model <- lm(RBI ~ yearID + lgID + H + X3B + HR + SB + CS + BB + SO + age + height + weight + bats, data = full_data)
+
+# Display model summary
+summary(lm_model)
+----
+
+Although a linear model provides P-values as evidence for variable selection, shrinkage or https://en.wikipedia.org/wiki/Regularization_(mathematics)[regularization] (e.g., Lasso, Ridge) methods are used for variable selection because P-values can sometimes be misleading, especially when the sample size is large, or when variables are highly correlated with one another. In such cases, a variable with a high P-value might still be relevant for the model, but its contribution isn't significant enough to pass the threshold. In some cases, especially when dealing with a large number of variables, instead of focusing on interpreting the output, you may want the model to perform both parameter estimation and variable selection simultaneously. Furthermore, many machine learning algorithms, due to their lack of interpretability, do not provide evidence (such as P-values) of which variables contribute to the model.
+
+Variable selection (feature engineering) in statistical models is crucial for improving both the model's performance and *interpretability*. By choosing only the most relevant variables, we can simplify the model, making it easier to understand and interpret, which is particularly important in fields where the relationships between variables are essential. Additionally, variable selection helps prevent *overfitting*, a common issue when too many irrelevant variables are included, which can lead to a model that fits the noise in the data rather than the underlying patterns. A more focused model with fewer predictors tends to generalize better to new data, leading to improved prediction accuracy. By selecting the right variables, we can also reduce computational costs, as fewer predictors mean less memory and processing power are required, which is especially important in large datasets. Ultimately, variable selection enables us to identify the key drivers of the outcome, providing deeper insights into the data and leading to more robust and reliable models.
+
+Also, If you have $p$ variables in the model, the number of possible models you could try is determined by the subsets of variables that can be included in the model. For each variable, you have two options: include it or exclude it from the model. Therefore, the total number of possible models is: $2^p$. This includes all combinations of variables, ranging from using none (the null model) to using all $p$ variables. However, this number can be very large if $p$ is high, leading to an impractical amount of models to test. This is why techniques like https://en.wikipedia.org/wiki/Regularization_(mathematics)[regularization] (e.g., Lasso, Ridge) are often used to reduce the number of models considered and make the selection process more manageable.
+
+While these models continue to evolve and new ones (such as https://en.wikipedia.org/wiki/Elastic_net_regularization[Elastic net]) are introduced, understanding *Ridge* and *LASSO* provides a strong foundation for grasping more advanced techniques. Now, let's recall the linear model we discussed earlier and review its mathematical representation.
+
+$RBI_{ij} = \beta_0 + \beta_1 HR_{ij} + \epsilon_{ij}$
+
+where:  
+
+- $\beta_0 =$ Common starting point for all players (overall intercept)  s 
+- $\beta_1 =$ Average effect of HR across all players (overall slope)
+- $\epsilon_{ij} =$ Error term (noise comes from modeling)
+
+We can replace the variable names in the model with their symbolic representations:
+
+$y_{ij} = \beta_0 + \beta_1 x_{ij} \epsilon_{ij}$
+
+Since we are looking for the best estimates for the unknown $\beta$ parameters in this model, we want to minimize $\epsilon_{ij}$ as much as possible. The method that provides the best estimates for these parameters is the least squares approach, which finds $\beta$ values that minimize the residual sum of squares (RSS):
+
+$RSS = \sum_{i = 1}^{n}(y_i - \beta_0 - \sum_{j = 1}^{p}\beta_1 (x_{ij}))^2$
 
 
+
+
+Even without prior knowledge of this method, if we were to discuss how to best predict $y_i$ based on the defined model, we would naturally aim to make both sides of the equation as close as possible. The variables in the model are known, and the parameters are estimated from the model, but $\epsilon$ represents an uncontrollable term arising from inherent uncertainty. Since we cannot eliminate this term, we aim to minimize it. Instead of minimizing $\epsilon$ directly, we minimize its squared value to prevent positive and negative errors from canceling each other out.
 
 .Deliverables
 ====
-- Run a linear model with RBI as dependent (Target) variable and include all the variables you wanted to add as independent variable from both tables.
+- 2.1. Run a linear model with RBI as dependent (Target) variable and include all the variables you wanted to add as independent variable from both tables.
+- 2.2. What is model interpretability? 
+- 2.3. Consider a linear model where RBI is the target (dependent) variable, and HR and age are the independent variables. We can fit this model using the `lm` function and obtain the model parameters with the following command:
+
+[source, R]
+----
+lmmodel <- lm(RBI ~ HR + age, data = full_data)
+
+coef(lmmodel)
+----
+
+Calculate the *RSS* from the results of this model. However, when performing the calculations, avoid using built-in residual functions in R. Instead, calculate it manually by substituting the values into the following formula:
+
+$RSS = \sum_{i = 1}^{n}(y_i - \beta_0 - \sum_{j = 1}^{p}\beta_1 (x_{ij}))^2$
 ====
 
 === Question 3 (2 points)
+
+At this point, shrinkage methods add a penalty term to RSS.
+
 
 .Deliverables
 ====
