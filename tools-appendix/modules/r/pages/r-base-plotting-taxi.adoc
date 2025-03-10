@@ -38,3 +38,29 @@ plot( as.Date(names(betterdates)), betterdates )
 ----
 ====
      
+
+==== Show the map with the data from Thanksgiving morning on November 26, 2015, at the time of the parade.
+
+.Click to see solution
+[%collapsible]
+====
+[source,R]
+----
+myDF <- fread("/anvil/projects/tdm/data/taxi/yellow/yellow_tripdata_2015-11.csv", tz="")
+
+thanksgivingDF <- subset(myDF, grepl("2015-11-26", tpep_pickup_datetime))
+dim(thanksgivingDF)
+paradestart <- strptime("2015-11-26 09:00:00", format="%Y-%m-%d  %H:%M:%S", tz="EST")
+paradeend <- strptime("2015-11-26 12:00:00", format="%Y-%m-%d  %H:%M:%S", tz="EST")
+
+times <- strptime(thanksgivingDF$tpep_pickup_datetime, format="%Y-%m-%d  %H:%M:%S", tz="")
+
+finalDF <- subset(thanksgivingDF, (times > paradestart) & (times < paradeend))
+dim(finalDF)
+testDF <- data.frame(finalDF$pickup_latitude, finalDF$pickup_longitude)
+names(testDF) <- c("lat","long")
+
+points <- st_as_sf(testDF, coords=c("long", "lat"), crs=4326)
+addCircleMarkers(addTiles(leaflet(testDF)), radius=.1)
+----
+====
