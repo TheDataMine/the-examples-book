@@ -19,6 +19,7 @@ In this project we will use the following mapping data:
 
 - `/anvil/projects/tdm/data/nps/nps_boundary.shp`
 - `/anvil/projects/tdm/data/boundaries/cb_2018_us_state_20m.shp`
+- `/anvil/projects/tdm/data/aiannh/tl_2023_us_aiannh.shp`
 
 == Questions
 
@@ -38,11 +39,11 @@ The maps for the National Park Service are available in this shapefile:
 
 If you try to plot all 437 shape files from this data set, you will find that the map is hard to see, because the parks are spread out.
 
-Let's agree to only view the parks from the 48 continental United States, plus the District of Columbia.
+Let's agree to only plot the parks from the 48 continental United States, plus the District of Columbia.
 
-To do this, we need to remove the parks from Alaska, Hawaii, American Samoa, Guam, Puerto Rico, Virgin Islands.
+To do this, we need to remove the parks from Alaska, Hawaii, American Samoa, Guam, Puerto Rico, and the Virgin Islands.
 
-There is also one park called `American Memorial Park` which is located in American Samoa but the `STATE` value is listed as `NaN`.  It is OK to drop this park too.
+There is also one park we should remove, called `American Memorial Park`, which is located in American Samoa but the `STATE` value is listed as `NaN`.  It is OK to drop this park too (the NPS is not finished setting its boundarys yet).
 
 There should be 396 parks remaining.  Plot the boundaries of these 396 parks.
 
@@ -54,7 +55,7 @@ There should be 396 parks remaining.  Plot the boundaries of these 396 parks.
 
 === Question 2 (2 pts)
 
-The plot from Question 1 might make more sense if we plot the parks from a specific state with a lot of parks.  California has the most parks.  For this question, make a plot that contains only the parks from California.
+California has the most parks.  For this question, make a plot that contains only the parks from California.
 
 (If you look at the maps in Questions 1 and 2 separately, does the map from Question 1 make more sense now?  Can you see where California is located in the map from Question 1, on the west side of the map?)
 
@@ -66,7 +67,7 @@ The plot from Question 1 might make more sense if we plot the parks from a speci
 
 === Question 3 (2 pts)
 
-Now we merge the data from two data sets.
+Now we merge the data from two data sets:
 
 The first data set is the data from Question 1, still excluding the data from Alaska, Hawaii, American Samoa, Guam, Puerto Rico, Virgin Islands, and also excluding the data from the `American Memorial Park`.
 
@@ -78,7 +79,7 @@ Rename the column `STUSPS` from the second data set, and (instead) call this col
 
 Now combine the data from these two data sets, keeping only the columns `STATE` and `geometry`.  You can use `pd.concat` with the option `ignore_index=True`.  Your resulting data frame should have 445 rows and 2 columns (396 rows from the first data set, and 49 rows from the second data set).
 
-If your combined data set is called (for instance) by the name `myresults` then you can plot the boundarys (only) using:
+If your combined data set is called (for instance) by the name `myresults` then you can plot only the boundaries using:
 
 myresults.boundary.plot()
 
@@ -90,14 +91,14 @@ myresults.boundary.plot(linewidth=0.2)
 
 .Deliverables
 ====
-- Display the boundaries of the 48 continential states (plus the District of Columbia), and also will be able to see the boundaries of the national parks.
+- Display the boundaries of the 48 continential states (plus the District of Columbia), and also (on the same plot) the boundaries of the national parks.
 - Be sure to document your work from Question 3, using some comments and insights about your work.
 ====
 
 
 === Question 4 (2 pts)
 
-Now revisit Question 3, but this time only show the boundaries of the parks from California, and also the boundary of the state of California.  You will see that California has one park whose boundaries poke into Nevada, and also some parks on islands.
+Now revisit Question 3, but this time only show the boundaries of the parks from California, and also (on the same plot) the boundary of the state of California.  You will see that California has one park with boundaries that poke into Nevada, and also some parks on islands.
 
 .Deliverables
 ====
@@ -107,19 +108,53 @@ Now revisit Question 3, but this time only show the boundaries of the parks from
 
 === Question 5 (2 pts)
 
-Go back to any of the 4 data sets from Questions 1, 3, 4, and make a plot of your own choosing, but instead of highlighting the maps according to the cities, this time (please) highlight something about the zip codes in the maps.
+Finally, we look at the boundary files for American Indian/Alaska Native/Native Hawaiian Areas (AIANNH), described here:
 
-In the data from Question 1, the zip codes are stored in `Post_Code` and `ESRI_ZIP` and `DLGF_PRO_1` and `GEOZIP`.
+https://catalog.data.gov/dataset/tiger-line-shapefile-current-nation-u-s-american-indian-alaska-native-native-hawaiian-areas-aia
 
-(The data from Question 2 does not have zip codes.)
+The data does not provide a column by which we can separate Alaska and Hawaii from the continental 48 states (plus DC).  BUT there is a natural dividing line at 125 degrees West longitude.
 
-In the data from Question 3, the zip codes are stored in `PROP_ZIP` AND `DLGF_PRO_1` and `ESRI_ZIP`.
+We can get the maximum and minimum values from a polygon as described here:
 
-In the data from Question 4, the zip codes are stored in `PostCode_L` AND `PostCode_R` and `TIGER_ZIPL` and `TIGER_ZIPR` and `ESRI_ZIP` and `GEOZIPLEFT` and `GEOZIPRIGH`.
+https://gis.stackexchange.com/questions/257807/get-min-max-lat-and-long-values-from-geodataframe
+
+To try it, first read in the data like this:
+
+aiannhdata = gpd.read_file('/anvil/projects/tdm/data/aiannh/tl_2023_us_aiannh.shp')
+
+and plot it:
+
+`aiannhdata.plot()`
+
+In the `geomtetry` column, we can use `bounds`:
+
+`aiannhdata['geometry'].bounds`
+
+and, in particular, we can get the minimum longitudinal value as follows:
+
+`aiannhdata['geometry'].bounds.minx`
+
+Now we can extract only the data for the continential 48 states (plus DC) as follows:
+
+`aiannhcontinentaldata = aiannhdata[aiannhdata['geometry'].bounds.minx > -125]`
+
+Let's color the interior of these regions blue:
+
+`aiannhcontinentaldata = aiannhcontinentaldata.assign(mycolors='blue')`
+
+Now use the states data from Project 7 (only for the 48 continental states plus DC) and set `mycolors` for this state data to be `green`.
+
+Finally, build a new data frame with the data from Project 7 (with green colors) and the `aiannhcontinentaldata` data (with blue colors) as follows:
+
+`myresults = pd.concat([myproject7statesdata[['geometry','mycolors']], aiannhcontinentaldata[['geometry','mycolors']]], ignore_index=True)`
+
+and finally plot a map that has the states colored in green, with the AIANNH regions colored in blue, as follows:
+
+`myresults.plot(color = myresults['mycolors'])`
 
 .Deliverables
 ====
-- Make a map of your own choosing, highlighting something about the zip codes from 1 of the maps listed above, and using 1 of the zip code columns.
+- Plot a map that has the states colored in green, and has the AIANNH regions colored in blue.
 - Be sure to document your work from Question 5, using some comments and insights about your work.
 ====
 
@@ -136,7 +171,7 @@ Once you upload your submission to Gradescope, make sure that everything appears
 
 .Items to submit
 ====
-- firstname_lastname_project8.ipynb
+- firstname_lastname_project9.ipynb
 ====
 
 [WARNING]
