@@ -19,6 +19,7 @@ In this project we will use the following mapping data:
 
 - `/anvil/projects/tdm/data/nps/nps_boundary.shp`
 - `/anvil/projects/tdm/data/boundaries/cb_2018_us_state_20m.shp`
+- `/anvil/projects/tdm/data/aiannh/tl_2023_us_aiannh.shp`
 
 == Questions
 
@@ -107,19 +108,59 @@ Now revisit Question 3, but this time only show the boundaries of the parks from
 
 === Question 5 (2 pts)
 
-Go back to any of the 4 data sets from Questions 1, 3, 4, and make a plot of your own choosing, but instead of highlighting the maps according to the cities, this time (please) highlight something about the zip codes in the maps.
+Finally, we look at the boundary files for American Indian/Alaska Native/Native Hawaiian Areas (AIANNH), described here:
 
-In the data from Question 1, the zip codes are stored in `Post_Code` and `ESRI_ZIP` and `DLGF_PRO_1` and `GEOZIP`.
+https://catalog.data.gov/dataset/tiger-line-shapefile-current-nation-u-s-american-indian-alaska-native-native-hawaiian-areas-aia
 
-(The data from Question 2 does not have zip codes.)
+The data does not provide a column by which we can separate Alaska and Hawaii from the continental 48 states (plus DC).  BUT there is a natural dividing line at 125 degrees West longitude.
 
-In the data from Question 3, the zip codes are stored in `PROP_ZIP` AND `DLGF_PRO_1` and `ESRI_ZIP`.
+First load this:  `from shapely.geometry import Polygon`
 
-In the data from Question 4, the zip codes are stored in `PostCode_L` AND `PostCode_R` and `TIGER_ZIPL` and `TIGER_ZIPR` and `ESRI_ZIP` and `GEOZIPLEFT` and `GEOZIPRIGH`.
+and then we can get the maximum and minimum values from a polygon as described here:
+
+https://gis.stackexchange.com/questions/257807/get-min-max-lat-and-long-values-from-geodataframe
+
+To try it, first read in the data like this:
+
+aiannhdata = gpd.read_file('/anvil/projects/tdm/data/aiannh/tl_2023_us_aiannh.shp')
+
+and plot it:
+
+`aiannhdata.plot()`
+
+and check the head of the data:
+
+`aiannhdata.head()`
+
+In the `geomtetry` column, we can use `bounds` like this:
+
+`aiannhdata['geometry'].bounds`
+
+and then we can get the minimum longitudinal value as follows:
+
+`aiannhdata['geometry'].bounds.minx`
+
+Now we can extract only the data for the continential 48 states (plus DC) as follows:
+
+`aiannhcontinentaldata = aiannhdata[aiannhdata['geometry'].bounds.minx > -125]`
+
+Let's color the interior of these regions blue:
+
+`aiannhcontinentaldata = aiannhcontinentaldata.assign(mycolors='blue')`
+
+Now use the states data from Project 7 (only for the 48 continental states plus DC) and set `mycolors` for this state data to be `green`.
+
+Finally, build a new data frame with the data from Project 7 (with green colors) and the `aiannhcontinentaldata` data (with blue colors) as follows:
+
+`myresults = pd.concat([myproject7statesdata[['geometry','mycolors']], aiannhcontinentaldata[['geometry','mycolors']]], ignore_index=True)`
+
+and finally plot a map that has the states colored in green, with the AIANNH regions colored in blue, as follows:
+
+`myresults.plot(color = myresults['mycolors'])`
 
 .Deliverables
 ====
-- Make a map of your own choosing, highlighting something about the zip codes from 1 of the maps listed above, and using 1 of the zip code columns.
+- Plot a map that has the states colored in green, and has the AIANNH regions colored in blue.
 - Be sure to document your work from Question 5, using some comments and insights about your work.
 ====
 
@@ -136,7 +177,7 @@ Once you upload your submission to Gradescope, make sure that everything appears
 
 .Items to submit
 ====
-- firstname_lastname_project8.ipynb
+- firstname_lastname_project9.ipynb
 ====
 
 [WARNING]
