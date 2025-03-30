@@ -1,0 +1,270 @@
+= TDM 40200: Project 10 - Large Language Models (LLMs): N-gram model
+
+== Project Objectives
+
+In this project we will understanding the concept of n-grams, their uses, and creating a simple n-gram model. We will also explore the use of n-grams in natural language processing (NLP) tasks such as text generation and language modeling.
+
+.Learning Objectives
+****
+- Understand the concept of n-grams and their applications in NLP.
+- Implement a simple n-gram model for text generation.
+- Explore the use of n-grams in language modeling and text generation tasks.
+- Evaluate the performance of the n-gram model using perplexity and other metrics.
+****
+
+== Dataset
+- '/anvil/projects/tdm/data/amazon/music.txt'
+
+== Questions
+
+=== Question 1 (2 points)
+
+Last project, you looked into basic text processing and some basic text statistics like word count, letter frequency, etc. In this project, we will look into n-grams, which are a more complex way of statistically analyzing text. N-grams are sequences of n items (words, letters, etc.) from a given text. For example, in the word "hello!", we could analyze the 2-grams (bigrams) of "he", "el", "ll", "lo", and "o!". We could similarly analyze 3-grams, 4-grams, etc. Alternatively, we could analyze the sentence "Large Language Models are great!" and analyze n-grams on a per-word basis. In this case, we have the following 2-grams: "Large Language", "Language Models", "Models are", "are great!".
+
+To start, let's create a generic n-gram class to store any data and functions we need. The code below serves as a good starting point. Throughout this project, we will fill in each function.
+
+[source,python]
+----
+class NGram:
+    def __init__(self, n, is_character_based=False):
+        self.n = n
+        self.data = None
+        self.is_character_based = is_character_based
+        self.ngrams = set()
+        self.ngram_frequencies = {}
+        self.ngram_probabilities = {}
+
+    def set_data(self, data):
+        pass
+
+    def generate_ngrams(self):
+        pass
+
+    def generate_ngram_probabilities(self):
+        pass
+
+    def get_next_word(self, previous_words, method='random'):
+        pass
+----
+
+Firstly, let's figure out how to add some data to our NGram class. The `set_data` function should take in a list of elements that we can generate n-grams from. These elements could either be strings if we want an n-gram on a per character basis, or they could be list of strings for making an n-gram on a per word basis. At the very least, we should ensure that the data passed in is a list. If not, we should not do anything. For our data, we will continue to use the Amazon music dataset. Please copy your `read_lines` and `clean_text` functions from last project. Additionally, you will need to make a couple of modifications to your `clean_text` function. Firstly, please lowercase all letters. There are other techniques to ensure that the model understands that words with different capitalization are the same, but we will look into those in future projects. Then, add the following line of code to your `clean_text` function to ensure that only alphabetic characters are kept in the text. This will help us avoid any issues with punctuation and special characters.
+[source,python]
+----
+text = ''.join(c for c in text if c.isalpha() or c.isspace())
+----
+
+Now that we have our data helper functions, let's implement the `set_data` function. This function should take in a list of strings, along with a the stored flag that indicates whether we want to generate n-grams on a per character basis or a per word basis. If the flag is set to `True`, we should generate n-grams on a per character basis. If the flag is set to `False`, we should generate n-grams on a per word basis. In total, your function should take this list of strings, clean it using the `clean_text` function, ensure that it is in the correct format for per word or per character n-grams, and then store it in the `self.data` variable.
+
+[NOTE]
+====
+In the case of generating on a per word basis, simply split the string into a list of words using the `split()` function. That is to say, for per character n-grams, `self.data` should be a list of strings. For per word n-grams, `self.data` should be a list of tuples of strings. This is because functionally, a string can be treated as a list of characters in python. Doing it thi way will simplify your code in future steps. It is very important that you have a list of tuples of strings, not a list of lists of strings to ensure hashability.
+====
+
+To test that your `set_data` function is working, you can use the following code:
+
+[source,python]
+----
+my_ngram = NGram(2, is_character_based=True)
+my_ngram.set_data(["\"hello!\""])
+print(my_ngram.data) # should return ['hello']
+
+my_ngram = NGram(2, is_character_based=False)
+my_ngram.set_data(read_lines('/anvil/projects/tdm/data/amazon/music.txt', 2))
+print(my_ngram.data) # should return a list of lists of strings like below:
+'''
+[
+    ('i', 'love', 'this', 'cd', 'so', 'inspiring'),
+    ('love', 'it', 'great', 'seller')
+]
+'''
+----
+
+.Deliverables
+====
+- Modified clean_text function
+- Implemented set_data function
+- Passes tests for set_data function
+====
+
+=== Question 2 (2 points)
+
+After you have n-gram generation working, we can begin looking at the frequencies of each n-gram. The `generate_ngrams` function should use the stored `self.n` and `self.data` and create each n-gram, along with counting how many times that n-gram appears in the data. This should be stored in a dictionary, where the key is the n-gram and the value is the frequency of that n-gram. For example, if we are analyzing 'hello yellow' on a per character basis, we would have the following n-grams and frequencies:
+```
+{
+    'he': 1,
+    'el': 2,
+    'll': 2,
+    'lo': 2,
+    'o ': 1,
+    ' y': 1,
+    'ye': 1,
+    'ow': 1
+}
+```
+
+The resulting dictionary should be stored in the `self.ngram_frequencies` variable **AND** returned by the function. If `self.data` is empty or is not a list, the function should return an empty dictionary. Please implement this functionality and run the below test cases to ensure that it is working. You can use the following code to test your `generate_ngrams` function:
+[source,python]
+----
+
+my_ngram = NGram(2, is_character_based=True)
+my_ngram.set_data(read_lines('/anvil/projects/tdm/data/amazon/music.txt', 1, 14))
+print(my_ngram.generate_ngrams())
+
+# Should return the following dictionary:
+'''
+{'ha': 3, 'ad': 1, 'd ': 3, ' t': 3, 'th': 4, 'hi': 2, 'is': 2, 's ': 5, ' a': 4, 'as': 1, 'an': 1, 'n ': 2, 'al': 2, 'lb': 1, 'bu': 1, 'um': 1, 'm ': 1, ' b': 1, 'ba': 1, 'ac': 1, 'ck': 1, 'k ': 1, ' i': 1, 'in': 1, 'he': 1, 'e ': 4, ' d': 1, 'da': 1, 'ay': 2, 'y ': 2, '  ': 1, ' h': 2, 'av': 2, 've': 3, 'lw': 1, 'wa': 1, 'ys': 1, ' e': 2, 'en': 2, 'nj': 1, 'jo': 1, 'oy': 1, 'ye': 1, 'ed': 1, ' k': 1, 'ki': 1, 'ie': 1, 'et': 1, 'h ': 1, ' g': 1, 'gr': 1, 're': 1, 'ee': 1, 'ns': 1, ' m': 1, 'mu': 1, 'us': 1, 'si': 1, 'ic': 1, 'c ': 1, 'ev': 1, 'er': 1, 'ry': 1, ' o': 1, 'on': 1, 'ne': 1, ' s': 1, 'sh': 1, 'ho': 1, 'ou': 1, 'ul': 1, 'ld': 1, ' c': 1, 'cd': 1}
+'''
+
+my_ngram = NGram(2, is_character_based=False)
+my_ngram.set_data(read_lines('/anvil/projects/tdm/data/amazon/music.txt', 1, 14))
+print(my_ngram.generate_ngrams())
+----
+
+.Deliverables
+====
+- Implemented generate_ngrams function
+- Passes tests for generate_ngrams function
+====
+
+=== Question 3 (2 points)
+
+Now that we how our n-grams and their frequencies, let's look at the probabilities of each n-gram. Our probability table will essentially be a nested dictionary, where the first key is n-1 part of the n-gram and it's value is another dictionary. In this second dictionary, each key is the last part of the n-gram and the value is the probability of that n-gram. For example, if we are analyzing 'hey help' on a per character basis with n=3, we would have the following n-grams and probabilities:
+```
+{
+    'he': {'y': 0.5, 'l': 0.5},
+    'ey': {' ': 1.0},
+    'y ': {'h': 1.0},
+    ' h': {'e': 1.0},
+    'el': {'p': 1.0},
+}
+```
+
+In the above example, half of the time after 'he' we see 'y' and half of the time we see 'l'. This is a very simple example, but it shows how we can use n-grams to predict the next word in a sequence. The `generate_ngram_probabilities` function should generate the n-gram frequencies by calling the `generate_ngrams` function and use the returned value to calculate the probabilities of each n-gram. This should be stored in the `self.ngram_probabilities` variable **AND** returned by the function. If `self.ngram_frequencies` is empty or is not a dictionary, the function should return an empty dictionary.
+
+
+The following code should be used to test your `generate_ngram_probabilities` function:
+[source,python]
+----
+my_ngram = NGram(3)
+my_ngram.set_data(read_lines('/anvil/projects/tdm/data/amazon/music.txt', 5, 3), is_character_based=False)
+my_ngram.generate_ngram_probabilities()
+print(my_ngram.ngram_probabilities)
+
+# Your output should be decently long. You should be able to find near the center the following:
+# ('one', 'good'): {'album': 1.0}, ('good', 'album'): {'and': 0.5, 'because': 0.5}, ('album', 'and'): {'all': 1.0}
+----
+
+[NOTE]
+====
+This example shows that from the 5 given reviews, after 'one good' we see 'album' 100% of the time, after 'album and' we see 'all' 100% of the time, and after 'good album' we see 'and' 50% of the time and 'because' 50% of the time. Althought these numbers are very clean and there are a lot of 100% probabilities in your dataset, that is simply because we do not have a lot of data yet. Recall from project 1 just how much data modern LLMs are trained on. The more data we have, If you want to see a more realistic example, you can try using the `read_lines` function to read in 500 lines of data. You should see a much more diverse set of probabilities, however it will be a much longer output.
+====
+
+.Deliverables
+====
+- Implemented generate_ngram_probabilities function
+- Passes tests for generate_ngram_probabilities function
+====
+
+=== Question 4 (2 points)
+
+Now that we have our n-gram probabilities, we can finally try and use our n-gram model to generate some text. The `get_next_word` function should take in a string of previous words/letters and 'predict' the next word/letter in the sequence. This function can either be used in 'random', 'common', or 'uncommon' mode. In random mode, the function should use the probabilities in conjunction with np.random.choice to randomly select the next word/letter. In common mode, the function will select the most common next word/letter. In uncommon mode, the function will select the least common next word/letter. The function should return the next word/letter as a string. If `self.ngram_probabilities` is empty or is not a dictionary, the function should return an empty string.
+
+[IMPORTANT]
+====
+Please assume that the input string will always be the same length as the n-gram size. For example, if we are using a 3-gram model, the input string should be 2 words long. If we are using a 4-gram model, the input string should be 3 words long. This is important because it will help us avoid any issues with the n-gram model not being able to find the correct n-gram in the dictionary. If the input string is not the same length as the n-gram size, the function should return an empty string. However, the input string will not be a list of strings for the n-gram word mode, so you will need to split the input string by whitespace.
+====
+
+Something that may be useful is an example of using np.random.choice with probabilities. Typically, you would provide just a list of items to choose from, and the random choice would assume a uniform probability distribution. However, if you want to provide a custom probability distribution, we can use the `p` parameter, which is a list of probabilities for each item in the list. For example, if we have a list of items `['a', 'b', 'c']` and we want to select one of them with the following probabilities: `{'a': 0.1, 'b': 0.3, 'c': 0.6}`, we can use the following code:
+[source,python]
+----
+import numpy as np
+
+np.random.choice(
+    ['a', 'b', 'c'],
+    p=[0.1, 0.3, 0.6]
+)
+----
+A keen eye may notice that this is simply our `dictionary.keys()` as the first parameter and the `dictionary.values()` as the second parameter. 
+
+
+Please implement the `get_next_word` function and run the following test cases to ensure that it is working. You can use the following code to test your `get_next_word` function:
+[source,python]
+----
+import numpy as np
+my_ngram = NGram(3, is_character_based=False)
+my_ngram.set_data(read_lines('/anvil/projects/tdm/data/amazon/music.txt', 300, 50))
+my_ngram.generate_ngram_probabilities()
+np.random.seed(18)
+print(my_ngram.get_next_word('is a', method='random')) # random word from the n-gram probabilities: truly
+print(my_ngram.get_next_word('is a', method='random')) # random word from the n-gram probabilities: very
+print(my_ngram.get_next_word('is a', method='random')) # random word from the n-gram probabilities: show
+
+print(my_ngram.get_next_word('is a', method='common')) # most common word from the n-gram probabilities: great
+print(my_ngram.get_next_word('is a', method='uncommon')) # least common word from the n-gram probabilities: masterpiece
+----
+
+.Deliverables
+====
+- Implemented get_next_word function
+- Passes tests for get_next_word function
+====
+
+=== Question 5 (2 points)
+
+One metric that is commonly used to evaluate the performance of n-gram models is the concept of perplexity. Perplexity is a measure of how well a probability distribution predicts a sample. In the context of n-gram models, perplexity is a measure of how well the model predicts the next word in a sequence. The lower the perplexity, the better the model is at predicting the next word.
+
+We can calculate the perplexity of our n-gram model using the following formula:
+```
+
+perplexity = 2^(sum(-1/N * ln(P(w_i|w_1, w_2, ..., w_n-1))))
+```
+
+where:
+- N is the number of words in the sequence
+- P(w_i|w_1, w_2, ..., w_n-1) is the probability of the i-th word given the previous n-1 words
+- ln is the natural logarithm
+
+Essentially, we find perplexity by giving the model some string of text. for each n-gram within the text, we calculate the probability of our model generating that n-gram based on the previous n-1 words. We then take the log of that probability, sum all of those values, divide it by the number of words in the text, multiply it by negative 1, and finally take the exponential of that value. This will give us a single number that represents how well our model is able to predict the next word in the sequence. These values can range from 1 to infinity, with lower values indicating a better model. A value of 1 would indicate that the model is perfect and is able to predict the next word with 100% accuracy. A value of infinity would indicate that the model is unable to predict the next word at all.
+
+For example, let's say we have a 3-gram model and input the following string:
+'apples and bananas taste good'
+We want to find the probability that our 3-gram model will predict `bananas` given the previous 2 words `apples and`, `taste` given the previous 2 words `and bananas`, and `good` given the previous 2 words `bananas taste`. Each of these probabilities is calculated using the probabilities we generated in step 3, then their natural log is taken, then they are multiplied by -1 and divided by the total number of words in our input string (5 words). Finally, we sum all of these values and take 2 to the power of that value. This will give us a single number that represents how well our model is able to predict the next word in the sequence.
+
+To summarize what these values actually mean, a theoretical perfect model would have a perplexity of 1, where it has no doubts about what the next word in a sequence is. A higher perplexity indicates that the model is less certain about what the next word in a sequence is. This is not necessarily a bad things, as it shows that the model is able to generate a wider variety of text. 
+
+Please implement the `get_perplexity` function and run the following test cases to ensure that it is working as expected. You can use the following code to test your `get_perplexity` function:
+
+[source,python]
+----
+import numpy as np
+my_ngram = NGram(3, is_character_based=False)
+my_ngram.set_data(read_lines('/anvil/projects/tdm/data/amazon/music.txt', 10000))
+my_ngram.generate_ngram_probabilities()
+print(my_ngram.get_perplexity('is a great cd')) # 3.5325225511299707
+print(my_ngram.get_perplexity('is a good cd')) # 5.9206199215324915
+print(my_ngram.get_perplexity('is a bad cd')) # 10.575321821055631
+
+print(my_ngram.get_perplexity('this music is a wonderful experience and i love it')) # 7.744547150097188
+----
+
+.Deliverables
+====
+- Implemented get_perplexity function
+- Passes tests for get_perplexity function
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project10.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
