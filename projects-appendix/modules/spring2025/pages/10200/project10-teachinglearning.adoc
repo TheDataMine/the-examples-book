@@ -45,17 +45,17 @@ Now we can replicate this work, using a function, as follows:
 
 [source, python]
 ----
-def myindyflights (myyear: str) -> int:
+def myindyflights (myyear: int) -> int:
     """
-    The myindyflights function takes a year (as a string) as the input, and returns the number of flights departing from Indianapolis airport during that year.
+    The myindyflights function takes a year as the input, and returns the number of flights departing from Indianapolis airport during that year.
 
     Args:
-    myyear (str): This is a year (as a string) as the input
+    myyear (str): This is a year as the input
 
     Returns:
     myvalue (int): This is the number of flights departing from Indianapolis airport during that year.
     """
-    myDF = pd.read_csv("/anvil/projects/tdm/data/flights/subset/" + myyear + ".csv")
+    myDF = pd.read_csv("/anvil/projects/tdm/data/flights/subset/" + str(myyear) + ".csv")
     myvalue = myDF['Origin'].value_counts()["IND"]
     return myvalue
 ----
@@ -73,8 +73,7 @@ Finally, we can use the `map` function to run this function on each year from 19
 [source, python]
 ----
 import pandas as pd
-mylistofyears = list(map(str,range(1987,2009)))
-myresults = list(map(myindyflights, mylistofyears))
+myresults = list(map(myindyflights, range(1987,2009)))
 ----
 
 which yields the number of flights starting from Indianapolis airport in each year from 1987 to 2008.
@@ -96,7 +95,7 @@ and the number of flights per year is:
 [source, python]
 ----
 import matplotlib.pyplot as plt
-plt.barh(mylistofyears, myresults)
+plt.barh(range(1987,2009), myresults)
 ----
 
 
@@ -115,32 +114,39 @@ The data sets cover October 1987 through April 2008.  So the data sets for 1987 
 
 We replicate the work from Question 1, but this time, we keep track of all of the flights originating at every airport in the data set.
 
-
 We make a function, very much like Question 1, but this time, we keep track of the full table of the counts of `Origin` airports, for all airports (not just for Indianapolis):
 
 [source, python]
 ----
-myflights <- function(myyear) {
-    myDF <- fread(paste0("/anvil/projects/tdm/data/flights/subset/", myyear, ".csv"))
-    myvalue <- table(myDF$Origin)
-    return(myvalue)
-}
+def myflights (myyear: int) -> int:
+    """
+    The myflights function takes a year as the input, and returns the number of flights departing from each airport during that year.
+
+    Args:
+    myyear (str): This is a year as the input
+
+    Returns:
+    myvalue (int): This is the number of flights departing from each airport during that year.
+    """
+    myDF = pd.read_csv("/anvil/projects/tdm/data/flights/subset/" + str(myyear) + ".csv")
+    myvalue = myDF['Origin'].value_counts()
+    return myvalue
 ----
 
 and we can test that this function works for the 1990 flights:
 
 [source, python]
 ----
-library(data.table)
+import pandas as pd
 myflights(1990)
 ----
 
-Finally, we can use the `sapply` function to run this function on each year from 1987 to 2008.
+Finally, we can use the `map` function to run this function on each year from 1987 to 2008.
 
 [source, python]
 ----
-library(data.table)
-myresults <- sapply(1987:2008, myflights)
+import pandas as pd
+myresults = list(map(myflights, range(1987,2009)))
 ----
 
 which yields the number of flights starting from each airport in each year, from 1987 to 2008.
@@ -149,15 +155,17 @@ Now we can add up the number of flights across all of the years, as follows:
 
 [source, python]
 ----
-v <- unlist(myresults)
-tapply(v, names(v), sum)
+pd.concat(myresults, axis=1).sum(axis=1)
 ----
 
 and the number of flights starting at each of the top 10 airports during the years 1987 to 2008 is:
 
 [source, python]
 ----
-dotchart(tail(sort(tapply(v, names(v), sum)), n=10))
+mycounts = pd.concat(myresults, axis=1).sum(axis=1).sort_values().tail(10)
+
+import matplotlib.pyplot as plt
+plt.barh(mycounts.index, mycounts)
 ----
 
 
@@ -170,59 +178,58 @@ dotchart(tail(sort(tapply(v, names(v), sum)), n=10))
 
 === Question 3 (2 pts)
 
-++++
-<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_x0xp0qzm&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
-++++
-
-++++
-<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_l29dxguq&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
-++++
-
-++++
-<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_svh7fdl7&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
-++++
-
 Now we follow the methodology of Question 1, but this time we obtain the total amount of the donations from Indiana during federal election campaigns.
 
 We can extract the total amount of the donations from Indiana during an election year as follows:
 
 [source, python]
 ----
-myindydonations <- function(myyear) {
-    myDF <- fread(paste0("/anvil/projects/tdm/data/election/itcont", myyear, ".txt"), quote="", select = c(10,15))
-    names(myDF) <- c("state", "donation")
-    myvalue <- tapply(myDF$donation, myDF$state, sum)['IN']
-    names(myvalue) <- myyear
-    return(myvalue)
-}
+def myindydonations (myyear: int) -> int:
+    """
+    The myindydonations function takes a year as the input, and returns the amount of money donated from Indiana during that year.
+
+    Args:
+    myyear (str): This is a year as the input
+
+    Returns:
+    myvalue (int): This is the amount of money donated from Indiana during that year.
+    """
+    myDF = pd.read_csv("/anvil/projects/tdm/data/election/itcont" + str(myyear) + ".txt", header=None, sep='|', usecols=[9,14], encoding='Windows-1252')
+    myDF.columns = ["STATE", "TRANSACTION_AMT"]
+    myvalue = myDF.groupby('STATE')['TRANSACTION_AMT'].sum()["IN"]
+    return myvalue
 ----
 
 and we can test this function by discovering how much money was donated from Indiana during the 1990 election cycle:
 
 [source, python]
 ----
-library(data.table)
+import pandas as pd
 myindydonations(1990)
 ----
 
-Finally, we can use the `sapply` function to run this function on each election year (in other words, the even numbered years) from 1980 to 2018.
+Finally, we can use the `map` function to run this function on each election year (in other words, the even numbered years) from 1980 to 2018.
 
 [source, python]
 ----
-library(data.table)
-myresults <- sapply( seq(1980,2018,by=2), myindydonations )
+import pandas as pd
+myresults = list(map(myindydonations, range(1980,2019,2)))
 ----
 
 which yields the total amount of money donated from Indiana during each election cycle from 1980 to 2018.
+
+[NOTE]
+====
+Don't worry that a "DtypeWarning" appears!
+====
 
 The amount of money donated from Indiana per election cycle is:
 
 [source, python]
 ----
-plot(names(myresults), myresults)
+import matplotlib.pyplot as plt
+plt.barh(range(1980,2019,2), myresults)
 ----
-
-
 
 .Deliverables
 ====
@@ -231,38 +238,42 @@ plot(names(myresults), myresults)
 
 === Question 4 (2 pts)
 
-++++
-<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_i6z2ceud&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
-++++
-
 Now we find the top 10 states according to the total amount of the donations from each state during the elections from 1980 to 2018.
 
 We can extract the total amount of all the donations from all of the states during an election year as follows:
 
 [source, python]
 ----
-mydonations <- function(myyear) {
-    myDF <- fread(paste0("/anvil/projects/tdm/data/election/itcont", myyear, ".txt"), quote="", select = c(10,15))
-    names(myDF) <- c("state", "donation")
-    myvalue <- tapply(myDF$donation, myDF$state, sum)
-    return(myvalue)
-}
+def mydonations (myyear: int) -> int:
+    """
+    The mydonations function takes a year as the input, and returns the amount of money donated from each state during that year.
+
+    Args:
+    myyear (str): This is a year as the input
+
+    Returns:
+    myvalue (int): This is the amount of money donated from each state during that year.
+    """
+    myDF = pd.read_csv("/anvil/projects/tdm/data/election/itcont" + str(myyear) + ".txt", header=None, sep='|', usecols=[9,14], encoding='Windows-1252')
+    myDF.columns = ["STATE", "TRANSACTION_AMT"]
+    myvalue = myDF.groupby('STATE')['TRANSACTION_AMT'].sum()
+    return myvalue
 ----
 
 and we can test this function by discovering how much money was donated from each state during the 1990 election cycle:
 
 [source, python]
 ----
-library(data.table)
+import pandas as pd
 mydonations(1990)
 ----
 
-Finally, we can use the `sapply` function to run this function on each election year (in other words, the even numbered years) from 1980 to 2018.
+Finally, we can use the `map` function to run this function on each election year (in other words, the even numbered years) from 1980 to 2018.
 
 [source, python]
 ----
-library(data.table)
-myresults <- sapply( seq(1980,2018,by=2), mydonations )
+import pandas as pd
+myresults = list(map(mydonations, range(1980,2019,2)))
 ----
 
 which yields the total amount of money donated from each state during each election cycle from 1980 to 2018.
@@ -271,15 +282,17 @@ Now we can add up the amount of donations in each state, across all of the years
 
 [source, python]
 ----
-v <- unlist(myresults)
-tapply(v, names(v), sum)
+pd.concat(myresults, axis=1).sum(axis=1)
 ----
 
 and the total amount of donations from each of the top 10 states across all election years 1980 to 2018 is:
 
 [source, python]
 ----
-dotchart(tail(sort(tapply(v, names(v), sum)), n=10))
+mycounts = pd.concat(myresults, axis=1).sum(axis=1).head(10)
+
+import matplotlib.pyplot as plt
+plt.barh(mycounts.index, mycounts)
 ----
 
 
@@ -290,46 +303,43 @@ dotchart(tail(sort(tapply(v, names(v), sum)), n=10))
 
 === Question 5 (2 pts)
 
-++++
-<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_ysjcwuy7&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
-++++
-
-++++
-<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_rvtzl3g2&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
-++++
-
-++++
-<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_9kcmqcfv&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
-++++
-
 In this last question, we find the total amount of money spent on taxi cab rides in New York City on each day of 2018.
-
 
 We first extract the total amount of the taxi cab rides per day of a given month as follows:
 
 [source, python]
 ----
-myfares <- function(mymonth) {
-    myDF <- fread(paste0("/anvil/projects/tdm/data/taxi/yellow/yellow_tripdata_2018-", mymonth, ".csv"), select=c(2,17))
-    mytable <- tapply(myDF$total_amount, as.Date(myDF$tpep_pickup_datetime), sum)
-    return(mytable)
-}
+def myfares (mymonth: str) -> float:
+    """
+    The myfares function takes a 2-character month as the input (in quotation marks, with a leading 0 if needed), and returns the amount of money spent on each day during that month
+
+    Args:
+    mymonth (str): This is a 2-character month (as a string) as the input
+
+    Returns:
+    mytable (float): This is the amount of money (as a floating point number) spent on each day during that month
+    """
+    myDF = pd.read_csv("/anvil/projects/tdm/data/taxi/yellow/yellow_tripdata_2018-" + mymonth + ".csv", usecols=[1,16])
+    myDF['mydate'] = pd.to_datetime(myDF['tpep_pickup_datetime']).dt.strftime("%Y-%m-%d")
+    mytable = myDF.groupby('mydate')['total_amount'].sum()
+    return mytable
 ----
 
 and we can test this function by discovering how much money was spent on each day in January:
 
 [source, python]
 ----
-library(data.table)
+import pandas as pd
 myfares("01")
 ----
 
-Finally, we can use the `sapply` function to run this function on each month from `"01"` to `"12"`.
+Finally, we can use the `map` function to run this function on each month from `"01"` to `"12"`.
 
 [source, python]
 ----
-library(data.table)
-myresults <- sapply( sprintf("%02d", 1:12), myfares )
+import pandas as pd
+mymonths = [str(i).zfill(2) for i in range(1,13)]
+myresults = list(map(myfares, mymonths))
 ----
 
 which yields the total amount of money spent on taxi cab rides each day.
@@ -338,17 +348,16 @@ Now we can add up the amounts spent per day (sometimes there is overlap from mon
 
 [source, python]
 ----
-names(myresults) <- NULL
-v <- do.call(c, myresults)
-mytotals <- tapply(v, names(v), sum)
-betterdates <- mytotals[year(as.Date(names(mytotals))) == 2018]
+mycounts = pd.concat(myresults, axis=1).sum(axis=1)
+betterdates = mycounts[pd.to_datetime(mycounts.index).strftime("%Y") == "2018"]
 ----
 
 and the total amount of money spent on taxi cab rides during each day in 2018 is can be plotted as:
 
 [source, python]
 ----
-plot( as.Date(names(betterdates)), betterdates )
+import matplotlib.pyplot as plt
+plt.plot(betterdates.index, betterdates)
 ----
 
 
