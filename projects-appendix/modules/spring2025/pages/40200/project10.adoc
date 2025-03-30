@@ -229,6 +229,11 @@ where:
 
 Essentially, we find perplexity by giving the model some string of text. for each n-gram within the text, we calculate the probability of our model generating that n-gram based on the previous n-1 words. We then take the log of that probability, sum all of those values, divide it by the number of words in the text, multiply it by negative 1, and finally take the exponential of that value. This will give us a single number that represents how well our model is able to predict the next word in the sequence. These values can range from 1 to infinity, with lower values indicating a better model. A value of 1 would indicate that the model is perfect and is able to predict the next word with 100% accuracy. A value of infinity would indicate that the model is unable to predict the next word at all.
 
+[IMPORTANT]
+====
+If your model can not find the probability of generating that nth word based on the previous n-1 words, please use a probability of 0.00001. This will heavily penalize the model.
+====
+
 For example, let's say we have a 3-gram model and input the following string:
 'apples and bananas taste good'
 We want to find the probability that our 3-gram model will predict `bananas` given the previous 2 words `apples and`, `taste` given the previous 2 words `and bananas`, and `good` given the previous 2 words `bananas taste`. Each of these probabilities is calculated using the probabilities we generated in step 3, then their natural log is taken, then they are multiplied by -1 and divided by the total number of words in our input string (5 words). Finally, we sum all of these values and take 2 to the power of that value. This will give us a single number that represents how well our model is able to predict the next word in the sequence.
@@ -241,19 +246,102 @@ Please implement the `get_perplexity` function and run the following test cases 
 ----
 import numpy as np
 my_ngram = NGram(3, is_character_based=False)
-my_ngram.set_data(read_lines('/anvil/projects/tdm/data/amazon/music.txt', 10000))
+my_ngram.set_data(read_lines('/anvil/projects/tdm/data/amazon/music.txt', 50000))
 my_ngram.generate_ngram_probabilities()
-print(my_ngram.get_perplexity('is a great cd')) # 3.5325225511299707
-print(my_ngram.get_perplexity('is a good cd')) # 5.9206199215324915
-print(my_ngram.get_perplexity('is a bad cd')) # 10.575321821055631
+print(my_ngram.get_perplexity('is a great cd')) # 3.513998171326   
+print(my_ngram.get_perplexity('is a good cd')) # 5.461575334059693
+print(my_ngram.get_perplexity('is a bad cd')) # 11.67642266413374
 
-print(my_ngram.get_perplexity('this music is a wonderful experience and i love it')) # 7.744547150097188
+print(my_ngram.get_perplexity('this music is a wonderful experience and i love it')) # 27.903381350329948
 ----
 
 .Deliverables
 ====
 - Implemented get_perplexity function
 - Passes tests for get_perplexity function
+====
+
+=== Question 6 (2 points)
+
+N-grams have many uses besides just text generation. Another popular use of n-grams is text classification. We could classify text based on its language (English, French, Spanish, etc.), its sentiment (positive, negative, neutral, etc.), or even its topic (politics, STEM, sports, etc.). In these next two projects, we will be adapting our n-gram model to classify text based on its language. Let's go ahead and create a new class called `LanguageClassifier` that will use our NGram class to predict the language of text. This class will be used to classify text based on its language. The `LanguageClassifier` class should have the following functions:
+
+- `add_language_data`: This function should take in a list of strings and a language label. It should then create an n-gram model for that language with the input data and store it in a dictionary, where the keys are the language labels and the value is the n-gram object.
+- `classify`: This function should take in a string of text and return the language label that the text is most likely to be. This should be done by creating an n-gram model for the input text and then comparing it to each of the n-gram models in the dictionary. The language with the lowest perplexity should be returned as the predicted language.
+
+[NOTE]
+====
+This should be done on a per character basis. If you wanted to do this on a per word basis, you could assume that it would almost always work as the words would be completely different between languages, so our perplexity scores for the wrong language would be extremely high. However, we want to do this on a per character basis where each language shares the same characters, just to prove conceptually that this is possible.
+====
+
+Below is an outline of the `LanguageClassifier` class to get you started:
+
+[source,python]
+----
+class LanguageClassifier():
+    def __init__(self, n):
+        self.n = n
+        self.languages = dict()
+    def add_language_data(self, data, language):
+        pass
+    def classify(self, text):
+        pass
+----
+
+For this question, please implement the `add_language_data` function, as described above. You can test your implementation using the following code:
+
+[source,python]
+----
+
+my_language_classifier = LanguageClassifier(2) # use 2-grams
+
+my_language_classifier.add_language_data(
+    ["Mr. and Mrs. Dursley, of number four, Privet Drive, were proud to say that they were perfectly normal, thank you very much. Mr. Dursley made drills. He was a big, beefy man with hardly any neck, although he did have a very large moustache. Mrs. Dursley was thin and blonde and had twice the usual amount of neck, which came in very useful as she spent so much of her time spying on the neighbours. The Dursleys had a small son called Dudley and in their opinion there was no finer boy anywhere. Mrs Dursley had a sister called Lily Potter. She and her husband James Potter had a son called Harry Potter. They lived far from the Dursleys and did not speak to them much. They did not get along. One day, a man appeared outside of the Dursleys house. He was tall, thin, and very old, judging by the silver of his hair and beard, which were both long enough to tuck into his belt. He was wearing long robes, a purple cloak that swept the ground, and highheeled, buckled boots. His blue eyes were light, bright, and sparkling behind half-moon spectacles and his nose was very long and crooked, as though it had been broken at least twice. This man's name was Albus Dumbledore."], 'English')
+
+my_language_classifier.add_language_data(
+    ["Poco después de la guerra civil, un brote de cólera se había llevado a mi madre. La enterramos en Montju'ic el día de mi cuarto cumpleaños. Sólo recuerdo que llovió todo el día y toda la noche, y que cuando le pregunté a mi padre si el cielo lloraba le faltó la voz para responderme. Seis años después, la ausencia de mi madre era para mí todavía un espejismo, un silencio a gritos que aún no había aprendido a acallar con palabras. Mi padre y yo vivíamos en un pequeño piso de la calle Santa Ana, junto a la plaza de la iglesia. El piso estaba situado justo encima de la librería especializada en ediciones de coleccionista y libros usados heredada de mi abuelo, un bazar encantado que mi padre confiaba en que algún día pasaría a mis manos. Me crié entre libros, haciendo amigos invisibles en páginas que se deshacían en polvo y cuyo olor aún conservo en las manos. De niño aprendí a conciliar el sueño mientras le explicaba a mi madre en la penumbra de mi habitación las incidencias de la jornada, mis andanzas en el colegio, lo que había aprendido aquel día... No podía oír su voz o sentir su tacto, pero su luz y su calor ardían en cada rincón de aquella casa y yo, con la fe de los que todavía pueden contar sus años con los dedos de las manos, creía que si."], 'Spanish'
+)
+
+my_language_classifier.add_language_data(
+    ["Quoique ce détail ne touche en aucune manière au fond même de ce que nous avons à raconter, il n'est peut-être pas inutile, ne fût-ce que pour être exact en tout, d'indiquer ici les bruits et les propos qui avaient couru sur son compte au moment où il était arrivé dans le diocèse. Vrai ou faux, ce qu'on dit des hommes tient souvent autant de place dans leur vie et surtout dans leur destinée que ce qu'ils font. M. Myriel était fils d'un conseiller au parlement d'Aix; noblesse de robe. On contait de lui que son père, le réservant pour hériter de sa charge, l'avait marié de fort bonne heure, à dix-huit ou vingt ans, suivant un usage assez répandu dans les familles parlementaires. Charles Myriel, nonobstant ce mariage, avait, disait-on, beaucoup fait parler de lui. Il était bien fait de sa personne, quoique d'assez petite taille, élégant, gracieux, spirituel; toute la première partie de sa vie avait été donnée au monde et aux galanteries. La révolution survint, les événements se précipitèrent, les familles parlementaires décimées, chassées, traquées, se dispersèrent. M. Charles Myriel, dès les premiers jours de la révolution, émigra en Italie. Sa femme y mourut d'une maladie de poitrine dont elle était atteinte depuis longtemps. Ils n'avaient point d'enfants. Que se passa-t-il ensuite dans la destinée de M. Myriel? L'écroulement de l'ancienne société française, la chute de sa propre famille, les tragiques spectacles de 93, plus effrayants encore peut-être pour les émigrés qui les voyaient de loin avec le grossissement de l'épouvante, firent-ils germer en lui des idées de renoncement et de solitude? Fut-il, au milieu d'une de ces distractions et de ces affections qui occupaient sa vie, subitement atteint d'un de ces coups mystérieux et terribles qui viennent quelquefois renverser, en le frappant au cœur, l'homme que les catastrophes publiques n'ébranleraient pas en le frappant dans son existence et dans sa fortune? Nul n'aurait pu le dire; tout ce qu'on savait, c'est que, lorsqu'il revint d'Italie, il était prêtre."], 'French'
+)
+
+print(my_language_classifier.languages)
+----
+
+=== Question 7 (2 points)
+
+Now that we are able to add language data to our `LanguageClassifier` class, we can implement the `classify` function. This function should take in a string of text and return the language label that the text is most likely to be. There are many ways to do this, but the simplest way is to compare the perplexity of the input text to each of the n-gram models in the dictionary. The language with the lowest perplexity should be returned as the predicted language, as it was the model that was able to predict the input text easiest. Other ways you could do this would be create a new n-gram model with the input text and compare the probabilities of each n-gram language model to the n-gram model of the input text, with some algorithm like cosine similarity or euclidean distance. However, this is a bit more complex and not necessary for this project.
+
+[NOTE]
+====
+Cosine similarity is a measure of similarity between two vectors of an inner product space. We can take anything and essentially "vectorize" it in n-dimensional space, and then apply cosine similarity to find the similarity between the two. A value of 1 meaning similar, 0 meaning orthogonal or not similar, and -1 meaning opposite. This has very powerful applications in NLP, as we can vectorize words and phrases and compare their meanings to eachother. For example, we could use cosine similarity in a model to compare "cat" and "kitten", resulting in a high similarity score, and "cat" and "car", resulting in a low similarity score, or perhaps "rich" and "poor" resulting in a negative similarity score. This is a very powerful tool in NLP and is used in many modern LLMs. We will discuss this in more detail in future projects.
+====
+
+Please implement the classify function and run the following test cases to ensure that it is working as expected. You can use the following code to test your `classify` function:
+
+[source,python]
+----
+my_language_classifier = LanguageClassifier(2) # use 2-grams
+
+my_language_classifier.add_language_data(
+    ["Mr. and Mrs. Dursley, of number four, Privet Drive, were proud to say that they were perfectly normal, thank you very much. Mr. Dursley made drills. He was a big, beefy man with hardly any neck, although he did have a very large moustache. Mrs. Dursley was thin and blonde and had twice the usual amount of neck, which came in very useful as she spent so much of her time spying on the neighbours. The Dursleys had a small son called Dudley and in their opinion there was no finer boy anywhere. Mrs Dursley had a sister called Lily Potter. She and her husband James Potter had a son called Harry Potter. They lived far from the Dursleys and did not speak to them much. They did not get along. One day, a man appeared outside of the Dursleys house. He was tall, thin, and very old, judging by the silver of his hair and beard, which were both long enough to tuck into his belt. He was wearing long robes, a purple cloak that swept the ground, and highheeled, buckled boots. His blue eyes were light, bright, and sparkling behind half-moon spectacles and his nose was very long and crooked, as though it had been broken at least twice. This man's name was Albus Dumbledore."], 'English')
+
+my_language_classifier.add_language_data(
+    ["Poco después de la guerra civil, un brote de cólera se había llevado a mi madre. La enterramos en Montju'ic el día de mi cuarto cumpleaños. Sólo recuerdo que llovió todo el día y toda la noche, y que cuando le pregunté a mi padre si el cielo lloraba le faltó la voz para responderme. Seis años después, la ausencia de mi madre era para mí todavía un espejismo, un silencio a gritos que aún no había aprendido a acallar con palabras. Mi padre y yo vivíamos en un pequeño piso de la calle Santa Ana, junto a la plaza de la iglesia. El piso estaba situado justo encima de la librería especializada en ediciones de coleccionista y libros usados heredada de mi abuelo, un bazar encantado que mi padre confiaba en que algún día pasaría a mis manos. Me crié entre libros, haciendo amigos invisibles en páginas que se deshacían en polvo y cuyo olor aún conservo en las manos. De niño aprendí a conciliar el sueño mientras le explicaba a mi madre en la penumbra de mi habitación las incidencias de la jornada, mis andanzas en el colegio, lo que había aprendido aquel día... No podía oír su voz o sentir su tacto, pero su luz y su calor ardían en cada rincón de aquella casa y yo, con la fe de los que todavía pueden contar sus años con los dedos de las manos, creía que si."], 'Spanish'
+)
+
+my_language_classifier.add_language_data(
+    ["Quoique ce détail ne touche en aucune manière au fond même de ce que nous avons à raconter, il n'est peut-être pas inutile, ne fût-ce que pour être exact en tout, d'indiquer ici les bruits et les propos qui avaient couru sur son compte au moment où il était arrivé dans le diocèse. Vrai ou faux, ce qu'on dit des hommes tient souvent autant de place dans leur vie et surtout dans leur destinée que ce qu'ils font. M. Myriel était fils d'un conseiller au parlement d'Aix; noblesse de robe. On contait de lui que son père, le réservant pour hériter de sa charge, l'avait marié de fort bonne heure, à dix-huit ou vingt ans, suivant un usage assez répandu dans les familles parlementaires. Charles Myriel, nonobstant ce mariage, avait, disait-on, beaucoup fait parler de lui. Il était bien fait de sa personne, quoique d'assez petite taille, élégant, gracieux, spirituel; toute la première partie de sa vie avait été donnée au monde et aux galanteries. La révolution survint, les événements se précipitèrent, les familles parlementaires décimées, chassées, traquées, se dispersèrent. M. Charles Myriel, dès les premiers jours de la révolution, émigra en Italie. Sa femme y mourut d'une maladie de poitrine dont elle était atteinte depuis longtemps. Ils n'avaient point d'enfants. Que se passa-t-il ensuite dans la destinée de M. Myriel? L'écroulement de l'ancienne société française, la chute de sa propre famille, les tragiques spectacles de 93, plus effrayants encore peut-être pour les émigrés qui les voyaient de loin avec le grossissement de l'épouvante, firent-ils germer en lui des idées de renoncement et de solitude? Fut-il, au milieu d'une de ces distractions et de ces affections qui occupaient sa vie, subitement atteint d'un de ces coups mystérieux et terribles qui viennent quelquefois renverser, en le frappant au cœur, l'homme que les catastrophes publiques n'ébranleraient pas en le frappant dans son existence et dans sa fortune? Nul n'aurait pu le dire; tout ce qu'on savait, c'est que, lorsqu'il revint d'Italie, il était prêtre."], 'French'
+)
+
+print(my_language_classifier.classify("this is a good cd")) # English
+print(my_language_classifier.classify('Este es un buen CD')) # Spanish
+print(my_language_classifier.classify("c'est un bon cd")) # French
+----
+
+[IMPORTANT]
+====
+Depending on your implementation of the get_perplexity method, there may be a few things you need to change. Primarily, if the n-1 part of the n-gram is not in the dictionary or the nth letter/word is not in the dictionary, you may have simply added 0 to the logarithmic probability sum. However, you may get better results if you add a large positive number, ie 5,6, etc. This will make it so that if the model cannot find the correct n-th letter/word it is heavily penalized
 ====
 
 == Submitting your Work
