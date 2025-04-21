@@ -1,0 +1,238 @@
+= TDM 10200: Python Project 13 -- Spring 2025
+
+**Motivation:** It is fun and straightforward to do mapping in Python!
+
+**Context:** We will create several maps in Python.  In particular, we will verify the location of the location of the Macy's Thanksgiving Day Parade using maps.
+
+**Scope:** Maps in Python are large, so when you download your Jupyter Lab project to your computer and then upload it to Gradescope, you won't be able to easily view it in Gradescope, but that's OK.  The graders will still be able to see it.
+
+.Learning Objectives:
+****
+- Learn how to make maps in Python.
+****
+
+
+Make sure to read about, and use the template found xref:ROOT:templates.adoc[here], and the important information about project submissions xref:ROOT:submissions.adoc[here].
+
+== Dataset(s)
+
+This project will use the following datasets:
+
+- `/anvil/projects/tdm/data/craigslist/vehicles.csv` (Craigslist vehicles)
+- `/anvil/projects/tdm/data/taxi/yellow/yellow_tripdata_2015-11.csv` (New York City taxi cab data from November 2015)
+
+[NOTE]
+====
+It should be enough to use 3 cores in your Jupyter Lab session for this project.
+====
+
+== Questions
+
+=== Question 1 (2 pts)
+
+First load:  `import pandas as pd` so that you have the `pd.read_csv` function available, and `import geopandas as gpd` so that you can plot maps, and also `pd.set_option('display.max_columns', 50)` so that you can see 50 columns.
+
+For this first question, we simply make a simple map, with three latitude and longitude values.
+
+We call our data frame `testDF`, and it is important that we name the columns:
+
+[source,python]
+----
+testDF = pd.DataFrame({'lat': [40.4259, 41.8781, 39.0792], 'long': [-86.9081, -87.6298, -84.17704]})
+----
+
+The whole data frame looks like this, just three rows and two columns:
+
+[source,python]
+----
+testDF
+----
+
+Now we can define the points that we want to plot on a map:
+
+[source,python]
+----
+gdf = gpd.GeoDataFrame(testDF, geometry=gpd.points_from_xy(testDF.long, testDF.lat), crs="4326")
+----
+
+and we can render the map.  We make each dot have radius 20, but you are welcome to change the radius if you want to:
+
+[source,python]
+----
+gdf.plot(markersize = 20)
+----
+
+
+.Deliverables
+====
+Show the map with the three points.
+====
+
+
+=== Question 2 (2 pts)
+
+Now load the Craiglist data as follows:
+
+[source,python]
+----
+myDF = pd.read_csv("/anvil/projects/tdm/data/craigslist/vehicles.csv", nrows=100)
+----
+
+Examine the `head` of `myDF` and also the `shape` of `myDF`, and see which columns are the `state` and the `long` and the `lat` columns.
+
+
+Now read ALL of the rows of the data set into a new data frame, but use the `usecols` option so that you only read the three columns called `state` and `long` and `lat` (the other columns will not be needed).
+
+Finally, make a new data frame called `indyDF` satisfying 3 conditions, namely, the `state` variable indicates that the data is from Indiana, and the `long` and `lat` values are not missing.
+
+[source,python]
+----
+(newDF['state']=="in") & (newDF['long'].nonnull()) & (newDF['lat'].nonnull())
+----
+
+You should now have a data frame with 3 columns and 5634 rows.
+
+
+.Deliverables
+====
+Display the dimension of your new data frame, which should have 3 columns and 5634 rows.
+====
+
+
+=== Question 3 (2 pts)
+
+Now make a plot of the data frame that you created in question 2, using these two lines of Python:
+
+[source,python]
+----
+mystates = gpd.read_file('/anvil/projects/tdm/data/boundaries/cb_2018_us_state_20m.shp')    # get the state boundary data
+
+indianaboundary = mystates[mystates['NAME']=="Indiana"]  # get the boundary for Indiana
+
+gdf = gpd.GeoDataFrame(indyDF, geometry=gpd.points_from_xy(indyDF.long, indyDF.lat), crs="4326")  # get the longitudes and latitudes from indyDF
+
+gdf = gdf.assign(mycolors='orange')   # make the Craigslist data orange
+
+indianaboundary = indianaboundary.to_crs(gdf.crs)   # convert the Indiana map to the same coordinates as the Craigslist coordinates
+
+ax = indianaboundary.plot()
+
+gdf.plot(ax=ax, markersize = 0.1, color = gdf['mycolors'])   # get ready to plot the Craigslist data
+
+# inspired by this geopandas page https://geopandas.org/en/stable/docs/user_guide/mapping.html
+----
+
+Please note that, with Craigslist, people can list items from anywhere in the country.  So there are some items outside Indiana, even though we selected only the items that are supposed to be from the State of Indiana.  BUT, fortunately, most people's listings are accurate.
+
+
+.Deliverables
+====
+Show the map with the Craiglist data from Indiana.  (Some of the data points will be outside Indiana, but most of them will be in the State of Indiana.)
+====
+
+=== Question 4 (2 pts)
+
+In question 4 and question 5, we will verify the path of the Thanksgiving parade in New York City from 2015, as shown on this image:  
+
+https://www.bizjournals.com/newyork/news/2015/11/25/thanksgiving-is-tomorrow-but-parade-re-routes-and.html
+
+You can import the New York taxi cab data from November 2015 as follows:
+
+[source,python]
+----
+myDF = pd.read_csv("/anvil/projects/tdm/data/taxi/yellow/yellow_tripdata_2015-11.csv", usecols=['tpep_pickup_datetime','pickup_longitude','pickup_latitude'])
+----
+
+Create two times in Python, one for the start of the parade, and one for the end of the parade:
+
+
+[source,python]
+----
+from datetime import datetime
+
+paradestart = datetime.strptime('2015-11-26 09:00:00', "%Y-%m-%d %H:%M:%S")
+
+paradeend = datetime.strptime('2015-11-26 12:00:00', "%Y-%m-%d %H:%M:%S")
+----
+
+Now make a vector of times (converting the pickup times from the taxi cab rides from strings into times).
+
+[source,python]
+----
+mytimes = pd.to_datetime(myDF['tpep_pickup_datetime'])
+----
+
+Finally, make a new data frame called `finalDF`:
+
+`finalDF = myDF[ (mytimes >= paradestart) & (mytimes <= paradeend)]`
+
+Your data frame `finalDF` should have 28710 rows.
+
+.Deliverables
+====
+Display the dimension of your data frame called `finalDF`, which should have 28710 rows.
+====
+
+=== Question 5 (2 pts)
+
+If you examine the head of `finalDF`, you see that the latitude values are called `pickup_latitude` and `pickup_longitude`.
+
+We want them to be called `lat` and `long` instead, so we can make a new data frame as follows:
+
+[source,python]
+----
+testDF = pd.DataFrame({'lat': finalDF['pickup_latitude'], 'long': finalDF['pickup_longitude']})
+----
+
+Finally, plot the latitude and longitude values from `testDF` in explore mode
+
+
+[source,python]
+----
+gdf = gpd.GeoDataFrame(testDF, geometry=gpd.points_from_xy(testDF.long, testDF.lat), crs="4326")  # get the longitudes and latitudes from testDF
+gdf = gdf.assign(mycolors='orange')   # make the taxi cab data orange
+gdf.explore(color = gdf['mycolors'])   # plot the taxi cab data in explore mode
+----
+
+You will notice that taxi cabs were unable to pickup passengers on the route of the Thanksgiving Day parade because those roads were closed.  Please zoom into the map and verify this, comparing your map to the parade route map:
+
+https://www.bizjournals.com/newyork/news/2015/11/25/thanksgiving-is-tomorrow-but-parade-re-routes-and.html
+
+
+.Deliverables
+====
+Show the map with the data from Thanksgiving morning on November 26, 2015, at the time of the parade.
+====
+
+[WARNING]
+====
+Because of the maps in this project, when you upload your work to Gradescope, it will say:  "Large file hidden.  You can download it using the button above."  That is what the graders will do, namely, they will download it when they are grading it.  This warning is expected because your maps are large, and that is totally OK.
+====
+
+
+== Submitting your Work
+
+Please make sure that you added comments for each question, which explain your thinking about your method of solving each question.  Please also make sure that your work is your own work, and that any outside sources (people, internet pages, generating AI, etc.) are cited properly in the project template.
+
+If you have any questions or issues regarding this project, please feel free to ask in seminar, over Piazza, or during office hours.
+
+Prior to submitting your work, you need to put your work xref:ROOT:templates.adoc[into the project template], and re-run all of the code in your Jupyter notebook and make sure that the results of running that code is visible in your template.  Please check the xref:ROOT:submissions.adoc[detailed instructions on how to ensure that your submission is formatted correctly]. To download your completed project, you can right-click on the file in the file explorer and click 'download'.
+
+Once you upload your submission to Gradescope, make sure that everything appears as you would expect to ensure that you don't lose any points.
+
+.Items to submit
+====
+- firstname_lastname_project13.ipynb
+====
+
+[WARNING]
+====
+It is necessary to document your work, with comments about each solution.  All of your work needs to be your own work, with citations to any source that you used.  Please make sure that your work is your own work, and that any outside sources (people, internet pages, generating AI, etc.) are cited properly in the project template.
+
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not.
+
+**Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
+
