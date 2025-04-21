@@ -81,13 +81,13 @@ myDF = pd.read_csv("/anvil/projects/tdm/data/craigslist/vehicles.csv", nrows=100
 Examine the `head` of `myDF` and also the `shape` of `myDF`, and see which columns are the `state` and the `long` and the `lat` columns.
 
 
-Now read ALL of the rows of the data set into a new data frame, but use the `usecols` option so that you only read the three columns called `state` and `long` and `lat` (the other columns will not be needed).
+Now remove the `nrows=100` option, and (instead) read ALL of the rows of the data set into a new data frame called `newDF`, but this time, please use the `usecols` option so that you only read the three columns called `state` and `long` and `lat` (the other columns will not be needed).
 
-Finally, make a new data frame called `indyDF` satisfying 3 conditions, namely, the `state` variable indicates that the data is from Indiana, and the `long` and `lat` values are not missing.
+Finally, make a new data frame called `indyDF` satisfying 3 conditions, namely, the `state` variable indicates that the data is from Indiana, and the `long` and `lat` values are not missing.  You can use this condition on `newDF`:
 
 [source,python]
 ----
-(newDF['state']=="in") & (newDF['long'].nonnull()) & (newDF['lat'].nonnull())
+(newDF['state']=="in") & (newDF['long'].notnull()) & (newDF['lat'].notnull())
 ----
 
 You should now have a data frame with 3 columns and 5634 rows.
@@ -105,21 +105,9 @@ Now make a plot of the data frame that you created in question 2, using these tw
 
 [source,python]
 ----
-mystates = gpd.read_file('/anvil/projects/tdm/data/boundaries/cb_2018_us_state_20m.shp')    # get the state boundary data
-
-indianaboundary = mystates[mystates['NAME']=="Indiana"]  # get the boundary for Indiana
-
 gdf = gpd.GeoDataFrame(indyDF, geometry=gpd.points_from_xy(indyDF.long, indyDF.lat), crs="4326")  # get the longitudes and latitudes from indyDF
-
 gdf = gdf.assign(mycolors='orange')   # make the Craigslist data orange
-
-indianaboundary = indianaboundary.to_crs(gdf.crs)   # convert the Indiana map to the same coordinates as the Craigslist coordinates
-
-ax = indianaboundary.plot()
-
-gdf.plot(ax=ax, markersize = 0.1, color = gdf['mycolors'])   # get ready to plot the Craigslist data
-
-# inspired by this geopandas page https://geopandas.org/en/stable/docs/user_guide/mapping.html
+gdf.explore(color = gdf['mycolors'])
 ----
 
 Please note that, with Craigslist, people can list items from anywhere in the country.  So there are some items outside Indiana, even though we selected only the items that are supposed to be from the State of Indiana.  BUT, fortunately, most people's listings are accurate.
@@ -164,7 +152,11 @@ mytimes = pd.to_datetime(myDF['tpep_pickup_datetime'])
 
 Finally, make a new data frame called `finalDF`:
 
-`finalDF = myDF[ (mytimes >= paradestart) & (mytimes <= paradeend)]`
+
+[source,python]
+----
+finalDF = myDF[ (mytimes >= paradestart) & (mytimes <= paradeend)]
+----
 
 Your data frame `finalDF` should have 28710 rows.
 
