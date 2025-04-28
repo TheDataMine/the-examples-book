@@ -2,10 +2,13 @@ on:
   push:
     branches:
       - main
+  schedule:
+      - cron: "0 4 * * *"
 
 jobs:
   build:
     runs-on: ubuntu-22.04
+    if: ${{ github.event_name == 'push' }}
     steps:
     - uses: actions/checkout@v2
     - name: Wait for CF Pages
@@ -20,8 +23,8 @@ jobs:
         githubToken: ${{ secrets.GITHUB_TOKEN }}
 
   run-scraper:
-    needs: build
     runs-on: ubuntu-22.04
+    if: ${{ github.event_name == 'schedule' }}
     steps:      
     - name: Clone TheDataMine/docs-scraper
       uses: actions/checkout@v2
@@ -47,6 +50,7 @@ jobs:
         pipenv run ./docs_scraper ./the-examples-book.config.json
         
   purge-cf-cache:
+    if: ${{ always() }}
     needs: build
     runs-on: ubuntu-22.04
     steps:
