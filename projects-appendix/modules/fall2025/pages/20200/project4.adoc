@@ -1,0 +1,215 @@
+= TDM 20200: Web Scraping Project 4 -- Spring 2025
+
+**Motivation:** We continue to learn how to leverage our skills for systematic web scraping.
+
+**Context:** We will use lxml for web scraping in this project, with XPath queries.  We will wrap our web scraping into functions, which we will use systematically, to gather data.
+
+**Scope:** Web Scraping in Python
+
+.Learning Objectives:
+****
+- We continue to learn how to scrape data more systematically from the web
+****
+
+Make sure to read about, and use the template found xref:ROOT:templates.adoc[here], and the important information about project submissions xref:ROOT:submissions.adoc[here].
+
+== Dataset(s)
+
+In this project we will scrape data from the following website:
+
+- https://www.nps.gov
+
+== Questions
+
+=== Question 1 (2 pts)
+
+We have now scraped information from the main page of the National Park Service, located at:  https://www.nps.gov/
+
+and also from each of the 56 states that are listed on the front page of the NPS website.  For instance, we scraped data from the Indiana page:  https://www.nps.gov/state/in/index.htm
+
+BUT we did not (yet) scrape the actual webpages of each park!  There are 645 park webpages, and we will scrape these individual park pages in this project.
+
+First, to get started, use the main page of the National Park Service website to get the URLs for the 56 state pages, as follows:
+
+[source, python]
+----
+import requests
+
+from lxml import etree
+from lxml import html
+
+mytree = html.fromstring(requests.get("https://www.nps.gov").content)
+
+mystateurls = ['https://www.nps.gov' + element.attrib['href'] for element in mytree.xpath('//a[@class = "dropdown-item dropdown-state"]')]
+
+mystateurls
+----
+
+We did something similar to this in Project 3, Question 4, but just to get you started, we are giving you this code directly.  For instance, `mystateurls[16]` is the URL for the parks in Indiana.
+
+Now we extract the webpages for the four parks in Indiana, as follows:
+
+[source, python]
+----
+mytree = html.fromstring(requests.get(mystateurls[16]).content)
+myparksdirectories = [element.attrib['href'] for element in mytree.xpath('//h3/a')]
+----
+
+These four Indiana parks directories are:
+
+[source, python]
+----
+['/gero/', '/indu/', '/lecl/', '/libo/']
+----
+
+We can modify the code above, to put the NPS website before each of these, as follows:
+
+[source, python]
+----
+mytree = html.fromstring(requests.get(mystateurls[16]).content)
+myparksdirectories = ['https://www.nps.gov' + element.attrib['href'] for element in mytree.xpath('//h3/a')]
+----
+
+which gives us the locations of the 4 parks in Indiana:
+
+[source, python]
+----
+['https://www.nps.gov/gero/',
+ 'https://www.nps.gov/indu/',
+ 'https://www.nps.gov/lecl/',
+ 'https://www.nps.gov/libo/']
+----
+
+Now use similar work, to extract the URLs for all 645 parks in all 56 states.  (There will be some duplicates in your list, and that is OK.  We will remove the duplicates in Question 2.)
+
+
+.Deliverables
+====
+- Make a list of the URLs for all 645 parks in all 56 states.
+- Be sure to document your work from Question 1, using some comments and insights about your work.
+====
+
+=== Question 2 (2 pts)
+
+If your list in Question 1 is called `mylist`, then you can remove the duplicates and put the list in sorted order as follows:
+
+[source, python]
+----
+mysortedandcleanedlist = sorted(list(set(mylist)))
+----
+
+At this point, `mysortedandcleanedlist` should have 475 URLs for all of the individual parks.
+
+We can ignore 8 of the parks in this project:
+
+'https://www.nps.gov/cbpo/'
+
+'https://www.nps.gov/deva/'
+
+'https://www.nps.gov/grsp/'
+
+'https://www.nps.gov/gwmp/'
+
+'https://www.nps.gov/maac/'
+
+'https://www.nps.gov/roca/'
+
+'https://www.nps.gov/wwim/'
+
+'https://www.nps.gov/yose/'
+
+because these 8 webpages for these 8 parks either do not have their street address listed, or they have one address in the USA and one in Canada.
+
+Remove these 8 parks from your list, so that (now) you have only 467 URLs for parks.
+
+[TIP]
+====
+In Dr Ward's list of 475 parks, the ones to remove were 82, 121, 202, 208, 281, 373, 468, 471, but this may vary for you!
+====
+
+
+.Deliverables
+====
+- Make a list of 467 parks, by removing duplicates from your list from Question 1, removing duplicates, and also removing the 8 parks listed above.
+- Be sure to document your work from Question 2, using some comments and insights about your work.
+====
+
+=== Question 3 (2 pts)
+
+Extract the street address from each of these 467 parks.
+
+[TIP]
+====
+The location of the street address of each park is in a `div` tag with attribute `itemprop` equal to `"address"` and then inside the `div` tag, there is a `p` tag, and then inside the `p` tag, there is a `span` tag with attribute `itemprop` equal to `"streetAddress"`.
+====
+
+Also, extract the city from each of these 467 parks.  The location is similar to the street address, but the `span` tag has attribute `itemprop` equal to `"addressLocality"` in this case.  (Do not worry about the fact that each city has a comma attached; that is OK!)
+
+Additionally, please extract the state from each of these 467 parks.  The location is similar to the street address and to the city, but the `span` tag has attribute `itemprop` equal to `"addressRegion"` in this case.
+
+Finally, please extract the zip code from each of these 467 parks.  The location is similar to the street address and to the city, but the `span` tag has attribute `itemprop` equal to `"postalCode"` in this case.
+
+
+.Deliverables
+====
+- Build 4 lists (one for the street addresses, one for the cities, one for the states, and one for the zip codes), each of which has length 467, corresponding to the 467 parks from Question 2.
+- Be sure to document your work from Question 3, using some comments and insights about your work.
+====
+
+
+=== Question 4 (2 pts)
+
+Join your 4 lists from Question 3 into a data frame with 4 columns and 467 rows.
+
+Which state has the most national parks?
+
+Which city-and-state pair has the most national parks?
+
+.Deliverables
+====
+- A data frame with 4 columns and 467 rows, corresponding to the information from Question 3.
+- The state which has the most national parks.
+- The city-and-state pair which has the most national parks.
+- Be sure to document your work from Question 4, using some comments and insights about your work.
+====
+
+=== Question 5 (2 pts)
+
+Make a visualization about something that you find interesting from the National Park Service data, either using your work from Project 3 or Project 4; any visualization is OK.
+
+.Deliverables
+====
+- Make a visualization about something that you find interesting from the National Park Service data, either using your work from Project 3 or Project 4; any visualization is OK.
+- Be sure to document your work from Question 5, using some comments and insights about your work.
+====
+
+
+
+
+
+== Submitting your Work
+
+Please make sure that you added comments for each question, which explain your thinking about your method of solving each question.  Please also make sure that your work is your own work, and that any outside sources (people, internet pages, generating AI, etc.) are cited properly in the project template.
+
+Congratulations! Assuming you've completed all the above questions, you are learning to apply your web scraping knowledge effectively!
+
+Prior to submitting your work, you need to put your work xref:ROOT:templates.adoc[into the project template], and re-run all of the code in your Jupyter notebook and make sure that the results of running that code is visible in your template.  Please check the xref:ROOT:submissions.adoc[detailed instructions on how to ensure that your submission is formatted correctly]. To download your completed project, you can right-click on the file in the file explorer and click 'download'.
+
+Once you upload your submission to Gradescope, make sure that everything appears as you would expect to ensure that you don't lose any points. We hope your first project with us went well, and we look forward to continuing to learn with you on future projects!!
+
+.Items to submit
+====
+- firstname_lastname_project4.ipynb
+====
+
+[WARNING]
+====
+It is necessary to document your work, with comments about each solution.  All of your work needs to be your own work, with citations to any source that you used.  Please make sure that your work is your own work, and that any outside sources (people, internet pages, generating AI, etc.) are cited properly in the project template.
+
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not.
+
+**Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
+

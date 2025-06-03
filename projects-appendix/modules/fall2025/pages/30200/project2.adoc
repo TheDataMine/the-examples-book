@@ -1,0 +1,253 @@
+= TDM 30200: Project 02 - Image Preprocessing
+
+== Project Objectives
+
+In this project we will explore image preprocessing techniques. This includes resizing, cropping, and applying filters to images.
+
+.Learning Objectives
+****
+- Understand the importance of image preprocessing
+- Learn how to resize and crop images
+- Apply filters to images
+****
+
+== Dataset
+- '/anvil/projects/tdm/data/icecream/hd/images'
+
+== Questions
+
+=== Question 1 (2 points)
+
+Firstly, let's review what we learned from last project. Please load the `/anvil/projects/tdm/data/icecream/hd/images/56_hd.png` image into a variable called `image_opencv`, print out its dimensions, and display it using matplotlib and OpenCV. Additionally, please explain any techniques you had to do to ensure the image was displayed correctly.
+
+[NOTE]
+====
+Remember to use the correct color space when displaying the image.
+====
+
+.Deliverables
+====
+- Dimensions of the image
+- Image displayed using matplotlib
+- Please explain any techniques you had to do to ensure the image was displayed correctly.
+====
+
+=== Question 2 (2 points)
+
+Next, let's learn about cropping and resizing images. Firstly, we will look at cropping images. There are many reasons to crop an image, but a major one is removing unwanted parts of the image such as background. Typically, images are cropped by specifying the coordinates of the top left and bottom right corners of the desired region. For example, if we had a 1000x1000 pixel image and wanted to crop the center 500x500 pixels, we would specify the top left corner as (250, 250) and the bottom right corner as (750, 750).
+
+Please review the below function to crop an image based on the input coordinates. This function will take in an image and the cropping coordinates (tuples) and return the cropped image. Make sure you understand the underlying mechanics here (slicing an image), as it will be used in future projects.
+
+[NOTE]
+====
+Remember, images are simply numpy arrays. You can use numpy slicing to crop the image
+====
+
+[source,python]
+----
+def crop_image(image, top_left_coordinates, bottom_right_coordinates):
+    
+    cropped_image = image[top_left_coordinates[1]:bottom_right_coordinates[1], top_left_coordinates[0]:bottom_right_coordinates[0]]
+
+    return cropped_image
+----
+
+To test your function, please run the below test cases. This should crop the center 200x200 pixels of the image, the top left 60x60 pixels, and the bottom right 150x35 pixels.
+
+[source,python]
+----
+cropped_image1 = crop_image(image, (170, 217), (370, 417))
+cropped_image2 = crop_image(image, (0, 0), (60, 60))
+cropped_image3 = crop_image(image, (390, 598), (540, 633))
+
+fig, ax = plt.subplots(1, 4, figsize=(20, 20))
+
+ax[0].imshow(image)
+ax[0].set_title('Original Image')
+ax[0].axis('off')
+
+ax[1].imshow(cropped_image1)
+ax[1].set_title('Center 200x200 pixels')
+ax[1].axis('off')
+
+ax[2].imshow(cropped_image2)
+ax[2].set_title('Top left 60x60 pixels')
+ax[2].axis('off')
+
+ax[3].imshow(cropped_image3)
+ax[3].set_title('Bottom right 150x35 pixels')
+ax[3].axis('off')
+----
+
+.Deliverables
+====
+- Display the cropped images beside the original image
+- Please select which cropped image you think would be most useful in an image classification task and explain why.
+====
+
+=== Question 3 (2 points)
+
+Even if we crop an image down to just its most important region, the image may still be too large for our model to handle. This is where resizing or downscaling an image comes in. Although decreasing the size of an image inherently results in a loss of information, which sounds bad for our model, it is actually often very beneficial. Think back to last semester where we discussed the curse of dimensionality. In a 500x500 pixel RGB image, there are 750,000 values. Resizing this image to 100x100 pixels shrinks that down to 30,000 values. This is a much more manageable number of inputs for our model to handle.
+
+There are many different methods for downsizing (and upsizing) images, but one of the most common and simple is https://en.wikipedia.org/wiki/Bilinear_interpolation[bilinear interpolation]. Bilinear interpolation is a method for estimating the value of a function at a point by averaging the values of its closest known points. For example, if we know that f(1) = 2 and f(3) = 4, we can use bilinear interpolation to estimate f(2) = 3. When it comes to images, bilinear interpolation is used on the pixel values/color channels to estimate the new pixel values. 
+
+OpenCV has a built-in function for resizing images that defaults to bilinear interpolation, `cv2.resize`. In addition to bilinear interpolation, OpenCV also has support for nearest neighbor interpolation, bicubic interpolation, area interpolation, and Lanczos interpolation. Each of these methods has their own strengths and weaknesses, and their methodology is explained briefly below:
+
+.Image Interpolation Methods
+[cols="1,1,1,1",options="header"]
+|===
+| Method | Description | Strengths | Weaknesses 
+| Bilinear | The value of the new pixel is the weighted average of the 4 closest pixels in the original image. | Fast and smooth | Blurring 
+| Nearest Neighbor | The simplest interpolation method. The value of the new pixel is the value of the closest pixel in the original image. | Fast with no blurring | Pixelation
+| Bicubic | The value of the new pixel is the weighted average of the 16 closest pixels in the original image. | Smooth with less blurring | Slow 
+| Area | The value of the new pixel is the average of all the pixels in the original image that fall within the new pixel. | Very smooth with less blurring | Slow 
+| Lanczos | The value of the new pixel is the sinc weighted average of the 4 closest pixels in the original image. | High quality and less blurring | Very slow
+|===
+
+To start, let's try to resize the image to 100x100 pixels using bilinear interpolation. Please run the below code to resize the image and display it.
+
+[source,python]
+----
+resized_image = cv2.resize(image, (100, 100), interpolation=cv2.INTER_LINEAR)
+
+plt.imshow(resized_image)
+plt.axis('off')
+plt.show()
+----
+
+As you can see, the image is quite pixelated, yet we can still clearly see the important features of the image. However, some of you may notice that the ice cream looks a little stretched out. This is because we actually changed the image's aspect ratio with the last operation. This can lead to distortion in the image, including stretching or squishing. An images aspect ratio is simply its width divided by its height. To maintain the aspect ratio of the image, the output width and height should also have the same aspect ratio (see for more details: https://learnopencv.com/image-resizing-with-opencv/). This may be challenging to do when resizing an image, but luckily OpenCV also supports scaling images down while maintaining or adjusting the aspect ratio. The optional parameters `fx` and `fy` can be used to scale the image by a factor in the x and y directions, respectively.
+
+To test this out, please run the below code to resize the image to 1/5th of its original size while maintaining the aspect ratio.
+
+[source,python]
+----
+resized_image_aspect = cv2.resize(image, (0, 0), fx=0.2, fy=0.2, interpolation=cv2.INTER_LINEAR)
+
+plt.imshow(resized_image_aspect)
+plt.axis('off')
+plt.show()
+----
+
+Now that you know how to resize images, please resize the original image to a smaller size and compare the nearest neighbor, bilinear interpolation, and area interpolation methods. Please display the images and point out any differences you see between the methods. Which resulting image do you think looks the best?
+
+[NOTE]
+====
+The codes for these methods can be found at the documentation: https://docs.opencv.org/3.4/da/d54/group\__imgproc__transform.html#ga5bb5a1fea74ea38e1a5445ca803ff121[here].
+====
+
+.Deliverables
+====
+- Image resized to 100x100 pixels using bilinear interpolation
+- Image resized to 1/5th of its original size while maintaining the aspect ratio
+- Image resized to a smaller size using nearest neighbor, bilinear, and area interpolation methods
+====
+
+=== Question 4 (2 points)
+
+Now that we understand cropping and resizing, another important preprocessing technique is filtering images. Filters are a wide range of operations that can be applied to blur images, sharpen images, detect edges, and much more. The mathematics behind these filters is quite complex at times, but the general idea is that a matrix is convolved across the image to produce a new image. That matrix is called a kernel, and the size and values of said kernel determine its effects. 
+
+OpenCV provides a generic `cv2.filter2D` function that can be used to apply any kernel to an image (see for more details: https://learnopencv.com/image-filtering-using-convolution-in-opencv/). Run the code below to apply a simple 7x7 averaging filter to the image.
+
+[source,python]
+----
+kernel = np.ones((7, 7), np.float32) / 49
+
+filtered_image = cv2.filter2D(image_opencv, -1, kernel)
+
+plt.imshow(filtered_image)
+plt.title('Averaging Filter')
+plt.axis('off')
+plt.show()
+----
+
+You should be able to see that the image is now somewhat blurry. This is because the averaging filter works by simply taking the average of (in this case) the 49 pixels surrounding the pixel in question. This has the effect of smoothing out the image.
+
+Arguably the most common filter is the Gaussian filter, which is a low-pass filter used to blur images. This filter is very often used as a preprocessing step before applying other filters such as edge detection or running a model. OpenCV provides a `cv2.GaussianBlur` function that can be used to apply a Gaussian filter to an image. This function takes in an image along with the desired kernel size, computes the Gaussian kernel, and convolves it across the image. Run the code below to apply a Gaussian filter to the image.
+
+[NOTE]
+====
+Both parts of the kernel size must be odd and positive. Additionally, the function also requires a `sigmaX` parameter, which is the standard deviation of the Gaussian kernel in the x direction. If this is set to 0, the standard deviation will be calculated based on the kernel size. This is recommended for now
+====
+
+[source,python]
+----
+filtered_image_gaussian = cv2.GaussianBlur(image_opencv, (7, 7), 0)
+
+plt.imshow(filtered_image_gaussian)
+plt.title('Gaussian Filter')
+plt.axis('off')
+plt.show()
+----
+
+You should see that the image is now blurrier than before, but the edges are more preserved than the averaging filter. 
+
+Please select 3 different kernel sizes for the gaussian filter and display the resulting images. What is the correlation between the kernel size and the blurriness of the image?
+
+.Deliverables
+====
+- Image filtered with basic averaging filter
+- Image filtered with Gaussian filter
+- Image filtered with 3 different kernel sizes for the Gaussian filter
+- Explanation of the correlation between the kernel size and the blurriness of the image
+====
+
+=== Question 5 (2 points)
+
+In addition to blurring images, filters can also be used to sharpen images by enhancing the edges. One of the most common sharpening filters is Laplacian filter, which is a high-pass filter (in contrast to the low-pass Gaussian filter, e.g.: https://www.geeksforgeeks.org/difference-between-low-pass-filter-and-high-pass-filter/). This filter works by taking the second derivative of the image, which highlights the edges. OpenCV provides a `cv2.Laplacian` function that can be used to apply a Laplacian filter to an image. Run the code below to apply a Laplacian filter to the image.
+
+[source,python]
+----
+grayscale_image = cv2.cvtColor(image_opencv, cv2.COLOR_BGR2GRAY)
+filtered_image_laplacian = cv2.Laplacian(grayscale_image, cv2.CV_8U, ksize=5)
+
+plt.imshow(filtered_image_laplacian, cmap='gray')
+plt.title('Laplacian Filter')
+plt.axis('off')
+plt.show()
+----
+
+You should see the image has very enhanced edges, but also a lot of noise. This is because the Laplacian filter is very sensitive to noise. To reduce the noise, the image can be blurred before applying the Laplacian filter. This is a common technique called edge detection.
+
+Another popular filter is the Sobel filter which is used to detect edges in the images. This filter is more complex, and actually involves two filters: one in the x direction and one in the y direction. The two resulting images are then combined to produce the final image. OpenCV provides a `cv2.Sobel` function that can be used to apply a Sobel filter to an image. Run the code below to apply a Sobel filter to the image.
+
+[source,python]
+----
+filtered_image_sobel_x = cv2.Sobel(image_opencv, cv2.CV_32F, 1, 0, ksize=5)
+
+plt.imshow(filtered_image_sobel_x)
+plt.title('Sobel Filter X')
+plt.axis('off')
+plt.show()
+----
+
+[NOTE]
+====
+This function has parameters for the x and y direction. In this case, the values are 1 and 0 respectively, meaning that the filter is only applied in the x direction.
+====
+
+In this, you should see the more vertically aligned edges in the image have become more bold. Please modify the code to apply the Sobel filter in the y direction and display the resulting image. What do you see?
+
+
+.Deliverables
+====
+- Image filtered with Laplacian filter
+- Image filtered with Sobel filter in the x direction
+- Image filtered with Sobel filter in the y direction
+- Explanation of the differences between the Sobel filter in the x and y directions
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project2.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====

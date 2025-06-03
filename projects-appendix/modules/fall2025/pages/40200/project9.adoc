@@ -1,0 +1,293 @@
+= TDM 40200: Project 09 - Large Language Models (LLMs): Introduction to Text Data
+
+== Project Objectives
+
+In this project we will begin understanding some basics of text data and examine how text statistics can be leveraged to extract meaningful insights.
+
+
+.Learning Objectives
+****
+- Learn how to read in text data
+- Learn how to clean text data
+- Understand how to use text statistics to gain insights
+- Implement Caesar Cipher and understand its limitations
+****
+
+== Dataset
+- '/anvil/projects/tdm/data/amazon/music.txt'
+
+== Introduction
+
+Large Language Models (LLMs) have become extremely popular in recent years thanks to OpenAI's Chat-GPT, along with other models like Google's BERT and Facebook's RoBERTa. These models are trained on massive amounts of text data and are able to generate human-like text. Although it is easy for us to understand text, it can be quite complex for a computer. Words can have multiple meanings, and the same word can have different meanings in different contexts. For example, the word "bat" can refer the flying animal or a baseball bat. In a similar note, the word "battery" can refer to a power source or a criminal charge for assault. Additionally, both of these words begin with "bat" but have different meanings. On the contrary, prefixes like "re" and "un" can change the meaning of a word considerably. Contractions like "can't" and "won't" are expanded into different words, and different dialects can have different contractions. All of these small details that we take for granted can be quite challenging for a computer to understand. This is why these models need to be trained on massive amounts of text data, and often contain hundreds of billions of parameters. In the case of GPT-4, it was trained with a whopping 1 petabyte (one-thousand terabytes, or a million gigabytes) of raw text data, and it is rumored to have upwards of 1.8 trillion parameters. Throughout these next 5 projects, we will learn about the basics of text data, simple text based models like n-grams, word embeddings, and finally we hope to build a simple language model.
+
+== Questions
+
+=== Question 1 (2 points)
+
+For these projects, we will use the Amazon Music text file. This file contains reviews of music albums from Amazon, where each line is a review. The reviews are in English, and are separated by a newline character. The file is located at '/anvil/projects/tdm/data/amazon/music.txt'. 
+
+Firstly, this file is ~2GB in size, so it is unadvisable to load the entire file into memory at once. Instead, let's create a function that reads `n` lines from the file at a time. This function should take in the file path, the number of lines to read, and an optional starting line number. The function should return a list of strings, where each string is a line in the file. Below is some starter code to help you get started.
+
+[source,python]
+----
+def read_lines(file_path, n, start = 0):
+    lines = []
+    with open(file_path, 'r') as f: # open the file in read mode
+        for i, line in enumerate(f): # go through each line in the file
+            # if the line number is less than the starting line, skip it
+
+            # if the line number is greater than the starting line + n, break the loop
+
+            # else, add the line to the list of lines
+    return lines
+----
+
+Here are a few test cases and expected outputs for the function:
+
+[source,python]
+----
+print(read_lines('/anvil/projects/tdm/data/amazon/music.txt', 2)) 
+# ['"I love this CD.  So inspiring!"', '"Love it!!  Great seller!"']
+
+print(read_lines('/anvil/projects/tdm/data/amazon/music.txt', 2, 50))
+# ['"Item arrived quickly and was as described!"\n', '"I love this CD!  It was a Christmas gift from my husband and he did a great job picking it out for me!"\n']
+----
+
+.Deliverables
+====
+- Function `read_lines` that reads `n` lines from a file at a time
+- Outputs of running test cases for the function
+====
+
+=== Question 2 (2 points)
+
+Now that we are able to read lines from the file without loading the entirety of it into memory, let's look at cleaning the text data. Text data can be quite messy, and it is important to clean it before performing any analysis. In this file, each review is surrounded by double quotes and on a separate line. However, what if the original reviewer included a double quote in their review? A new line? A tab? All of these are cause for concern, so we should investigate the data to see if there are any issues. 
+
+Take a look at the 68th review (read_lines('music.txt',1,68)) and print it out. Do you notice anything that may cause issues? How about the 150th review? What do you notice in these reviews?
+
+Some of these reviews clearly contain new lines, double quotes, etc. Additionally, every review begins and ends with an unnecessary double quote. We need to clean these reviews before we can perform any analysis. Create a function called `clean_text` that takes in a string and returns a cleaned version of the string. Escape sequences like `\n` should be removed, and `\"` should be processed into just `"`. In order to make this function work, we highly recommend using the `codecs` library. Below is some starter code to help you get started.
+
+[source,python]
+----
+import codecs
+
+def clean_text(text):
+    #modify the text here
+    # 1) decode escape sequences
+    # 2) remove the starting and ending double quotes
+    # 3) replace any newlines with a space
+    # 4) return the cleaned text
+    return text
+
+----
+
+[NOTE]
+====
+The easiest way to remove escape sequences is to use the `codecs` library. The `codecs` library has a function called `decode` that can be used to remove escape sequences. For example, calling the function on a string that contains `\n` will remove the escape sequence and replace it with a newline character. Similarly, calling the function on a string that contains `\"` will remove the escape sequence and replace it with a double quote. There are multiple ways that the decode function can be used, so you must also pass the 'unicode_escape' argument to the function to tell it that it is a string with escape sequences. For example, `codecs.decode(text, 'unicode_escape')` will remove escape sequences from the string `text`.
+====
+
+Here are a few test cases and expected outputs for the function:
+
+[source,python]
+----
+print(clean_text('"I love this CD.  So inspiring!"'))
+# I love this CD.  So inspiring!
+
+print(clean_text('"Amazing!\\nIt is wonderful"'))
+# Amazing! It is wonderful
+
+print(clean_text('"Contractions like can\\\'t and won\\\'t should also work"'))
+# Contractions like can't and won't should also work
+----
+
+.Deliverables
+====
+- Issues with the 68th and 150th reviews
+- Function `clean_text` that cleans a string
+- Outputs of running test cases for the function
+====
+
+=== Question 3 (2 points)
+
+Now that we are able to read lines from the file and clean the text data, let's look at some text statistics. One of the most basic text statistics is the word count. Create a function called `word_count` that takes in a string and returns the number of words in the string. A word here is defined as a sequence of characters that are separated by whitespace. Below is some starter code to help you get started.
+
+[source,python]
+----
+def word_count(text):
+    #modify the text here
+    # 1) split the text into words
+    # 2) return the number of words
+    return len(words)
+----
+
+[NOTE]
+====
+Splitting the text is quite easy in python, simply use the `split` function on the text. For example, calling `text.split(',')` will split the text by commas, and store each section in a list. By default, if no argument is passed to the `split` function, it will split the text by whitespace.
+====
+
+Here are a few test cases and expected outputs for the function:
+
+[source,python]
+----
+print(word_count('I love this CD.  So inspiring!'))
+# 6
+
+print(word_count('Amazing! It is wonderful'))
+# 4
+
+print(word_count('Contractions like can\'t and won\'t should also work'))
+# 8
+----
+
+Now that you have a working word counter, let's make some observations about the text data, using the first 500 reviews. What is the average word count of the reviews? What is the maximum word count? What is the minimum word count? Please provide the answers to these questions.
+
+.Deliverables
+====
+- Function `word_count` that counts the number of words in a string
+- Outputs of running test cases for the function
+- Average word count of the reviews
+- Maximum word count of the reviews
+- Minimum word count of the reviews
+====
+
+=== Question 4 (2 points)
+
+Another thing we can look at is the frequency of characters in the text data. Create a function called `char_freq` that takes in a string and returns a dictionary where the keys are the characters in the string and the values are the frequency of the characters. Below is some starter code to help you get started.
+
+[source,python]
+----
+def char_freq(text):
+    outputdict = dict()
+    for character in text:
+        # if the character is not in the dictionary, add it with a value of 1
+        # if it is in the dictionary, increment the value by 1
+    return outputdict
+----
+
+Given this dictionary, we can actually graph the frequency of characters using matplotlib's bar plot. Below is some basic code, not including axis labels, titles, formatting, etc. to help you get started.
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+def plot_char_freq(freq_dict):
+    plt.bar(freq_dict.keys(), freq_dict.values())
+    plt.show()
+----
+
+To check that your functions are correct, please run the following code:
+
+[source,python]
+----
+plot_char_freq(char_freq('aaaabbbccd'))
+----
+
+.Deliverables
+====
+- char_freq function that returns a dictionary of character frequencies
+- plot_char_freq function that plots the character frequencies
+- Output of running the test case for the plot_char_freq function
+====
+
+=== Question 5 (2 points)
+
+Let's take a look at an older encryption method called the Caesar Cipher. The Caesar Cipher is a very easy method that simply shifts the letters of the alphabet by a fixed amount. For example, if the shift is 3, then the letter 'A' would become 'D', 'B' would become 'E', and so on. If you shift past the end of the alphabet, you simply wrap around to the beginning. For example, if the shift is 3, then 'X' would become 'A', 'Y' would become 'B', and 'Z' would become 'C'. The Caesar Cipher is named after Julius Caesar, who used it to communicate with his generals. This cipher is very easy to break, as there are only 26 possible shifts and with our modern computers it takes almost no time at all to try all of them. However, there is a way to crack the Caesar Cipher without trying all 26 shifts. The primary weakness of this cipher is the fact that the frequency of letters in the English language is not uniform. For example, the letter 'E' is the most common letter in the English language, and the letter 'Z' is the least common. 
+
+[NOTE]
+====
+If you have ever watched Wheel of Fortune, you may have noticed that the letters R, S, T, L, N, and E are already given to the contestants. This is because these are some of the most common letters in the English language, and contestants used to always pick some combination of these letters. To help make the final puzzle more interesting for the audience, producers decided to give these letters to the contestants for free and let them pick a few more, while also making the puzzle more difficult.
+====
+
+For fun, let's create a Caesar Cipher function. Create a function called `caesar_cipher` that takes in a string and a shift amount, and returns the encrypted string. Below is some starter code to help you get started.
+
+[source,python]
+----
+def caesar_cipher(text, shift):
+    alphabet_list = [c for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ']
+    output = ''
+
+    for character in text:
+        if not character in alphabet_list:
+            # if the character isnt a part of the alphabet, keep it the same
+        else:
+            # if the character is a part of the alphabet, shift it by the shift amount
+    return output
+----
+
+[IMPORTANT]
+====
+For this function, you can assume that the text is in all uppercase letters. It is important that your function is also able to shift by negative amounts. For example, a shift of -3 would shift 'D' to 'A', 'E' to 'B', etc. A simple way to do this is to add 26 to the shift amount until it is positive. For example, if the shift amount is -3, you would add 26 to it to get 23, which is the same as a shift of -3.
+====
+
+Here are a few test cases and expected outputs for the function:
+
+[source,python]
+----
+print(caesar_cipher('ABCD', 3))
+# DEFG
+
+print(caesar_cipher('DEFG', -3))
+# ABCD
+
+print(caesar_cipher('HELLO WORLD', 5))
+# MJQQT BTWQI
+----
+
+.Deliverables
+====
+- Function `caesar_cipher` that encrypts a string
+- Outputs of running test cases for the function
+====
+
+=== Question 6 (2 points)
+
+Create a function that decrypts a Caesar Cipher. This function should perform a character frequency analysis on the text, compare it to a character frequency analysis of the English language, and determine the shift amount. The function should take in an encrypted string and return the decrypted string. Below is some starter code to help you get started.
+
+[source,python]
+----
+def caesar_decrypt(text):
+    text_frequencies = char_freq(text)
+    # create a dictionary of the frequencies of the English language
+    # we can use the first 500 reviews to get a good estimate of the frequencies
+    reviews = read_lines('/anvil/projects/tdm/data/amazon/music.txt', 500)
+    text = ' '.join(reviews)
+    english_frequencies = char_freq(text)
+
+    shift_amount = 0
+    # Now, it is up to you to think of some way to compare the two dictionaries
+    # you could compare the maximum frequency, the minimum frequency, the top 3, etc. However you see fit
+    # once you have determined the shift amount, you can decrypt the text by calling the caesar_cipher function with the negative shift amount
+
+    print("Caesar Cipher decrypted with shift amount: ", shift_amount)
+    return caesar_cipher(text, -shift_amount)
+----
+
+To test your function, please decrypt the following text:
+
+[source,python]
+----
+encrypted_text = "XC. LYO XCD. OFCDWPJ, ZQ YFXMPC QZFC, ACTGPE OCTGP, HPCP ACZFO EZ DLJ ESLE ESPJ HPCP APCQPNEWJ YZCXLW, ESLYV JZF GPCJ XFNS. XC. OFCDWPJ XLOP OCTWWD. SP HLD L MTR, MPPQJ XLY HTES SLCOWJ LYJ YPNV, LWESZFRS SP OTO SLGP L GPCJ WLCRP XZFDELNSP. XCD. OFCDWPJ HLD ESTY LYO MWZYOP LYO SLO EHTNP ESP FDFLW LXZFYE ZQ YPNV, HSTNS NLXP TY GPCJ FDPQFW LD DSP DAPYE DZ XFNS ZQ SPC ETXP DAJTYR ZY ESP YPTRSMZFCD. ESP OFCDWPJD SLO L DXLWW DZY NLWWPO OFOWPJ LYO TY ESPTC ZATYTZY ESPCP HLD YZ QTYPC MZJ LYJHSPCP. XCD OFCDWPJ SLO L DTDEPC NLWWPO WTWJ AZEEPC. DSP LYO SPC SFDMLYO ULXPD AZEEPC SLO L DZY NLWWPO SLCCJ AZEEPC. ESPJ WTGPO QLC QCZX ESP OFCDWPJD LYO OTO YZE DAPLV EZ ESPX XFNS. ESPJ OTO YZE RPE LWZYR"
+
+print(caesar_decrypt(encrypted_text))
+----
+
+.Deliverables
+====
+- Decrypted output of the encrypted text
+- Explanation of how you determined the shift amount, and why you picked that method to compare the two dictionaries
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project1.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
