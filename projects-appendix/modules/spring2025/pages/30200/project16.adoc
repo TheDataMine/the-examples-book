@@ -1,0 +1,230 @@
+= TDM : Project - Time Series with NOAA Climate Data (2006–2024)
+
+== Project Objectives
+
+This project will introduce students to the essential steps of preparing time series data for analysis and forecasting. Time series data requires special attention during the cleaning and transformation process before applying any machine learning method. We will learn how to handle common challenges such as missing values, and repeated timestamps to prepare data for time series analysis.
+
+.Learning Objectives
+****
+- Understand the unique structure of time series data and why certain cleaning methods are required before analysis.
+- Identify and address common data quality issues such as missing values, and duplicate timestamps.
+- Convert and format datetime variables using pandas.
+- Apply time-based interpolation and feature transformation techniques to prepare data for time series analysis.
+- Gain experience in structuring raw weather data into a usable format for modeling or forecasting.
+****
+
+== Dataset
+- `/anvil/projects/tdm/data/noaa_timeseries`
+
+
+== Introduction
+“Climate is what we expect, weather is what we get.” – Mark Twain
+
+image::climate-change.png[width=600, height=450, title="Global 2-meter air temperature anomalies on February 19, 2021, visualized by Climate Reanalyzer, Climate Change Institute, University of Maine."]
+
+Everyone’s talking about climate change—but what does the data actually say? How do we know it's real? In this project, you'll explore over 18 years of daily weather from Indianapolis and see what the numbers reveal.
+
+Of course, the data won't be a clean, pre-packaged dataset. Weather data is messy. Some days have missing values. Others value have symbols like “T” for "trace amounts." You’ll need to clean, wrangle, and transform the data before you can start uncovering the big picture.
+
+By the end, you'll be deailing with plots and time series data that reveals how the Midwest’s climate is shifting, one day at a time.
+
+This dataset comes from NOAA (the National Oceanic and Atmospheric Administration) and includes variables such as daily temperature, precipitation, humidity, wind speed, and snowfall for Indianapolis.
+
+This is time series data—data collected at consistent time intervals. Whether we’re looking at rising average temperatures over the years or spotting seasonal snowfall patterns, time plays a critical role in uncovering trends and generating insights.
+
+The dataset includes key environmental indicators:
+
+- DailyAverageDryBulbTemperature: The average air temperature for the day.
+- DailyMaximumDryBulbTemperature and DailyMinimumDryBulbTemperature: Extremes that help capture heatwaves or cold snaps.
+- DailyPrecipitation: Total rainfall or snowmelt, essential for understanding flooding risks and water cycles.
+- DailyAverageRelativeHumidity: A measure of moisture in the air, which influences comfort, storm potential, and health outcomes.
+- DailyAverageWindSpeed: Wind patterns affect everything from airport safety to wildfire spread.
+- DailySnowfall: Helps track seasonal snowfall, crucial for road maintenance, agriculture, and climate trend analysis.
+
+These are the main variables we are interested in for this climate change time series analysis. We will want to examine how DailyAverageDryBulbTemperature (The average air temperature for the day) changes over time along with the other weather variables. However, you will notice that the data won't come in the exact format we want it to right away! We will need to do some data cleaning and data preparation in order to prepare our time series data. You will slowly uncover that the data needs some prepping before you start doing any sort of analysis or implementing any sort if time series based machine learning model like ARIMA or LSTMs. 
+
+Climate change isn’t just about rising global temperatures—it’s about changing patterns. Shifts in precipitation, increasing variability in humidity, and more frequent extreme events all leave clues in historical weather data. Time series analysis gives us the tools to detect those patterns and ask better questions: Are winters getting shorter? Is the Midwest (Indianapolis) seeing more heavy rain events? 
+
+In this project, you'll use Python and pandas to clean, transform, and prepare this dataset for time series analysis. We’ll take raw weather data and shape it into meaningful insights—because understanding our environment and the weather in Indianapolis starts with understanding our data.
+
+
+== Questions
+
+=== Question 1 Explore One Year Worth of Data (2 points)
+
+Before we clean or analyze anything, we need to take a step back and get to know the data. Your goal is to investigate what kind of time intervals the data uses and whether it's ready for time series analysis.
+
+
+Let’s ask some questions that will help you get to know this dataset:
+
+- What kind of time intervals is the data in?
+- If we wanted our data to be on a daily level, is there something weird within the data that's preventing that?
+- Are there duplicates for a given calendar day?
+- What kinds of variables are currently included in the data? Which ones do you think will be useful for weather analysis?
+
+
+To load the 2006 weather dataset you can run:
+
+[source,python]
+----
+import pandas as pd
+indy_climatedata_2006 = pd.read_csv("/anvil/projects/tdm/data/noaa_timeseries/indyclimatedata_2006.csv", low_memory=False)
+----
+
+.Deliverables
+====
+- 1a. Load the 2006 weather dataset and preview the first few rows.  What initial observations can you make about the data? Are there any patterns, missing values, or unusual entries that stand out?
+- 1b. Check the number of rows and columns, then check the columns and data types. Based on this, state which columns you think seem most important for weather analysis. Are the data types appropriate?
+- 1c. Convert the `"DATE"` column to datetime format and inspect a few values. What do you notice about the `DATE` column in the data? Is there more than one observation per calendar day? (Hint: you may want to use `to_datetime.`
+- 1d. Compare the number of unique calendar dates to the expected number of days in a year. What does this tell you about the frequency of observations in the dataset? (Hint: you may want to use `dt.date.nunique().`
+====
+
+=== Question 2 Combine All Years (2 points)
+
+In many real-world projects, your data won’t come clean in a tidy file. Instead, it will arrive across multiple files, years, or formats. It will often be like assembling a puzzle: each piece holds valuable information, but the full picture only comes into view once everything is combined neatly.
+
+In our case, each year of daily weather observations is stored in its own file. Luckily, these files are consistent with each other because they share the same structure and the same column names. By stacking them together into a single, unified dataset, we’re able to build a continuous timeline spanning nearly two decades of weather data.
+
+By stacking these annual files together, we will be able to:
+
+- Track long-term climate trends in temperature, precipitation, snowfall, and more
+- Detect seasonal patterns and anomalies across years
+- Investigate how weather events are changing over time—key to studying climate change
+- Prepare the data for meaningful time series analysis and modeling
+
+Our data files currently look like this:
+
+- indyclimatedata_2006.csv
+- indyclimatedata_2007.csv
+- indyclimatedata_2008.csv ...
+- indyclimatedata_2024.csv
+
+
+    
+Each file contains daily weather data for a single year—like the 2006 dataset. Our goal is to combine (or stack) these files into one continuous dataset so we can prepare it for time series analysis and explore long-term weather trends in Indianapolis.
+
+You can think of it like stacking information — you're placing one dataset on top of another. This process is often called appending or combining rows, and it's how we build one larger dataset from many smaller ones with the same structure. Like in the image below:
+
+image::append-data-vis.png[width=600, height=450, title="Figure Source: “Combine or Append Data – Main Concepts,” The Power User, April 9, 2019."]
+
+After combining all years together ask yourself: 
+- Are some years more complete than others?
+- What challenges might this pose for analysis?
+
+
+
+For (2a) you can use the function already developed for you to stack the data:
+
+[source,python]
+----
+import pandas as pd
+
+def load_and_stack_climate_data(start_year=2006, end_year=2024, base_path="/anvil/projects/tdm/data/noaa_timeseries/"):
+    dfs = []
+    for year in range(start_year, end_year + 1):
+        file_path = f"{base_path}indyclimatedata_{year}.csv"
+        try:
+            df = pd.read_csv(file_path, low_memory=False)
+            df['year'] = year
+            dfs.append(df)
+        except FileNotFoundError:
+            print(f"File not found for year {year}: {file_path}")
+            continue
+    combined_df = pd.concat(dfs, ignore_index=True)
+    return combined_df
+----
+
+
+.Deliverables
+====
+- 2a. Stack the files from 2006–2024 into one DataFrame (You may use the function provided for stacking the data if you'd like or write your own function).
+- 2b. Understand the new shape and column types of the combined dataset. Make a note of anything unusual or unexpected in the data structure. If you were designing a time series  model to forecast weather trends, would the current structure of the data allow you to do that?
+- 2c. Examine the number of rows for each year. What do you notice? How do you think you will need to prepare the data to be at a true daily level?"
+====
+
+=== Question 3 Clean Weather Data (2 points)
+
+Choose a small set of columns that best represent daily weather conditions. These might include average, minimum, and maximum temperatures, precipitation, humidity, wind speed, and snowfall. 
+
+In a time series, it’s essential that the time variable follows a consistent interval—like daily, weekly, or monthly—and that the variable we are interested in analyzing over time contains numeric values, so we can properly visualize, model, and interpret trends over time. **For the purpose of this project, we will prepare the data to be at a daily level.**
+
+Start cleaning the dataset:
+
+- Drop rows where all weather values are missing.
+- Note values like "T" for trace precipitation.
+
+.Deliverables
+====
+- 3a. Create a filtered version of your dataset that includes only the key weather columns states below in `columns_to_keep` and the `DATE` column. Save this as a new DataFrame.
+
+  You may find it helpful to define the columns you want to keep:
+
+  [source,python]
+  ----
+  columns_to_keep = ["DATE", "DailyAverageDryBulbTemperature", "DailyMaximumDryBulbTemperature",
+      "DailyMinimumDryBulbTemperature", "DailyPrecipitation", "DailyAverageRelativeHumidity",
+      "DailyAverageWindSpeed", "DailySnowfall", "NAME"]
+  DF = DF[columns_to_keep]
+  ----
+
+- 3b. Drop any rows where all selected weather columns are missing.  
+  _Hint_: You can use `.dropna()` with `how='all'`.
+
+- 3c. Convert the `DATE` column to datetime format `YYYY-MM-DD` and preview the result to confirm it worked. _Hint_: You may want to use `.datetime()`
+
+- 3d. Print the shape of your cleaned dataset and display the range of dates it covers. _Hint_: You may want to use `.min().date()` or `max().date()`.
+====
+
+=== Question 4 Prepare for Time Series Analysis (2 points)
+
+Prepare your data by setting the index to DATE, identifying numeric columns, and using time-based interpolation to fill in gaps.
+
+Before we can analyze or model our time series data, we need to make sure it’s clean and in the right format! That means checking for anything that could break our code or mislead our analysis—like strange values, missing data, or non-numeric entries.
+
+For example, weather datasets often include values like "T" for “trace” amounts of precipitation, which aren’t numbers and can cause errors if we try to run calculations. If we don’t catch and fix these, we could end up with incorrect trends, faulty predictions, or broken code. Setting DATE as the index helps Python understand the data is time-ordered, and interpolation helps us fill in small gaps smoothly so the timeline stays continuous.
+
+For example, see the visual below:
+
+image::time-series-ex.png[width=600, height=450, title="Figure Source: Airbyte, 'What Is Time Series Data In Data Analysis (With Examples)', https://airbyte.com/data-engineering-resources/time-series-data"]
+
+
+Time series data consists of values recorded at consistent time intervals, allowing us to track changes and uncover patterns over time—like snapshots that show how something evolves moment by moment. The chronological order is what makes it possible to detect trends, cycles, or seasonality. 
+
+
+.Deliverables
+====
+- 4a. Set the DATE column as the index and identify numeric columns.
+- 4b. Use time-based interpolation to fill missing values in numeric columns.
+- 4b. Right now, "DATE" is your index, which was useful for interpolation—but what if you want to use it as a regular column again for plotting or exporting your data? Try resetting the index so that "DATE" becomes a column once more.
+- 4d. How might non-numeric values that disrupt your time series analysis analysis? Look for "T" values (trace amounts) in the weather columns. Replace them with 0, convert the affected columns to float, and verify that non-numeric values do not remain.
+====
+
+=== Question 5 (2 points)
+
+You’ve cleaned and prepared your data—now it’s time to visualize it. Before you plot, think about whether the temperature values are in a format that makes sense for interpretation. How might converting the units change your understanding of the data?
+
+Try visualizing the full range of daily temperatures to uncover trends or shifts over the years. Then, focus on a single year. What patterns do you notice when you zoom in?
+
+.Deliverables
+====
+- 5a. Review your temperature columns. Are they in Celcius or Farenheit? If so, consider whether converting them to Fahrenheit would make your analysis more interpretable or relevant. If needed, perform the conversion.
+- 5b. Create a time series plot of daily average for one of the weather columns from 2006 to 2024. What trends do you see?
+- 5c. Create a second plot focusing only on 2024. What seasonal patterns or anomalies stand out?
+- 5d. Write 2–3 observations based on your plots. What surprises you?
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project1.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
