@@ -1,4 +1,4 @@
-= SSH
+= 1. SSH
 
 `ssh` is a powerful tool that allows you to create a connection to a server, over a network, and exchange data. 
 
@@ -11,7 +11,7 @@ ssh username@anvil.rcac.purdue.edu
 
 The part _before_ the "@" is your username for the _server_. The part _after_ the "@" is the _host_. The result will be the default shell of given user, on the _host_.
 
-You can also run specific commands on the _host_ without launching an entire shell.
+You can also run specific commands on the _host_ without launching an entire shell. **Run this command in the terminal in your LOCAL computer. You will need to fill in the USERNAME part with your Anvil username!**
 
 [source,bash]
 ----
@@ -20,7 +20,7 @@ ssh username@anvil.rcac.purdue.edu whoami
 
 This would run the `whoami` command on the _host_, `anvil.rcac.purdue.edu`, and output the value in the current shell on your _local_ machine.
 
-== Authentication
+== 2. Authentication
 
 When using `ssh` to login to the _host_ system, you will be asked to enter a password. This is the password of the user, `username`, on the _host_ machine. You will be required to enter this for every `ssh` connection. 
 
@@ -30,59 +30,26 @@ Public key cryptography allows the user to bypass typing a password by exchangin
 
 To setup `ssh` keys, do the following.
 
-. On your _local_ machine _or_ your _host_ machine, generate your key pair.
-+
+. On your _local_ machine _or_ your _host_ machine, generate your key pair:
+
 [source,bash]
 ----
 # mac or linux
-ssh-keygen -a 100 -t ed25519 -f ~/.ssh/id_ed25519 -C "comment here"
+cd .ssh
+ssh-keygen -a 100 -t ed25519 -f ~/.ssh/id_ed25519 
 
 # windows
+cd .ssh
 ssh-keygen -t ed25519
 ----
-+
-. You will be prompted to enter a password. If you choose to _not_ enter a password, your resulting _private_ key will end up being the equivalent of a password. Any bad actor who gets ahold of your key will be able to enter any authorized system under your username. If you _do_ enter a password, you will be asked to enter this password every time your `ssh` into another system with a matching _public_ key in the `~/.ssh/authorized_keys` file.
-. This will create two files in your `$HOME` directory: `~/.ssh/id_ed25519` and `~/.ssh/id_ed25519.pub`. Or, if you are in a windows system `C:\Users\username\.ssh\id_ed25519` and `C:\Users\username\.ssh\id_ed25519`. The first key, `~/.ssh/id_ed25519`, is your _private_ key. The other file, `~/.ssh/id_ed25519.pub` is your _public_ key. 
+
+. You will be prompted to enter a password. If you choose to _not_ enter a password, your resulting _private_ key will end up being the equivalent of a password. Any bad actor who gets ahold of your key will be able to enter any authorized system under your username. If you _do_ enter a password, you will be asked to enter this password every time you `ssh` into another system with a matching _public_ key in the `~/.ssh/authorized_keys` file.
+
+. This will create two files in your `$HOME` directory: `~/.ssh/id_ed25519` and `~/.ssh/id_ed25519.pub`. Or, if you are in a Windows system: `C:\Users\username\.ssh\id_ed25519` and `C:\Users\username\.ssh\id_ed25519.pub`. The first key, `~/.ssh/id_ed25519`, is your _private_ key. The other file, `~/.ssh/id_ed25519.pub` is your _public_ key.
+
 . The next task is to share your _public_ key with any other system you'd like to be able to `ssh` into. For example, Anvil. To share a public key, you can either use the nifty `ssh-copy-id` command, _or_ you can manually copy the contents of your _public_ key and _append_ the contents to the `~/.ssh/authorized_keys` file on the desired _host_ (in our example, Anvil).
-+
-[source,bash]
-----
-# long, manual way, starting on the local machine
 
-# mac or linux
-cat ~/.ssh/id_ed25519.pub
-
-# windows
-type C:\Users\username\.ssh\id_ed25519.pub
-
-# copy the output of the cat command to you clipboard
-ssh username@anvil.rcac.purdue.edu
-
-# now on anvil via ssh
-mkdir ~/.ssh
-vim ~/.ssh/authorized_keys
-
-# paste the contents of your keys to a newline, and press
-# Ctrl+c, and type ":wq" to save and quit.
-
-# set the permissions on the host (anvil)
-# ssh requires ssh-specific files have proper permissions
-chmod 700 ~/.ssh
-chmod 644 ~/.ssh/authorized_keys
-chmod 644 ~/.ssh/known_hosts
-chmod 644 ~/.ssh/config
-chmod 600 ~/.ssh/id_ed25519
-chmod 644 ~/.ssh/id_ed25519.pub
-
-# short, automatic way, starting on the local machine
-# IMPORTANT: this will _not_ work as anvil does not 
-# support password authentication.
-ssh-copy-id username@anvil.rcac.purdue.edu
-----
-+
-[IMPORTANT]
-====
-For Anvil, specifically, you will need to perform the manual way. You can do this by first copying the contents of your _public_ key.
+For Anvil, specifically, you will need to perform the manual way. You can do this by first copying the contents of your _public_ key. You will type this command in your **local computer's terminal**, then select the output string and copy it into Anvil's shell:
 
 [source,bash]
 ----
@@ -93,43 +60,46 @@ cat ~/.ssh/id_ed25519.pub
 type C:\Users\username\.ssh\id_ed25519.pub
 ----
 
-Then, navigate and login to https://ondemand.anvil.rcac.purdue.edu. Click on Clusters > Anvil Shell Access in the top menu. Once presented with a shell, do the following.
+Navigate and login to https://ondemand.anvil.rcac.purdue.edu. Click on *Clusters > Anvil Shell Access* in the top menu. Once presented with a shell, run the following to create the `.ssh` folder if it doesn't already exist:
 
 [source,bash]
 ----
-mkdir ~/.ssh
-vim ~/.ssh/authorized_keys
+mkdir -p ~/.ssh
+----
 
-# paste the contents of your keys to a newline, and press
-# Ctrl+c, and type ":wq" to save and quit.
+Next, return to the top menu and click on *Files > Home Directory*.
 
-# set the permissions
+. In the file browser, click the gear icon in the top right and enable *Show Dotfiles*.
+. Open the `.ssh` folder.
+. If the `authorized_keys` file does not exist, click *New File* and name it `authorized_keys`.
+. Open the `authorized_keys` file and paste the full contents of your public key (copied from `cat ~/.ssh/id_ed25519.pub`) on a new line.
+. Save the file.
+
+Then, go back to the Anvil shell terminal and set the required permissions:
+
+[source,bash]
+----
 chmod 700 ~/.ssh
 chmod 644 ~/.ssh/authorized_keys
-chmod 644 ~/.ssh/known_hosts
-chmod 644 ~/.ssh/config
-chmod 600 ~/.ssh/id_ed25519
-chmod 644 ~/.ssh/id_ed25519.pub
 ----
 
-Now, on your local machine, you should be able to run the following and immediately connect.
+Now, on your local machine, you should be able to run the following and immediately connect:
 
 [source,bash]
 ----
 ssh username@anvil.rcac.purdue.edu
 ----
-====
-+
-. If you chose to add a password to your key pair, and you do not want to have to type your password each time you `ssh` into the given _host_, you can use the `ssh-agent`, which, after an initial setup step, will automatically do this for you. To set this up, simply type `ssh-add`, and, when prompted, type in the password associated with your key pair. At this stage, you should be able to run the following and immediately be connected to the _host_. For windows users, the information https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_keymanagement[here] may be helpful.
-+ 
-[source,bash]
-----
-ssh username@anvil.rcac.purdue.edu
-----
-+
-. One neat trick, when managing many hosts, is to maintain an `ssh` config file. This is useful if you have many hosts, with different usernames, key pairs, and addresses. Take the following, for example.
-+
-.~/.ssh/config
+
+That should do it! 
+
+
+
+
+Here is some more information that might come in handy:
+
+. One neat trick, when managing many hosts, is to maintain an `ssh` config file. This is useful if you have many hosts, with different usernames, key pairs, and addresses. Take the following, for example:
+
+[source,sshconfig]
 ----
 Host anvil 
     Hostname anvil.rcac.purdue.edu
@@ -141,9 +111,9 @@ Host pizza
     User georgie
     IdentityFile ~/.ssh/id_rsa
 ----
-+
-This config allows you to establish a connection using `ssh` very easily.
-+
+
+This config allows you to establish a connection using `ssh` very easily:
+
 [source,bash]
 ----
 ssh anvil
@@ -152,9 +122,9 @@ ssh anvil
 
 ssh pizza
 ----
-+ 
-This replaces the alternative.
-+
+
+This replaces the alternative:
+
 [source,bash]
 ----
 ssh username1@anvil.rcac.purdue.edu
