@@ -30,7 +30,6 @@ ____
 ____
 
 
-
 Time series forecasting isn’t just number crunching—it’s the closest thing we have to a crystal ball. By recognizing patterns across time, we can uncover hidden structures in the data, anticipate what’s coming, and even influence decisions before events unfold. It's not magic, it's just cool math behind the scenes.
 
 Climate isn’t random—it follows patterns, some obvious and others subtle. When we zoom out from daily weather reports and look at broader climate trends, we start to see the underlying patterns of our weather. In this project, we’ll work with nearly two decades of monthly-aggregated climate data from Indianapolis (2006–2024), sourced from NOAA (the National Oceanic and Atmospheric Administration).
@@ -45,7 +44,7 @@ This time, the focus shifts from day-to-day fluctuations to monthly averages, a 
 
 The power of time series forecasting lies in its ability to take these past patterns and use them to make educated predictions about the future. In this project, you'll start off with bulding an AR model and then you’ll learn how to build a type of ARIMA model. Specifically, a SARIMAX model that incorporates not just past temperature values, but also external predictors like humidity and precipitation.
 
-You’ll clean and transform the data, test for stationarity, evaluate model performance, and ultimately forecast future climate trends for Indianapolis. The goal? To understand not only what the temperature was—but why, and what it might be next — yes, we are going to try to predict the future!
+You’ll clean and transform the data, test for stationarity, evaluate model performance, and ultimately forecast future climate trends for Indianapolis. The goal? To understand not only what the temperature was—but what might be next — yes, we are going to try to predict the future!
 
 == Questions
 
@@ -66,9 +65,6 @@ Time series models are different than other models. From forecasting stock price
 Take, for example, your plot of average monthly temperature. One thing you'll notice right away is that observations from month to month are not independent. Instead, they are correlated with one another! This is known as *autocorrelation*—when values close together in time tend to be similar.
 
 This feature distinguishes time series data from other datasets you’ve likely seen, where each row can typically be treated as an independent observation. In time series, the order of the data matters. Patterns, cycles, and trends can all emerge over time—and understanding those structures is the key to effective forecasting.
-
-[.small]
-_Some explanations have been adapted from_ _Introduction to Statistical Learning in Python_, Springer Textbook.
 
 
 **Why Autoregressive (AR) Models?**
@@ -110,7 +106,7 @@ Let's look at how autocorrelation looks like in our data:
 
 image::Autocorrelation-monthly.png[width=600, height=450, title="The autocorrelation function for Monthly Temperature."]
 
-The figure above is the autocorrelation for `Monthly_AverageDryBulbTemperature_Farenheit` across months where one lag is one month. We observe a clear seasonal pattern, with strong positive correlations at lags of 12, 24, and 36 months. This indicates a strong yearly seasonality in monthly average temperatures.
+The figure above is the autocorrelation for `Monthly_AverageDryBulbTemperature_Farenheit` across months where one lag is one month. We observe a clear seasonal pattern, with strong positive correlations at lags of 12, 24, and 36 months. This indicates a strong yearly seasonality in monthly average temperatures. Notice that the autocorrelation at lag 0 is exactly 1, since a variable is always perfectly correlated with itself. At lag 1 (one month in the past), the autocorrelation is around 0.80, indicating a strong relationship between this month’s temperature and the previous month’s.
 
 
 Understanding this concept of *lag* is foundational before jumping into more complex models like **SARIMAX**!
@@ -127,7 +123,7 @@ We’ll start by fitting an AR(1) model to see this in action. This foundation w
   Include `Date`, `Current`, and `Previous` columns. Output the first five rows.  
   Then, describe the relationship between consecutive months in one sentence. 
   
-Use the partial code below to guide your approach in (2b). Take a moment to understand what the function is doing, and then complete the section labeled "For YOU to FILL in":
+Use the partial code below for question (2b). Take a moment to understand what the function is doing, and then complete the section labeled "For YOU to FILL in":
 
 [source,python]
 ----
@@ -162,7 +158,7 @@ comparison_df = pd.DataFrame(monthly_comparisons)
 
 **Why Are We Using ARIMA Now?**
 
-By now, you’ve seen that temperature data isn’t random—there are patterns over time. Some months are warmer than others, and these shifts often repeat each year. But how can we predict the future based on what we’ve seen?
+By now, you’ve seen that temperature data isn’t random—some months are correlated with each other. Some months are warmer than others, and these shifts often repeat each year. But how can we predict the future based on what we’ve seen?
 
 Enter *ARIMA*, one of the most widely used tools for time series forecasting. It stands for:
 
@@ -176,9 +172,9 @@ So why are we using it here?
 * The data is recorded at regular time intervals, which ARIMA is well-suited for. 
 * Unlike black-box models, ARIMA gives us an interpretable framework—we can understand what’s driving our predictions.
 
-Before jumping into the full ARIMA model, we started with just the *AR (AutoRegressive)* part. Why?
+Before jumping into the full ARIMA model, we started with just understanding autocorrelation. Why?
 
-Because the AR model lays the foundation for how time series models “remember” the past. It helped us:
+Because the autocorrelationlays the foundation for how time series models “remember” the past. It helped us:
 
 * Build intuition around the idea of lagged values (past influencing present)  
 * See whether yesterday’s weather helps predict today’s  
@@ -188,17 +184,15 @@ ARIMA models are flexible and interpretable. They work best when the future depe
 
 But there’s one important assumption that ARIMA makes: *stationarity*.
 
----
 
 **Why Stationarity Matters**
 
-In time series modeling, stationarity means the statistical properties of the data—like its mean, variance, and autocorrelation—stay consistent over time. This consistency helps ARIMA detect patterns and relationships more reliably.
+In time series modeling, stationarity means the statistical properties of the data like its mean, variance, and autocorrelation stay consistent over time. This consistency helps ARIMA detect patterns and relationships more reliably.
 
 If the series shows a trend or changing variance, ARIMA may struggle to learn anything meaningful. The model might misinterpret those trends as patterns it needs to learn—leading to poor forecasts.
 
-That’s why before using ARIMA, we need to test whether our series is stationary—and if it’s not, we need to transform it.
+That’s why before using ARIMA, we need to test whether our series is stationary and if it’s not, we need to transform it.
 
----
 
 **How Do We Know If It’s Stationary?**
 
@@ -211,7 +205,6 @@ If the p-value is less than 0.05, we reject the null hypothesis and say: _“It 
 
 Think of the ADF test as a screening step. If our series fails the test, that’s a sign it may need transformation before modeling.
 
----
 
 **How Do We Make It Stationary?**
 
@@ -228,13 +221,12 @@ By focusing on change over time instead of absolute values, we reduce the impact
 
 Understanding whether your data is stationary and knowing how to make it so is a key step before using ARIMA. It’s part of the model’s logic, and it’s what sets the stage for meaningful, interpretable time series predictions.
 
----
 
 **Train, Test Split in Time Series**
 
 image::Train-test-split.png[width=600, height=450, title="The split for our training and test dataset."]
 
-When building forecasting models like ARIMA—or any model for time series data—we must always respect the order of time. Time series data isn’t like regular machine learning data where we can shuffle rows freely. In time series, past events influence future outcomes, so the order of observations matters.
+When building forecasting models like ARIMA—or any model for time series data we must always keep in mind the order of time. Time series data isn’t like regular machine learning data where we can shuffle rows freely. In time series, past events influence future outcomes, so the order of observations matters.
 
 That’s why we always split the data chronologically:
 
@@ -242,14 +234,16 @@ That’s why we always split the data chronologically:
 
 - Testing set: The later portion, used to evaluate how well the model can predict unseen future values. 
 
-This principle applies to all time series models—whether you’re using ARIMA, LSTM, Prophet, or even XGBoost on sequential data. You must never let the model "peek" into the future while training.
+This principle applies to all time series models—whether you’re using ARIMA or LSTM. You must never let the model "peek" into the future while training.
 
 Example:
 
 Let’s say we have monthly temperature data from January 2012 to December 2024. A proper split would be:
 
-Training set: January 2012 to December 2022
-Testing set: January 2023 to December 2024
+- Training set: January 2012 to December 2022
+
+- Testing set: January 2023 to December 2024
+
 This setup simulates a real-world scenario: we train using data up until 2022, and then test how well the model can forecast what comes next.
 
 Why This Matters:
@@ -271,8 +265,7 @@ Time-aware train/test splitting is fundamental to reliable time series forecasti
 - **Training set:** January 2012 to December 2022  
 - **Testing set:** January 2023 to December 2024
 
-_Note:_ We’ll only test for stationarity on the training set since ARIMA models are fit using this data.  
-If the training set is non-stationary, the model may produce poor or misleading forecasts.
+_Note:_ We’ll only test for stationarity on the training set since ARIMA models are fit using this data.  If the training set is non-stationary, the model may produce poor or misleading forecasts.
 
 Use the code below to complete the split and print the first five rows of your training and test sets:
 
@@ -293,11 +286,15 @@ print(train.head())
 print(test.head())
 ----
 
+_Note:_ We’ll only test for stationarity on the training set since ARIMA models are fit using this data.  If the training set is non-stationary, the model may produce poor or misleading forecasts.
+
+
 **3b. Run the ADF test on the training set’s `Monthly_AverageDryBulbTemperature_Farenheit` column using the `adfuller()` function from `statsmodels`.**  
 Then, in 1–2 sentences, explain whether the series appears stationary based on the p-value:
 
 - If the p-value is **greater than 0.05**, we fail to reject the null hypothesis — this suggests the series is **not stationary**.  
 - If the p-value is **0.05 or below**, the series is likely **stationary**.
+
 
 Use the partial code below to guide your approach:
 
@@ -316,13 +313,6 @@ Use `type(adf_result)` or `help(adfuller)` if you're unsure what the function re
 **3c. Apply first-order differencing to the `Monthly_AverageDryBulbTemperature_Farenheit` column in your training data, and create a plot of the result.**
 
 
-Then, write **1–2 sentences** addressing the following:
-
-- What do you notice about the differenced series?  
-- Does it appear more stable over time than the original?  
-- Could this transformation help your model better identify patterns?
-
-
 _Hint: Use the `.diff()` method to compute first-order differences. Fill in `train[...]` with your target variable and use `matplotlib.pyplot` to create the plot._
 
 Use the code below to guide your approach:
@@ -331,12 +321,12 @@ Use the code below to guide your approach:
 ----
 import matplotlib.pyplot as plt
 
-train['Temp_diff'] = train['Monthly_AverageDryBulbTemperature_Farenheit'].diff()
+train['Temp_diff'] = train['...'].diff() # For YOU to fill in
 
 plt.plot(train['DATE'], train['Temp_diff'])
-plt.title("First-Order Differenced Series")
+plt.title("....") # For YOU to FILL in
 plt.xlabel("Date")
-plt.ylabel("Change in Temperature (°F)")
+plt.ylabel("....") # For YOU to FILL in
 plt.grid(True)
 plt.show()
 ----
@@ -363,98 +353,67 @@ print("p-value (differenced):", result_diff[1])
 ====
 
 
-=== Question 4 - Prepare the Data for Modeling (2 points)
+=== Question 4 – Fit a Baseline ARIMA Model (2 points)
 
-At this point, you’ve done the hard groundwork. You explored the data, identified long-term trends, applied differencing to stabilize the series, and confirmed stationarity with the ADF test. Now comes the fun part: modeling.
+You’ve done the groundwork: explored the data, visualized trends, and confirmed stationarity by differencing. Now let’s fit a baseline ARIMA model using only the temperature data — no seasonality or external variables yet.
 
-But before we can fit a model, we need to know what kind of model we’re using — and why.
+Why start here?
 
-We’ll be using a *SARIMAX* model, which stands for: Seasonal AutoRegressive Integrated Moving Average with exogenous regressors. 
+By fitting a basic ARIMA model first, we create a simple benchmark. This allows us to later evaluate whether adding seasonality or extra predictors (as we’ll do with SARIMAX) actually improves performance.
 
-Let’s break this down:
+**What is ARIMA?**
 
-* *AutoRegressive (AR)*: The model uses past values of the series to predict future ones.
-* *Integrated (I)*: It handles trends in the data by differencing the series.
-* *Moving Average (MA)*: It incorporates past forecast errors to refine predictions.
-* *Seasonal*: Adds AR, I, and MA terms to capture repeating patterns (such as yearly cycles).
-* *Exogenous variables (X)*: Allows us to include other relevant predictors (like precipitation or humidity) that could help explain temperature fluctuations.
+ARIMA is a classic model used in time series forecasting. It stands for:
 
-In simpler terms, SARIMAX is ARIMA with upgrades. It’s capable of handling both seasonality and outside influence, making it a great fit for weather data, which often involves repeated yearly patterns and multiple interrelated climate variables.
+* *AutoRegressive (AR)*:  
+  The model uses the relationship between a variable and its own past values.  
+  _Example: If last month was hot, this month might also be hot._
 
-Why not just use ARIMA? Because ARIMA only models the temperature series using its own past behavior, it completely ignores what else might be happening (like a sudden snowstorm or a spike in wind speed). SARIMAX, on the other hand, lets us incorporate exogenous variables that could explain those shifts more accurately.
+* *Integrated (I)*:  
+  Differencing is used to remove trends and make the series stationary — a key assumption for ARIMA models.  
+  _Example: If temperatures are gradually rising due to climate change, differencing helps focus on short-term patterns rather than long-term trends._
 
-In this question, you’ll begin setting up your SARIMAX model by defining:
+* *Moving Average (MA)*:  
+  The model incorporates past forecast errors to improve predictions.  
+  _Example: If last month’s forecast was too low, the model may adjust this month’s prediction upward._
 
-* Your *target variable* (the thing you're trying to predict — temperature), and
-* Your *exogenous variables* (the predictors you think influence that target — humidity, wind, precipitation, and snowfall).
 
-Once that’s set, we’ll be ready to fit the model and see how well it captures patterns in the training data.
-
-Let’s get started by preparing your features below.
+Even though ARIMA doesn’t handle seasonality or external factors, it’s still a powerful tool — especially when you're just using one time series.
 
 .Deliverables
 ====
-**4a. Define Your Target Variable. Identify which column in your data contains the values you want to predict. You’ll store the name of this column in a variable called 'target_col'.**
+
+**4a. Define the Target Variable.**
+
+What are you trying to predict? Save the name of that column (as a string) in a variable called `target_col`.
 
 
-_Hint: Think about what you're trying to forecast. Which column best represents the value you'd want to predict for future months? Store the name of that column (as a string) in a variable called target_col._
-
-
-**4b. Select Exogenous Variables. Run the code below to save the list of your exogenous variables:**
-
-
-[source,python]
-----
-exog_cols = [
-    'Monthly_Precipitation',
-    'Monthly_AverageRelativeHumidity',
-    'Monthly_AverageWindSpeed',
-    'Monthly_Snowfall']
-----
-
-Note: 
-These are the other weather-related variables in our dataset that might help explain or predict changes in temperature. These are factors like rainfall or wind. We are storing the column names you choose in a list called exog_cols to prepare our ARIMA model.
-
-
-**4c. Prepare the Training Inputs. Run the code below, then print the first five rows of both inputs to confirm they were created correctly.**
+**4b. Prepare the training data by resetting the index and extracting your target variable using the code below. Make sure to fill in and label your axes.**
 
 [source,python]
 ----
 train = train.reset_index(drop=True)
 y_train = train[target_col]
-X_train = train[exog_cols]
 ----
 
-Note: 
-This is getting your data ready for modeling. We are resetting the index of our training set. Then, we are extracting the target and exogenous variables using the column names you defined earlier: target_col and exog_cols.
-
-
-**4d. Fit a Baseline ARIMA(1,1,1) Model (No Exogenous Variables). The code below fits the model and generates fitted values for the training set. Your task is to complete the plot by adding both the actual and predicted temperature values over time.**
-
-
-Use the provided code below to build your plot. Make sure to:
-
-- Label your axes clearly
-- Add a legend to distinguish actual vs. predicted values
-- Write 1-2 sentences describing what you are plotting
-  
+**4c. Fit an ARIMA(1,1,1) model using the code below and visualize the results. Write 1–2 sentences describing what your plot shows. How well does the ARIMA model match the trend?**
 
 [source,python]
 ----
 import matplotlib.pyplot as plt
 from statsmodels.tsa.arima.model import ARIMA
 
-
 arima_model = ARIMA(y_train, order=(1, 1, 1))
 arima_fit = arima_model.fit()
 fitted_values = arima_fit.fittedvalues
+
 plt.figure(figsize=(12, 5))
 plt.plot(train['DATE'], y_train, label='Actual', color='blue')
 plt.plot(train['DATE'].iloc[1:], fitted_values, label='Fitted', color='orange', linestyle='--')  
 
-plt.title("_______") # Fill in 
-plt.xlabel("_________")   # Fill in
-plt.ylabel("_________")   # Fill in 
+plt.title("______")      # Fill in a descriptive title
+plt.xlabel("______")     # Fill in X-axis label
+plt.ylabel("______")     # Fill in Y-axis label
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
@@ -463,23 +422,8 @@ plt.show()
 ----
 
 
-Note: 
-This will help you visually evaluate how well the model captures the trend and variability in the training data. Before introducing seasonal components or external predictors, we are seeing how well a simple ARIMA(1,1,1) model performs using only the temperature data. The code above fits the model and generates fitted values for the training set. 
 
-
-**4e. Evaluate the Model Using MAE. **
-
-Let’s measure how well the ARIMA(1,1,1) model fits the training data. One common way to do this is by calculating the Mean Absolute Error (MAE)—the average size of the prediction error in degrees Fahrenheit.
-
-The mean_absolute_error() function from sklearn.metrics takes two arguments:
-
-- The actual observed values
-- The model’s predicted values
-
-It returns a single number that summarizes the average absolute difference between them.
-
-
-A function has been provided below to help you with the setup—you may use it if you'd like.
+**4d. Use the `mean_absolute_error()` function to assess the model's performance. Make sure to fill in the mean_absolute_error function with the appropriate values.**
 
 [source,python]
 ----
@@ -488,32 +432,45 @@ from sklearn.metrics import mean_absolute_error
 actual = y_train
 predicted = fitted_values
 
-# Fill in the function with the appropriate arguments
-# mae = mean_absolute_error(_____, _____)
-
-# Print the MAE with some context
-# print(f"Mean Absolute Error: {mae:.2f}°F — on average, the model's predictions are off by about this many degrees.")
+mae = mean_absolute_error(_____, _____) # For YOU to FILL in
+print(f"Mean Absolute Error: {mae:.2f}°F — on average, the model's predictions are off by this many degrees.")
 ----
 
-
+**4e. Briefly explain one limitation of ARIMA for this problem by writing 1-2 sentences (hint: think about seasonality or other weather factors).**
 ====
+
+
+
 
 === Question 5 - Build and Fit the SARMIAX Model (2 points)
 
-So now you've done the important steps: understood AR and autocorrelation, and understood ARIMAX. 
+Before we fit the SARIMAX model we need to know why.
 
-Now, we’ll use a *SARIMAX* model — a powerful extension of ARIMA that’s particularly well-suited for weather and climate data!
+SARIMAX model stands for: Seasonal AutoRegressive Integrated Moving Average with exogenous regressors.
 
-==== Why SARIMAX?
+Let’s break this down:
 
-At first glance, SARIMAX might seem like a lot to take in. But don’t worry — our goal is simply to build on what you've already learned about ARIMA.
+    AutoRegressive (AR): The model uses past values of the series to predict future ones.
 
-SARIMAX:
+    Integrated (I): It handles trends in the data by differencing the series.
 
-* Handles seasonal patterns (like temperature changes throughout the year)
-* Allows for external variables (such as humidity, precipitation, wind, and snowfall)
+    Moving Average (MA): It incorporates past forecast errors to refine predictions.
 
-This makes it even more powerful than standard ARIMA — and in many cases, it produces much lower forecasting error, especially when seasonal behavior is strong (as it is in climate data).
+    Seasonal: Adds AR, I, and MA terms to capture repeating patterns (such as yearly cycles).
+
+    Exogenous variables (X): Allows us to include other relevant predictors (like precipitation or humidity) that could help explain temperature fluctuations.
+
+In simpler terms, SARIMAX is ARIMA with upgrades. It’s capable of handling both seasonality and outside influence, making it a great fit for weather data, which often involves repeated yearly patterns and multiple interrelated climate variables.
+
+Why not just use ARIMA? Because ARIMA models the temperature series using its own past behavior. SARIMAX, on the other hand, lets us incorporate exogenous variables that could explain those shifts more accurately.
+
+In this question, you’ll begin setting up your SARIMAX model by defining:
+
+    Your target variable (the thing you’re trying to predict — temperature), and
+
+    Your exogenous variables (the predictors you think influence that target — humidity, wind, precipitation, and snowfall).
+
+Once that’s set, we’ll be ready to fit the model and see how well it captures patterns in the training data.
 
 ==== What Are We Asking SARIMAX to Do?
 
@@ -546,7 +503,7 @@ seasonal_order = (1, 1, 1, 12)
 * `1` (Seasonal MA): Uses past seasonal forecast errors to improve predictions
 * `12`: Indicates the seasonal pattern repeats every 12 steps (months)
 
-This setup helps us tackle both short-term changes and long-term seasonal trends, while also accounting for outside conditions — giving us a much better model for forecasting temperature.
+This setup helps us tackle both short-term changes and long-term seasonal trends, while also accounting for outside conditions giving us a much better model for forecasting temperature.
 
 
 .Deliverables
@@ -579,7 +536,7 @@ warnings.filterwarnings("ignore")
 ----
 
 
-**5b. Fit a SARIMAX model using the configuration below. Don’t change the parameters just yet. Write 1-2 sentences on why we are including seasonal_order=(1, 1, 1, 12) here? What pattern in the data justifies adding a seasonal component?**
+**5b. Fit a SARIMAX model using the configuration below. Write 1-2 sentences on why we are including seasonal_order=(1, 1, 1, 12) here?**
 
 Note:
 
@@ -587,10 +544,16 @@ You're building a **SARIMAX** model to predict temperature. This model should:
 
 - Use the most recent temperature trends
 - Learn from past seasonal cycles (e.g., last year's January helps predict this January)
-- Incorporate other weather features that may influence temperature (like precipitation or snowfall)
+- Incorporate other weather features that may influence temperature in exog_cols
 
 [source,python]
 ----
+exog_cols = [
+    'Monthly_Precipitation',
+    'Monthly_AverageRelativeHumidity',
+    'Monthly_AverageWindSpeed',
+    'Monthly_Snowfall']
+
 model = SARIMAX(
     y_train,
     exog=X_train,
@@ -600,7 +563,7 @@ model = SARIMAX(
 model_fit = model.fit(disp=False)
 ----
 
-**5c. Now that you've fit the SARIMAX model, evaluate how well it captures the patterns in your training data using MAE. Use the code snippet below to create a line plot comparing the actual training values to the model’s fitted values. Then write 1–2 sentences to answer: How well does the model capture the overall trend and seasonality? Does the fitted line generally follow the structure of the actual temperature series?**
+**5c. Now that you've fit the SARIMAX model, evaluate how well it captures the patterns in your training data. Use the code below to create a line plot comparing the actual training values to the model’s fitted values. Then write 1–2 sentences to answer: How well does the model capture the overall trend and seasonality? Does the fitted line generally follow the structure of the actual temperature series?**
 
 Note: 
 This plot will help you visually assess whether the model is detecting key trends and seasonal behavior in temperature over time.
@@ -624,7 +587,7 @@ plt.tight_layout()
 plt.show()
 ----
 
-**5d. Use your trained SARIMAX model to predict temperatures for the test set, then calculate the Mean Absolute Error (MAE) to assess performance on unseen data. Print the test MAE (rounded to two decimals), and in 1–2 sentences, explain what it tells you and why testing on new data is essential.**
+**5d. Calculate the Mean Absolute Error (MAE) to assess performance on unseen dat (test dataset). Print the test MAE (rounded to two decimals), and in 1–3 sentences, explain what it tells you and why testing on new data is essential.**
 
 You may use the code below to calculate the MAE:
 
@@ -643,13 +606,12 @@ print(f"Mean Absolute Error (Test Set): {mae_test:.2f}°F")
 ====
 === Question 6 - Forecast and Evaluate on the Test Set (2 points)
 
-Now that your SARIMAX model is trained, let’s test how well it generalizes.
+Now that your SARIMAX model is trained, let’s test how well it generalizes into the future.
 
 .Deliverables
 ====
 
-**6a. Use your SARIMAX model to forecast temperatures for the test set.**  
-Pass in the exogenous variables from the test set and generate predictions for January 2023 to December 2024. Print the first five predicted values.
+**6a. Use your SARIMAX model to forecast temperatures for the test set. Pass in the exogenous variables from the test set and generate predictions for January 2023 to December 2024. Print the first five predicted values.**
 
 You may use the code below to guide your work:
 
@@ -663,7 +625,7 @@ forecast = model_fit.predict(start=len(train), end=len(train) + n_steps - 1, exo
 
 **6b. Create a plot comparing actual vs. forecasted test set values.**  
 
-Plot both the actual test temperatures and your model’s forecast. Label your axes, add a legend, and write 1–2 sentences describing how well the model performs on unseen data.
+Plot both the actual test temperatures and your model’s forecast. Label your axes and write 1–2 sentences describing how well the model performs on unseen data.
 
 
 You may use the code below to guidw your work: 
@@ -672,12 +634,12 @@ You may use the code below to guidw your work:
 y_test = test[target_col]
 
 plt.figure(figsize=(14, 6))
-plt.plot(test['DATE'], y_test, label='....')
-plt.plot(test['DATE'], forecast, label='....', color='orange', linestyle='--')
+plt.plot(test['DATE'], y_test, label='....') # For YOU to FILL in
+plt.plot(test['DATE'], forecast, label='....', color='orange', linestyle='--') # For YOU to FILL in 
 
-plt.title("...")
-plt.xlabel("...")
-plt.ylabel("....")
+plt.title("...") # For YOU you FILL in 
+plt.xlabel("...") # For YOU you FILL in 
+plt.ylabel("....")  # For YOU you FILL in 
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
@@ -698,7 +660,8 @@ print(f"Test MAE: {mae_test:.2f}°F")
 
 ====
 
-
+[.small]
+_Some explanations in this project have been adapted from_ _Introduction to Statistical Learning in Python_, Springer Textbook.
 
 
 == Submitting your Work
