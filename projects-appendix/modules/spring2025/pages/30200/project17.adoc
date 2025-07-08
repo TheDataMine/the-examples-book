@@ -1,0 +1,339 @@
+= TDM 32100: Project 17 - Predicting Prescriptions for Ozempic Among Prescribers Using Logistic Regression
+
+== Project Objectives
+
+In this project, you will build a Logistic Regression model intrepret the model to discover what features among prescribes increase the liklihood of them prescribing the drug Ozempic (otherwise known as Semaglutide). 
+
+
+.Learning Objectives
+****
+- Understand how to check class distribution of the target variable (variable we are trying to predict) in the data and learn how to perform feature engineering.
+-  Develop visualizations and perform initial exploratory data analysis on the data.
+- Understand how to prepare the data before and after splitting into train, test, and validation for modeling and to prevent overfitting.
+- Use the Variance Inflation Factor Formula to prevent multicollineaity among variables. 
+- Use forward selection with AIC as a critetion for feature selection.
+- Develop a final model and interpet it's results using AUC and confusion matrices. 
+****
+
+== Dataset
+- `/anvil/projects/tdm/data/CMS/diabetes_prescriber_data.csv``
+
+
+image::Prescriber Image.png[width=600, height=450, caption="Figure 1: Prescriber Image. Source: Google Images (accessed July 8, 2025)."]
+
+Semaglutide (also known as Ozempic) has become more than a medication. It is a headline. It is the drug behind Ozempic and Wegovy, and lately it feels like everyone is talking about it. From celebrities on the red carpet to relatives at family gatherings, semaglutide is in the spotlight.
+
+This project looks at real prescription data to figure out what is driving the trend. Which types of prescribers are writing the most scripts? Is it more common among prescribers in some regions than others? And what makes semaglutide different from other prescriptions?
+
+We will start by loading and cleaning the data, exploring key features, and examining class balance. From there, we will dig into modeling and interpretation to better understand what kind of prescribers are behind this high profile drug.
+
+
+**About the Data**
+
+This dataset comes from the Centers for Medicare and Medicaid Services (CMS) and includes prescription-level records for diabetes medications. Each row represents a prescriber writing a prescription for a specific brand-name drug. Among these drugs is Semaglutide, the generic name behind Ozempic and Wegovy, medications originally approved for type 2 diabetes but now widely known for their off-label use in weight loss. This has made Semaglutide one of the most talked about and in demand drugs in the country.
+
+**Variables in the Data**
+
+Below are the columns you will be working with in this project:
+
+[cols="1,3", options="header"]
+|===
+| Column Name | Description
+
+| `Prscrbr_State_Abrvtn` | Two-letter state abbreviation for the prescriber location.
+| `Prscrbr_Type` | Detailed medical specialty of the prescriber (e.g. Family Practice, Endocrinology).
+| `Brnd_Name` | Brand name of the prescribed drug (e.g. Ozempic).
+| `Gnrc_Name` | Generic name of the prescribed drug (e.g. Semaglutide).
+| `Tot_Clms` | Total number of prescription claims for that drug by this prescriber.
+| `Tot_30day_Fills` | Approximate number of 30-day prescription fills.
+| `Tot_Day_Suply` | Total number of days of medication supplied.
+| `Tot_Drug_Cst` | Total cost of the drug across all claims (in dollars).
+| `Total_Patients` | Total number of unique patients who received the drug.
+| `Prscrbr_Type_Grouped` | A simplified grouping of `Prscrbr_Type` into broader categories (e.g. Primary Care, Cardiology).
+|===
+
+
+== Questions
+
+=== Question 1 Class Distribution and Feature Engineering (2 points)
+
+Before we can analyze or model anything, we need to clean the data and add few new features (do some feature engineering).
+
+One of the first things you will do is create a _binary target variable_ to indicate whether a record involves Semaglutide. This kind of variable only takes on two values: 1 if the drug is Semaglutide, and 0 if it is not. In Python, you can create a binary variable using a boolean expression and then convert the result to integers using `.astype(int)`. For example:
+
+[source,python]
+----
+df["Semaglutide_drug"] = (df["Gnrc_Name"] == "Semaglutide").astype(int)
+----
+
+This creates a column where any row with Semaglutide is marked as 1, and all others are marked as 0. This will eventually serve as the outcome we try to predict.
+
+Another important task we will perform is called *feature engineering*. Feature engineering is the process of transforming raw data into meaningful features that better represent the underlying problem to the predictive model. This includes creating, modifying, or grouping existing variables to enhance model performance or interpretability.
+
+In our case, we will _map state abbreviations to regions_. Since state-level data can be messy or overly granular, grouping states into broader U.S. Census regions like *Midwest*, *South*, or *Northeast* provides a cleaner way to analyze patterns. For example, instead of comparing individual state-level behavior, we can analyze regional prescribing trends.
+
+This mapping can be done using a Python dictionary and the `.map()` function:
+
+
+[source,python]
+----
+df["Region"] = df["State"].map(region_dict)
+----
+
+However, not all states in the dataset may appear in the dictionary. In those cases, `.map()` returns a missing value (`NaN`). To handle this, you can fill in those missing values with a default label like `"Missing"` using `.fillna("Missing")`.
+
+Finally, it is often useful to explore the _distribution_ of values in a column — for example, how many rows fall into each region or how many are Semaglutide prescriptions. You can do this using `.value_counts()` for counts and `.value_counts(normalize=True)` for proportions.
+
+These basic data preparation steps: binary indicators, feature engineering, mapping, and counting are critical in setting up a dataset for modeling. Once they are complete, you will have a clean, structured dataset that is ready for exploratory analysis.
+
+
+.Deliverables
+====
+- 1a. Read in the data and print the the first five rows of the dataset. Save the dataframe as  `diabetes_prescriber_data`.
+-  1b. Add a binary target column that equals 1 if `Gnrc_Name` is `"Semaglutide"` and 0 otherwise. Then, display the count of 1s and 0s in the column `Semaglutide_drug`.
+
+Hint: Use a boolean comparison with `.astype(int)` to convert `True`/`False` values into 1s and 0s.
+
+- 1c. Create a new column called `Cost_per_Claim` by dividing  `Tot_Drug_Cst` by `Tot_Clms`. Then, print the first five rows of the following columns: `Tot_Drug_Cst`, `Tot_Clms`, and your new `Cost_per_Claim`` column to verify the calculation was performed correctly.
+
+- 1d. Using the provided `state_region_map` dictionary, create a new column named `Prscrbr_State_Region` that maps each `Prscrbr_State_Abrvtn` to its corresponding U.S. region. Any state abbreviation not found in the dictionary should be labeled as `"Missing"`. After mapping, print the unique region values to verify your transformation.
+
+
+Hints:
+
+- Use .map() to apply the dictionary: df["new_col"] = df["existing_col"].map(mapping_dict)
+- Use .fillna("Missing") to replace any unmapped values.
+- Use .unique() to view the distinct region labels.
+
+Use the following dictionary to perform the mapping:
+
+[source,python]
+----
+state_region_map = {
+    # Northeast
+    "CT": "Northeast", "ME": "Northeast", "MA": "Northeast", "NH": "Northeast", "NJ": "Northeast",
+    "NY": "Northeast", "PA": "Northeast", "RI": "Northeast", "VT": "Northeast",
+    
+    # Midwest
+    "IL": "Midwest", "IN": "Midwest", "IA": "Midwest", "KS": "Midwest", "MI": "Midwest",
+    "MN": "Midwest", "MO": "Midwest", "NE": "Midwest", "ND": "Midwest", "OH": "Midwest",
+    "SD": "Midwest", "WI": "Midwest",
+    
+    # Southb
+    "AL": "South", "AR": "South", "DE": "South", "DC": "South", "FL": "South", "GA": "South",
+    "KY": "South", "LA": "South", "MD": "South", "MS": "South", "NC": "South", "OK": "South",
+    "SC": "South", "TN": "South", "TX": "South", "VA": "South", "WV": "South",
+    
+    # West
+    "AK": "West", "AZ": "West", "CA": "West", "CO": "West", "HI": "West", "ID": "West",
+    "MT": "West", "NV": "West", "NM": "West", "OR": "West", "UT": "West", "WA": "West", "WY": "West",
+    
+    # Territories / Other
+    "PR": "Territory"
+}
+
+- 1e. Print how many prescribers were assigned to each region, including "Missing". 
+
+Hint: Use .value_counts() to display the counts.
+----
+
+====
+
+
+=== Question 2 Exploratory Data Analysis (2 points)
+
+Before building any predictive model, it’s crucial to take a closer look at the dataset using exploratory data analysis (EDA). This step helps you understand patterns, spot inconsistencies or missing values, and gain insights into how different features relate to the outcome you're trying to predict. In this case, the target variable is Semaglutide_drug, a binary indicator of whether a prescription record involves Semaglutide.
+
+
+We will compare summary statistics like the mean and standard deviation across the Semaglutide and non-Semaglutide groups allows us to begin forming hypotheses. For example, does Semaglutide tend to be prescribed for more patients, or at a higher cost?
+
+We’ll also look at the correlation between numeric variables. Highly correlated features may suggest redundancy, which can influence model complexity and interpretability.
+
+Lastly, examining the regional distribution of prescribers gives us geographic context. Using a count plot split by the Semaglutide_drug indicator helps us explore whether Semaglutide is more commonly prescribed in some regions than others which is an important consideration. 
+
+Each of these steps lays the groundwork for understanding the structure and behavior of the data—and ultimately supports more robust modeling and interpretation.
+
+.Deliverables
+====
+- 2a. For the numeric columns ['Tot_30day_Fills', 'Tot_Day_Suply', 'Cost_per_Claim', 'Total_Patients'], print the percentage of missing values in the full dataset.
+- 2b. Group by Semaglutide_drug and calculate the mean and standard deviation of the numeric columns. Then write 1-2 sentences on how the averages are different between the two classes and what it suggests.
+
+Hint:
+Use .groupby(target)[numeric_cols].agg(['mean', 'std']).
+
+- 2c. Create a correlation matrix heatmap using the numeric columns to visualize how the variables are related. Then write 1-2 sentences on whether you think any numeric variables are strongly correlated with each other.
+
+Hint:
+
+- Use .corr() to get pairwise correlations.
+
+- Use sns.heatmap() to visualize it.
+
+- Set annot=True in .heatmap() if you'd like to see the numbers directly in the heatmap.
+
+- 2d. Create a bar plot showing the number of prescribers in each Prscrbr_State_Region, split by Semaglutide_drug. Then write 1-2 sentences on whether different regions prescribe Semaglutide more or less often.
+
+Hint:
+
+- Use sns.countplot(data=..., x='Prscrbr_State_Region', hue='Semaglutide_drug')
+====
+
+=== Question 3: Train/Test Split and Data Preparation (2 points)
+
+In predictive modeling, one of the first and most critical steps is to distinguish between your *predictors* (also known as features or independent variables) and your *response* (or target). The predictors are the pieces of information the model will use to make its decisions, while the response is the variable we wish to predict. In this context, we are interested in predicting whether a prescriber issued a prescription for Semaglutide which is a binary outcome that will form the basis of our classification model.
+
+In practice, models are not trained on entire datasets. Instead, we partition the data into multiple subsets to serve distinct roles in the model development process. The most common partitioning scheme involves three subsets:
+
+- Training data is what the model actually learns from. It’s used to find patterns and relationships between the features and the target.
+
+- Validation data helps us make decisions about the model — such as choosing which features to keep or which settings (hyperparameters) work best. The model doesn’t learn from this data, but we use it to check how well it's doing while we’re still building it.
+
+- Test data is completely held out until the very end. It gives us a final check to see how well the model is likely to perform on brand-new data it has never seen before.
+
+One subtle but essential consideration is that we must maintain the distribution of the response variable — particularly in classification settings with imbalanced classes. To achieve this, we use *stratified sampling*, which ensures that the proportion of cases (e.g., Semaglutide = 1 vs. 0) remains consistent across the training, validation, and test sets. This avoids the model performing poorly simply because the subsets are not represented int he data.
+
+Finally, it is good to inspect each of the resulting subsets. How many observations are in each split? Is the class balance preserved? These simple diagnostics are foundational checks that ensure the integrity of downstream modeling efforts which you will perform in the questions below.
+
+.Deliverables
+====
+
+- 3a. Use the code below to define your model's features and create your `X` and `y` variables for modeling. Then print the shape of `X` and `y` and display the first 5 rows of `X` to confirm everything looks correct.
+
+[source,python]
+----
+# Define model features
+model_features = [
+    "Tot_30day_Fills", "Tot_Day_Suply", "Cost_per_claim", "Total_Patients",
+    "Prscrbr_State_Region", "Prscrbr_Type_Grouped"
+]
+
+# Define target and predictors
+target_col = "Semaglutide_drug"
+y = diabetes_prescriber_data[target_col]
+X = diabetes_prescriber_data[model_features]
+----
+
+- 3b. Split the dataset into 60% training, 20% validation, and 20% test using the code below. Then write 1–2 sentences explaining the purpose of each subset (train, validation, test).
+
+[source,python]
+----
+from sklearn.model_selection import train_test_split
+
+# Step 1: Split off test set (20%)
+X_train_val, X_test, y_train_val, y_test = train_test_split(
+    X, y, test_size=0.20, stratify=y, random_state=42
+)
+
+# Step 2: Split remaining 80% into train (60%) and validation (20%)
+X_train, X_val, y_train, y_val = train_test_split(
+    X_train_val, y_train_val, test_size=0.25, stratify=y_train_val, random_state=42
+)
+----
+
+- 3c. Print the number of rows and class proportions of the target variable `Semaglutide_drug` in each subset (`train`, `val`, and `test`). _Hint:_ Use `len()` to count rows and `value_counts(normalize=True)` for proportions.
+
+====
+
+=== Question 4 (2 points)
+
+.Deliverables
+====
+
+- 4a. Fill any missing values in the categorical variables with `"Missing"` across `X_train`, `X_val`, and `X_test`. Then, one-hot encode `Prscrbr_State_Region` and `Prscrbr_Type_Grouped` using `X_train` by filling in the code below.
+
+.Hint:
+Use the following helper code to get started. Complete the final step for one-hot encoding:
+
+[source,python]
+----
+# Step 1: Fill missing values in categorical columns for all sets
+categorical_cols = ['Prscrbr_State_Region', 'Prscrbr_Type_Grouped']
+
+for df in [X_train, X_val, X_test]:
+    for col in categorical_cols:
+        df[col] = df[col].fillna("Missing")
+
+# Step 2: One-hot encode only the training set
+pd.get_dummies(..., drop_first=True) # For YOU to fill in
+----
+
+
+- 4b. Fill in the blank in the code below to one-hot encode the same two variables `Prscrbr_State_Region` and `Prscrbr_Type_Grouped` from the validation and test sets. Then run the rest of the code to reindex X_val and X_test to match the column structure of X_train.
+
+[source,python]
+----
+X_test = pd.get_dummies(....., columns=categorical_cols, drop_first=True) # For YOU to fill in 
+X_val = pd.get_dummies(...., columns=categorical_cols, drop_first=True) # For YOU to fill in
+
+# Save column names for alignment
+# Aligning the columns across X_train, X_val, and X_test after one-hot encoding so
+# all three datasets have the exact same structure
+encoded_columns = X_train.columns
+
+# Reindex to match training columns
+# we are rearranging columns so that they match in order
+X_test = X_test.reindex(columns=encoded_columns, fill_value=0)
+X_val = X_val.reindex(columns=encoded_columns, fill_value=0)
+----
+
+- 4c. Standardize the numeric features Tot_30day_Fills, Tot_Day_Suply, Cost_per_Claim, and Total_Patients across all datasets by filling in some of the code below. Then write 1-2 sentences on what scaling is and why it is useful for logistic regression.
+
+[source,python]
+----
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+
+# First numeric Identify columns
+numeric_cols = ['Tot_30day_Fills', 'Tot_Day_Suply', 'Cost_per_Claim', 'Total_Patients']
+
+one_hot_cols = [col for col in X_train.columns if col not in numeric_cols] # These are the categorical variables that we one got encoded
+
+# Then Fill missing values in numeric columns
+for df in [X_train, X_val, X_test]:
+    df[numeric_cols] = df[numeric_cols].fillna(  # For YOU to fill in: use medians from training data
+        ________________
+   # )
+    df[one_hot_cols] = df[one_hot_cols].fillna(  # For YOU to fill in: what should missing one-hot values be?
+        ________________
+    )
+
+# Then Standardize using StandardScaler()
+scaler = StandardScaler()
+X_train[numeric_cols] = scaler.fit_transform(  # For YOU to fill in: what data do we fit on?
+    ________________
+)
+X_val[numeric_cols] = scaler.transform(  # For YOU to fill in
+    ________________
+)
+X_test[numeric_cols] = scaler.transform(  # For YOU to fill in
+    ________________
+)
+----
+
+
+====
+
+
+=== Question 5 (2 points)
+
+
+.Deliverables
+====
+- 
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project1.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
