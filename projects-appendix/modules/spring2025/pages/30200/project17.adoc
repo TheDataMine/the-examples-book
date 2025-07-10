@@ -2,7 +2,7 @@
 
 == Project Objectives
 
-In this project, you will build a Logistic Regression model intrepret the model to discover what features among prescribes increase the liklihood of them prescribing the drug Ozempic (otherwise known as Semaglutide). 
+In this project, you will build a Logistic Regression model to discover what features among prescribes increase the liklihood of them prescribing the drug Ozempic (also known as Semaglutide). 
 
 
 .Learning Objectives
@@ -11,7 +11,7 @@ In this project, you will build a Logistic Regression model intrepret the model 
 -  Develop visualizations and perform initial exploratory data analysis on the data.
 - Understand how to prepare the data before and after splitting into train, test, and validation for modeling and to prevent overfitting.
 - Use the Variance Inflation Factor Formula to prevent multicollineaity among variables. 
-- Use forward selection with AIC as a critetion for feature selection.
+- Use forward selection with AIC as a way to perform feature selection on the model. 
 - Develop a final model and interpet it's results using AUC and confusion matrices. 
 ****
 
@@ -21,16 +21,16 @@ In this project, you will build a Logistic Regression model intrepret the model 
 
 image::Prescriber Image.png[width=600, height=450, caption="Figure 1: Prescriber Image. Source: Google Images (accessed July 8, 2025)."]
 
-Semaglutide (also known as Ozempic) has become more than a medication. It is a headline. It is the drug behind Ozempic and Wegovy, and lately it feels like everyone is talking about it. From celebrities on the red carpet to relatives at family gatherings, semaglutide is in the spotlight.
+Semaglutide (also known as Ozempic) has become more than a medication. It is a headline. It is the drug behind Ozempic and Wegovy, and lately it feels like everyone is talking about it. From celebrities on the red carpet to relatives at family gatherings, Semaglutide is in the spotlight.
 
-This project looks at real prescription data to figure out what is driving the trend. Which types of prescribers are writing the most scripts? Is it more common among prescribers in some regions than others? And what makes semaglutide different from other prescriptions?
+This project looks at real prescription data to figure out what is driving the trend. Which types of prescribers are writing the most prescriptions? Is it more common among prescribers in some regions than others? And what makes Semaglutide different from other prescriptions?
 
 We will start by loading and cleaning the data, exploring key features, and examining class balance. From there, we will dig into modeling and interpretation to better understand what kind of prescribers are behind this high profile drug.
 
 
 **About the Data**
 
-This dataset comes from the Centers for Medicare and Medicaid Services (CMS) and includes prescription-level records for diabetes medications. Each row represents a prescriber writing a prescription for a specific brand-name drug. Among these drugs is Semaglutide, the generic name behind Ozempic and Wegovy, medications originally approved for type 2 diabetes but now widely known for their off-label use in weight loss. This has made Semaglutide one of the most talked about and in demand drugs in the country.
+This dataset comes from the Centers for Medicare and Medicaid Services (CMS) and includes prescription-level records for diabetes medications. Each row represents a prescriber writing a prescription for a specific brand-name drug. Among these drugs is Semaglutide, the drug name behind Ozempic and Wegovy, medications originally approved for type 2 diabetes but now widely known for their off-label use in weight loss. This has made Semaglutide one of the most talked about and in demand drugs in the country.
 
 **Variables in the Data**
 
@@ -55,11 +55,14 @@ Below are the columns you will be working with in this project:
 
 == Questions
 
-=== Question 1 Class Distribution and Feature Engineering (2 points)
+**Class Distributions**
+
 
 Before we can analyze or model anything, we need to clean the data and add few new features (do some feature engineering).
 
-One of the first things you will do is create a _binary target variable_ to indicate whether a record involves Semaglutide. This kind of variable only takes on two values: 1 if the drug is Semaglutide, and 0 if it is not. In Python, you can create a binary variable using a boolean expression and then convert the result to integers using `.astype(int)`. For example:
+One of the first things you will do is create a _binary target variable_ to indicate whether a record involves Semaglutide. This kind of variable only takes on two values: 1 if the drug is Semaglutide, and 0 if it is not. In Python, you can create a binary variable using a boolean expression and then convert the result to integers using `.astype(int)`. 
+
+For example:
 
 [source,python]
 ----
@@ -68,12 +71,31 @@ df["Semaglutide_drug"] = (df["Gnrc_Name"] == "Semaglutide").astype(int)
 
 This creates a column where any row with Semaglutide is marked as 1, and all others are marked as 0. This will eventually serve as the outcome we try to predict.
 
+**Feature Engineering**
+
 Another important task we will perform is called *feature engineering*. Feature engineering is the process of transforming raw data into meaningful features that better represent the underlying problem to the predictive model. This includes creating, modifying, or grouping existing variables to enhance model performance or interpretability.
 
-In our case, we will _map state abbreviations to regions_. Since state-level data can be messy or overly granular, grouping states into broader U.S. Census regions like *Midwest*, *South*, or *Northeast* provides a cleaner way to analyze patterns. For example, instead of comparing individual state-level behavior, we can analyze regional prescribing trends.
+One simple but powerful example is *creating a new column* that provides more insight than the raw data alone. For instance, to understand how costly each prescription claim is, we can divide `Tot_Drug_Cst` (total drug cost) by `Tot_Clms` (total number of claims) to compute a new column called `Cost_per_Claim`:
 
-This mapping can be done using a Python dictionary and the `.map()` function:
+[source,python]
+----
+diabetes_prescriber_data["Cost_per_Claim"] = diabetes_prescriber_data["Tot_Drug_Cst"] / diabetes_prescriber_data["Tot_Clms"]
+----
 
+This gives us a per-claim cost that may be more meaningful for comparison across prescribers or regions.
+
+Another useful technique is *mapping existing values into more interpretable categories*. For example, individual state abbreviations in the `Prscrbr_State_Abrvtn` column can be mapped to broader U.S. Census regions. This can help us spot regional trends more easily than looking at each state individually:
+
+[source,python]
+----
+state_region_map = {
+    "CT": "Northeast", "CA": "West", "TX": "South", ...
+}
+
+diabetes_prescriber_data["Prscrbr_State_Region"] = diabetes_prescriber_data["Prscrbr_State_Abrvtn"].map(state_region_map)
+----
+
+By grouping states into regions, we reduce granularity while retaining useful geographic patterns — a valuable preprocessing step before modeling.
 
 [source,python]
 ----
@@ -82,6 +104,8 @@ df["Region"] = df["State"].map(region_dict)
 
 However, not all states in the dataset may appear in the dictionary. In those cases, `.map()` returns a missing value (`NaN`). To handle this, you can fill in those missing values with a default label like `"Missing"` using `.fillna("Missing")`.
 
+**Value Counts**
+
 Finally, it is often useful to explore the _distribution_ of values in a column — for example, how many rows fall into each region or how many are Semaglutide prescriptions. You can do this using `.value_counts()` for counts and `.value_counts(normalize=True)` for proportions.
 
 These basic data preparation steps: binary indicators, feature engineering, mapping, and counting are critical in setting up a dataset for modeling. Once they are complete, you will have a clean, structured dataset that is ready for exploratory analysis.
@@ -89,23 +113,23 @@ These basic data preparation steps: binary indicators, feature engineering, mapp
 
 .Deliverables
 ====
-- 1a. Read in the data and print the the first five rows of the dataset. Save the dataframe as  `diabetes_prescriber_data`.
--  1b. Add a binary target column that equals 1 if `Gnrc_Name` is `"Semaglutide"` and 0 otherwise. Then, display the count of 1s and 0s in the column `Semaglutide_drug`.
-
-Hint: Use a boolean comparison with `.astype(int)` to convert `True`/`False` values into 1s and 0s.
-
-- 1c. Create a new column called `Cost_per_Claim` by dividing  `Tot_Drug_Cst` by `Tot_Clms`. Then, print the first five rows of the following columns: `Tot_Drug_Cst`, `Tot_Clms`, and your new `Cost_per_Claim`` column to verify the calculation was performed correctly.
-
-- 1d. Using the provided `state_region_map` dictionary, create a new column named `Prscrbr_State_Region` that maps each `Prscrbr_State_Abrvtn` to its corresponding U.S. region. Any state abbreviation not found in the dictionary should be labeled as `"Missing"`. After mapping, print the unique region values to verify your transformation.
+**1a. Read in the data and print the the first five rows of the dataset. Save the dataframe as  `diabetes_prescriber_data`.**
 
 
-Hints:
+**1b. Add a binary target column that equals 1 if `Gnrc_Name` is `"Semaglutide"` and 0 otherwise. Then, display the count of 1s and 0s in the column `Semaglutide_drug`.**
 
-- Use .map() to apply the dictionary: df["new_col"] = df["existing_col"].map(mapping_dict)
-- Use .fillna("Missing") to replace any unmapped values.
-- Use .unique() to view the distinct region labels.
+_Hint:_ Use a boolean comparison with `.astype(int)` to convert `True`/`False` values into 1s and 0s.
 
-Use the following dictionary to perform the mapping:
+
+**1c. Create a new column called `Cost_per_Claim` by dividing  `Tot_Drug_Cst` by `Tot_Clms`. Then, print the first five rows of the following columns: `Tot_Drug_Cst`, `Tot_Clms`, and your new `Cost_per_Claim`` column to verify the calculation was performed correctly.**
+
+**1d. Using the provided `state_region_map` dictionary, create a new column named `Prscrbr_State_Region` that maps each `Prscrbr_State_Abrvtn` to its corresponding U.S. region. Any state abbreviation not found in the dictionary should be labeled as `"Missing"`. After mapping, print the unique region values to verify your transformation.**
+
+_Hints:_
+
+- Use `.map()` to apply the dictionary: `df["new_col"] = df["existing_col"].map(mapping_dict)`
+- Use `.fillna("Missing")` to replace any unmapped values.
+- Use `.unique()` to view the distinct region labels.
 
 [source,python]
 ----
@@ -131,73 +155,106 @@ state_region_map = {
     # Territories / Other
     "PR": "Territory"
 }
-
-- 1e. Print how many prescribers were assigned to each region, including "Missing". 
-
-Hint: Use .value_counts() to display the counts.
 ----
+**1e. Print how many prescribers were assigned to each region, including "Missing".**
 
 ====
 
 
-=== Question 2 Exploratory Data Analysis (2 points)
+=== Question 2: Exploratory Data Analysis (2 points)
 
-Before building any predictive model, it’s crucial to take a closer look at the dataset using exploratory data analysis (EDA). This step helps you understand patterns, spot inconsistencies or missing values, and gain insights into how different features relate to the outcome you're trying to predict. In this case, the target variable is Semaglutide_drug, a binary indicator of whether a prescription record involves Semaglutide.
+Before we build any models, we need to take a step back and really *get to know* our data. This is the purpose of **exploratory data analysis**, or EDA. You can think of it like being a detective — you’re looking for patterns, inconsistencies, and clues that might help you understand how different variables relate to the outcome you're trying to predict. In our case, that outcome is `Semaglutide_drug`, a column that tells us whether or not a prescription record involves the diabetes drug Semaglutide.
 
+Each of the questions below helps uncover different aspects of the data structure and variability that may influence our model’s performance or interpretability.
 
-We will compare summary statistics like the mean and standard deviation across the Semaglutide and non-Semaglutide groups allows us to begin forming hypotheses. For example, does Semaglutide tend to be prescribed for more patients, or at a higher cost?
+**Missing Values**
 
-We’ll also look at the correlation between numeric variables. Highly correlated features may suggest redundancy, which can influence model complexity and interpretability.
+We’ll start by checking for missing values in the numeric columns. This might seem minor, but it’s actually really important. If a feature is missing data for just a few rows, we might be able to fill it in or move on. But if half the values are missing, it could be a sign that the variable isn’t reliable for modeling.
 
-Lastly, examining the regional distribution of prescribers gives us geographic context. Using a count plot split by the Semaglutide_drug indicator helps us explore whether Semaglutide is more commonly prescribed in some regions than others which is an important consideration. 
+To calculate the percentage of missing values, we can use the `.isna()` method to find missing entries, then apply `.mean()` to calculate the proportion of missing values in each column. Multiplying this by 100 gives us the percentage. You can also use `.sum()` if you want the raw count.
 
-Each of these steps lays the groundwork for understanding the structure and behavior of the data—and ultimately supports more robust modeling and interpretation.
+**Group Statistics: Mean and Standard Deviation**
+
+Next, we’ll split the data into two groups: one where Semaglutide was prescribed and one where it wasn’t. Then we’ll calculate the *mean* (average) and *standard deviation* (a measure of spread) for key numeric features in each group.
+
+This gives us insight into whether, for example, Semaglutide is associated with higher costs or larger patient counts. These statistics can help us start forming hypotheses — like whether prescribers who use Semaglutide tend to prescribe more 30-day fills or serve more patients.
+
+To do this, we can use `.groupby("Semaglutide_drug")` followed by `.agg(["mean", "std"])` on the numeric columns. This will create a side-by-side comparison table showing the average and variability for each group.
+
+**Correlation Between Numeric Variables**
+
+We’ll also explore how the numeric features relate to one another using *correlation*. Correlation is a measure that ranges from -1 to 1 and tells us how strongly two variables move together. A value close to 1 means they increase together, while -1 indicates that one tends to decrease as the other increases. A value near 0 suggests no clear relationship.
+
+**Heatmap Visualization**
+
+To visualize these relationships, we’ll use a *heatmap*. A heatmap is a color-coded grid where darker or brighter colors represent stronger relationships. This allows us to quickly see which variables are closely linked and potentially redundant.
+
+To create the heatmap, we first use `.corr()` on the numeric columns to compute all pairwise correlations. Then we pass that matrix into `sns.heatmap()`, a Seaborn function that creates the visualization. By setting `annot=True`, we can print the correlation values directly on the plot, which makes it easier to interpret.
+
+**Geographic Patterns**
+
+Lastly, we’ll examine regional prescribing patterns. We want to know: do certain regions prescribe Semaglutide more often? A good way to check this is with a *count plot*, which shows how many records come from each region — and whether Semaglutide was prescribed.
+
+Using `sns.countplot()`, we can plot the number of prescribers in each `Prscrbr_State_Region` and split the bars by `Semaglutide_drug` using the `hue` parameter. This lets us compare across regions in one chart and spot any geographic trends in prescription behavior.
 
 .Deliverables
 ====
-- 2a. For the numeric columns ['Tot_30day_Fills', 'Tot_Day_Suply', 'Cost_per_Claim', 'Total_Patients'], print the percentage of missing values in the full dataset.
-- 2b. Group by Semaglutide_drug and calculate the mean and standard deviation of the numeric columns. Then write 1-2 sentences on how the averages are different between the two classes and what it suggests.
+**2a.** For the numeric columns `['Tot_30day_Fills', 'Tot_Day_Suply', 'Cost_per_Claim', 'Total_Patients']`, print the percentage of missing values in the full dataset.
 
-Hint:
-Use .groupby(target)[numeric_cols].agg(['mean', 'std']).
 
-- 2c. Create a correlation matrix heatmap using the numeric columns to visualize how the variables are related. Then write 1-2 sentences on whether you think any numeric variables are strongly correlated with each other.
 
-Hint:
+**2b.** Group by `Semaglutide_drug` and calculate the mean and standard deviation of the numeric columns. Then write 1–2 sentences on how the averages differ between the two classes and what that might suggest.
 
-- Use .corr() to get pairwise correlations.
+_Hint:_ Use `.groupby(target)[numeric_cols].agg(['mean', 'std'])` to compute group-level summary statistics.
 
-- Use sns.heatmap() to visualize it.
 
-- Set annot=True in .heatmap() if you'd like to see the numbers directly in the heatmap.
+**2c.** Create a correlation matrix heatmap using the numeric columns to visualize how the variables are related. Then write 1–2 sentences on whether you think any numeric variables are strongly correlated with each other.
 
-- 2d. Create a bar plot showing the number of prescribers in each Prscrbr_State_Region, split by Semaglutide_drug. Then write 1-2 sentences on whether different regions prescribe Semaglutide more or less often.
+_Hint:_
 
-Hint:
+- Use `.corr()` to get pairwise correlations between numeric variables.  
 
-- Use sns.countplot(data=..., x='Prscrbr_State_Region', hue='Semaglutide_drug')
+- Use `sns.heatmap()` to visualize the correlation matrix.  
+
+- Set `annot=True` in `.heatmap()` if you'd like to display the correlation values directly in the plot.
+
+**2d.** Create a bar plot showing the number of prescribers in each `Prscrbr_State_Region`, split by `Semaglutide_drug`. Then write 1–2 sentences on whether different regions prescribe Semaglutide more or less often.
+
+
 ====
+
 
 === Question 3: Train/Test Split and Data Preparation (2 points)
 
 In predictive modeling, one of the first and most critical steps is to distinguish between your *predictors* (also known as features or independent variables) and your *response* (or target). The predictors are the pieces of information the model will use to make its decisions, while the response is the variable we wish to predict. In this context, we are interested in predicting whether a prescriber issued a prescription for Semaglutide which is a binary outcome that will form the basis of our classification model.
 
-In practice, models are not trained on entire datasets. Instead, we partition the data into multiple subsets to serve distinct roles in the model development process. The most common partitioning scheme involves three subsets:
+**Splitting the Data**
+Models are not trained on entire datasets. Instead, we partition the data into multiple subsets to serve distinct roles in the model development process. The most common partitioning scheme involves three subsets:
 
-- Training data is what the model actually learns from. It’s used to find patterns and relationships between the features and the target.
+- **Training data** is what the model actually learns from. It’s used to find patterns and relationships between the features and the target.
 
-- Validation data helps us make decisions about the model — such as choosing which features to keep or which settings (hyperparameters) work best. The model doesn’t learn from this data, but we use it to check how well it's doing while we’re still building it.
+- **Validation data** helps us make decisions about the model — such as choosing which features to keep or which settings (hyperparameters) work best. The model doesn’t learn from this data, but we use it to check how well it's doing while we’re still building it.
 
-- Test data is completely held out until the very end. It gives us a final check to see how well the model is likely to perform on brand-new data it has never seen before.
+- **Test data** is completely held out until the very end. It gives us a final check to see how well the model is likely to perform on brand-new data it has never seen before.
 
-One subtle but essential consideration is that we must maintain the distribution of the response variable — particularly in classification settings with imbalanced classes. To achieve this, we use *stratified sampling*, which ensures that the proportion of cases (e.g., Semaglutide = 1 vs. 0) remains consistent across the training, validation, and test sets. This avoids the model performing poorly simply because the subsets are not represented int he data.
+
+[NOTE]
+====
+In practice, it's recommended to use **cross-validation**, which provides a more reliable estimate of a model’s performance by repeatedly splitting the data into training and validation sets and averaging the results. This helps reduce the variability that can come from a single random split.
+
+However, for the purpose of this project, we will not use cross-validation. Instead, we will perform a single random train/validation/test split using a fixed random seed.
+====
+
+**Stratified Sampling**
+
+One subtle but essential consideration is that we must maintain the distribution of the response variable, particularly in classification settings with imbalanced classes. To achieve this, we use *stratified sampling*, which ensures that the proportion of cases (e.g., Semaglutide = 1 vs. 0) remains consistent across the training, validation, and test sets. This avoids the model performing poorly simply because the subsets are not represented int he data.
 
 Finally, it is good to inspect each of the resulting subsets. How many observations are in each split? Is the class balance preserved? These simple diagnostics are foundational checks that ensure the integrity of downstream modeling efforts which you will perform in the questions below.
 
 .Deliverables
 ====
 
-- 3a. Use the code below to define your model's features and create your `X` and `y` variables for modeling. Then print the shape of `X` and `y` and display the first 5 rows of `X` to confirm everything looks correct.
+**3a. Use the provided code below to define your model's features and create your `X` and `y` variables for modeling. Then, on your own, print the shape of `X` and `y` and display the first 5 rows of `X` to confirm everything looks correct.**
 
 [source,python]
 ----
@@ -213,7 +270,7 @@ y = diabetes_prescriber_data[target_col]
 X = diabetes_prescriber_data[model_features]
 ----
 
-- 3b. Split the dataset into 60% training, 20% validation, and 20% test using the code below. Then write 1–2 sentences explaining the purpose of each subset (train, validation, test).
+**3b. Split the dataset into 60% training, 20% validation, and 20% test using the code below. Then write 1–2 sentences explaining the purpose of each subset (train, validation, test).**
 
 [source,python]
 ----
@@ -230,19 +287,75 @@ X_train, X_val, y_train, y_val = train_test_split(
 )
 ----
 
-- 3c. Print the number of rows and class proportions of the target variable `Semaglutide_drug` in each subset (`train`, `val`, and `test`). _Hint:_ Use `len()` to count rows and `value_counts(normalize=True)` for proportions.
+**3c. Print the number of rows and class proportions of the target variable `Semaglutide_drug` in each subset (`train`, `val`, and `test`).**
+
+_Hint:_ Use `len()` to count rows and `value_counts(normalize=True)` for proportions.
 
 ====
 
 === Question 4 (2 points)
+Before we can fit our logistic regression model, we need to make sure our dataset is clean and formatted correctly. This stage, called **preprocessing**, ensures that our features are in a numerical format, have no missing values, are properly scaled, and are aligned across all datasets. Logistic regression, like many models, assumes that the data has been prepared in a certain way. If we skip these steps or do them incorrectly, our model may perform poorly or fail to train altogether.
+
+This question walks you through five key preprocessing steps, some of which have partially completed code to help guide you.
+
+**Handling Missing Values in Categorical Variables**
+
+Missing values can cause errors during modeling and interfere with scaling or encoding. For categorical columns like `Prscrbr_State_Region` and `Prscrbr_Type_Grouped`, we’ll fill in missing values with the string `"Missing"`. This way, even rows with unknown data are retained and can be captured as their own category during encoding.
+
+For numeric columns like `Tot_30day_Fills`, `Tot_Day_Suply`, `Cost_per_Claim`, and `Total_Patients`, we’ll fill missing values using the **median from the training set**. This is preferred over the mean because the median is less sensitive to outliers. You’ll use `.fillna()` to perform this replacement.
+
+For one-hot encoded (binary) columns, we’ll fill missing values with `0`. These columns represent the presence or absence of a category — so `0` safely indicates that the feature was not activated for that row.
+
+**One-Hot Encoding Categorical Variables**
+
+Machine learning models can’t interpret text categories directly. We convert them into numeric form using **one-hot encoding**, which creates a separate binary column for each unique category. For example, the column `Prscrbr_State_Region` might be transformed into:
+
+- `Prscrbr_State_Region_Midwest`
+- `Prscrbr_State_Region_South`
+- `Prscrbr_State_Region_Northeast`
+- etc.
+
+We use `pd.get_dummies()` to apply one-hot encoding. The option `drop_first=True` tells pandas to omit the first category — this prevents multicollinearity, which is especially important in models like logistic regression.
+
+**Why We Encode Train, Validation, and Test Separately**
+
+We always apply one-hot encoding to `X_train` **first**. That’s because we want the model to learn from the structure of the training data, including which categories exist. We then apply the same process to `X_val` and `X_test` — but here’s the tricky part:
+
+- These datasets may contain **a different set of categories** (some categories might be missing, or new ones might appear).
+- If we encoded all three together, we would risk **leaking information** from validation or test sets into training — which we want to avoid to ensure fair model evaluation.
+
+To resolve this, we:
+
+1. Encode each dataset separately using `pd.get_dummies()`.
+
+2. Then use `.reindex(columns=encoded_columns, fill_value=0)` on `X_val` and `X_test` to ensure their columns match the training set exactly — any missing columns will be added with `0`s.
+
+This guarantees that the model sees inputs with the same structure at all stages (training, validation, testing), even if the underlying data varies.
+
+**Standardizing Numeric Features**
+
+Features that are on very different numeric scales can cause issues for models like logistic regression. For example, `Tot_Day_Suply` might be in the hundreds while `Cost_per_Claim` could be in the thousands. If we don’t scale them, the model might assign disproportionate importance to the larger features.
+
+To address this, we use `StandardScaler()` from `sklearn.preprocessing`. This function subtracts the mean and divides by the standard deviation, resulting in a column with mean 0 and standard deviation 1. We fit the scaler on `X_train[numeric_cols]`, and apply the transformation to `X_train`, `X_val`, and `X_test`.
+
+**Converting Boolean Columns**
+
+Some features may be stored as `True`/`False`. Most models, including logistic regression, expect numeric input. We use `.astype(int)` to convert all boolean columns into `1`/`0` format, which the model can interpret as binary indicators.
+
+**Final Structure Check**
+
+After all these steps, it’s important to verify that `X_train`, `X_val`, and `X_test` all have the same number and order of columns. This ensures the model receives a consistent input structure during training and evaluation.
+
+Each of the steps in this question prepares your data for modeling. Some of the code has been provided — your task is to fill in the missing pieces and reflect on why each step is needed.
+
 
 .Deliverables
 ====
 
-- 4a. Fill any missing values in the categorical variables with `"Missing"` across `X_train`, `X_val`, and `X_test`. Then, one-hot encode `Prscrbr_State_Region` and `Prscrbr_Type_Grouped` using `X_train` by filling in the code below.
+**4a. Fill any missing values in the categorical variables with `"Missing"` across `X_train`, `X_val`, and `X_test`. Then, one-hot encode `Prscrbr_State_Region` and `Prscrbr_Type_Grouped` using `X_train`.**
 
-.Hint:
-Use the following helper code to get started. Complete the final step for one-hot encoding:
+Most of the code has been provided for you below. Your task is to complete the final line that performs one-hot encoding on the training set.
+
 
 [source,python]
 ----
@@ -254,16 +367,18 @@ for df in [X_train, X_val, X_test]:
         df[col] = df[col].fillna("Missing")
 
 # Step 2: One-hot encode only the training set
-pd.get_dummies(..., drop_first=True) # For YOU to fill in
+X_train = pd.get_dummies(..., drop_first=True)  # For YOU to fill in
 ----
 
+**4b. One-hot encode the same two variables, `Prscrbr_State_Region` and `Prscrbr_Type_Grouped`, in the validation and test sets. Then reindex `X_val` and `X_test` so their column structure matches `X_train`.**
 
-- 4b. Fill in the blank in the code below to one-hot encode the same two variables `Prscrbr_State_Region` and `Prscrbr_Type_Grouped` from the validation and test sets. Then run the rest of the code to reindex X_val and X_test to match the column structure of X_train.
+The structure of the code is provided below. Your task is to complete the lines that apply one-hot encoding to the validation and test sets using `pd.get_dummies()`. This step is important to ensure that all datasets share the same set of columns before modeling.
+
 
 [source,python]
 ----
-X_test = pd.get_dummies(....., columns=categorical_cols, drop_first=True) # For YOU to fill in 
-X_val = pd.get_dummies(...., columns=categorical_cols, drop_first=True) # For YOU to fill in
+X_test = pd.get_dummies(....., columns=categorical_cols, drop_first=True)  # For YOU to fill in
+X_val = pd.get_dummies(...., columns=categorical_cols, drop_first=True)    # For YOU to fill in
 
 # Save column names for alignment
 # Aligning the columns across X_train, X_val, and X_test after one-hot encoding so
@@ -271,33 +386,36 @@ X_val = pd.get_dummies(...., columns=categorical_cols, drop_first=True) # For YO
 encoded_columns = X_train.columns
 
 # Reindex to match training columns
-# we are rearranging columns so that they match in order
+# We are rearranging columns so that they match in order
 X_test = X_test.reindex(columns=encoded_columns, fill_value=0)
 X_val = X_val.reindex(columns=encoded_columns, fill_value=0)
 ----
 
-- 4c. Standardize the numeric features Tot_30day_Fills, Tot_Day_Suply, Cost_per_Claim, and Total_Patients across all datasets by filling in some of the code below. Then write 1-2 sentences on what scaling is and why it is useful for logistic regression.
+**4c. Standardize the numeric features `Tot_30day_Fills`, `Tot_Day_Suply`, `Cost_per_Claim`, and `Total_Patients` across all datasets by filling in the missing lines of code below. Then write 1–2 sentences on what scaling is and why it is useful for logistic regression.**
+
+Most of the code has been provided for you. Your task is to complete the missing pieces that handle missing values and apply standardization correctly.
 
 [source,python]
 ----
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 
-# First numeric Identify columns
+# First identify numeric columns
 numeric_cols = ['Tot_30day_Fills', 'Tot_Day_Suply', 'Cost_per_Claim', 'Total_Patients']
 
-one_hot_cols = [col for col in X_train.columns if col not in numeric_cols] # These are the categorical variables that we one got encoded
+# These are the categorical variables that we one-hot encoded
+one_hot_cols = [col for col in X_train.columns if col not in numeric_cols]
 
-# Then Fill missing values in numeric columns
+# Then fill missing values in numeric columns
 for df in [X_train, X_val, X_test]:
     df[numeric_cols] = df[numeric_cols].fillna(  # For YOU to fill in: use medians from training data
         ________________
-   # )
+    )
     df[one_hot_cols] = df[one_hot_cols].fillna(  # For YOU to fill in: what should missing one-hot values be?
         ________________
     )
 
-# Then Standardize using StandardScaler()
+# Then standardize using StandardScaler()
 scaler = StandardScaler()
 X_train[numeric_cols] = scaler.fit_transform(  # For YOU to fill in: what data do we fit on?
     ________________
@@ -310,16 +428,176 @@ X_test[numeric_cols] = scaler.transform(  # For YOU to fill in
 )
 ----
 
+**4d. Convert all boolean (`True`/`False`) columns in your training, validation, and test sets to integers (`1`/`0`).**
+
+_Hint:_  
+Use `.select_dtypes(include='bool')` to identify boolean columns.  
+Use `.astype(int)` to convert them.
+
+**4e. Confirm that X_train, X_val, and X_test all have the same number of columns. Then write 1-2 sentences on what one hot encoding is and why it was necessary.**
 
 ====
-
 
 === Question 5 (2 points)
 
-
 .Deliverables
 ====
-- 
+**5a. Check for multicollinearity using VIF (Variance Inflation Factor) by completing the helper function provided below.**
+
+Your task is to complete the code below to calculate the VIF for each numeric column in your training data. Most of the function has been provided for you — just fill in the missing pieces to compute the VIF formula (stated above).
+
+[source,python]
+----
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+
+def calculate_vif_manual(X):
+    vif_dict = {}
+    X = X.copy()
+
+    for feature in X.columns:
+        y = X[feature]
+        X_pred = X.drop(columns=feature)
+
+        model = LinearRegression().fit(X_pred, y)
+        r_squared = model.score(X_pred, y)
+
+        # Compute VIF
+        if r_squared == 1.0:
+            vif = np.inf
+        else:
+            # For YOU to fill in: implement the VIF formula below
+            vif = _____
+
+        vif_dict[feature] = vif
+
+    return pd.Series(vif_dict, name="VIF").sort_values(ascending=False)
+
+# Prepare data
+X_for_vif = X_train.select_dtypes(include=[np.number]).astype(float)
+
+# Run VIF calculation
+vif_values = calculate_vif_manual(X_for_vif)
+print(vif_values)
+----
+
+**5b. Drop any variables with a VIF greater than 10, except for `"Tot_Day_Suply"`, which you should keep regardless of its VIF value.**
+
+The code below has already filtered out the appropriate features and created the list `features_after_vif`. Your task is to run this code and use it to subset the training data.
+
+
+_Note:_  
+
+- VIF values greater than 10 indicate high multicollinearity and suggest that the variable may be redundant.  
+
+- `"Tot_Day_Suply"` is an important feature, so we will **keep it** and remove the other two, even if its VIF exceeds the threshold.  
+
+[source,python]
+----
+# Example after feature selection
+features_after_vif = [
+    'Tot_Day_Suply',
+    'Cost_per_claim',
+    'Prscrbr_State_Region_South',
+    'Prscrbr_State_Region_West',
+    'Prscrbr_State_Region_Northeast',
+    'Prscrbr_Type_Grouped_Primary Care',
+    'Prscrbr_Type_Grouped_Dental',
+    'Prscrbr_Type_Grouped_Missing',
+    'Prscrbr_Type_Grouped_Dermatology/Ophthalmology',
+    'Prscrbr_Type_Grouped_Surgery',
+    'Prscrbr_Type_Grouped_Neuro/Psych',
+    'Prscrbr_Type_Grouped_Cardiology',
+    'Prscrbr_Type_Grouped_GI/Renal/Rheum',
+    'Prscrbr_Type_Grouped_Other',
+    'Prscrbr_Type_Grouped_Endocrinology',
+    "Prscrbr_Type_Grouped_Women's Health",
+    'Prscrbr_Type_Grouped_Oncology/Hematology',
+    'Prscrbr_State_Region_Territory',
+    'Prscrbr_Type_Grouped_Pulmonary/Critical Care',
+    'Prscrbr_Type_Grouped_Rehabilitation',
+    'Prscrbr_Type_Grouped_Anesthesia/Pain',
+    'Prscrbr_Type_Grouped_Palliative Care',
+    'Prscrbr_State_Region_Missing'
+]
+
+# Subset the training data
+X_train = X_train[features_after_vif].copy()
+----
+
+**5c. Use forward selection to iteratively add features that result in the greatest reduction in AIC (Akaike Information Criterion). Then write 2–3 sentences explaining how forward selection works using AIC as the criterion and why this is an important step in model building for logistic regression.
+
+_Note:_ The function `forward_selection()` below has already been written for you. It adds one feature at a time, selecting the one that most reduces the AIC, and stops when no further significant improvement is made. Your task is to run the function and then write the 2–3 sentences.
+
+[source,python]
+----
+def forward_selection(X, y, aic_threshold=20, verbose=True):
+    import numpy as np
+    import statsmodels.api as sm
+    import warnings
+
+    np.seterr(over='raise', divide='raise', invalid='raise')  # Raise numeric errors
+
+    included = []
+    current_score, best_new_score = np.inf, np.inf
+
+    while True:
+        changed = False
+        excluded = list(set(X.columns) - set(included))
+        scores_with_candidates = []
+
+        for new_col in excluded:
+            try:
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=RuntimeWarning)
+
+                    model = sm.Logit(y, sm.add_constant(X[included + [new_col]])).fit(disp=0)
+
+                    # Get summary statistics for stability check
+                    summary = model.summary2().tables[1]
+                    coef = summary.loc[new_col, 'Coef.']
+                    std_err = summary.loc[new_col, 'Std.Err.']
+
+                    # Heuristic thresholds to skip unstable models
+                    if abs(coef) > 15 or std_err > 5:
+                        if verbose:
+                            print(f"Skipping {new_col} due to instability (coef={coef:.2f}, std_err={std_err:.2f})")
+                        continue
+
+                    aic = model.aic
+                    scores_with_candidates.append((aic, new_col))
+
+            except (np.linalg.LinAlgError, FloatingPointError, KeyError):
+                if verbose:
+                    print(f"Skipping {new_col} due to numerical error.")
+                continue
+
+        if not scores_with_candidates:
+            break
+
+        scores_with_candidates.sort()
+        best_new_score, best_candidate = scores_with_candidates[0]
+
+        if current_score - best_new_score >= aic_threshold:
+            included.append(best_candidate)
+            current_score = best_new_score
+            changed = True
+            if verbose:
+                print(f"Add  {best_candidate:30} AIC = {best_new_score:.2f}")
+
+        if not changed:
+            break
+
+    return included
+
+# Run forward selection
+selected_features = forward_selection(X_train, y_train, verbose=False)
+print("Selected features:", selected_features)
+----
+
+
+
 ====
 
 == Submitting your Work
