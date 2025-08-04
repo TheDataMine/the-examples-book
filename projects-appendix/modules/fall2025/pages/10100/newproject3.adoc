@@ -1,0 +1,346 @@
+= TDM 10100: Project [] - Grouping in R
+
+== Project Objectives
+
+Motivation: Learning how to efficiently manipulate and summarize data using the `(.)apply` family of functions and the `dplyr` package from the `tidyverse` is a valuable skill. These tools help us to simplify complex data operations, reduce written repetition, and make analysis faster and easier.
+
+Context: We will be working with two separate dataframes in R, and will learn about and make comparisons through different methods of grouping.
+
+Scope: R, grouping, apply family, dplyr
+
+.Learning Objectives
+****
+- Learn about grouping methods in R
+- Get comfortable using apply grouping functions
+- Learn some about the tidyverse 
+****  
+
+== Datasets
+- `/anvil/projects/tdm/data/grouping/vgchartz-2024.csv` 
+- `/anvil/projects/tdm/data/grouping/googleplaystore.csv`
+
+### Video Game Sales
+The video game industry has evolved into one of the world's largest entertainment sectors, generating over $180 billion annually and surpassing both the movie and music industries combined. This market creates rich opportunities for data analysis, as gaming companies are constantly seeking to understand consumer preferences, market trends, and the factors that drive commercial success.
+ 
+This dataset contains both numerical and categoical variables, making it ideal for developing data science skills by providing numerous cases for us to explore data grouping, analysis, and visualization. 
+
+There are 14 columns and 64016 rows of data for us to work with. These columns include: 
+
+- `title`: official title of the video game
+- `console`: video game console models by many different companies
+- `genre`: category for video games based on the content's theme
+- `critic_score`: numerical rating assigned to each game on a scale of 1 to 10 reflecting the overall opinion of the game's quality
+- `total_sales`: approximate number of copies (millions) sold of each game across all locations
+
+
+### Google Play Store
+The Google Play Store, released in 2008 as "Android Market", is the very popular marketplace for users of Android devices. It is used by over 2.5 billion users monthly to discover, download, and update a vast number of applications including games, movies, books, and more. There are millions of apps and games available. This store has over 150 billion items downloaded from it in the past year. 
+
+There are 13 columns and 10841 rows of data for us to work with. The main columns we will be working with are: 
+
+- `Rating`: numerical decimal rating (1 - 5) showing average score of each app
+- `Reviews`: count of reviews left per app, ranging from 0 to over 10 million
+- `Content.Rating`: suggested target audience based on app's theme
+
+== Questions
+
+=== Question 1 (2 points)
+Import the Video Game Sales dataset from the file `/anvil/projects/tdm/data/grouping/vgchartz-2024.csv` into a dataframe called `video_games`.
+
+One thing we might choose to examine is the critic scores. These are important because they create a standardized way to gauge the quality of a game before buying it. We could look at the average critic scores by genre using `tapply()` to determine which genre is usually the most trustworthy for a quality game. 
+
+The `tapply()` function has format `tapply(X, INDEX, FUN, ...)`, where 
+
+- `X` is a vector to apply a function to
+- `INDEX` is a vector to group by
+- `FUN` is the function to apply (mean, sum, ...)
+- `...` is any other additional arguments beyond `X`, `INDEX`, and `FUN` to pass to the function.
+
+So, we could do `tapply(video_games$critic_score, video_games$genre, mean)` to find the average critic score within each video game genre. It all looks very simple - all one line, not too hard to think about - but is not the easiest to make sense of. In this case: 
+
+[IMPORTANT]
+====
+We didn't have any additional arguments. Though once you run this code, you will soon see why we will need to add one.
+====
+
+The output is not good. It shows us each of the genres, but each with a `NA` value, which is not insightful beyond showing us that the dataset is imperfect. Try adding `na.rm=TRUE` in place of an additional argument. 
+
+Let's look at some new columns. `total_sales` shows us the number of copies of each video game and console pairing sold worldwide. `console` shows us the gaming system that each game is compatible with.
+
+In a `tapply()` statment with the `total_sales` and `console` columns, use `sum` as the `FUN` argument. This will show the total number of game sales across each console type. 
+
+It is often helpful to sort the data when wanting to learn from the output. By default, this is sorted by the console names, alphabetically. In this case, it would be useful for us to sort by the values of the total sales. 
+
+[NOTE]
+====
+Use `sort()` with `decreasing = TRUE` to order these results to quickly be able to see which console has had the most sales. 
+====
+
+Sometimes we want to count the number of video games within a certain genre.
+
+In this dataset, each row is a game, so we can sort by `genre` and get the count of uniqure `title` values.
+
+We can do this by taking our two columns (`title`, `genre`), and setting `FUN = length`. Sort these results and find which genre has the most games. 
+
+.Deliverables
+====
+1.1 Which video game `genre` has the highest average `critic_score?`
+
+1.2  Which `console` has the highest number of `total_sales`? 
+
+1.3  In 3-5 sentences, explain _in your own words_ what the `tapply()` function does and why it is useful when working with datasets. 
+====
+
+=== Question 2 (2 points)
+In 1.1, we found the average critic score sorted by genre by running `tapply(video_games$critic_score, video_games$genre, mean, na.rm=TRUE)`. While R's apply family of functions is really great for grouping data, it can get hard to read very quickly.
+
+Sometimes it is useful to have another set of tools we can use for data analysis:
+
+`dplyr` is an R package that is useful when you want to easily work with dataframes. It is a part of the `tidyverse`, a collection of packages that focus on making data analysis simpler and more readable. It provides clear, readable, and efficient tools for common data tasks like:
+
+- Sorting data
+- Summarizing groups
+- Creating new columns
+- Filtering rows
+
+We start by loading the `dplyr` library: +
+[source,R]
+----
+library(dplyr)
+----
+
+The first step when using `dplyr` is to define what data we are working with. We will put `video_games` in a clean cell, followed by our piping `%>%`.
+
+[WARNING]
+====
+In `dplyr`, the `%>%` (pipe) operator is used to chain together multiple functions. It should typically be placed at the end of a line to indicate that the next function will continue processing the output.
+====
+
+Group the video game data by the `genre` column.
+
+[NOTE]
+====
+Any lines following that first line where the dataframe was declared are usually begun after a tabulated indentation. This helps us to understand that all of these manipulating functions are working within the same base dataframe (and are going into the same variable definition (when applicable)).
+====
+
+If we ran this code in its current state, the system would try to print out every single line of the dataset, and it would look the same as it did originally. Why? The data has been grouped at this point, so R knows the data is split into groups, but no calculations have been done yet. 
+
+Now we want to get back to the `critic_scores` we were sorting into the `genre` groups in question 1.1. Our next task is to summarize the data. We want to find the average `critic_score` by `genre`, so now we want to calculate those average scores, and display the output sorted by `genre`. 
+
+[HINT]
+====
+Learn about `summarize()` https://www.r-bloggers.com/2022/06/how-to-group-and-summarize-data-in-r/[here]. Assign the average `critic_score` (removing NAs) to a new variable called `avg_critic_score`
+====
+
+What will this look like when we run it all together? We will see two columns, `genre`, and `avg_critic_score`. There are twenty genres, so there will be twenty rows. Each row of `avg_critic_score` will be the average critic score for the corresponding genre. 
+
+We can see that the output is sorted by the alphabetically-ordered `genre` column. What if we wanted to sort by the score values?
+
+
+.Deliverables
+====
+2.1 Table displaying average `critic_scores` grouped by `genre` using dplyr +
+2.2 Some key differences you have noticed so far between `tapply()` and `dplyr`. (At least 2 examples) +
+2.3 Which method (`tapply()` or `dplyr`) do you prefer so far? Why? (2-3 sentences)
+====
+
+=== Question 3 (2 points)
+Before, we found the average counts. We are now going to look at finding the sums of values when grouping data. This is useful when we want to find which video game console has the most total game sales, or how many unique titles total there are per genre.
+
+We now have just a little practice using `group_by()` and `summarize()` from the `dplyr` library. These are still very new topics to us.
+
+To start, let's create a copy of the code we just made in Question 2. BUT we will now group by the `console` column, and we will summarize these groups using `sum()` (in place of `mean()`) on the `total_sales` column. DO NOT run this new code just yet. We will first save it as the variable `console_sales`, and then print just the first few lines to see what the data looks like.  
+
+This grouping shows us the total number of video game sales across each console type. But the results are not sorted. What if we wanted to easily find the console with the most sales? +
+We can use `arrange()`: 
+
+`arrange()` is a function used to sort rows in a dataframe based on the values in one or more columns. By default, this will give results in ascending order (lowest to highest) based on the values in the column we're sorting.  
+
+[NOTE]
+====
+We will want to see which consoles had high or low sales. If we want to easily access the highest values, we could look at the `tail()`, or we could use `desc()` to sort in descending order, and look at the `head()` of this output. DO NOT print everything out. Make sure to just view a few rows at a time (use `n=20` to get a good sized list of these results). This will be enough to get an understanding of what consoles seem to have a lot of video game sales versus those that don't. 
+====
+
+What if we wanted to find how many video games are in each genre in this dataset? Each row in the dataset represents one video game. But there isn't a dedicated column that counts the games that we can pair with the `genre` column to do this grouping. This is OK.
+
+There is a function in `dplyr` called `n()` that counts how many rows fall into each group defined by `group_by()`. It is very useful for when we want to get the counts of the occurances of values within a group. 
+
+Using `group_by()`, `summarize()`, `arrange()`, and `n()` from dplyr, we will find the count of how many games have been made in each genre. 
+The first instinct here may be to run something like:
+
+[source,R]
+----
+genre_title_counts <- video_games %>% \
+    group_by(genre) %>%\
+    summarize(total_titles = sum(title, na.rm=TRUE)) %>%\
+    arrange(desc(total_titles)) 
+
+head(genre_title_counts)
+----
+...Coding it so we will group by genre, get the sum of the titles, and arrange these results to show which title had the highest sum. 
+    
+BUT this will not work! Why? The `title` column is made of text values, and `sum()` only works with numeric data. You can't add the names of games together like numbers! 
+
+### What actually works
+We will need to replace what `total_titles` is equal to. Try using `n()`. +
+[HINT]
+====
+Read about using `n()` https://www.statology.org/n-function-in-r/[here]. 
+====
+Our end code will read like: 
+
+- Group by genre
+- Use `n()` to count how many rows (games) are in each group
+- `arrange(desc(...))` to sort the groups from most to least rows
+
+
+.Deliverables
+====
+3.1 Which console had the most total sales? +
+3.2 Which genre had the least title counts? +
+3.3 Create another summarized grouping between two columns. 
+====
+
+=== Question 4 (2 points)
+We are going to be calculating the values of each `Rating` divided by the `Reviews` for each video game. This will help to normalize the scoring values by combining popularity with quality, which allows us to compare each video game fairly, regardless of number of reviews.
+
+Read in the Google Play Store dataset: `/anvil/projects/tdm/data/grouping/googleplaystore.csv` into a dataframe called `app_store`.
+
+To start, checkout the `Rating` and `Reviews` columns of `app_store`. Each app in the Google Play Store has a rating (0-5). This is not the best way to judge an app’s quality, since:
+
+-	Apps with high ratings but few reviews have a larger value,
+-	Apps with many reviews and even the same rating will have a smaller value.
+
+Finding the rating per review will help us detect under-reviewed apps that have high ratings but a lower vote count. Ideally, we would use these two columns (`Rating` and `Reviews`) to find out how each app was rated by each review it got.
+
+### Cleaning the data
+This calculation of rating-per-review that we want to make is numerical, but looking at the classes of these columns shows that the `Reviews` column is full of character data rather than numeric values.
+
+We can’t go through and look at each unique value in the `Reviews` column because there are hundreds of different values, and getting a table output of this would not be good. In an ideal world, this column would be numeric and contain only 0-9 characters. But real-world data is always messy. It is extremely likely that this column contains values like "1,234", "Free", or NA values, with the "," and letter characters that cannot be easily converted. We do not know for sure what is causing the issue.
+
+[NOTE]
+====
+There is a function in R called `gsub` that is used for replacement operations. The function takes an input and substitutes it against any specified values. Here, we will use it to replace any “,” (commas) with “” (nothing) in the `Reviews` column.
+====
+
+Save the `gsub` function as a new column `Clean_Reviews`. It should be a copy of the `Reviews` column, minus any commas.
+
+We still have yet to change the class of the review data. Use `as.numeric` to convert every entry in the `Clean_Reviews` column to numeric data. There is a warning about NAs being introduced by coercion. Why didn’t this cleaning work? It did. The column now contains numeric data when we check the class. But there is still something causing an issue.
+
+In this case, it is that we have not removed all of the problematic values just by removing all the commas. Run `app_store[is.na(app_store$Numeric_Reviews) & !is.na(app_store$Reviews), "Reviews"]`. This will go through the `app_store` dataset and find what values are causing a problem in the new `Numeric_Reviews` numeric column, AND (&) what values are *not* causing a problem in the `Reviews` character column. In the instances where both these columns have a value selected from the same row, the "Reviews" at the end of this line says to select the good value from the `Reviews` column.
+
+Running this will tell us the value(s) in the column that is causing the warning message to appear.
+
+Now that we know a bit about reshaping datasets, we will learn how to use `mutate()` and `filter()` from the `dplyr` library to do this same task.
+
+Go to https://dplyr.tidyverse.org/reference/mutate.html[this page] to read more about the `mutate()` function.
+
+[WARNING]
+====
+It is OK to use AI for researching topics and asking for further explanation of something. Just be 100% certain your usage stays following the guidelines https://the-examples-book.com/projects/fall2025/syllabus#guidance-on-generative-ai[here]
+====
+
+In this case, we will use `mutate()` to create new columns in the dataset. _This will act the same as where we created the `Clean_Reviews` and `Numeric_Reviews` columns._
+
+Build a `mutate()` statement that uses `gsub` and `as.numeric`. 
+If you reuse the column names `Clean_Reviews` and `Numeric_Reviews`, it will overwrite your pre-existing columns - this is OK if you want two new columns instead of four.
+
+[NOTE]
+====
+The lines in `mutate()` are similar to the `gsub` and `as.numeric` lines from before, but now they will have the `dplyr` piping format and be wrapped within the `mutate()` function. Save this as `app_store_cleaned` and view just the `head()`.
+====
+
+Another useful function is `filter()`. Make sure you learn about this on your own enough to build a `filter()` function to go through the `Numeric_Reviews` and `Reviews` columns and filter as we did in basic R. This will look like:
+
+[source,R]
+----
+app_store_cleaned %>%
+    filter([part 1], [part 2])
+----
+
+Your code should read as "In `app_store_cleaned`, filter for where `Numeric_Reviews` is NA and where `Reviews` is not NA, and select the `Reviews`/non-NA value of the two". We will still get that one `3.0M` value as the result.
+
+To finally remove that bothersome value, add `filter(!is.na(Numeric_Reviews))` after the `mutate()` fuction when creating `app_store_cleaned`. There is still a warning, but re-running the check for problematic values / `filter()` line will show no values creating a problem.
+
+[NOTE]
+====
+If there are errors in your code or the value persists after you believe it should have been removed, try checking that you have all of your piping in place and correct.
+====
+
+Now with both the `Rating` and `Numeric_Reviews` columns, find the rating-to-review ratio. Use `mutate()` to create a new column called rating_per_review in `app_store_cleaned` that contains the `Rating` per `Numeric_Reviews` (how well an app is rated for each review it gets). Save this back into the `app_store_cleaned` dataframe.
+
+.Deliverables
+====
+4.1 Create `Numeric_Reviews` using basic R +
+4.2 Create `Numeric_Reviews` using `dplyr` and remove `3.0M` value +
+4.3 Display head of `rating_per_review` column
+====
+
+=== Question 5 (2 points)
+The `apply()` family of functions in R provides efficient ways to work through data structures and apply functions to them. We already have some practice using `tapply()` earlier in this project. In this question, we will begin working with some of the other functions to gain more experience using this family of functions in basic R. We will continue working with the Google Play Store dataset (either reread in or continued with changes from Question 4).
+
+In the dataset, there is a column called `Content.Rating`. This column contains 7 types of rating based on target audience for each game - which we can find using `unique()`:
+
+- `Everyone`
+- `Teen`
+- `Everyone 10+`
+- `Mature 17+`
+- `Adults only 18+`
+- `Unrated`
+- `''` (empty entries)
+
+[IMPORTANT]
+==== 
+There are only 6 types in app_store_cleaned - the '' (empty values) being removed. 
+====
+
+[NOTE]
+====
+It is good to check how many unique values there are before printing them all out. In this case, it was fine because there were 7, but in the future when looking for the unique values, it is useful to use the form `length(unique(df$[column_name]))` first. 
+====
+
+In cases where there are a lot of unique values, it can happen that there are two values that are actually the same but were entered differently in a case-specific environment (such as `everyone` vs `Everyone` vs `EVERYONE`). This common error can be fixed by setting all the text to capital letters. While it isn't needed with this column, we can still apply this technique to these values as a learning case. 
+
+`lapply()` stands for "list apply". It applies a function to each element of a list, and returns a new list, where each element is the result of applying that function. 
+
+Within `lapply()`, there is a function called `toupper` which will convert all of the characters to uppercase. Try using `toupper` in `lapply()` to convert the `Content.Rating` column to all capital letters. Save this as a new column in your dataframe and compare the changes. 
+
+Another thing we might want to look at is the class of each column in the dataframe. We can easily use `class()` to find one or two, but what about for every column in the dataframe? 
+
+`sapply()` is very similar to `lapply()`. Either will work just fine here for finding the classes. Read about and compare their differences. `lapply()` will output a list, while `sapply()` will give the best possible return type. 
+
+Returning to the `Content.Rating` column, we can make another comparison. Using `nchar`, we can get outputs telling us how many characters are in each output line of the column. Try using this in both `lapply()` and `sapply()`.
+
+[NOTE]
+====
+We will run these each with a `head(..., n=30)` to just output the first 30 rows  of each line. While it is possible to output all 10,000+ rows here, it is not the best practice and could easily slow things down. You can change the `'n='` value from 30, but keep away from anything near 10,000. 
+====
+
+[NOTE]
+====
+The function `nchar` is used to count the number of characters in a string or character vector. In our tests, we can see that the results are stating how many characters are in each row in the `Content.Rating` column. 
+====
+
+
+.Deliverables
+====
+5.1 Find the class of each column of the dataframe using two methods +
+5.2 Display the number of characters per row in `Content.Rating` using two methods +
+5.3 Explain a bit about another function from the apply family (3-4 sentences)
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project[].ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
