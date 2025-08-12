@@ -1,0 +1,338 @@
+= Large Language Models
+
+== What is a Large Language Model?
+
+++++
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_oldht3gh&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_amshv2zy%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 960px; height: 540px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Introduction to LLMs TDM"></iframe>
+++++
+
+A large language model is an AI program that predicts what word comes next for any piece of text. They are pre-trained and can fine-tuned or trained further for specific purposes. They use neural networks behind the scenes to predict the next set of words for sentence. Instead of predicting one word with certainty, though, what it does is it assigns a probability to all possible next words. With each iteration, the model adjusts its internal parameters to reduce the difference between its predictors and the actual outcomes.
+
+
+[IMPORTANT]
+====
+You should request 16 cores if you want to run Ollama on Anvil. This step is very important because the notebook we will reference will use 8 threads, but Ollama runs optimally with half as many threads as cores requested, so please request 16 cores.
+====
+
+== Using an LLM on Anvil
+
+++++
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_hht10tkj&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_rdpjey73%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 960px; height: 540px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Using Ollama Models on Anvil Pt 1"></iframe>
+++++
+
+
+
+[NOTE]
+====
+This guide referenced in this video was prepared by a senior data scientist of the Data Science team.  For any questions or clarifications, please submit a support https://the-examples-book.com/internal/main/ds_team/tdx-support[ticket] to the Data Science team.
+====
+
+
+=== Step 1. Create an Ollama Symbolic Link - DO THIS JUST ONCE!
+
+[source,bash]
+----
+
+#  DO THIS JUST ONCE, then comment it out by putting "#" in front to comment it out
+rm -rf ~/.ollama; mkdir -p $SCRATCH/.ollama; ln -s $SCRATCH/.ollama ~
+
+mkdir: cannot create directory '/.ollama': Read-only file system
+----
+
+=== Step 2. Launch ollama serve in a Terminal window
+
+The "ollama" commands we must run to launch an Ollama server must NOT be run from this notebook using `%%bash`!
+
+
+[NOTE]
+====
+We must ALWAYS run ollama serve in a **Terminal** window when running this notebook so it can run the various LLMs we will download and train. To do so, we open a Terminal window using `File -> New -> Terminal`, and in that new Terminal tab, type:
+====
+
+
+**In Terminal 1:**
+[source,bash]
+----
+/anvil/projects/tdm/bin/ollama serve
+----
+
+It will generate some text and stabilize in 5-10 seconds, then you should come back to this tab for the next step.
+
+=== Step 3. Select and download an LLM
+
+You must initially download one or more LLMs for Ollama to be able to do anything. Once you download them, you won't have to download them again! Browse to https://github.com/ollama/ollama?tab=readme-ov-file#model-library, choose the name of one of the models you would like to try, such as `llama3.2`. Then open a second Terminal window (the first one is busy running our ollama serve) and in that window, type:
+
+
+**In terminal 2:**
+[source,bash]
+----
+/anvil/projects/tdm/bin/ollama pull llama3.2
+----
+
+This will download the Meta Llamma 3.2 LLM to your `~/.ollama` directory (which is really in `$SCRATCH/.ollama` due to the symbolic link we created above). You can confirm that it was successfully downloaded by typing:
+
+**In terminal 2:**
+[source,bash]
+----
+/anvil/projects/tdm/bin/ollama list
+----
+
+in that second Terminal window.
+
+=== Step 4. Select and download an embedding
+
+You must initially download an embedding, which allows us to convert text in documents we want to train our LLM on into a vectorized format we will store in a vector database called Milvus. Once you download and ingest it into Milvus you won't have to download it again! Go to our second Terminal window (the first one is busy running our ollama serve) and in that window, type:
+
+
+**In terminal 2:**
+[source,bash]
+----
+/anvil/projects/tdm/bin/ollama pull mxbai-embed-large
+----
+
+You can confirm that it was successfully downloaded by typing:
+
+**In terminal 2:**
+[source,bash]
+----
+/anvil/projects/tdm/bin/ollama list
+----
+
+It should look something like this:
+
+----
+a240.anvil ~ : /anvil/projects/tdm/bin/ollama list
+NAME                        ID              SIZE      MODIFIED           
+mxbai-embed-large:latest    468836162de7    669 MB    About a minute ago    
+llama3.2:latest             a80c4f17acd5    2.0 GB    2 minutes ago
+----
+
+=== Step 5. CRITICAL: Force new model and embedding to use just 8 threads
+
+All the Ollama documentation you read will tell you to directly use these models you have downloaded but that would be a huge mistake on Anvil. These models expect to use all CPU cores on the server, but our jobs on **Anvil** are only granted access to a fraction of the CPU cores on a node, but Ollama doesn't know that! The result is these models will take HOURS to run unless we tell them to use a smaller number of threads/CPU cores.
+
+To correct this, we create a tiny new model based on the downloaded LLM model that uses just 8 CPU threads. This is **critically important**. Always try to use 1/2 as many threads as CPU cores you have requested when launching your notebook. If you have requested 16 cores, use 8 threads. Numbers higher or lower than this will perform worse than 8.
+
+**You can run this in python cell because of the %%bash**
+
+[source,bash]
+----
+%%bash
+cat > ~/mymodel << HERE
+FROM llama3.2
+PARAMETER num_thread 8
+HERE
+----
+
+=== Step 6. Create a new model definition with a new name
+
+Next we want to create a new model definition with a new name that is based on the mymodel file we created. To do so, go to that second Terminal tab again and type this to create a new model called `llama3.2-8`, with the extra `-8` appended to the end to indicate to us it was the one we created with 8 threads:
+
+**In terminal 2:**
+[source,bash]
+----
+/anvil/projects/tdm/bin/ollama create llama3.2-8 -f mymodel
+----
+
+We should be able to test that it was created successfully by typing:
+
+**In terminal 2:**
+[source,bash]
+----
+/anvil/projects/tdm/bin/ollama list
+----
+
+
+Now we repeat this same for our embedding as well so it also uses just 8 threads!  It's OK to reuse the same "mymodeL" filename, as it's only briefly used to create our new model definition:
+
+**You can run this in python cell because of the %%bash**
+[source,bash]
+----
+%%bash
+cat > ~/mymodel << HERE
+FROM mxbai-embed-large
+PARAMETER num_thread 8
+HERE
+----
+
+Next we want to create a new model definition with a new name that is based on the mymodel file we created. To do so, go to that second Terminal tab again and type this to create a new model called "mxbai-embed-large-8", with the extra "-8" appended to the end to indicate it will use 8 threads:
+
+**In terminal 2:**
+[source,bash]
+----
+/anvil/projects/tdm/bin/ollama create mxbai-embed-large-8 -f mymodel
+----
+
+We should be able to test that it was created successfully by typing:
+
+[source,bash]
+----
+/anvil/projects/tdm/bin/ollama list
+----
+
+It should look something like this:
+
+----
+NAME                          ID              SIZE      MODIFIED       
+mxbai-embed-large-8:latest    476feb66e612    669 MB    3 seconds ago     
+llama3.2-8:latest             cfdf6bee4b5e    2.0 GB    14 minutes ago    
+mxbai-embed-large:latest      468836162de7    669 MB    19 minutes ago    
+llama3.2:latest               a80c4f17acd5    2.0 GB    21 minutes ago
+----
+
+
+=== Step 7. Our first LLM query!
+
+Now we can make an actual LLM query against our llama3.2-8 model!  Go to the second Terminal window and type:
+
+
+[source,bash]
+----
+/anvil/projects/tdm/bin/ollama run llama3.2-8 "Why is the sky blue?"
+----
+
+Note: If we had accidentally used the original `llama3.2` model rather than `llama3.2-8` it would take over an hour to respond!
+
+== Train on a new body of text (create a RAG)
+
+++++
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_527cnb2w&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_h4cfsvpv%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 960px; height: 540px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Using RAG on Anvil Ollama Pt2"></iframe>
+++++
+
+We were able to ask a general question of our LLM above. What if we wanted to train our LLM on other documents we have? Doing so involves a process called Retrieval Augmented Generation, or a RAG.
+
+The LLM can't be trained directly on text. We must first convert any text to a vector format using the embedding we downloaded above. This conversion is a little computationally intensive, so ideally we'd save these vectors in a way that they can be easily retrieved if we were to make some future query against our LLM. We will store them in a vector database in our case, Milvus.
+
+=== Step 1. Load the necessary Python libraries
+
+**Python cell to run:**
+[source,python]
+----
+import os
+from langchain_ollama import OllamaLLM
+from langchain_ollama import OllamaEmbeddings
+from langchain.document_loaders import TextLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_milvus import Milvus
+from langchain.chains import create_retrieval_chain
+from langchain import hub
+from langchain.chains.combine_documents import create_stuff_documents_chain
+----
+
+=== Step 2. Specify the Location of the Milvus Database
+
+**Note (read this section only):**
+
+We must specify the location of the Milvus database we will use.  We can fill this database with vector embeddings we create from text today, then make queries against it tomorrow by specifying the same Milvus database.  We will just call ours "milvus_demo.db" but we will store someplace where it has room to grow, by putting it in our SCRATCH directory.  We could easily use an absolute path below instead of the SCRATCH directory.  That is, we could have said something like:
+
+`URI = "/anvil/projects/tdm/corporate/some_project_name/milvus.db"`
+
+The `f"{os.getenv('SCRATCH')}/milvus_demo.db"` below will just evaluate to something like `/anvil/scratch/x-dgc/milvus_demo.db`.  The SCRATCH environment variable gets expanded to `/anvil/scratch/x-dgc` but the last bit will correspond to YOUR username when you run this notebook.
+
+There may be a time where this database can get corrupted or otherwise cause problems adding new documents and you'd like to delete it and start over.  To do so, you must remove the database AND the database lock file by going to a Terminal window as described above and typing something like:
+
+`rm $SCRATCH/milvus_demo.db $SCRATCH/.milvus_demo.db.lock`
+
+Again, only do this if you are having problems. You only need to reset the Milvus database if you run into errors creating or updating the vector store. If you have not had any errors, you can proceed with running the next lines without doing anything here.
+
+**Python cell to run:**
+
+[source,python]
+----
+URI = f"{os.getenv('SCRATCH')}/milvus_demo.db"
+collection_name = "my_test_collection"
+----
+
+**Python cell to run:**
+[source,python]
+----
+import os
+
+# If SCRATCH isn't set, define it manually for your username
+if not os.getenv("SCRATCH"):
+    import getpass
+    os.environ["SCRATCH"] = f"/anvil/scratch/{getpass.getuser()}"
+
+# Define the path to your Milvus DB file
+URI = f"{os.environ['SCRATCH']}/milvus_demo.db"
+collection_name = "my_test_collection"
+
+print("Using Milvus DB at:", URI)
+----
+
+
+
+=== Step 3. Point LangChain to the running Ollama server
+
+**Python cell to run:**
+
+[source,python]
+----
+# You MUST have these lines in your code to read the port number that "ollama serve" was launched using
+with open(f"/dev/shm/ollama.{os.getuid()}") as hostfile:
+    hostline = [line.rstrip() for line in hostfile]
+os.environ["OLLAMA_HOST"] = hostline[0]
+print(os.environ["OLLAMA_HOST"])
+----
+
+=== Step 4. Specify the model and embedding to use (8-thread version!)
+**Python cell to run:**
+
+[source,python]
+----
+# NEVER DIRECTLY USE DOWNLOADED MODELSlike "llama3.1", "llama3.2", ETC.
+# ALWAYS MAKE A NEW MODEL BASED ON DOWNLOADED MODELS THAT USES 8 THREADS OR PERFORMANCE IS TERRIBLE!
+# INCREASING BEYOND 8 WILL RUN MORE SLOWLY!
+llm = OllamaLLM(model="llama3.2-8")
+embed_model = OllamaEmbeddings(model="mxbai-embed-large-8")
+----
+
+=== Step 5. Read a PDF, convert it to text, and split into chunks
+
+**Python cell to run:**
+
+[source,python]
+----
+from langchain_community.document_loaders import PyPDFLoader
+loader = PyPDFLoader("https://datamine.purdue.edu/wp-content/uploads/2024/06/Academic-Partners-Overview_2024.pdf")
+data = loader.load()
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0)
+all_splits = text_splitter.split_documents(data)
+----
+
+=== Step 6. Ingest text chunks into Milvus vector database
+
+**Python cell to run:**
+
+[source,python]
+----
+vector_store = Milvus.from_documents(documents=all_splits, embedding=embed_model,
+    collection_name=collection_name,
+    connection_args={"uri": URI},
+    drop_old=True, )
+retriever = vector_store.as_retriever()
+chain = create_retrieval_chain(combine_docs_chain=llm,retriever=retriever)
+----
+
+=== Step 7. Use a standard LLM prompt with our vector database
+
+**Python cell to run:**
+
+[source,python]
+----
+retrieval_qa_chat_prompt = hub.pull("langchain-ai/retrieval-qa-chat")
+combine_docs_chain = create_stuff_documents_chain(
+    llm, retrieval_qa_chat_prompt
+)
+retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)    
+----
+
+=== Step 8. Ask LLM questions about our documents
+
+**Python cell to run:**
+
+[source,python]
+----
+response = retrieval_chain.invoke({"input": "What is this document about?"})
+print(response['answer'])
+----
