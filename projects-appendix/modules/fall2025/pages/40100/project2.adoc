@@ -3,7 +3,7 @@
 = TDM 40100: Project 2 - Basic Python, Environment & Dependency Management, Documentation
 
 == Project Objectives
-This project is an introduction to Python dependency management and environments. We will explore how to create and use different environments, and how to manage them afterwards. This is very closely related with dependency management and making sure we can make it easy for others to take on the project, while solve problems when it arises; thus, we will take a look at some common tools and conflict resolution techniques.  
+This project is an introduction to Python dependency management and environments. We will explore how to create and use different environments, and how to manage them afterwards. This is very closely related with dependency management and making sure we can make it easy for others to take on the project, while solving problems when they arise; thus, we will take a look at some common tools and conflict resolution techniques.  
 We integrate this learning with analyzing data driven problems. The https://the-examples-book.com/projects/data-sets/co2Dataset[dataset] deals with global C02 and greenhouse gas emission. Since this is one of the introduction projects, this part will also serve as a refresher on basic Python implementation, and relevant documentation methods. 
 
 .Learning Objectives
@@ -18,6 +18,38 @@ We integrate this learning with analyzing data driven problems. The https://the-
 /anvil/projects/tdm/data/co2/owid-co2-data.csv 
 https://github.com/owid/co2-data
 
+== Useful Things
+You can safely ignore this if you are not running into any issues with trying to run `pipreqs` as described in the project.
+
+If you are running into issues some of these may help fix your situation but if they don't feel free to reach out to us on Piazza/Office Hours.
+
+If you installed `pipreqs` into your environment, using the absolute path will always work: 
+
+[source,bash]
+----
+~/.conda/envs/{myenv}/bin/pipreqs .
+----
+
+If you want to not have to use the absolute path and are running into an issue saying its not found in the local bin, then you can remove it:
+[source,bash]
+----
+rm ~/.local/bin/pipreqs
+----
+
+Then run `hash -r` which https://askubuntu.com/questions/952137/what-does-hash-r-command-do[clears shell location history] so it will resolve the locations again according to path:
+
+[source,bash]
+----
+hash -r
+----
+
+Now `pipreqs` should work like normal:
+
+[source,bash]
+----
+pipreqs .
+----
+
 == Questions
 
 === Question 1 (2 points)
@@ -30,58 +62,144 @@ The common issue that arises from no dependency management is version conflicts:
 
 Thus, we can use virtual environments, to create a separate space for all of one project's dependencies so that regardless of what we have in our system's global installation or what other projects use, the one we are working on runs smoothly. 
 
-We will try creating a virtual environment using the Python 3 venv module. Open your terminal or command prompt and navigate to the directory where you want to set up your project. Then run the following command (replace env_proj with your preferred environment name if desired):
+[NOTE]
+====
+Since we are working on a cluster that has some sort of central python module management, we need to do a couple extra things to make sure our environment is set up correctly.
+====
 
-[source,python]
-----
-python3 -m venv env_proj
-----
+We will try creating a virtual environment using Conda. Open your terminal or command prompt and navigate to the directory where you want to set up your project. Then run the following command (replace env_proj with your preferred environment name if desired):
 
-Above creates a new environment named env_proj. You can name it anything, but it should be easily recognizable and relevant. Use below code to activate the environment.
-
-[source,python]
+[source,bash]
 ----
-source env_proj/bin/activate
+conda create -n env_proj python=3.11 -y
 ----
 
-A folder that will have all the needed packages is created inside the project directory. We can install whatever is needed inside the environment using pip. 
+[NOTE]
+====
+You may need to run `conda init` prior to creating this conda environment.
+====
 
-Pip is a standard package management tool in Python for libraries or modules that are not in the Python standard library; it searches through Python Package Index (PyPI), which is a public repository of open source packages that can be installed. Developers create setup containing metadata of the package and build distribution files, then upload to PyPI. When install command is ran by the user, pip locates the package in PyPI, resolve dependencies, and downlaod wheels. 
+This will create a new conda environment called `env_proj` that explicitly installs the specified version of python into the environment. You can name it anything, but it should be easily recognizable and relevant.
+
+Use below code to activate the environment.
+
+[source,bash]
+----
+conda activate env_proj
+----
+
+Your conda environments are located in the directory `~/.conda/envs/` which we can check out by doing either of these below:
+
+[source,bash]
+----
+ls ~/.conda/envs/
+
+conda env list
+----
+
+However, if we run (which you should always do if you are running into python environment issues):
+
+[source,bash]
+----
+which python
+----
+
+We will still see this as our current python:
+[output]
+----
+/anvil/projects/tdm/apps/lmodbin/python-seminar/python
+----
+
+Our shell is still defaulting to run from the seminar python environment, which in most cases is likely what we want when working on Anvil. However, for this project we want to practice creating a new environment from scratch.
+
+The reason it still defaults to run from the seminar environment is due to our shell's `PATH` environment variable which you can see by running:
+
+[source,bash]
+----
+echo $PATH
+----
+
+It is helpful to do some more research on how `PATH` works in your shell but for this project we can fix the issue by simply prepending our `PATH` with our new conda environment like so (change the name of the environment as necessary):
+
+[source,bash]
+----
+export PATH=~/.conda/envs/env_proj/bin:$PATH
+----
+
+[IMPORTANT]
+====
+If you restart your shell you will need to rerun the export line unless you actually add it to the end of your `~/.bashrc` file. 
+====
+
+[NOTE]
+====
+This is slightly nonstandard and is a workaround for this project but it may be useful for other scenarios you may run into involving the PATH env variable. 
+====
+
+If you rerun the `echo $PATH` you should see that the path to your conda environment is at the front which means your shell will default to that python first.
+
+Now when we run `which python` we should see:
+
+[output]
+----
+/home/{x-username}/.conda/envs/{yourenvname}/bin/python
+----
+
+Now we should be able to use the environment like normal on Anvil!
+
+You may also know about `pip` which is another python package management tool in Python for libraries or modules that are not in the Python standard library; it searches through Python Package Index (PyPI), which is a public repository of open source packages that can be installed. Developers create setup containing metadata of the package and build distribution files, then upload to PyPI. When install command is ran by the user, pip locates the package in PyPI, resolve dependencies, and download wheels.
+
+There is an analogous version of PyPI and set of commands for Conda which function about the same. Note that some packages or versions of packages may only be on one or the other, however all pip commands will work in a conda so you can install packages from PyPI into your conda environment. We will touch more on Conda later but for now we will go over the various `pip` commands:
 
 - Install (with version specification if needed)
-[source,python]
+[source,bash]
 ----
-pip install name
-pip install name==version
+pip install {name}
+pip install {name}=={version}
 ----
 
 - Uninstall
-[source,python]
+[source,bash]
 ----
-pip uninstall name
+pip uninstall {name}
 ----
 
 - Show information about installed package
-[source,python]
+[source,bash]
 ----
-pip show name
+pip show {name}
 ----
 
 - List installed packages
-[source,python]
+[source,bash]
 ----
 pip list [options]
 ----
 
 There are multiple options available for most pip commands. We recommend you to check the documentation for full listings. (for example: https://pip.pypa.io/en/stable/cli/pip_install/ for `pip install`)
 
-Deactivating the virtual environment is very simple with:
-[source,python]
+Don't do it yet, but deactivating the conda virtual environment is very simple with:
+[source,bash]
 ----
-deactivate
+conda deactivate
 ----
 
-Now, let's load the dataset in the environment we created. 
+We have one last step before being able to use this environment in our Jupyter Notebook - we need to make it a kernel!
+
+For every other project we have been using the `seminar` *kernel*, which is a special form of a python environment that allows it run in a Jupyter Notebook. 
+
+Creating a kernel is actually very simple. Make sure you have your desired environment activated, then we can first install the `ipykernel` package and then install our environment as a kernel like so:
+
+[source,bash]
+----
+pip install ipykernel
+
+python -m ipykernel install --user --name={yourenvname} --display-name "YourEnvName"
+----
+
+If you wait a minute or so, your brand new kernel should appear as an option in the menu in the top right where it normally says seminar!
+
+Now, let's open a Jupyter notebook using our brand new kernel and load the dataset in the environment we created.
 
 [source,python]
 ----
@@ -113,45 +231,23 @@ ModuleNotFoundError: No module named 'pandas'
 This would have occurred if for example, the pandas library could not be found in the current environment - Python cannot import what doesn't exist. 
 ====
 
-We can see the above ourselves. 
+If you try to import a library you did not install into your environment, we can see a similar error as above when trying to load up the dataset.
+
+To fix this, head back into your command line and install pandas into your environment:
 
 [source,python]
 ----
-pipreqs .
+pip install pandas
 ----
 
-Which would result in:
-
-[source,python]
-----
-/bin/bash: line 1: pipreqs: command not found
-----
-
-Can be confirmed with:
-
-[source,python]
-----
-pip show pipreqs
-----
-
-[source,python]
-----
-WARNING: Package(s) not found: pipreqs
-Note: you may need to restart the kernel to use updated packages.
-----
-
-We'll install pipreqs and use it in the next question. 
-
-Example of installing with pip (these should already exist in Anvil):
-[source,python]
-----
-pip install pandas matplotlib numpy seaborn
-----
+Now we should have `pandas` installed and you can import the dataset.
 
 [NOTE]
 ====
-`venv` provides a very easy way to manage dependencies; however, if there are packages you need that is not done through pip install or some non Python libraries, `venv` will not do it for you and you might need to find another tool.
+If you need to install a new package, you will need to go back to the command line, activate your environment, and install it like described here. You may or may not need to restart your kernel so it can use the newly downloaded packages. 
 ====
+
+Refer to the deliverables below for what to do with the dataset.
 
 .Deliverables
 ====
@@ -164,7 +260,7 @@ pip install pandas matplotlib numpy seaborn
 ====
  
 === Question 2  (2 points)
-`pip list` and `pip freeze` both outputs installed Python packages. Try running both:
+`pip list` and `pip freeze` both output the installed Python packages. Try running both:
 
 - pip list
 [source,python]
@@ -203,13 +299,61 @@ Another way we can create a requirements file is through pipreqs.
 pip install pipreqs
 ----
 
+And we can confirm it with:
+
+[source,python]
+----
+pip show pipreqs
+----
+
+Which should show something like:
+[output]
+----
+Name: pipreqs
+Version: 0.5.0
+Summary: Pip requirements.txt generator based on imports in project
+Home-page: https://github.com/bndr/pipreqs
+Author: Vadim Kravcenko
+Author-email: vadim.kravcenko@gmail.com
+License: Apache-2.0
+Location: /home/{x-username}/.conda/envs/{envname}/lib/python3.11/site-packages
+Requires: docopt, ipython, nbconvert, yarg
+Required-by:
+----
+
+Or this if it was not installed correctly:
+[source,python]
+----
+WARNING: Package(s) not found: pipreqs
+Note: you may need to restart the kernel to use updated packages.
+----
+
+If it all worked then we can run:
 [source,python]
 ----
 pipreqs .
 ----
-`.` is to indicate current directory. pipreqs will scan all .py files and get all import and from statements, find PyPI package name, and your installed version. Alphabetical ordering is used to write package==version into requirements.txt. 
 
-Depending on the situation, there are flags we can use with pipreqs, including --force (overwrite existing requirements.txt), --print (outputs detected dependencies instead of writing to file), --ignore <dir> (specific directory not taken into considering when scanning), --clean <file> (remove modules that are not imported anymore), etc. Again, we recommend you to check documentations. 
+[NOTE]
+====
+If you are running into issues with `pipreqs .` other than the kind talked about below, the simplest way to fix it is to use the absolute path to pipreqs which would be:
+
+[source,bash]
+----
+~/.conda/envs/{myenv}/bin/pipreqs .
+----
+====
+
+`.` is to indicate current directory. pipreqs will scan all .py files and get all `import x` and `from x import y` statements, find PyPI package name, and your installed version. Alphabetical ordering is used to write package==version into requirements.txt. 
+
+Depending on the situation, there are flags we can use with pipreqs, including 
+
+- --force (overwrite existing requirements.txt)
+- --print (outputs detected dependencies instead of writing to file)
+- --ignore <dir> (specific directory not taken into considering when scanning)
+- --clean <file> (remove modules that are not imported anymore), etc.
+
+Again, we recommend you to check documentations to see all available options.
 
 .Deliverables
 ====
@@ -218,39 +362,43 @@ Depending on the situation, there are flags we can use with pipreqs, including -
 ====
 
 === Question 3 (2 points)
-Conda is another widely used environment management system, with the main difference from venv being that it works across multiple languages and is not limited to Python packages. It is also fast since we are installing precompiled binary packages on Conda; users have less worries when it comes to compiling extension modules of libraries written in different languages. Another difference is that while most environments are created and used at the scope of the project, Conda environments can be used across various projects and be activated from any location. 
+We created a conda environment in Question 1, but we have only covered pip so far. 
 
-[source,python]
+Conda is another widely used environment management system, with the main difference from a pip virtual environment being that it works across multiple languages and is not limited to Python packages. It is also fast since we are installing precompiled binary packages on Conda; users have less worries when it comes to compiling extension modules of libraries written in different languages. Another difference is that while most environments are created and used at the scope of the project, Conda environments can be used across various projects and be activated from any location. 
+
+We already went over some of these in the first problem but we will do it again here:
+
+[source,bash]
 ----
 conda create --name <env>
 ----
 Replace `<env>` with your environment name. You can also specify Python version by adding 'python=version' at the end.
 
 Activate with:
-[source,python]
+[source,bash]
 ----
 conda activate <env>
 ----
 
 Deactivate with:
-[source,python]
+[source,bash]
 ----
 conda deactivate
 ----
 
 To check what is installed in the conda environment, use the `conda list` command.
-[source,python]
+[source,bash]
 ----
 conda list
 ----
 Note that you can check package list in a different Conda environment with 
-[source,python]
+[source,bash]
 ----
 conda list -n <other environment name>
 ----
 
 Remove existing environment with:
-[source,python]
+[source,bash]
 ----
 conda remove --name <env> --all
 ----
@@ -260,21 +408,21 @@ You can check list of other commands at: https://docs.conda.io/projects/conda/en
 
 We can install with:
 
-[source,python]
+[source,bash]
 ----
 conda install pandas matplotlib numpy seaborn
 ----
 
 Again, we want our environments to be reproducible. Conda uses .yml file to do so, which is a text file using YAML formatting (very widely used for creating software project configuration files). 
 Below command that outputs a file called `environment.yml` containing environment information regarding name, installed packages, versions, and other configuration details. 
-[source,python]
+[source,bash]
 ----
 conda env export > environment.yml
 ----
 
 The file structure will look something like:
 
-[source,python]
+[source,yaml]
 ----
 name: env_proj
 channels:
@@ -465,4 +613,5 @@ You _must_ double check your `.ipynb` after submitting it in gradescope. A _very
 
 You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
 ====
+
 
