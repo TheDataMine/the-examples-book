@@ -1,0 +1,234 @@
+= Linear Regression Project
+
+== Project Objectives
+
+In this project, you’ll clean and prepare a Spotify dataset, explore patterns in song popularity, and build your own linear regression model. Along the way, you’ll practice dealing with multicollinearity, handling outliers, and selecting the best features. You’ll build a model, interpret results, and see what helps with predicting the popularity of a song!
+
+.Learning Objectives
+****
+- Practice cleaning and preparing Spotify data for analysis.
+- Explore the target distribution and develop summary statistics for song popularity.
+- Identify and handle multicollinearity and outliers to improve model quality.
+- Build and interpret a linear regression model, checking its assumptions.
+- Perform feature selection to find a balance between fit and number of features in the model.
+- Interpet the results of the model using summary results. 
+****
+
+== Dataset
+- `/anvil/projects/tdm/data/spotify/linear_regression_popularity.csv``
+
+
+== Questions
+
+=== Question 1 Reading and Preparing the Data (2 points)
+
+.Deliverables
+====
+**1a. Read in the data and print the the first five rows of the dataset. Save the dataframe as  `spotify_popularity_data`.**
+
+
+**1b. Use the code provided to drop the columns listed from `spotify_popularity_data`. After dropping them, print the columns still in the data.**
+
+_Hint: You’ll want to use the .drop(columns=...) function in pandas. For more information on the drop function in pandas you can go here https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.drop.html[here]._ 
+
+[source,python]
+----
+drop_cols = [
+    "Unnamed: 0", "Unnamed: 0.1", "track_id", "track_name", "available_markets", "href",
+    "album_id", "album_name", "album_release_date", "album_type",
+    "artists_names", "artists_ids", "principal_artist_id",
+    "principal_artist_name", "artist_genres", "analysis_url", "duration_min"
+]
+
+# For YOU to do: drop unnecessary columns using .drop(columns=drop_cols)
+
+# For YOU to do: List columns still in the data after removing those in drop_cols
+
+----
+
+**1c. Use the code provided to set up your prediction target and features. Then, print the shape of `X` and `y` using `.shape()`. **
+
+_Note: We are using the “popularity” column as y, and use all the other columns as X._
+
+[source,python]
+----
+# Target and features
+y = spotify_popularity_data["popularity"].copy()
+X = spotify_popularity_data.drop(columns=["popularity"]).copy()
+
+# Quick check
+print(_____) # For YOU to do 
+print(____) #For YOU to do 
+----
+
+====
+
+=== Question 2 Splitting the Data and Understanding the Data (2 points)
+
+.Deliverables
+====
+**2a. Use the code provided to create an 80/20 train/test split (use random_state=42). Then, print the shapes of X_train, X_test, y_train, and y_test.**
+
+Hint: Use `.shape()` function to print the shape of the dataset splits.
+
+[source,python]
+----
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# For YOU to do: print X_train shape
+
+# For YOU to do: print X_test shape
+
+# For YOU to do: print y_train shape
+
+# For YOU to do: print y_test shape
+----
+
+**2b. Generate a histogram of y_train (popularity) using the code provided. Be sure to include clear axis labels and a title for the plot.**
+
+Note: See documentation on using `.histplot` in seaborn library https://seaborn.pydata.org/generated/seaborn.histplot.html[here].
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+plt.figure(figsize=(8,5))
+sns.histplot(y, bins=30, kde=True, color="skyblue")
+plt.xlabel("_____") # For YOU to fill
+plt.ylabel("______") # For YOU to fill
+plt.title("_____") # For YOU to fill
+plt.show()
+----
+
+**2c. Examine the plot above and determine whether the distribution appears roughly symmetric. In 1–2 sentences, describe any skewness or outliers you observe.**
+
+**2d. Print summary stats of y_train using `.describe()` , and write 1–2 sentences stating the min, mean and max.**
+
+====
+
+=== Question 3 (2 points)
+
+.Deliverables
+====
+**3a. Use the provided code to keep only numeric columns and compute VIF values. Be sure to fill in the threshold value.**
+
+_Note: This function iteratively removes the features/variables with the highest VIF until all remaining features have a VIF less than or equal to the threshold 10._
+
+[source,python]
+----
+import pandas as pd
+import numpy as np
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+
+# Convert booleans to ints
+bool_cols = X_train.select_dtypes(include=["bool"]).columns
+if len(bool_cols):
+    X_train[bool_cols] = X_train[bool_cols].astype(int)
+
+
+def calculate_vif_iterative(X, thresh=__): # For YOU to fill in
+    X_ = X.astype(float).copy()
+    while True:
+        vif_df = pd.DataFrame({
+            "variable": X_.columns,
+            "VIF": [variance_inflation_factor(X_.values, i) for i in range(X_.shape[1])]
+        }).sort_values("VIF", ascending=False).reset_index(drop=True)
+
+        max_vif = vif_df["VIF"].iloc[0]
+        worst = vif_df["variable"].iloc[0]
+
+        if (max_vif <= thresh) or (X_.shape[1] <= 1):
+            return X_, vif_df.sort_values("VIF")
+
+        print(f"Dropping '{worst}' with VIF={max_vif:.2f}")
+        X_ = X_.drop(columns=[worst])
+----
+
+**3b. Use the code provided to keep only the columns with VIF ≤ 10 and update the X_train dataset. Then, print the kept columns along with their VIF using `vif_summary`.**
+
+[source,python]
+----
+# Run iterative VIF filtering
+result_vif = calculate_vif_iterative(X_train, thresh=10.0)
+
+# Split into the filtered dataset and the VIF summary
+X_train = result_vif[0]
+vif_summary = result_vif[1]
+
+# For YOU to do: print VIF summary
+----
+
+**3c. Run the code provided below to calculate Cook’s Distance and identify potential outliers.  Use the .drop(index=____) function on both X_train and y_train to remove `cooks_outliers`.**
+
+[source,python]
+----
+import numpy as np
+import pandas as pd
+import statsmodels.api as sm
+
+# Align and clean training data
+X_train_cook = X_train.loc[X_train.index.intersection(y_train.index)]
+y_train_cook = y_train.loc[X_train_cook.index]
+
+# Keep only rows without missing/infinite values
+mask = np.isfinite(X_train_cook).all(1) & np.isfinite(y_train_cook.to_numpy())
+X_train_cook, y_train_cook = X_train_cook.loc[mask], y_train_cook.loc[mask]
+
+# Fit OLS model on the cleaned data
+ols_model_cook = sm.OLS(y_train_cook, sm.add_constant(X_train_cook, has_constant="add")).fit()
+
+# Cook's Distance values for each observation
+cooks_distance = ols_model_cook.get_influence().cooks_distance[0]
+cooks_threshold = 4 / len(X_train_cook)
+
+# Identify outlier indices
+cooks_outliers = X_train_cook.index[cooks_distance > cooks_threshold]
+
+print(f"Flagged {len(cooks_outliers)} outliers (Cook's D > 4/n).")
+
+
+# STUDENT TODO 
+X_train = X_train.drop(index=________) # For YOU to fill in
+y_train = y_train.drop(index=________) # For YOU to fill in
+----
+
+
+**3d. In 2–3 sentences, explain why it is important to (1) remove features with high multicollinearity and (2) remove outliers identified by Cook’s Distance before building a regression model.**
+
+
+
+====
+
+=== Question 4 (2 points)
+
+.Deliverables
+====
+- 
+====
+
+=== Question 5 (2 points)
+
+
+.Deliverables
+====
+- 
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project1.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
