@@ -39,14 +39,14 @@ cat /anvil/projects/tdm/data/restaurant/test_full.csv | \
 awk -F',' '
 # Skip the header row (NR > 1), and only consider rows where the rating field is greater than 0 ($30 > 0)
 
-# YOUR CONDITIONAL CODE HERE {
+NR > 1 && $30>0 {
 
 # extract the vendor id from column 11 and store it in "vendor"
 # YOUR CODE HERE
 
 # make a sum array and a count array, indexed by vendor
-# add the rating (column 30) to the sum for this vendor
-# increment the count for this vendor by 1
+# add the rating (column 30) to the sum for this vendor (`sum[vendor] += $30`)
+# increment the count for this vendor by 1 (`count[vendor] += 1`)
 # for example, array[index] += value
 
 # YOUR CODE HERE
@@ -57,11 +57,12 @@ END {
 print "Vendor, Average Rating, Count"
 # for each vendor, print the name, average rating (sum/count), and count
 for (v in sum) {
-    # calculate the average rating as sum divided by count
+
+    # calculate the average rating as sum divided by count (`sum[v]/count[v]`)
     # YOUR CODE HERE
 
-    # print the vendor name (v), average rating, and count as comma separated
-    # YOUR CODE HERE
+    # print the vendor name (v), average rating, and count as comma separated:
+    printf "%s, %.2f, %d\n", v, sum[v]/count[v], count[v] 
 }
 }
 '
@@ -105,7 +106,7 @@ head -n 5 /anvil/projects/tdm/data/restaurant/test_full.csv | awk -F',' '{print 
 head -n 5 /anvil/projects/tdm/data/restaurant/orders.csv | awk -F',' '{print $22}'
 ----
 
-They are not unifrom, we need one extra step in the code chunk below to make them uniform.
+(You may notice that, IDs are not unifrom, we need one extra step in the code chunk below to make them uniform.)
 
 Suppose we want to find what category of food each vendor sells, and what their biggest order was. Please fill in the below code outline to join the two files together.
 
@@ -119,14 +120,14 @@ awk -F',' '
     # skip first line
     if (FNR == 1) next
 
-    # extract the vendor id from column 11 and store it in "vendor".
+    # extract the vendor id from column 11 and store it in "vid".
     # One important detail to note is that we want to ensure vendor ids are uniform between the two datasets. Therefore, you should force it to be a number by adding 0 to it, and then casting it to an integer using int(), such as `int($11+0)`.
     # YOUR CODE HERE
 
-    # if vendor id is blank, skip this line
+    # if vendor id is blank, skip this line (`if (vid == "") next`)
     # YOUR CODE HERE
 
-    # extract the vendor category from column 15 and store it in "category"
+    # extract the vendor category from column 15 and store it in "vc"
     # YOUR CODE HERE
 
     # create an associative array "category_by_vendor" indexed by vendor, and store the category for each vendor
@@ -140,10 +141,10 @@ awk -F',' '
 FNR == 1 { next }
 {
 
-    # get the vendor id from column 22 and store it in "vendor"
+    # get the vendor id from column 22 and store it in "vid"
     # YOUR CODE HERE
 
-    # get the order amount from column 4 and store it in "total". You may want to convert it to a number by adding 0 to it.
+    # get the order amount from column 4 and store it in "amt". You may want to convert it to a number by adding 0 to it.
     # YOUR CODE HERE
 
     # if vendor id is blank, skip this line
@@ -151,9 +152,9 @@ FNR == 1 { next }
 
     # check if this vendor id exists in the category_by_vendor array
     if (vendor in category_by_vendor) {
-        # if it does, check if this order costs more than the current max for this vendor, which is in an "max_order" associative array indexed by vendor
-        # YOUR CODE HERE {
-
+        # if it does, we check if this order costs more than the current max for this vendor, which is in an "max_order" associative array indexed by vid as follow:
+        if (max_order[vid] < amt) {
+            max_order[vid] = amt {
             # if this order is larger, update the max_order for this vendor to be this orders total
         }
     }
@@ -162,7 +163,7 @@ FNR == 1 { next }
 END {
     # for each vendor in the max_order array, print the vendor id, category (looked up from category_by_vendor), and max order (from max_order)
     for (v in max_order) {
-        # YOUR CODE HERE
+        printf "%s, %s, %.2f\n", v, category_by_vendor[v], max_order[v]
     }
 
 }
