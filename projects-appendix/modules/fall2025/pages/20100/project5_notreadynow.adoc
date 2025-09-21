@@ -1,0 +1,359 @@
+= TDM 20100: Project 5 - AWK 2
+
+== Project Objectives
+
+We will continue practicing `awk` with more examples and advanced features in this project.
+
+.Learning Objectives
+****
+- Use associative arrays in `awk` to track counts, sums, and averages
+- Join data from multiple files using `awk`
+- Define and use functions in `awk` to break up complex tasks
+****
+
+== Dataset
+- /anvil/projects/tdm/data/restaurant/orders.csv
+- /anvil/projects/tdm/data/restaurant/test_full.csv
+
+== Questions
+
+=== Question 1 (2 points)
+
+One powerful feature of `awk` is associative arrays. These are arrays that can use strings as indices instead of just integers (similar to dictionaries in Python). This allows you to do things like count the number of occurrences of each unique value in a column. It also lets us track sums and counts together, which is very useful for calculating averages in one pass through the data. 
+
+Take the `test_full.csv` file for example. This file contains test data for orders from a restaurant, including a rating column. Let's say we want to find the 5 highest rated restaurants from this data. Firstly, we need to compute the average rating for each restaurant. Then, we need to sort the restaurants by their average rating and print the top 5. We can do this all in one pass through the data using associative arrays in `awk`.
+
+[NOTE]
+====
+In `test_full.csv`, the rating column is column 30 and the vendor id is column 11.
+====
+
+First, we need to sum up the ratings for each restaurant and count how many ratings there are. Then, we can calculate the average by dividing the total sum by the count for each restaurant. The code below shows the full chunk, with a few parts left blank (YOUR CODE HERE) for you to complete. Read it closely and follow the steps in order; this will guide you to the correct solution.
+
+[source,bash]
+----
+# cat the data file and pipe it to awk
+cat /anvil/projects/tdm/data/restaurant/test_full.csv | \ 
+
+# Firstly, we skip the header row. We also only want to consider rows where the rating field is greater than 0.
+
+awk -F',' '
+
+# Skip the header row (NR > 1), and only consider rows where the rating field is greater than 0 ($30 > 0):
+
+NR > 1 && $30>0 {
+
+# extract the vendor id from column 11 and store it in "vendor"
+# YOUR CODE HERE
+
+# make a sum array and a count array, indexed by vendor
+# add the rating (column 30) to the sum for this vendor (`sum[vendor] += $30`)
+# increment the count for this vendor by 1 (`count[vendor] += 1`)
+
+# YOUR CODE HERE
+}
+
+# After processing all rows, we have the sum and count for each vendor
+END {
+print "Vendor, Average Rating, Count"
+# for each vendor, print the name, average rating (sum/count), and count
+for (v in sum) {
+
+    # calculate the average rating as sum divided by count (`sum[v]/count[v]`)
+    # YOUR CODE HERE
+
+    # print the vendor name (v), average rating, and count as comma separated:
+    printf "%s, %.2f, %d\n", v, sum[v]/count[v], count[v] 
+}
+}
+'
+----
+
+Once you've filled in that code, you can pipe the output to the `sort` command to sort by average. The `sort` command in bash has a `-t` option to specify sorting tables with a comma delimiter, and a `-k` option to specify which column to sort by. You can also use the `-nr` options to sort numerically in reverse order (highest to lowest).
+
+For example, to sort by the third column, you would use `sort -t, -k3 -nr`.
+
+[NOTE]
+====
+By default, `-nr` will sort based on the selected column in the `-k` option, and will further sort based on other columns in order if there are ties. If you want the sort to be based only on the selected column, you can combine the arguments into `-k{column},{column}nr`. For example, `-k3,3nr` will sort only based on the third column.
+====
+
+Finally, you can use the `head` command to print the top 5 results.
+
+.Deliverables
+====
+- 1.1 Awk command to compute the average rating for each restaurant
+- 1.2 Sort command to sort by average rating, highest to lowest
+- 1.3 Full command that combines the awk, sort, and head commands to print the top 5 highest rated restaurants
+- 1.4 What are the two highest rated restaurants' ids and their average ratings?
+====
+
+=== Question 2 (2 points)
+
+Another powerful ability of `awk` is the ability to join data from multiple files. Pretty soon you will be learning about SQL, which is a language designed for working with relational databases (databases that store data in related tables). One of the most important operations in SQL is the JOIN operation, which can combine data from multiple tables based on a common key or column (for example, customer id, or vendor id, or food category).
+
+`awk` can perform similar operations by reading in multiple files at the same time, and storing data from each file in separate associative arrays. Then, when processing the second file, you can look up values from the first file using the common key.
+
+To start, output the first line from our two datasets, `/anvil/projects/tdm/data/restaurant/orders.csv` and `/anvil/projects/tdm/data/restaurant/test_full.csv`. Do you see any common columns between the two files?
+
+From looking at these columns, you may notice that orders.csv contains a `grand_total` column (column 4), and `test_full.csv` contains a `vendor_category_en` column (column 15). Both files contain a `vendor_id` column (column 22 in orders.csv and column 11 (as `id`) in test_full.csv). We can use this common column to join the two files together.
+
+Let us see the first five values (including the title) for vendor id columns from two data sets:
+
+[source,bash]
+----
+%%bash
+head -n 5 /anvil/projects/tdm/data/restaurant/test_full.csv | awk -F',' '{print $11}'
+head -n 5 /anvil/projects/tdm/data/restaurant/orders.csv | awk -F',' '{print $22}'
+----
+
+(You may notice that, IDs are not uniform, we need one extra step in the code chunk below to make them uniform.)
+
+Suppose we want to find what category of food each vendor sells, and what their biggest order was. Please fill in the below code outline to join the two files together.
+
+[source,bash]
+----
+awk -F',' '
+# To start at the first file, we can check if File record number (FNR) is equal to Record number (NR).
+
+# YOUR CODE HERE {
+
+    # skip first line:
+    if (FNR == 1) next
+
+    # extract the vendor id from column 11 and store it in "vid".
+    # One important detail to note is that we want to ensure vendor ids are uniform between the two datasets. 
+    #Therefore, you should force it to be a number by adding 0 to it, and then casting it to an integer using int(), such as `int($11+0)`.
+    # YOUR CODE HERE
+
+    # if vendor id is blank, skip this line (`if (vid == "") next`)
+    # YOUR CODE HERE
+
+    # extract the vendor category from column 15 and store it in "vc"
+    # YOUR CODE HERE
+
+    # create an associative array "category_by_vendor" indexed by vendor, and store the category for each vendor
+    # YOUR CODE HERE
+
+    # go to the next line
+    next
+}
+
+# now, we are at the second file. check if the second file is at line one, if so go to the next line
+FNR == 1 { next }
+{
+
+    # get the vendor id from column 22 and store it in "vid"
+    # YOUR CODE HERE
+
+    # get the order amount from column 4 and store it in "amt". You may want to convert it to a number by adding 0 to it.
+    # YOUR CODE HERE
+
+    # if vendor id is blank, skip this line
+    # YOUR CODE HERE
+
+    # check if this vendor id exists in the category_by_vendor array
+    if (vendor in category_by_vendor) {
+        # if it does, we check if this order costs more than the current max for this vendor, which is in an "max_order" associative array indexed by vid as follow:
+        if (max_order[vid] < amt) {
+            max_order[vid] = amt {
+            # if this order is larger, update the max_order for this vendor to be this orders total
+        }
+    }
+}
+
+END {
+    # for each vendor in the max_order array, print the vendor id, category (looked up from category_by_vendor), and max order (from max_order)
+    for (v in max_order) {
+        printf "%s, %s, %.2f\n", v, category_by_vendor[v], max_order[v]
+    }
+
+}
+' /anvil/projects/tdm/data/restaurant/test_full.csv \ 
+/anvil/projects/tdm/data/restaurant/orders.csv | \ 
+sort -t, -k3,3nr | head -n 5 | sed '1i Vendor,Category,Biggest Order'
+----
+
+.Deliverables
+====
+- 2.1. Awk command to join the two files and print the vendor id, category, and biggest order
+- 2.2. What are the top 5 biggest orders, and what category of food do they belong to?
+====
+
+=== Question 3 (2 points)
+
+Now, let's try to find the average order amount for each food category.
+
+Combine what you learned in questions 1 and 2 to join 'orders.csv' and 'test_full.csv', and compute the average order amount for each food category.
+
+[NOTE]
+====
+For this question, we have provided most of the code for you to review and follow. In the code chunk below, you only need to complete the two sections marked `YOUR CODE HERE`.
+
+We created an associative array for vendor -> category mapping, and then created sum and count associative arrays for category -> total order amount and category -> number of orders.
+====
+
+[source, bash]
+----
+%%bash
+awk -F',' '
+FNR==NR {
+    if (FNR==1) next
+
+    vid = int($11 + 0)
+    cat = $15
+    if (vid && cat!="") category_by_vendor[vid] = cat
+    next
+}
+
+FNR==1 { next }
+{
+    # get the vendor id from column 22 and store it in "vid"
+
+    # YOUR CODE HERE
+    
+    amt = $4 + 0
+    if (vid in category_by_vendor) {
+        c = category_by_vendor[vid]
+        sum[c]  += amt
+        count[c]++
+    }
+}
+
+END{
+    for (c in count)
+    # Print Vendor, Average Order, Number of Orders (comma separated)
+
+    # YOUR CODE HERE
+
+}
+' /anvil/projects/tdm/data/restaurant/test_full.csv \
+  /anvil/projects/tdm/data/restaurant/orders.csv \
+| sort -t, -k2,2nr | head -n 5 | sed '1i Vendor, Average Order, Number of Orders'
+----
+
+.Deliverables
+====
+- 3.1. What categories are there in the data?
+- 3.2. What is the average order amount for each category? Are they similar or different?
+- 3.3. Which category has the most orders? Is it similar to the other(s)?
+====
+
+=== Question 4 (2 points)
+
+Awk also has a system to define and use functions. This is useful for breaking up more complex tasks into smaller pieces. For example, let's say you want to find the most and least expensive orders for each food category. Then, you want to find the midpoint of those as a representative order amount for that category.
+
+You can define a function to compute the midpoint, and then use that function when processing the data. An example is shown below.
+
+[source,bash]
+----
+%%bash
+awk -F',' '
+# define a function to compute the midpoint of two numbers and return it. i.e., sum them and divide by 2.
+function midpoint(a, b) {
+    # YOUR CODE HERE
+}
+
+# You should have this section from question 3, to get the vendor -> category mapping
+FNR==NR {
+    if (FNR==1) next
+
+    vid = int($11 + 0)
+    cat = $15
+    if (vid && cat!="") category_by_vendor[vid] = cat
+    next
+}
+
+FNR==1 { next }
+{
+    vid = int($22 + 0)
+    amt = $4 + 0
+
+    # If amt is 0, skip this line
+    # YOUR CODE HERE
+
+    if (vid in category_by_vendor) {
+        # Get the category for this vendor
+        # YOUR CODE HERE
+
+        # if the category doesn’t exist in "cat_max", or if amt is greater than the current max for this category, update "cat_max" for this category
+        # YOUR CODE HERE
+
+        # if the category does not exist in "cat_min", or if amt is greater than the current max for this category, update "cat_min" for this category
+        # YOUR CODE HERE
+    }
+}
+
+END {
+    # for each category, print the category, min order, max order, and midpoint (using the midpoint function)
+    for (c in cat_min) {
+        # get the min and max for this category from cat_min and cat_max arrays
+        # YOUR CODE HERE
+        
+        # call your midpoint function here
+        mid = # YOUR CODE HERE
+
+        print c, min, max, mid
+    }
+}
+' /anvil/projects/tdm/data/restaurant/test_full.csv \
+/anvil/projects/tdm/data/restaurant/orders.csv | \
+sed '1i Category Min_Order Max_Order Midpoint'
+----
+
+.Deliverables
+====
+- 4.1. What is the cheapest order and most expensive order for each category? 
+- 4.2. What is the midpoint for each category?
+====
+
+=== Question 5 (2 points)
+
+Now, you have free reign to explore the data using `awk`. Please pick 2 columns, one that is unique to orders.csv, and one that is unique to test_full.csv. Then, use `awk` to join the two files together, and compute some interesting statistics about the two columns you picked. Use a function to calculate at least one statistic. Please explain why you picked those two columns, and what you found.
+
+To help get you started, here are some potentially interesting columns from each file:
+
+From orders.csv:
+- 'grand_total' (column 4)
+- 'payment_mode' (column 5)
+- 'driver_rating' (column 12)
+- 'deliverydistance' (column 13)
+- 'delivery_time' (column 15)
+
+From test_full.csv:
+- 'vendor_category_en' (column 15)
+- 'city_id' (column 65)
+- 'delivery_charge' (column 17)
+- 'comission' (column 23)
+
+Additionally, there are some fun statistics you can compute, such as:
+- Range (max - min)
+- Midpoint (average of max and min)
+- Standard deviation
+- Variance
+- Percentiles (25th, 50th, 75th, 90th, 95th, 99th)
+- Mode (most common value)
+
+.Deliverables
+====
+- 5.1. Which two columns did you pick, and why?
+- 5.2. Awk command to join the two files and compute interesting statistics about
+the two columns you picked
+- 5.3. What interesting statistics did you find about the two columns you picked?
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project5.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====

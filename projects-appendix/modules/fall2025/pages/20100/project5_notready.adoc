@@ -1,345 +1,242 @@
-= TDM 20100: Project 5 - AWK 2
+= TDM 20100: Project 5 - SQL Introduction 1
 
 == Project Objectives
 
-We will continue practicing `awk` with more examples and advanced features in this project.
+This project and the following projects will introduce you to SQL (specifically SQLite), which is a powerful language for managing and querying databases.
 
 .Learning Objectives
 ****
-- Use associative arrays in `awk` to track counts, sums, and averages
-- Join data from multiple files using `awk`
-- Define and use functions in `awk` to break up complex tasks
+- Learn the basics of SQLite syntax and structure.
+- Learn how to create and manipulate tables.
 ****
 
 == Dataset
-- /anvil/projects/tdm/data/restaurant/orders.csv
-- /anvil/projects/tdm/data/restaurant/test_full.csv
+- '/anvil/projects/tdm/data/lahman/lahman.db'
 
 == Questions
 
 === Question 1 (2 points)
 
-One powerful feature of `awk` is associative arrays. These are arrays that can use strings as indices instead of just integers (similar to dictionaries in Python). This allows you to do things like count the number of occurrences of each unique value in a column. It also lets us track sums and counts together, which is very useful for calculating averages in one pass through the data. 
+Structured Query Language (SQL) is the standard language for managing and manipulating relational databases. It allows users to efficiently create, read, update, and delete data in databases. SQL is used in various applications, from small-scale projects to many large-scale industry applications. It is essential for data analysts, data scientists, and software developers to understand SQL to work with databases effectively. In the next few projects, you will learn the basics of SQL, including how to write queries, filter data, and perform data aggregation.
 
-Take the `test_full.csv` file for example. This file contains test data for orders from a restaurant, including a rating column. Let's say we want to find the 5 highest rated restaurants from this data. Firstly, we need to compute the average rating for each restaurant. Then, we need to sort the restaurants by their average rating and print the top 5. We can do this all in one pass through the data using associative arrays in `awk`.
+To start, you will need to ensure Anvil is setup correctly. For these projects, please make sure you have the `seminar` kernel selected. Then, make a new code cell and run the following code to load the Lahman dataset into a queryable SQL database:
+
+[source,python]
+----
+%sql sqlite:////anvil/projects/tdm/data/lahman/lahman.db
+----
 
 [NOTE]
 ====
-In `test_full.csv`, the rating column is column 30 and the vendor id is column 11.
-====
+This will load the Lahman dataset into a SQLite database. You can then use SQL queries to interact with the data. You will need to re-run this code cell at the start of each jupyter session or if your kernel crashes/restarts.
+==== 
 
-First, we need to sum up the ratings for each restaurant and count how many ratings there are. Then, we can calculate the average by dividing the total sum by the count for each restaurant. The code below shows the full chunk, with a few parts left blank (YOUR CODE HERE) for you to complete. Read it closely and follow the steps in order; this will guide you to the correct solution.
+Once this is loaded, we can start writing SQL queries. To write SQL code in this environment, you will need to prefix a line of code with `%sql`. Additionally, you can make the first line of a code cell `%%sql` to run the entire cell as a SQL query.
 
-[source,bash]
-----
-# cat the data file and pipe it to awk
-cat /anvil/projects/tdm/data/restaurant/test_full.csv | \ 
+There are many many different SQL commands, each with their own use cases and best practices. For these project, we will focus on the following commands:
 
-# Firstly, we skip the header row. We also only want to consider rows where the rating field is greater than 0.
-
-awk -F',' '
-
-# Skip the header row (NR > 1), and only consider rows where the rating field is greater than 0 ($30 > 0):
-
-NR > 1 && $30>0 {
-
-# extract the vendor id from column 11 and store it in "vendor"
-# YOUR CODE HERE
-
-# make a sum array and a count array, indexed by vendor
-# add the rating (column 30) to the sum for this vendor (`sum[vendor] += $30`)
-# increment the count for this vendor by 1 (`count[vendor] += 1`)
-
-# YOUR CODE HERE
-}
-
-# After processing all rows, we have the sum and count for each vendor
-END {
-print "Vendor, Average Rating, Count"
-# for each vendor, print the name, average rating (sum/count), and count
-for (v in sum) {
-
-    # calculate the average rating as sum divided by count (`sum[v]/count[v]`)
-    # YOUR CODE HERE
-
-    # print the vendor name (v), average rating, and count as comma separated:
-    printf "%s, %.2f, %d\n", v, sum[v]/count[v], count[v] 
-}
-}
-'
-----
-
-Once you've filled in that code, you can pipe the output to the `sort` command to sort by average. The `sort` command in bash has a `-t` option to specify sorting tables with a comma delimiter, and a `-k` option to specify which column to sort by. You can also use the `-nr` options to sort numerically in reverse order (highest to lowest).
-
-For example, to sort by the third column, you would use `sort -t, -k3 -nr`.
+[cols="1,1,1,1",options="header"]
+|===
+| Command | Description | Example | Example Description
+| `SELECT` | Used to select data from a database. | `SELECT * FROM table` | Selects all columns from the table called `table`
+| `WHERE` | Used to filter records based on a condition. | `SELECT * FROM table WHERE column = value` | Selects all columns from the table called `table` where the `column` equals `value`
+| `ORDER BY` | Used to sort the result set in ascending or descending order. | `SELECT * FROM table ORDER BY column ASC` | Selects all columns from the table called `table` and orders the results by `column` in ascending order
+| `LIMIT` | Used to specify the number of records to return. | `SELECT * FROM table LIMIT 10` | Selects all columns from the table called `table` and limits the results to 10 records
+| `GROUP BY` | Used to group rows with the same values in specified columns into summary row(s). | `SELECT column, COUNT(*) FROM table GROUP BY column` | Selects the `column` and counts the number of records in each group, grouping by the `column`
+| `JOIN` | Used to combine rows from two or more tables based on a related column between them. | `SELECT * FROM table1 JOIN table2 ON table1.column = table2.column` | Selects all columns from `table1` and `table2` where the `column` in `table1` matches the `column` in `table2`
+| `INTO` | A directional command that may be used to create a new table from the results of a query. | `SELECT * INTO new_table FROM table` | Selects all columns from `table` and creates a new table called `new_table` with the results
+| `INSERT` | Used to insert new records into a table. | `INSERT INTO table (column1, column2) VALUES (value1, value2)` | Inserts a new record into the `table` with `column1` set to `value1` and `column2` set to `value2`
+| `UPDATE` | Used to modify existing records in a table. | `UPDATE table SET column = value WHERE condition` | Updates the `column` in the `table` to `value` where the `condition` is met
+| `DELETE` | Used to delete records from a table. | `DELETE FROM table WHERE condition` | Deletes records from the `table` where the `condition` is met
+| `DROP` | Used to delete a table or database. | `DROP TABLE table` | Deletes the `table` from the database
+| `CREATE` | Used to create a new table or database. | `CREATE TABLE table (column1 datatype, column2 datatype)` | Creates a new table called `table` with `column1` and `column2` of specified datatypes
+|===
 
 [NOTE]
 ====
-By default, `-nr` will sort based on the selected column in the `-k` option, and will further sort based on other columns in order if there are ties. If you want the sort to be based only on the selected column, you can combine the arguments into `-k{column},{column}nr`. For example, `-k3,3nr` will sort only based on the third column.
+In SQL, and some other languages such as bash/batch, the `*` character is a wildcard that will match with anything. For example, `SELECT * FROM table` will select all columns from the table called `table`, no matter their names, datatypes, or values. This is very useful when you want to select all data from a table without having to specify each column individually.
 ====
 
-Finally, you can use the `head` command to print the top 5 results.
+That's a lot of commands! The best part is that those are just the tip of the iceberg. SQL is a very powerful language with many more commands and features. You can find more information about SQL commands in the [SQLite documentation](https://www.sqlite.org/lang.html).
+
+One thing you may notice when reading through the examples above is that SQL commands are practically plain English. This is one of the reasons why SQL is so popular and widely used, as it is very easy to both understand and write.
+
+The first SQL query we will look at is exploring what tables are available in the Lahman dataset. To do this, we will use the `sqlite_master` table, which is a special table in SQLite that contains information about all the tables in the database. You can run the following command to see all the tables in the Lahman dataset:
+
+[source,python]
+----
+%%sql 
+SELECT name FROM sqlite_master WHERE type='table';
+----
+
+[INFO]
+====
+This will return a list of all the tables in the Lahman dataset. In the example above, you can see we used 3 SQL commands: `SELECT`, `FROM`, and `WHERE`. The `SELECT` command is used to specify the `name` column, the `FROM` command is used to specify the `sqlite_master` table, and the `WHERE` command is used to filter the results to only include rows where the `type` column is equal to `'table'`. This means we are only selecting tables, not other database objects like indexes or views.
+====
+
+Typically, SQL databases will have many tables, each containing different types or groups of data. In the Lahman dataset, you will find tables containing information about baseball players, teams, games, and more. As you should be able to tell, tables are typically clearly named to indicate what data they contain. For example, the `People` table contains information about baseball players, while the `Teams` table contains information about baseball teams. Go ahead and count how many tables are in the Lahman dataset, remember this count for later.
+
+Let's take a look at the `People` table to see what data it contains. Please create a new code cell and create your own SQL query to select all columns from the `People` table, but limit the results to 5 records. Then, run this cell to see the results.
+
+From this data, you should be able to answer the following questions about our dataset:
+
+1. How many columns are in the `People` table?
+2. What is the name of the column that contains the player's first name?
+3. For a players deathYear, what is put in the column if the player is still alive?
+4. What is Don Aase's playerID?
 
 .Deliverables
 ====
-- 1.1 Awk command to compute the average rating for each restaurant
-- 1.2 Sort command to sort by average rating, highest to lowest
-- 1.3 Full command that combines the awk, sort, and head commands to print the top 5 highest rated restaurants
-- 1.4 What are the two highest rated restaurants' ids and their average ratings?
+1.1. Load the SQL database into a queryable SQLite database.
+
+1.2. Run the SQL query to see all tables in the Lahman dataset.
+
+1.3. Write a SQL query to select all columns from the `People` table, limiting the results to 5 records.
+
+1.4. Answer the questions about the `People` table based on the results of your SQL query.
 ====
 
 === Question 2 (2 points)
 
-Another powerful ability of `awk` is the ability to join data from multiple files. Pretty soon you will be learning about SQL, which is a language designed for working with relational databases (databases that store data in related tables). One of the most important operations in SQL is the JOIN operation, which can combine data from multiple tables based on a common key or column (for example, customer id, or vendor id, or food category).
+Now, let's try using some slightly more advanced queries. We will continue to use the `People` table, but we will use the `WHERE` command to filter the results based on certain conditions.
 
-`awk` can perform similar operations by reading in multiple files at the same time, and storing data from each file in separate associative arrays. Then, when processing the second file, you can look up values from the first file using the common key.
+First, please create a new code cell and write a SQL query to select all columns from the `People` table where the player's last name is \`Sanders`. Then, run this cell to see the results.
 
-To start, output the first line from our two datasets, `/anvil/projects/tdm/data/restaurant/orders.csv` and `/anvil/projects/tdm/data/restaurant/test_full.csv`. Do you see any common columns between the two files?
+You should see that there are 15 players with the last name \`Sanders`. 
+Now, let's see how many players have the last name `Sanders` and were born before 1900. Please create a new code cell and write a SQL query to select all columns from the `People` table where the player's last name is "Sanders" and the birth year is before 1900. Then, run this cell to see the results.
 
-From looking at these columns, you may notice that orders.csv contains a `grand_total` column (column 4), and `test_full.csv` contains a `vendor_category_en` column (column 15). Both files contain a `vendor_id` column (column 22 in orders.csv and column 11 (as `id`) in test_full.csv). We can use this common column to join the two files together.
+[NOTE]
+====
+You can use the `AND` operator to combine multiple conditions inside a `WHERE` clause. Simply put the operator between each condition you want to check. There are other operators you can use as well, such as `OR` to check if either condition is true, or `NOT` to negate a condition.
+====
 
-Let us see the first five values (including the title) for vendor id columns from two data sets:
+After running this query, you should see that there are 4 players with the last name `Sanders` who were born before 1900.
 
-[source,bash]
-----
-%%bash
-head -n 5 /anvil/projects/tdm/data/restaurant/test_full.csv | awk -F',' '{print $11}'
-head -n 5 /anvil/projects/tdm/data/restaurant/orders.csv | awk -F',' '{print $22}'
-----
+Now, write a sql query to see how many players with the last name `Sanders` were born before 1900 or after 1975.
 
-(You may notice that, IDs are not uniform, we need one extra step in the code chunk below to make them uniform.)
+[IMPORTANT]
+====
+Operations like `AND`, `OR`, and `NOT` have an order of precedence, similar to PEMDAS in mathematics. This means that some operations will be evaluated before others. For example, `AND` has a higher precedence than `OR`, so if you use both in a query, the `AND` conditions will be evaluated first.
+For example, condition1 AND condition2 OR condition3 will be evaluated as (condition1 AND condition2) OR condition3. If you want to evaluate it as condition1 AND (condition2 OR condition3), you can simply use parentheses to specify the order of evaluation.
+====
 
-Suppose we want to find what category of food each vendor sells, and what their biggest order was. Please fill in the below code outline to join the two files together.
-
-[source,bash]
-----
-awk -F',' '
-# To start at the first file, we can check if File record number (FNR) is equal to Record number (NR).
-
-# YOUR CODE HERE {
-
-    # skip first line:
-    if (FNR == 1) next
-
-    # extract the vendor id from column 11 and store it in "vid".
-    # One important detail to note is that we want to ensure vendor ids are uniform between the two datasets. 
-    #Therefore, you should force it to be a number by adding 0 to it, and then casting it to an integer using int(), such as `int($11+0)`.
-    # YOUR CODE HERE
-
-    # if vendor id is blank, skip this line (`if (vid == "") next`)
-    # YOUR CODE HERE
-
-    # extract the vendor category from column 15 and store it in "vc"
-    # YOUR CODE HERE
-
-    # create an associative array "category_by_vendor" indexed by vendor, and store the category for each vendor
-    # YOUR CODE HERE
-
-    # go to the next line
-    next
-}
-
-# now, we are at the second file. check if the second file is at line one, if so go to the next line
-FNR == 1 { next }
-{
-
-    # get the vendor id from column 22 and store it in "vid"
-    # YOUR CODE HERE
-
-    # get the order amount from column 4 and store it in "amt". You may want to convert it to a number by adding 0 to it.
-    # YOUR CODE HERE
-
-    # if vendor id is blank, skip this line
-    # YOUR CODE HERE
-
-    # check if this vendor id exists in the category_by_vendor array
-    if (vendor in category_by_vendor) {
-        # if it does, we check if this order costs more than the current max for this vendor, which is in an "max_order" associative array indexed by vid as follow:
-        if (max_order[vid] < amt) {
-            max_order[vid] = amt {
-            # if this order is larger, update the max_order for this vendor to be this orders total
-        }
-    }
-}
-
-END {
-    # for each vendor in the max_order array, print the vendor id, category (looked up from category_by_vendor), and max order (from max_order)
-    for (v in max_order) {
-        printf "%s, %s, %.2f\n", v, category_by_vendor[v], max_order[v]
-    }
-
-}
-' /anvil/projects/tdm/data/restaurant/test_full.csv \ 
-/anvil/projects/tdm/data/restaurant/orders.csv | \ 
-sort -t, -k3,3nr | head -n 5 | sed '1i Vendor,Category,Biggest Order'
-----
+After running this, you should see 6 players in our results.
 
 .Deliverables
 ====
-- 2.1. Awk command to join the two files and print the vendor id, category, and biggest order
-- 2.2. What are the top 5 biggest orders, and what category of food do they belong to?
+2.1. Write a SQL query to select all columns from the `People` table where the player's last name is "Sanders".
+
+2.2. Write a SQL query to select all columns from the `People` table where the player's last name is "Sanders" and the birth year is before 1900.
+
+2.3. Write a SQL query to select all columns from the `People` table where the player's last name is "Sanders" and the birth year is before 1900 or after 1975.
 ====
 
 === Question 3 (2 points)
 
-Now, let's try to find the average order amount for each food category.
+Something that may be useful to us is to sort the results of our queries. For example, we could sort players by their birth year, their weight, or even their last name. To do this, we can use the `ORDER BY` command in our SQL queries. This command allows us to specify a column we want to sort by using the column name, and also if we want it sorted in ascending or descending order. By default, it will sort in ascending order, but you can specify `DESC` to sort in descending order. Look at the example in the table in question 1 if you need a little more help.
 
-Combine what you learned in questions 1 and 2 to join 'orders.csv' and 'test_full.csv', and compute the average order amount for each food category.
+For starters, write a query that returns all players born after 1970, who are over 70 inches tall, ordered by their last name in descending order. You can use the `People` table for this query.
+
+[IMPORTANT]
+====
+You should typically always use the LIMIT command to limit the number of results returned by your query. This is especially important when working with large datasets, as it can help improve performance and reduce the amount of data you need to process. In this query, you can use `LIMIT 10` to limit the results to 10 records.
+====
+
+After you have that query working, copy this query and expand our limit to 20 players. What happens? If your query is correct, you should get an error message that looks like this:
+[source,python]
+----
+(sqlite3.OperationalError) Could not decode to UTF-8 column 'nameLast' with text 'Zu�iga'
+----
+
+So what's happening here? The Lahman dataset contains some players with non-ASCII characters in their names, such as "Zuñiga". SQLite and python are having a hard time decoding these characters, which is causing the error. To fix this, we can talk about the `LIKE` operator in the `WHERE` clause. This operator allows us to filter results based on a pattern, and it can be used to match non-ASCII characters as well by matching the � character. For example, you can match any Players with a non-ASCII character in their last name by using the following query:
+[source,python]
+----
+%%sql
+SELECT * FROM People WHERE nameLast LIKE '%�%'
+----
+
+Based on this knowledge, can you modify your previous query to exclude players with non-ASCII characters in their last name? 
 
 [NOTE]
 ====
-For this question, we have provided most of the code for you to review and follow. In the code chunk below, you only need to complete the two sections marked `YOUR CODE HERE`.
-
-We created an associative array for vendor -> category mapping, and then created sum and count associative arrays for category -> total order amount and category -> number of orders.
+Hint: use the `NOT` operator before the `LIKE` operator to exclude results that match the pattern.
 ====
-
-[source, bash]
-----
-%%bash
-awk -F',' '
-FNR==NR {
-    if (FNR==1) next
-
-    vid = int($11 + 0)
-    cat = $15
-    if (vid && cat!="") category_by_vendor[vid] = cat
-    next
-}
-
-FNR==1 { next }
-{
-    # get the vendor id from column 22 and store it in "vid"
-
-    # YOUR CODE HERE
-    
-    amt = $4 + 0
-    if (vid in category_by_vendor) {
-        c = category_by_vendor[vid]
-        sum[c]  += amt
-        count[c]++
-    }
-}
-
-END{
-    for (c in count)
-    # Print Vendor, Average Order, Number of Orders (comma separated)
-
-    # YOUR CODE HERE
-
-}
-' /anvil/projects/tdm/data/restaurant/test_full.csv \
-  /anvil/projects/tdm/data/restaurant/orders.csv \
-| sort -t, -k2,2nr | head -n 5 | sed '1i Vendor, Average Order, Number of Orders'
-----
 
 .Deliverables
 ====
-- 3.1. What categories are there in the data?
-- 3.2. What is the average order amount for each category? Are they similar or different?
-- 3.3. Which category has the most orders? Is it similar to the other(s)?
+3.1. Write a SQL query to select all players born after 1970, who are over 70 inches tall, ordered by their last name in descending order, limiting the results to 10 records.
+
+3.2. Write a SQL query to select all players born after 1970, who are over 70 inches tall, ordered by their last name in descending order, limiting the results to 20 records.
+
+3.3. Fix the error in the previous query by excluding players with non-ASCII characters in their last name.
 ====
 
 === Question 4 (2 points)
 
-Awk also has a system to define and use functions. This is useful for breaking up more complex tasks into smaller pieces. For example, let's say you want to find the most and least expensive orders for each food category. Then, you want to find the midpoint of those as a representative order amount for that category.
+Another useful command in SQL is the `GROUP BY` command. This command allows us to group rows together if they have the same values in specified columns. This is useful for aggregating data, such as counting the number of records that match a certain condition, or calculating metrics of a column such as the average or sum.
 
-You can define a function to compute the midpoint, and then use that function when processing the data. An example is shown below.
+Similar to how the `WHERE` command comes with operators such as `AND` and `OR`, the `GROUP BY` command also comes with aggregation functions such as `COUNT`, `SUM`, `AVG`, `MIN`, and `MAX`. These functions allow us to perform calculations on the grouped data.
 
-[source,bash]
+For example, suppose we want to know the average height of players with the last name `Sanders`. 
+We can use the `WHERE` command to filter the results to only include players with the last name `Sanders`, the `GROUP BY` command to group the results by the last name, and the `AVG` function to calculate the average height. The SQL query would look like this:
+[source,python]
 ----
-%%bash
-awk -F',' '
-# define a function to compute the midpoint of two numbers and return it. i.e., sum them and divide by 2.
-function midpoint(a, b) {
-    # YOUR CODE HERE
-}
-
-# You should have this section from question 3, to get the vendor -> category mapping
-FNR==NR {
-    if (FNR==1) next
-
-    vid = int($11 + 0)
-    cat = $15
-    if (vid && cat!="") category_by_vendor[vid] = cat
-    next
-}
-
-FNR==1 { next }
-{
-    vid = int($22 + 0)
-    amt = $4 + 0
-
-    # If amt is 0, skip this line
-    # YOUR CODE HERE
-
-    if (vid in category_by_vendor) {
-        # Get the category for this vendor
-        # YOUR CODE HERE
-
-        # if the category doesn’t exist in "cat_max", or if amt is greater than the current max for this category, update "cat_max" for this category
-        # YOUR CODE HERE
-
-        # if the category does not exist in "cat_min", or if amt is greater than the current max for this category, update "cat_min" for this category
-        # YOUR CODE HERE
-    }
-}
-
-END {
-    # for each category, print the category, min order, max order, and midpoint (using the midpoint function)
-    for (c in cat_min) {
-        # get the min and max for this category from cat_min and cat_max arrays
-        # YOUR CODE HERE
-        
-        # call your midpoint function here
-        mid = # YOUR CODE HERE
-
-        print c, min, max, mid
-    }
-}
-' /anvil/projects/tdm/data/restaurant/test_full.csv \
-/anvil/projects/tdm/data/restaurant/orders.csv | \
-sed '1i Category Min_Order Max_Order Midpoint'
+%%sql
+SELECT *, AVG(height) AS avg_height FROM People WHERE nameLast = 'Sanders' GROUP BY nameLast;
 ----
+
+[NOTE]
+====
+Even though we use the wildcard to select all columns, we still need to specify which columns we want to aggregate. In this case, we are aggregating the `height` column using the `AVG` function. Additionally, the `AS` keyword allows us to put the result of the aggregation into a new column called `avg_height`. This is useful for readability and understanding the results of our query.
+====
+
+Let's try this out with a more complex query. Write a SQL query that returns the average weight of players grouped by their birth year, ordered by the average weight in descending order. You can use the `People` table for this query. Be sure to limit the results to 10 records.
+
 
 .Deliverables
 ====
-- 4.1. What is the cheapest order and most expensive order for each category? 
-- 4.2. What is the midpoint for each category?
+4.1. Write a SQL query to return the average weight of players grouped by their birth year, ordered by the average weight in descending order, limiting the results to 10 records.
 ====
 
 === Question 5 (2 points)
 
-Now, you have free reign to explore the data using `awk`. Please pick 2 columns, one that is unique to orders.csv, and one that is unique to test_full.csv. Then, use `awk` to join the two files together, and compute some interesting statistics about the two columns you picked. Use a function to calculate at least one statistic. Please explain why you picked those two columns, and what you found.
+Another useful operation in SQL is the `COUNT` function, which allows us to count the number of records that match a certain condition. Remember in Question 1 when you manually counted the number of tables in the Lahman dataset? We can instead use the `COUNT` function to do this boring task for us. The `COUNT` function can be used in conjunction with the `SELECT` command to count the number of records that match a certain condition.
+For example, if we want to count the number of players in the `People` table,
+we can use the following SQL query:
+[source,python]
+----
+%%sql
+SELECT COUNT(*) FROM People;
+----
 
-To help get you started, here are some potentially interesting columns from each file:
+This will return a single number, which is the total number of records in the `People` table. The `*` wildcard is used to count all records, regardless of their values.
 
-From orders.csv:
-- 'grand_total' (column 4)
-- 'payment_mode' (column 5)
-- 'driver_rating' (column 12)
-- 'deliverydistance' (column 13)
-- 'delivery_time' (column 15)
+We could also use the `WHERE` command to count the number of players with a certain condition. For example, if we want to count the number of players with the last name "Sanders", we can use the following SQL query:
+[source,python]
+----
+%%sql
+SELECT COUNT(*) FROM People WHERE nameLast = 'Sanders';
+----
 
-From test_full.csv:
-- 'vendor_category_en' (column 15)
-- 'city_id' (column 65)
-- 'delivery_charge' (column 17)
-- 'comission' (column 23)
+We can also use the `COUNT` function in conjunction with the `GROUP BY` command to count the number of records in each group. For example, if we want to count the number of players grouped by their birth year, we can use the following SQL query:
+[source,python]
+----
+%%sql
+SELECT birthYear, COUNT(*) FROM People GROUP BY birthYear LIMIT 10;
+----
 
-Additionally, there are some fun statistics you can compute, such as:
-- Range (max - min)
-- Midpoint (average of max and min)
-- Standard deviation
-- Variance
-- Percentiles (25th, 50th, 75th, 90th, 95th, 99th)
-- Mode (most common value)
+Now, time for you to try some yourself. Can you write an SQL query that counts the number of tables in the Lahman dataset? How about the number of players born before 1900 who are over 74 inches tall?
+
+
+[NOTE]
+====
+You should get 27 and 767, respectively, for the two queries above.
+====
 
 .Deliverables
 ====
-- 5.1. Which two columns did you pick, and why?
-- 5.2. Awk command to join the two files and compute interesting statistics about
-the two columns you picked
-- 5.3. What interesting statistics did you find about the two columns you picked?
+5.1. Write a SQL query to count the number of tables in the Lahman dataset.
+5.2. Write a SQL query to count the number of players born before 1900 who are over 74 inches tall.
 ====
 
 == Submitting your Work
@@ -348,7 +245,7 @@ Once you have completed the questions, save your Jupyter notebook. You can then 
 
 .Items to submit
 ====
-- firstname_lastname_project5.ipynb
+- firstname_lastname_project1.ipynb
 ====
 
 [WARNING]
