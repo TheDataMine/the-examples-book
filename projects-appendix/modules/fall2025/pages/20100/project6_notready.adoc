@@ -1,0 +1,170 @@
+= TDM 32100: Project ## - SQL Introduction 2
+
+== Project Objectives
+
+Learn how to use SQL to join tables, aggregate data, and perform more complex queries. This project will help you understand how to manipulate and analyze data using SQL.
+
+.Learning Objectives
+****
+- Understand how to join tables in SQL
+****
+
+== Dataset
+- '/anvil/projects/tdm/data/lahman/lahman.db'
+
+== Questions
+
+=== Question 1 (2 points)
+
+Last project, we learned about a bunch of different SQL commands, operators, and functions. However, we stuck only to the `People` table. For this question, go explore some of the other tables in the Lahman dataset. You can look back on the previous project for examples of how to initially load the Lahman dataset into SQLite, and how to query the `sqlite_master` table to see all the tables in the database. Once you have this list of table names, please pick at least 3 tables and look at the first 5 records in each of them. You can use the `LIMIT` clause to limit the number of records returned by your query. What do you notice about the data in these tables? Are there any columns that appear in multiple places? Are there any columns that are unique to a specific table? How do the tables relate to each other?
+
+.Deliverables
+====
+1.1. Look at first 5 records in at least 3 tables in the Lahman dataset, not including the `People` table.
+1.2. Name any columns that appear in multiple tables, or only in a specific table.
+1.3. Describe how the tables might relate to each other.
+====
+
+=== Question 2 (2 points)
+
+If you did not happen to look at the `Salaries` table in the previous question, please do so now. This table contains information about player salaries, which can be useful for analyzing player performance and team budgets. You may notice that in both the `People` and `Salaries` tables, there is a column called `playerID`. This column can be used to help match up a player's information from the `People` table, with their salary information in the `Salaries` table. However, it must be very slow to find a playerID in one table, and then look it up in another table. Luckily, SQL has already solved this problem with the `JOIN` command. The `JOIN` command allows us to combine data from two or more tables based on a common column between them. In this case, we can use the `playerID` column to join the `People` and `Salaries` tables into a single table that contains both player information and salary information. This is useful, as it can let us further analyze data such as comparing player heights to their salaries, or finding the average salary of players by their birth year.
+
+Using the `JOIN` command is quite simple. You can use the following syntax:
+[source,sql]
+----
+SELECT * FROM table1 JOIN table2 ON table1.columnname = table2.columnname;
+----
+
+[NOTE]
+====
+This context tells SQL to add all columns from both tables, and then match up the rows based on the common column specified in the `ON` clause. The `*` wildcard means "all columns," but you can also specify specific columns to return if you only need certain data. For example, if table 1 contained columns `A`, `B`, and `C`, and table 2 contained columns `C`, `D`, and `E`, you could write:
+[source,sql]
+----
+SELECT table1.A, table1.B, table2.D FROM table1 JOIN table2 ON table1.C = table2.C;
+----
+====
+
+Now, please write a SQL query to join the `People` and `Salaries` tables using the `playerID` column. Limit the results to the first 5 records using `LIMIT`.
+
+If we want to perform any other operations or functions on the joined data, we can add those to the end of the query. However, you may notice that these queries can get quite long and complex. Additionally, if we want to perform multiple different operations on the joined data, we need to write multiple queries and join the same tables multiple times. This can be inefficient and hard to read. To solve this problem, we can use the `WITH` clause to create a temporary table to store the joined data. Then, we can perform our operations on this temporary table. The below code shows an example of how to do this:
+
+[source,sql]
+----
+%%sql
+WITH joined_data AS (
+    SELECT * FROM Salaries JOIN People ON People.playerID = Salaries.playerID
+)
+
+SELECT * FROM joined_data LIMIT 5;
+----
+
+[NOTE]
+====
+This temporary table `joined_data` will only exist for the duration of the query (the current code cell in this case). If you want to make it permanent, you can use the `CREATE TABLE` command instead of `WITH`, with the exact same syntax. However, in this case, you will not be able to do this on the Lahman dataset as it is stored as a read-only database in anvil.
+====
+
+Now that you know how to join tables and create temporary tables, please write a SQL query that joins the `People` and `Salaries` tables, and then returns the average salary of players grouped by their weight, sorted in descending order. Limit the results to 10 records.
+
+Additionally, try to write that same query, but this time don't use the `WITH` clause to create a temporary table. Instead, write the query as a single line without the `WITH` clause. You should get the same results as before. Which method do you prefer? Why?
+
+[NOTE]
+====
+If you get confused, remember that the table you specify in the `FROM` clause can actually be any table, including the result of another `SELECT` query. This means, in rough psuedo-code, you can write something like this:
+[source,sql]
+----
+SELECT * FROM (SELECT * FROM Salaries WHERE yearID = 2020) WHERE salary > 1000000;
+----
+This code will firstly select all records from the Salaries table where the `yearID` is 2020. From that result, it will then select all records where the `salary` is greater than 1,000,000. You can expand this concept to include joins, aggregations, and other operations as well.
+====
+
+
+.Deliverables
+====
+2.1. Write a SQL query to join the `People` and `Salaries` tables using the `playerID` column, and limit the results to the first 5 records.
+2.2. Write a SQL query to join the `People` and `Salaries` tables, and return the average salary of players grouped by their weight, sorted in descending order, limiting the results to 10 records.
+2.3. Write the same query without using the `WITH` clause, as a single line.
+2.4. Describe which method you prefer and why.
+====
+
+=== Question 3 (2 points)
+
+Let's look at some other fun statistics we can calculate with the `JOIN` command. If you didn't in Question 1, go look at the `Batting` table. This table contains information about player batting statistics, such as hits, home runs, and runs batted in (RBIs). We can use the `JOIN` command to combine this data with the `People` table to analyze player performance.
+
+Firstly, write a SQL query to join the `People` and `Batting` tables using the `playerID` column, and find the career number of points scored, or how many times they reached the home plate (column name 'R') for Babe Ruth. 
+[HINT]
+====
+Babe Ruth reached the home plate 2174 times in his career, so that is the number you should get.
+====
+
+Then, write a SQL query to find the average number of points scored by players born in the 1980s, grouped and ordered by their birth year.
+
+.Deliverables
+====
+3.1. SQL query to find how many times Babe Ruth reached the home plate.
+3.2. SQL query to find the average number of points scored by players born in the 1980s, grouped and ordered by their birth year.
+====
+
+=== Question 4 (2 points)
+
+Write a SQL query to find the 10 highest scoring players in the `Batting` table, ordered by their career runs scored (column name 'R') in descending order. Be sure to `JOIN` with the `People` table so you can get the name of the player, and also `GROUP BY` the `playerID` to ensure you are getting the total runs scored for each player across all seasons, not just a single season.
+
+Additionally, write another SQL query to find the 10 highest hitting players in the `Batting` table, ordered by their career hits (column name 'H') in descending order.
+
+[source,sql]
+----
+WITH joined_data AS (
+    SELECT People.nameFirst, People.nameLast, Batting.R FROM People JOIN Batting ON People.playerID = Batting.playerID
+)
+
+SELECT nameFirst, nameLast, SUM(R) AS total_runs FROM joined_data GROUP BY playerID ORDER BY total_runs DESC LIMIT 10;
+
+----
+
+[source,sql]
+----
+WITH joined_data AS (
+    SELECT People.nameFirst, People.nameLast, Batting.H, People.playerID FROM People JOIN Batting ON People.playerID = Batting.playerID
+)
+
+SELECT nameFirst, nameLast, SUM(H) AS total_hits FROM joined_data GROUP BY playerID ORDER BY total_hits DESC LIMIT 10;
+----
+
+.Deliverables
+====
+4.1. Query to find the 10 highest scoring players and their names.
+4.2. Query to find the 10 highest hitting players and their names.
+4.3. Are there any players who appear in both lists? If so, who are they?
+====
+
+=== Question 5 (2 points)
+
+There's another table that we may find interesting. The `CollegePlaying` table contains information about players who played in college before joining the major leagues. This can be useful for analyzing where top players come from and how their college performance may have influenced their professional careers.
+
+Write a SQL query to find the players who played at Purdue University, and the sort them by their career number of runs scored (column name 'R') in descending order. You don't need to join with the `People` table for this query, just join between the `CollegePlaying` and `Batting` tables using the `playerID` column. Be sure to limit the results to the first 10 records. What is the highest number of runs scored by a player from Purdue University?
+
+Then, write another SQL query to find the average number of runs scored by players, grouped by their college name, and ordered by the average runs scored in descending order. Again, you can use the `CollegePlaying` and `Batting` tables for this query. Which university has the highest average runs scored by its players?
+dddd
+
+.Deliverables
+====
+5.1. SQL query to find the players who played at Purdue University, sorted by their career runs scored in descending order, limited to the first 10 records.
+5.2. Highest number of runs scored by a player from Purdue University.
+5.3. SQL query to find the average number of runs scored by players, grouped by their college name, ordered by the average runs scored in descending order.
+5.4. Which university has the highest average runs scored by its players?
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project1.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
