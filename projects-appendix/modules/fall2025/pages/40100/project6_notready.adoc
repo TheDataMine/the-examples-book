@@ -34,7 +34,6 @@ This project looks at real prescription data to figure out the trends in the pre
 We will start by loading and cleaning the 2023 data from the link: https://data.cms.gov/provider-summary-by-type-of-service/medicare-part-d-prescribers/medicare-part-d-prescribers-by-provider-and-drug/data?query=%7B%22filters%22%3A%7B%22rootConjunction%22%3A%7B%22label%22%3A%22And%22%2C%22value%22%3A%22AND%22%7D%2C%22list%22%3A%5B%5D%7D%2C%22keywords%22%3A%22methylphenidate%22%2C%22offset%22%3A0%2C%22limit%22%3A10%2C%22sort%22%3A%7B%22sortBy%22%3Anull%2C%22sortOrder%22%3Anull%7D%2C%22columns%22%3A%5B%5D%7D[Centers for Medicare and Medicaid Services (CMS)] dataset. Note that we have preprocessed some of the data to simplify the analysis. We will explore key features, examine class balance, and from there, dig into modeling and interpretation to better understand what kind of prescribers are behind this high-profile drug.
 
 
-
 **About the Data**
 
 This dataset comes from CMS and includes prescription-level records for diabetes medications. Each row represents a **unique** prescriber writing a prescription for a specific brand-name drug. Among these drugs is Semaglutide, the drug name behind Ozempic, a medication approved for type 2 diabetes.
@@ -122,19 +121,44 @@ These basic data preparation steps: binary indicators, feature engineering, mapp
 **1a. Read in the data and print the the first five rows of the dataset. Save the dataframe as  `diabetes_prescriber_data`.**
 
 
-**1b. Add a binary target column that equals 1 if `Gnrc_Name` is `"Semaglutide"` and 0 otherwise. Then, display the count of 1s and 0s in the column `Semaglutide_drug`.**
+[source,python]
+----
+import pandas as pd
 
-_Hint:_ Use a boolean comparison with `.astype(int)` to convert `True`/`False` values into 1s and 0s.
+diabetes_prescriber_data = pd.read_csv("/anvil/projects/tdm/data/CMS/diabetes_prescriber_data.csv")
+----
 
 
-**1c. Create a new column called `Cost_per_Claim` by dividing  `Tot_Drug_Cst` by `Tot_Clms`. Then, print the first five rows of the following columns: `Tot_Drug_Cst`, `Tot_Clms`, and your new `Cost_per_Claim`` column to verify the calculation was performed correctly.**
+**1b.Use the code below to add a binary target column that equals 1 if `Gnrc_Name` is `"Semaglutide"` and 0 otherwise. Then, display the count of 1s and 0s in the column `Semaglutide_drug`.**
 
-**1d. Using the provided `state_region_map` dictionary below, create a new column named `Prscrbr_State_Region` that maps each `Prscrbr_State_Abrvtn` to its corresponding U.S. region. Any state abbreviation should me mapped to a category. After mapping, print the unique region values to verify your transformation.**
+Hint: Use `.valuecounts()` to print the count of 1s and 0s in the column `Semaglutide_drug`. Read more about `.valuecounts()` https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.value_counts.html[here].
+
+[source,python]
+----
+diabetes_prescriber_data["Semaglutide_drug"] = (diabetes_prescriber_data["Gnrc_Name"] == "Semaglutide").astype(int)
+
+# For YOU to do: display the count of 1s and 0s in the column Semaglutide_drug
+
+----
+
+**1c. Using the code provided, create a new column called `Cost_per_Claim` by dividing  `Tot_Drug_Cst` by `Tot_Clms`. Then, print the first five rows of the following columns: `Tot_Drug_Cst`, `Tot_Clms`, and your new `Cost_per_Claim`` column to verify the calculation was performed correctly.**
+
+[source,python]
+----
+diabetes_prescriber_data['Cost_per_claim'] = # FOR YOU to fill in
+
+three_cols = ['Tot_Drug_Cst','Tot_Clms','Cost_per_claim']
+
+three_cols_data = diabetes_prescriber_data[three_cols]
+
+# For YOU to do: print the first five rows of the three_cols_data
+----
+
+**1d. Using the provided `state_region_map` dictionary below, create a new column named `Prscrbr_State_Region` that maps each `Prscrbr_State_Abrvtn` to its corresponding U.S. region. After mapping, print the unique region values to verify the transformation.**
 
 _Hints:_
 
-- Use `.map()` to apply the dictionary: `df["new_col"] = df["existing_col"].map(mapping_dict)`
-- Use `.unique()` to view the distinct region labels.
+- Use `.unique()` to view the distinct region labels. Learn more about `.unique()` https://pandas.pydata.org/docs/reference/api/pandas.unique.html[here]. 
 
 [source,python]
 ----
@@ -158,19 +182,26 @@ state_region_map = {
     "MT": "West", "NV": "West", "NM": "West", "OR": "West", "UT": "West", "WA": "West", "WY": "West",
     
     # Territories / Military / Other
-    "PR": "Territory",  # Puerto Rico
-    "VI": "Territory",  # U.S. Virgin Islands
-    "GU": "Territory",  # Guam
-    "MP": "Territory",  # Northern Mariana Islands
-    "AS": "Territory",  # American Samoa
-    "AA": "Military",   # Armed Forces Americas
-    "AE": "Military",   # Armed Forces Europe
-    "AP": "Military",   # Armed Forces Pacific
-    "ZZ": "Unknown"     # Placeholder or unknown state
+    "PR": "Territory",  
+    "VI": "Territory",
+    "GU": "Territory",  
+    "MP": "Territory",  
+    "AS": "Territory",  
+    "AA": "Military",   
+    "AE": "Military",   
+    "AP": "Military",   
+    "ZZ": "Unknown"     
 }
-}
+
+# Map state abbreviation to region
+diabetes_prescriber_data["Prscrbr_State_Region"] = diabetes_prescriber_data["Prscrbr_State_Abrvtn"].map(state_region_map)
+
+# For YOU to do: print categories of unique region values in Prscrbr_State_Region using .unique()
+
 ----
-**1e. Print how many prescribers were assigned to each region, including "Unknown".**
+**1e. Print how many prescribers were assigned to each region in `Prscrbr_State_Region`. Include "Unknown".**
+
+Hint: Use `.valuecounts()`. Read more about `.valuecounts()` https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.value_counts.html[here].
 
 ====
 
@@ -224,9 +255,10 @@ https://seaborn.pydata.org/generated/seaborn.heatmap.html[Seaborn `heatmap()` Do
 ====
 .Deliverables
 ====
-**2a For the numeric columns `['Tot_30day_Fills', 'Tot_Day_Suply', 'Cost_per_Claim', 'Total_Patients']`, print the percentage of missing values in the full dataset.**
 
-_Hint:_ Create a list for numeric_cols. For example: 
+**2a For the numeric columns `['Tot_30day_Fills', 'Tot_Day_Suply', 'Cost_per_Claim', 'Total_Patients']`, print the count of missing values in the full dataset `diabetes_prescriber_data`.**
+
+_Hint:_ `Use .isna().sum()).`
 
 [source,python]
 ----
@@ -234,27 +266,48 @@ numeric_cols = ['Cost_per_claim', 'Tot_30day_Fills', 'Tot_Day_Suply', 'Total_Pat
 ----
 
 
-**2b. Group by `Semaglutide_drug` and calculate the mean and standard deviation of the numeric_cols. Then write 1–2 sentences on how the averages differ between the two classes and what that might suggest.**
+**2b. Use the code below to group by `Semaglutide_drug` and calculate the mean and standard deviation of the numeric_cols. Then write 1–2 sentences on how the averages differ between the two classes and what that might suggest.**
 
-_Hint:_ Use `.groupby(target)[numeric_cols].agg(['mean', 'std'])` to compute group-level summary statistics.
+[source,python]
+----
+# Group by Semaglutide_drug and calculate mean
+summary_stats = diabetes_prescriber_data.groupby("Semaglutide_drug")[numeric_cols].mean()
+print(summary_stats)
+
+# For YOU to do: write 1–2 sentences on how the averages differ between the two classes and what that might suggest
+----
 
 
-**2c. Create a correlation matrix heatmap using the numeric columns to visualize how the variables are related. Then write 1–2 sentences on whether you think any numeric variables are strongly correlated with each other.**
+**2c. Use the code below to create a correlation matrix heatmap using the numeric columns to visualize how the variables are related. Make sure to label the plot and  write 1–2 sentences on whether you think any numeric variables are strongly correlated with each other.**
 
-_Hint:_
 
-- Use `.corr()` to get pairwise correlations of numeric_cols.  
+[source,python]
+----
+import seaborn as sns
+import matplotlib.pyplot as plt
 
-- Use `sns.heatmap()` to visualize the correlation matrix.  
+# correlation matrix
+corr_matrix = diabetes_prescriber_data[numeric_cols].corr()
 
-- Set `annot=True` in `.heatmap()` if you'd like to display the correlation values directly in the plot.
+# heatmap
+plt.figure(figsize=(8, 6))
+sns.heatmap(corr_matrix, annot=True, cmap="coolwarm", center=0)
+plt.title("________") # For YOU to do
+plt.tight_layout()
+plt.show()
+----
 
-**2d. Create a bar plot showing the number of prescribers in each Prscrbr_State_Region, split by Semaglutide_drug. Then write 1-2 sentences on whether different regions prescribe Semaglutide more or less often.**
+**2d. Use the code provided below to create a bar plot showing the number of prescribers in each Prscrbr_State_Region, split by Semaglutide_drug. Make sure to label the plot and write 1-2 sentences on whether different regions prescribe Semaglutide more or less often.**
 
-_Hint:_ 
-
-Use `sns.countplot(data=..., x='Prscrbr_State_Region', hue='Semaglutide_drug')`
-
+[source,python]
+----
+plt.figure(figsize=(10, 5))
+sns.countplot(data=diabetes_prescriber_data, x='Prscrbr_State_Region', hue='Semaglutide_drug')
+plt.title('____________')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+----
 ====
 
 
@@ -334,9 +387,11 @@ model_features = ["Tot_30day_Fills", "Tot_Day_Suply", "Cost_per_claim", "Total_P
 target_col = "Semaglutide_drug"
 y = diabetes_prescriber_data[target_col]
 X = diabetes_prescriber_data[model_features]
+
+# For YOU to do: print the shape of `X` and `y` and display the first 5 rows of `X` to confirm everything looks correct.
 ----
 
-**3b. Using the provided code split the dataset into 60% training, 20% validation, and 20% test. Then write 1–2 sentences, in your own words, explaining the purpose of each subset (train, validation, test).**
+**3b. Using the provided code, split the dataset into 60% training, 20% validation, and 20% test. Then write 1–2 sentences, in your own words, explaining the purpose of each subset (train, validation, test).**
 
 _Note:_
 This is the step where the `X_train`, `X_val`, `X_test`, `y_train`, `y_val`, and `y_test` variables are created. These subsets will be used throughout the rest of the modeling process, so make sure you understand what each one represents and read the explanation in the table above.
@@ -354,9 +409,22 @@ X_train, X_val, y_train, y_val = train_test_split(
     X_train_val, y_train_val, test_size=0.25, stratify=y_train_val, random_state=42)
 ----
 
-**3c. Print the number of rows and class proportions of the target variable `Semaglutide_drug` in each subset (`y_train`, `y_val`, and `y_test`).**
+**3c. Run the code below to print the number of rows and class proportions of the target variable `Semaglutide_drug` in each subset (`y_train`, `y_val`, and `y_test`). Then write 1-2 sentences interpreting the class proportions in each subset. Why do you think it is important to look at class proportions?**
 
-_Hint:_ Use `DF.len()` to count rows and `DF.value_counts(normalize=True)` for proportions.
+[source,python]
+----
+# Train 
+print("Train rows:", len(y_train))
+print("Train class %:\n", y_train.value_counts(normalize=True))
+
+# Validation 
+print("\nValidation rows:", len(y_val))
+print("Validation class %:\n", y_val.value_counts(normalize=True))
+
+# Test 
+print("\nTest rows:", len(y_test))
+print("Test class %:\n", y_test.value_counts(normalize=True))
+----
 
 ====
 
@@ -438,26 +506,23 @@ for df in [X_train, X_val, X_test]:
         df[col] = df[col].fillna("Missing")
 
 # Step 2: One-hot encode only the training set
-X_train = pd.get_dummies(..., drop_first=True)  # For YOU to fill in
+X_train = pd.get_dummies(data = ______, columns = _______, drop_first=True)  # For YOU to fill in
 ----
 
-**4b. One-hot encode the same two variables, `Prscrbr_State_Region` and `Prscrbr_Type_Grouped`, in the validation and test sets. Then reindex `X_val` and `X_test` so their column structure matches `X_train`.**
+**4b. Using the code provided, one-hot encode the same two variables, `Prscrbr_State_Region` and `Prscrbr_Type_Grouped`, in the validation and test sets.**
 
 _Note:_ The structure of the code is provided below. Your task is to complete the lines that apply one-hot encoding to the validation and test sets using `pd.get_dummies()`. This step is important to ensure that all datasets share the same set of columns before modeling.
 
-
 [source,python]
 ----
-X_test = pd.get_dummies(....., columns=categorical_cols, drop_first=True)  # For YOU to fill in
-X_val = pd.get_dummies(...., columns=categorical_cols, drop_first=True)    # For YOU to fill in
+X_test = pd.get_dummies(data=_____, columns=______, drop_first=True)  # For YOU to fill in
+X_val = pd.get_dummies(data=_______, columns=_______, drop_first=True)    # For YOU to fill in
 
-# Save column names for alignment
-# Aligning the columns across X_train, X_val, and X_test after one-hot encoding so
-# all three datasets have the exact same structure
+
 encoded_columns = X_train.columns
 
-# Reindex to match training columns
-# We are rearranging columns so that they match in order
+
+# reindex `X_val` and `X_test` so their column structure matches `X_train`
 X_test = X_test.reindex(columns=encoded_columns, fill_value=0)
 X_val = X_val.reindex(columns=encoded_columns, fill_value=0)
 ----
@@ -480,16 +545,13 @@ one_hot_cols = [col for col in X_train.columns if col not in numeric_cols]
 
 # Then fill missing values in numeric columns
 for df in [X_train, X_val, X_test]:
-    df[numeric_cols] = df[numeric_cols].fillna(  # For YOU to fill in: use medians from training data
+    df[numeric_cols] = df[numeric_cols].fillna(  # For YOU to fill in: use medians from X_train
         ________________
     )
-    df[one_hot_cols] = df[one_hot_cols].fillna(  # For YOU to fill in: missing one-hot values will be 0
+    df[one_hot_cols] = df[one_hot_cols].fillna(  # For YOU to fill in: missing one-hot values will be 0 
         ________________
     )
 
-
-# fit_transform calculates the mean and standard deviation from the training data.
-# then .tranform use the same mean and std from training (from .fit()) to scale validation and test data.
 
 scaler = StandardScaler()
 X_train[numeric_cols] = scaler.fit_transform(X_train[numeric_cols])
@@ -497,11 +559,16 @@ X_val[numeric_cols] = scaler.transform(X_val[numeric_cols])
 X_test[numeric_cols] = scaler.transform(X_test[numeric_cols])
 ----
 
-**4d. Convert all boolean (`True`/`False`) columns in your training, validation, and test sets to integers (`1`/`0`).**
+**4d. Using the code provided, convert all boolean (`True`/`False`) columns in your training, validation, and test sets to integers (`1`/`0`). Then write 1-2 sentenced on why true/false columsn should be converted to integers**
 
-_Hint:_  
-Use `.select_dtypes(include='bool')` to identify boolean columns.  
-Use `.astype(int)` to convert them.
+[source,python]
+----
+# Convert all boolean columns to int
+for col in X_train.select_dtypes(include='bool').columns:
+    X_train[col] = X_train[col].astype(int)
+    X_test[col] = X_test[col].astype(int)
+    X_val[col] = X_val[col].astype(int)
+----
 
 **4e. Confirm that X_train, X_val, and X_test all have the same number of columns. Then write 1-2 sentences on what one hot encoding is and why it was necessary to perform it seperately on the training, test and validation set.**
 
@@ -747,7 +814,7 @@ Now that you've reviewed the key concepts, proceed with training your logistic r
 
 .Deliverables
 ====
-**5a. Check for multicollinearity using VIF (Variance Inflation Factor) by completing the helper function provided below.**
+**5a. Check for multicollinearity using VIF (Variance Inflation Factor) by completing the function below.**
 
 Your task is to complete the code below to calculate the VIF for each numeric column in your training data. Most of the function has been provided for you — just fill in the missing pieces to compute the VIF formula (stated above).
 
@@ -789,7 +856,7 @@ print(vif_values)
 
 **5b. Drop any variables with a VIF greater than 10, except for `"Tot_Day_Suply"`, which you should keep regardless of its VIF value. Then write 1-2 sentences on what VIF is and why it is a neccessary step in model building for logistic regression.**
 
-The code below has already filtered out the appropriate features and created the list `features_after_vif`. Your task is to run this code and use it to subset the training data.
+The code below has already filtered out the appropriate features and created the list `features_after_vif`. Your task is to run this code and write 1-2 sentences on what VIF is and why it is a neccessary step in model building for logistic regression.
 
 
 _Note:_  
@@ -900,7 +967,7 @@ selected_features = forward_selection(X_train, y_train, verbose=False)
 print("Selected features:", selected_features)
 ----
 
-**5d. Use the provided code below to print model results and convert the logistic regression model coefficients into odds ratios. You only need to run the first cell of code, and fill in the blank in the second chunk where the odds ratios are calculated on `final_model.params` using `np.exp()` Then, write 1–2 sentences interpreting the results. In your explanation, briefly describe what an odds ratio represents in the context of logistic regression**. 
+**5d. Use the provided code below to print model results and convert the logistic regression model coefficients into odds ratios. You only need to run the first cell of code, and fill in the blank in the second chunk where the odds ratios are calculated on `final_model.params` using `np.exp()` Then, write 1–2 sentences briefly describing what an odds ratio represents in the context of logistic regression**. 
 
 _Note:_ 
 
@@ -915,12 +982,10 @@ import statsmodels.api as sm
 import warnings
 warnings.filterwarnings("ignore")
 
-# Final feature matrix and target
 X_train_final = sm.add_constant(X_train[selected_features]).astype(float)
 
 final_model = sm.Logit(y_train, X_train_final).fit()
 
-# Display model summary and AIC
 print(final_model.summary())
 print(f"\nFinal AIC: {final_model.aic}")
 ----
@@ -932,20 +997,17 @@ import numpy as np
 import pandas as pd
 
 # Calculate odds ratios for final_model.params
-odds_ratio_values = np.exp(...)  # For YOU to fill in
+odds_ratio_values = np.exp(______)  # For YOU to fill in
 
-# Build odds ratio DataFrame
 odds_ratios = pd.DataFrame({
     "Odds Ratio": odds_ratio_values,
     "P-value": final_model.pvalues
 })
 
-# Add Direction column
 odds_ratios["Direction"] = odds_ratios["Odds Ratio"].apply(
     lambda x: "Increases Odds" if x > 1 else ("Decreases Odds" if x < 1 else "No Effect")
 )
 
-# Round and sort
 odds_ratios = odds_ratios.round({"Odds Ratio": 3, "P-value": 4})
 odds_ratios = odds_ratios.sort_values("Odds Ratio", ascending=False)
 odds_ratios.reset_index().rename(columns={"index": "Feature"})
@@ -954,6 +1016,7 @@ odds_ratios.reset_index().rename(columns={"index": "Feature"})
 
 **5e. Run the code below to create and print confusion matrices for the training, validation, and test sets using the code below. Write 1–2 sentences to interpret the results of the confusion matrix and write whether there are any signs of overfitting.**
 
+_Note:_ Your task is to run the code succesfully and write 1-2 intepreting the results. 
 
 [source,python]
 ----
@@ -1001,7 +1064,7 @@ display_confusion_matrix(y_val, val_pred_labels, "Validation")
 display_confusion_matrix(y_test, test_pred_labels, "Test")
 ----
 
-**5f. Plot ROC curves and print AUC scores for the train, validation, and test sets using the code below. Then, write 1–3 sentences interpreting what this tells you about your model’s performance and generalizability of the model.**
+**5f. Using the code provided, plot ROC curves and print AUC scores for the train, validation, and test sets using the code below. Then, write 1–3 sentences interpreting what this tells you about your model’s performance and generalizability of the model.**
 
 [source,python]
 ----
@@ -1097,6 +1160,7 @@ That’s how we “fit” the model and it’s also how we estimate the best val
 
 **6a. Select 20 random prescribers from `X_test` using the `.sample()` function and save it as `sample_prescribers`.  Make sure to set `n=20` and `random_state=123` to ensure reproducibility.**
 
+Note: Click here for more information on https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.sample.html[sample].
 
 **6b. Run the code below to predict the probability that each prescriber in the sample will prescribe Semaglutide using the final_model. Then, on your own, print the top 5 rows.**
 
