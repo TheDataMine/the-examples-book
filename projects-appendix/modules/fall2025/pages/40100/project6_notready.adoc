@@ -6,7 +6,6 @@
 
 In this project, you will build a **logistic regression** model to discover what features among prescribers increase the likelihood of them prescribing the drug Ozempic (also known as Semaglutide). 
 
-
 ++++
 <iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_n5c4yl04&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_5zljkma8%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 940px;height: 540px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Fall 2025 Logistic Regression Project Data Background"></iframe>
 ++++
@@ -18,29 +17,25 @@ In this project, you will build a **logistic regression** model to discover what
 - Understand how to prepare the data before and after splitting into train, test, and validation for modeling and to prevent overfitting.
 - Use the Variance Inflation Factor to prevent multicollinearity among variables. 
 - Use forward selection with AIC as a way to perform feature selection on the model and find the model with the best balance between fit and number of features.
-- Develop a final model and interpet it's results using AUC and confusion matrices. 
+- Develop a final model and interpret it's results using AUC and confusion matrices. 
 ****
 
 == Dataset
-- `/anvil/projects/tdm/data/CMS/diabetes_prescriber_data.csv`
+- /anvil/projects/tdm/data/CMS/diabetes_prescriber_data.csv
 
 [IMPORTANT]
 ====
 Use 4 cores for this project. 
 ====
 
-
 image::PrescriberImage.jpg[width=600, height=450, caption="Figure 1: Prescriber Injection Image. Source: Fox News Ozempic Article (accessed July 11, 2025)."]
 
 This project looks at real prescription data to figure out the trends in the prescription data for Semaglutide (ingredient in Ozempic medication). Which types of prescribers are writing the most prescriptions? Is it more common among prescribers in some regions than others? And what makes Semaglutide different from other prescriptions?
 
-
 We will start by loading and cleaning the 2023 data from the link: https://data.cms.gov/provider-summary-by-type-of-service/medicare-part-d-prescribers/medicare-part-d-prescribers-by-provider-and-drug/data?query=%7B%22filters%22%3A%7B%22rootConjunction%22%3A%7B%22label%22%3A%22And%22%2C%22value%22%3A%22AND%22%7D%2C%22list%22%3A%5B%5D%7D%2C%22keywords%22%3A%22methylphenidate%22%2C%22offset%22%3A0%2C%22limit%22%3A10%2C%22sort%22%3A%7B%22sortBy%22%3Anull%2C%22sortOrder%22%3Anull%7D%2C%22columns%22%3A%5B%5D%7D[Centers for Medicare and Medicaid Services (CMS)] dataset. Note that we have preprocessed some of the data to simplify the analysis. We will explore key features, examine class balance, and from there, dig into modeling and interpretation to better understand what kind of prescribers are behind this high-profile drug.
-
 
 **Why Logistic Regression?**
 For logistic regression, the y variable (what you're trying to predict) has 2 outcomes: yes or no, success or failure. We represent each outcome as 0 or 1 binary variable, so we can make a model that predicts the probability of getting a 1 for any given set of conditions. With this setup, we can build a model that predicts the probability of being prescribed Semaglutide, given a set of conditions.
-
 
 
 **About the Data**
@@ -67,7 +62,6 @@ Below are the columns you will be working with in this project:
 | `Prscrbr_Type_Grouped` | A simplified grouping of `Prscrbr_Type` into broader categories (e.g. Primary Care, Cardiology).
 |===
 
-
 [NOTE]
 ====
 This project may look lengthy, but it has information to help you develop the skills needed to build a logistic regression model. Much of the code has been provided to guide you, and we mostly ask that you take time to reflect on each step. If you carefully read through the material and work through the questions, you'll come away with a stronger understanding of how logistic regression works in practice. 
@@ -81,8 +75,7 @@ This project may look lengthy, but it has information to help you develop the sk
 
 **Class Distributions**
 
-
-Before we can analyze or model anything, we need to clean the data and add few new features (do some feature engineering). One of the first things you will do is create a _binary target variable_ to indicate whether a record involves Semaglutide. This kind of variable only takes on two values: 1 if the drug is Semaglutide, and 0 if it is not. In Python, you can create a binary variable using a boolean expression and then convert the result to integers using `.astype(int)`. 
+Before we can analyze or model anything, we need to clean the data and add few new features (do some feature engineering). One of the first things you will do is create a _binary target variable_ to indicate whether a record involves Semaglutide. This kind of variable only takes on two values: 1 if the drug is Semaglutide, and 0 if it is not. In Python, you can create a binary variable using a Boolean expression and then convert the result to integers using `.astype(int)`. 
 
 For example:
 
@@ -119,7 +112,6 @@ diabetes_prescriber_data["Prscrbr_State_Region"] = diabetes_prescriber_data["Prs
 
 By grouping states into regions, we reduce granularity while retaining useful geographic patterns, a valuable preprocessing step before modeling.
 
-
 However, not all states in the dataset may appear in the dictionary. In those cases, `.map()` returns a missing value (`NaN`). To handle this, you can fill in those missing values with a default label like `"Missing"` using `.fillna("Missing")`.
 
 **Value Counts**
@@ -128,11 +120,9 @@ Finally, it is often useful to explore the _distribution_ of values in a column.
 
 These basic data preparation steps: binary indicators, feature engineering, mapping, and counting are critical in setting up a dataset for modeling. Now, you are ready for exploratory analysis.
 
-
 .Deliverables
 ====
 **1a. Read in the data and print the first five rows of the dataset. Save the dataframe as  `diabetes_prescriber_data`.**
-
 
 [source,python]
 ----
@@ -140,7 +130,6 @@ import pandas as pd
 
 diabetes_prescriber_data = pd.read_csv("/anvil/projects/tdm/data/CMS/diabetes_prescriber_data.csv")
 ----
-
 
 **1b.Use the code below to add a binary target column that equals 1 if `Gnrc_Name` is `"Semaglutide"` and 0 otherwise. Then, display the count of 1s and 0s in the column `Semaglutide_drug`.**
 
@@ -218,14 +207,11 @@ Hint: Use `.value_counts()`. Read more about `.value_counts()` https://pandas.py
 
 ====
 
-
 === Question 2: Exploratory Data Analysis (2 points)
-
 
 ++++
 <iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_h56tpj05&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_ieb34sc3%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 940px;height: 540px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Fall 2025 Seminar - Question 2 Logistic Regression "></iframe>
 ++++
-
 
 Before we build any models, we need to take a step back and *get to know* our data. This is the purpose of **exploratory data analysis**, (EDA). You look for patterns, inconsistencies, and clues that might be helpful to understand how different variables relate to the outcome you're trying to predict. In our case, that outcome is `Semaglutide_drug`, a column that tells us whether or not a prescription record involves the diabetes drug Semaglutide.
 
@@ -284,7 +270,6 @@ _Hint:_ `Use .isna().sum())`
 numeric_cols = ['Cost_per_claim', 'Tot_30day_Fills', 'Tot_Day_Suply', 'Total_Patients']
 ----
 
-
 **2b. Use the code below to group by `Semaglutide_drug` and calculate the mean of the numeric_cols. Then write 1–2 sentences on how the averages differ between the two classes and what that might suggest.**
 
 [source,python]
@@ -295,9 +280,7 @@ summary_stats = diabetes_prescriber_data.groupby("Semaglutide_drug")[numeric_col
 # For YOU to do: write 1–2 sentences on how the averages differ between the two classes and what that might suggest.
 ----
 
-
 **2c. Use the code below to create a correlation matrix heatmap using the numeric columns to visualize how the variables are related. Make sure to label the plot and  write 1–2 sentences on whether you think any numeric variables are strongly correlated with each other.**
-
 
 [source,python]
 ----
@@ -327,7 +310,6 @@ plt.tight_layout()
 plt.show()
 ----
 ====
-
 
 === Question 3: Train/Test Split and Data Preparation (2 points)
 
@@ -380,9 +362,7 @@ Final set of target labels (0 or 1) used for unbiased model evaluation on the te
 |===
 
 
-
 These splits are crucial to simulate how the model will perform in real-world settings and ensure that we’re not simply memorizing the data.
-
 
 [NOTE]
 ====
@@ -502,18 +482,16 @@ To address this, we use `StandardScaler()` from `sklearn.preprocessing`. This fu
 
 **Converting Boolean Columns**
 
-Some features may be stored as `True`/`False`. Most models, including logistic regression, expect numeric input. We use `.astype(int)` to convert all boolean columns into `1`/`0` format, which the model can interpret as binary indicators.
+Some features may be stored as `True`/`False`. Most models, including logistic regression, expect numeric input. We use `.astype(int)` to convert all Boolean columns into `1`/`0` format, which the model can interpret as binary indicators.
 
 **Final Structure Check**
 
 After all these steps, it’s important to verify that `X_train`, `X_val`, and `X_test` all have the same number and order of columns. This ensures the model receives a consistent input structure during training and evaluation.
 
-
 [NOTE]
 ====
 Each of the steps in this question prepares your data for modeling. Some of the code has been provided for this section, make sure to fill in the missing pieces and reflect on why each step is needed.
 ====
-
 
 .Deliverables
 ====
@@ -521,7 +499,6 @@ Each of the steps in this question prepares your data for modeling. Some of the 
 **4a. Fill any missing values in the categorical variables with `"Missing"` across `X_train`, `X_val`, and `X_test`. Then, one-hot encode `Prscrbr_State_Region` and `Prscrbr_Type_Grouped` using `X_train`.**
 
 _Note:_ Most of the code has been provided for you below. Your task is to complete the final line that performs one-hot encoding on the training set.
-
 
 [source,python]
 ----
@@ -545,9 +522,7 @@ _Note:_ The structure of the code is provided below. Your task is to complete th
 X_test = pd.get_dummies(data=_____, columns=______, drop_first=True)  # For YOU to fill in
 X_val = pd.get_dummies(data=_______, columns=_______, drop_first=True)    # For YOU to fill in
 
-
 encoded_columns = X_train.columns
-
 
 # reindex `X_val` and `X_test` so their column structure matches `X_train`
 X_test = X_test.reindex(columns=encoded_columns, fill_value=0)
@@ -579,7 +554,6 @@ for df in [X_train, X_val, X_test]:
         ________________
     )
 
-
 scaler = StandardScaler()
 X_train[numeric_cols] = scaler.fit_transform(X_train[numeric_cols])
 X_val[numeric_cols] = scaler.transform(X_val[numeric_cols])
@@ -597,7 +571,7 @@ for col in X_train.select_dtypes(include='bool').columns:
     X_val[col] = X_val[col].astype(int)
 ----
 
-**4e. Confirm that X_train, X_val, and X_test all have the same number of columns. Then write 1-2 sentences on what one hot encoding is and why it was necessary to perform it seperately on the training, test and validation set.**
+**4e. Confirm that X_train, X_val, and X_test all have the same number of columns. Then write 1-2 sentences on what one hot encoding is and why it was necessary to perform it separately on the training, test and validation set.**
 
 ====
 
@@ -623,7 +597,6 @@ where
 The result is an S-shaped curve that flattens near 0 and 1, making it ideal for modeling probabilities.
 
 image::SigmoidFunction.jpg[width=600, height=450, caption="Figure 1: Sigmoid function. Source: Educational article on activation functions (accessed July 11, 2025)."]
-
 
 [NOTE]
 ====
@@ -670,7 +643,6 @@ In other words, the probability of success is 4× greater than the probability o
 | $p = \dfrac{1}{1 + e^{-(\beta_0 + \beta_1 X)}}$
 |===
 
-
 Each form is mathematically equivalent, and which one you use depends on the context:
 
 - Use **log-odds** when modeling or interpreting coefficients.
@@ -715,7 +687,6 @@ This is especially helpful when explaining or interpreting the results in plain 
 ====
 
 
-
 **Checking Multicollinearity with VIF**
 
 Before fitting our model, we use *Variance Inflation Factor (VIF)* to check for multicollinearity:
@@ -739,9 +710,7 @@ where
 
 The model with the lowest AIC fits the data by striking a balance between fit and the number of parameters (features) used. If we pick the model with the smallest AIC, we are choosing the model with a low _k_ (fewer features) while still ensuring it has a high likelihood log(_L_).  
 
-
 *Forward selection* begins with no predictors and adds them one at a time, at each step choosing the variable that leads to the greatest reduction in AIC.
-
 
 [NOTE]
 ====
@@ -754,7 +723,6 @@ While we are using AIC in this project, you could also use:
 
 Each criterion has trade-offs. AIC is popular because it balances model fit and complexity, making it a solid choice when comparing logistic regression models. For consistency, we'll use AIC throughout this project.
 ====
-
 
 **Interpreting Model Coefficients with Odds Ratios**
 
@@ -809,9 +777,7 @@ A *Receiver Operating Characteristic (ROC)* curve plots the tradeoff between:
 * True Positive Rate (Recall)  
 * False Positive Rate (1 – Specificity)
 
-
 image::ROC_Curve.png[width=600, height=450, caption="Figure 3: ROC Curve Image. Source: Evidently AI Article (accessed July 14, 2025)."]
-
 
 It shows how the model performs across all classification thresholds.
 
@@ -838,7 +804,6 @@ You should compute and compare AUC scores for:
 * Test set
 
 This helps check for *overfitting*, which occurs when a model learns the noise or specific quirks of the training data rather than the underlying patterns. An overfitted model may perform very well on the training set but poorly on new, unseen data (test and validation dataset!). By evaluating performance on validation and test sets, we can ensure the model generalizes well to other data.
-
 
 **Ready to Model**
 
@@ -886,10 +851,9 @@ vif_values = calculate_vif_manual(X_for_vif)
 print(vif_values)
 ----
 
-**5b. Drop any variables with a VIF greater than 10, except for `"Tot_Day_Suply"`, which you should keep regardless of its VIF value. Then write 1-2 sentences on what VIF is and why it is a neccessary step in model building for logistic regression.**
+**5b. Drop any variables with a VIF greater than 10, except for `"Tot_Day_Suply"`, which you should keep regardless of its VIF value. Then write 1-2 sentences on what VIF is and why it is a necessary step in model building for logistic regression.**
 
-The code below has already filtered out the appropriate features and created the list `features_after_vif`. Your task is to run this code and write 1-2 sentences on what VIF is and why it is a neccessary step in model building for logistic regression.
-
+The code below has already filtered out the appropriate features and created the list `features_after_vif`. Your task is to run this code and write 1-2 sentences on what VIF is and why it is a necessary step in model building for logistic regression.
 
 _Note:_  
 
@@ -1003,8 +967,7 @@ _Note:_
 
 - The first block of code fits a logistic regression model using the selected features to predict whether a provider prescribes Semaglutide. It prints a summary of the model, including coefficient estimates, p-values, and confidence intervals for each feature. It also outputs the AIC, which helps assess model quality — lower AIC values indicate a better-fitting model.
 
-- The second block of code will output three values for each feature: the **odds ratio**, which is calculated by exponentiating the model coefficients; the **p-value**, which comes directly from the model output and tells us if the feature is statistically significant; and the **direction**, which summarizes whether the feature increases, decreases, or has no effect on the odds of the outcome (whether or not a prescriber wil prescribe the drug Semaglutide). **Make sure to FILL in the BLANK in the this second block of code to calculate odd ratios.**
-
+- The second block of code will output three values for each feature: the **odds ratio**, which is calculated by exponentiating the model coefficients; the **p-value**, which comes directly from the model output and tells us if the feature is statistically significant; and the **direction**, which summarizes whether the feature increases, decreases, or has no effect on the odds of the outcome (whether or not a prescriber will prescribe the drug Semaglutide). **Make sure to FILL in the BLANK in the this second block of code to calculate odd ratios.**
 
 [source,python]
 ----
@@ -1019,7 +982,6 @@ final_model = sm.Logit(y_train, X_train_final).fit()
 print(final_model.summary())
 print(f"\nFinal AIC: {final_model.aic}")
 ----
-
 
 [source,python]
 ----
@@ -1042,7 +1004,6 @@ odds_ratios = odds_ratios.round({"Odds Ratio": 3, "P-value": 4})
 odds_ratios = odds_ratios.sort_values("Odds Ratio", ascending=False)
 odds_ratios.reset_index().rename(columns={"index": "Feature"})
 ----
-
 
 **5e. Run the code below to create and print confusion matrices for the training, validation, and test sets using the code below. Write 1–2 sentences to interpret the results of the confusion matrix and write whether there are any signs of overfitting.**
 
@@ -1087,7 +1048,6 @@ def display_confusion_matrix(y_true, y_pred, label):
     print(f"\n{label} Confusion Matrix:")
     print(df_cm)
 
-
 display_confusion_matrix(y_train, train_pred_labels, "Train")
 display_confusion_matrix(y_val, val_pred_labels, "Validation")
 display_confusion_matrix(y_test, test_pred_labels, "Test")
@@ -1116,20 +1076,17 @@ plt.grid(True)
 plt.show()
 
 
-
 # AUC scores
 print("Train AUC:", roc_auc_score(y_train, train_preds))
 print("Validation AUC:", roc_auc_score(y_val, val_preds))
 print("Test AUC:", roc_auc_score(y_test, test_preds))
 ----
 
-
 ====
 
 ===  Question 6: Make Predictions on New Prescribers (2 points)
 
 Now that you’ve trained your final model, let’s use it to predict how likely new prescribers are to prescribe Semaglutide.
-
 
 **The Sigmoid Function and Likelihood in Logistic Regression (Semaglutide Example)**
 
@@ -1146,7 +1103,6 @@ So:
 
 - If this provider **did prescribe** Semaglutide, their likelihood = 0.83  
 - If this provider **did not prescribe** Semaglutide, their likelihood = 1 – 0.83 = 0.17
-
 
 **Maximum Likelihood Estimation (MLE)**
 
@@ -1183,7 +1139,6 @@ Logistic regression finds the coefficients that maximize the likelihood of the o
 That’s how we “fit” the model and it’s also how we estimate the best values for the βs in the sigmoid equation.
 ====
 
-
 .Deliverables
 ====
 
@@ -1212,7 +1167,6 @@ scored_sample["Predicted_Probability"] = sample_preds
 ====
 
 
-
 == Submitting your Work
 
 Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
@@ -1228,3 +1182,4 @@ You _must_ double check your `.ipynb` after submitting it in gradescope. A _very
 
 You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
 ====
+
