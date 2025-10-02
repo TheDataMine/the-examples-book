@@ -344,3 +344,99 @@ retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
 response = retrieval_chain.invoke({"input": "What is this document about?"})
 print(response['answer'])
 ----
+
+== Can we use this stored vector database at a later time?
+
+Yes! If you were to restart your kernel now, you could run the code below and ask the same LLM question we asked above on the previously learned document(s). This code does it.
+
+[NOTE]
+====
+As a first step, remember that you **MUST** run:
+
+`/anvil/projects/tdm/bin/ollama serve`
+
+in another Terminal window first if it isn't already running!!!
+====
+
+=== Imports
+
+[source,python]
+----
+import os
+from langchain_ollama import OllamaLLM
+from langchain_ollama import OllamaEmbeddings
+from langchain.document_loaders import TextLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_milvus import Milvus
+from langchain.chains import create_retrieval_chain
+from langchain import hub
+from langchain.chains.combine_documents import create_stuff_documents_chain
+----
+
+=== Define Database Path
+
+[source,python]
+----
+URI = f"{os.getenv('SCRATCH')}/milvus_demo.db"
+collection_name = "my_test_collection"
+----
+
+=== Read Port Number for `ollama serve`
+
+[source,python]
+----
+# You MUST have these lines in your code to read the port number 
+# that "ollama serve" was launched using
+with open(f"/dev/shm/ollama.{os.getuid()}") as hostfile:
+    hostline = [line.rstrip() for line in hostfile]
+os.environ["OLLAMA_HOST"] = hostline[0]
+print(os.environ["OLLAMA_HOST"])
+----
+
+=== Initialize Models
+
+[source,python]
+----
+# NEVER DIRECTLY USE DOWNLOADED MODELS like "llama3.1", "llama3.2", ETC.
+# ALWAYS MAKE A NEW MODEL BASED ON DOWNLOADED MODELS THAT USES 8 THREADS 
+# OR PERFORMANCE IS TERRIBLE!
+# INCREASING BEYOND 8 WILL RUN MORE SLOWLY!
+llm = OllamaLLM(model="llama3.2-8")
+embed_model = OllamaEmbeddings(model="mxbai-embed-large-8")
+----
+
+=== Connect to Milvus and Setup Retriever
+
+Now we can reference our previously learned documents in our Milvus vector database
+
+[source,python]
+----
+
+vector_store = Milvus(
+    embedding_function=embed_model,
+    collection_name=collection_name,
+    connection_args={"uri": URI},
+)
+retriever = vector_store.as_retriever()
+chain = create_retrieval_chain(combine_docs_chain=llm, retriever=retriever)
+----
+
+=== Create Retrieval Chain
+
+[source,python]
+----
+retrieval_qa_chat_prompt = hub.pull("langchain-ai/retrieval-qa-chat")
+combine_docs_chain = create_stuff_documents_chain(
+    llm, retrieval_qa_chat_prompt
+)
+retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
+----
+
+=== Query the Database
+
+[source,python]
+----
+response = retrieval_chain.invoke({"input": "What is this document about?"})
+print(response['answer'])
+----
+
