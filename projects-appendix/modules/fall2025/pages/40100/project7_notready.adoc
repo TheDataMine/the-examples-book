@@ -1,0 +1,443 @@
+= TDM 40100: Project ## - Image Segementation with K-means
+
+== Project Objectives
+
+This project will introduce you to the K-means clustering algorithm and how it can be used for image segmentation. You will use K-means through OpenCV to segment images based on color. You will also learn how to add other components to cluster by color and spatial location.
+
+.Learning Objectives
+****
+- Understand the K-means clustering algorithm
+- Use OpenCV to implement K-means for image segmentation
+- Learn how to preprocess images for clustering
+****
+
+== Dataset
+- 'segmentation_images/35008.jpg'
+
+== Questions
+
+=== Question 1 (2 points)
+
+K-means clustering is an unsupervised learning algorithm that partitions data into K clusters based on their similarity to eachother. For example, in image segmentation, K-means can be used to group pixels with similar colors together.
+
+The OpenCV library provides an implementation of K-means that can be used with images. There are many parameters that can be adjusted to influence the clustering results, described below:
+
+[cols="1,1,1",options="header"]
+|===
+| Parameter | Description | Type
+| image | The image we want to segment. | np.ndarray
+| K | The number of clusters we want to create. | int
+| bestLabels | The labels of each pixel, denoting which cluster they belong to. **THIS IS OPTIONAL, LEAVE AS None** | np.ndarray
+| criteria | The criteria for the algorithm to stop. | tuple
+| attempts | The number of times the algorithm should be run with different initializations. | int
+| flags | The flags for the algorithm. This could be `cv2.KMEANS_RANDOM_CENTERS` which initializes the cluster centers randomly, or `cv2.KMEANS_PP_CENTERS` which 
+initializes the cluster centers using the K-means++ algorithm. | int
+|===
+
+Additionally, the criteria parameter is a tuple of the following values:
+
+[cols="1,1,1",options="header"]
+|===
+| Parameter | Description | Type
+| criteria type | The type of criteria we want to use. cv2.TERM_CRITERIA_EPS stops the algorithm based on accuracy, and cv2.TERM_CRITERIA_MAX_ITER stops the algorithm after a number of iterations. As these are bit fields, you can use both by adding them together. | int
+| max_iter | The maximum number of iterations the algorithm should run for. | int
+| epsilon | The accuracy we want to achieve (0-1). | float
+|===
+
+To start, let's firstly load an image and display it using OpenCV. You can use the following code to do this:
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+import numpy as np
+import cv2
+
+img = cv2.imread('segmentation_images/35008.jpg') # we can use the imread function to read an image from a file
+
+plt.imshow(img) # we can use matplotlib to display the image
+----
+
+After running this code, you may notice something strange about the image. This image is supposed to be a photo of some ladybugs on flowers, but it looks like the colors are all wrong. This is because OpenCV reads images in Blue Green Red (BGR) format, while matplotlib expects images in Red Green Blue (RGB) format. This means that we are feeding the red colors into the blue channel, and the blue colors into the red channel. To fix this, we can convert the image to RGB format using the following code:
+
+[source,python]
+----
+img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) # we can use the cvtColor function to convert the image to RGB format
+----
+
+After converting the image to RGB format, display it again using matplotlib. You should now see the image in the correct colors.
+
+.Deliverables
+====
+- Image displayed in BGR format
+- Image displayed in RGB format
+====
+
+=== Question 2 (2 points)
+
+Now that we have our image in the correct format and know how to display it, we can start using K-means to segment the image. The first step is to preprocess the image so that it is in the right format for K-means. The K-means algorithm expects a list of data points, where each data point is a vector of features (in this case, our features are the red, green, and blue color values of each pixel). However, our image is currently a 3D array (width x height x color channels). We need to reshape this array into a 2D array where each row is a pixel and each column is a color channel. We can do this using the `reshape` function.
+
+[source,python]
+----
+image_reformatted = img_rgb.reshape((-1, 3)) # we can use the reshape function to convert the image to a 2D array. The (-1, 3) means that we want to keep the number of color channels (3) and flatten the other dimensions into a single dimension.
+----
+
+There is still one more step we need to take before we can use K-means. The K-means algorithm expects the data to be in float format, but our image is currently in uint8 format. We can convert the data by using the `astype` function, as shown below:
+
+[source,python]
+----
+image_reformatted = image_reformatted.astype(np.float32) # we can use the astype function to convert the data to 32-bit float format
+----
+
+Now that our image is preprocessed, let's define the parameters for the K-means algorithm.
+
+[source,python]
+----
+K = 5 # the number of clusters we want to create
+
+criteria_type = cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER # the type of criteria we want to use
+criteria_max_iter = 10 # the maximum number of iterations the algorithm should run for
+criteria_epsilon = 1.0 # the accuracy we want to achieve
+criteria = (criteria_type, criteria_max_iter, criteria_epsilon) # we can create a tuple with the criteria parameters
+
+bestLabels = None # we can leave this as None, as we don't need to use it for now
+
+attempts = 10 # the number of times the algorithm should be run with different initializations
+
+flags = cv2.KMEANS_RANDOM_CENTERS # the flags for the algorithm. KMEANS_RANDOM_CENTERS initializes the cluster centers randomly, while KMEANS_PP_CENTERS initializes the cluster centers using the K-means++ algorithm
+----
+
+Now that we have all the parameters defined, we can run the K-means algorithm using the `cv2.kmeans` function. This function takes in our parameters in the same order as described above, with the image data as the first parameter. The function returns a compactness value (which we can ignore for now), the labels for each pixel, and the cluster centers.
+[source,python]
+----
+compactness, labels, centers = cv2.kmeans(image_reformatted, K, bestLabels, criteria, attempts, flags) # we can use the kmeans function to run the algorithm
+----
+
+Now that we have these values, we can use the centers and labels to create a segmented image. We can get our segmented image by indexing into the centers using the labels, and we can display the segmented image by reshaping it back to the original image shape and displaying it using matplotlib.
+
+[source,python]
+----
+segmented_image = centers[labels.flatten()] # we can use the labels to index into the centers to get the segmented image
+
+segmented_image = segmented_image.reshape(img_rgb.shape) # we can reshape the segmented image back to the original image shape
+
+plt.imshow(segmented_image.astype(np.uint8)) # we can display the segmented image using matplotlib
+----
+
+After running this code, you should see a segmented image where the colors have been grouped into K clusters. The number of clusters is defined by the `K` variable we set earlier.
+
+Play around with the parameters to see how they affect the segmentation results. Try changing the number of clusters (K) and the criteria parameters to see how they influence the final segmented image.
+
+.Deliverables
+====
+- Segmented image displayed using matplotlib
+- Experiment with different values of K and criteria parameters, and display the results
+- A brief description of how changing the parameters affects the segmentation results
+====
+
+=== Question 3 (2 points)
+
+The compactness value returned by K-means is a measure of how tight or compact the clusters are. A lower compactness value indicates that clusters are closely packed together, while higher compactness indicates that clusters are more spread out. You can use this value to evaluate the quality of the clustering results.
+
+A common method for choosing the optimal number of clusters (K) is the "elbow method". This involves running K-means over a range of K values and plotting the compactness values. Then, you can select the "elbow" point of the plot, which is the point where the compactness starts to decrease at a slower rate. This point indicates that adding more clusters does not significantly improve the clustering results.
+
+To start, please create a function that will take in an RGB image and a single K value, and will return the compactness, labels, and centers. You can use the code from the previous question and the below function as a starting point:
+
+[source,python]
+----
+def kmeans_segment_image(image, K):
+    # STEP 1: Preprocess the image, reshaping it and converting it to float32
+
+    # STEP 2: Define the K-means parameters (criteria, bestLabels, attempts, flags)
+
+    # STEP 3: Run the K-means algorithm using cv2.kmeans
+
+    # STEP 4: Return the compactness, labels, and centers
+
+    return compactness, labels, centers
+----
+
+To test this function, please run the below code, which will display the segmented image and print the compactness value for K=5:
+
+[source,python]
+----
+compactness, labels, centers = kmeans_segment_image(img_rgb, 5)
+segmented_image = centers[labels.flatten()]
+segmented_image = segmented_image.reshape(img_rgb.shape)
+plt.imshow(segmented_image.astype(np.uint8))
+print(f"Compactness for K=5: {compactness}")
+----
+
+Now that you have this function, we can use it to run K-means over a range of K values and plot the compactness values. You can use the following code as a starting point for this:
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+def plot_elbow_method(image, max_k):
+    compactness_values = []
+    # compute compactness for each K value
+    for K in range(1, max_k + 1):
+        # compute the compactness using the kmeans_segment_image function
+        # YOUR CODE HERE
+
+        # append the compactness value to the list
+        # YOUR CODE HERE
+
+    # plot the compactness values
+
+    plt.plot(range(1, max_k + 1), compactness_values, marker='o')
+    plt.xlabel('Number of clusters (K)')
+    plt.ylabel('Compactness')
+    plt.title('Elbow Method for K-means Clustering')
+    plt.show()
+
+    return compactness_values
+----
+
+Now that you have a function to plot the elbow method, please call it with the `img_rgb` image and a maximum K value of your choice (e.g., 10). This will generate a plot showing the compactness values for different K values.
+
+Once the plot is generated, visually inspect the plot to find the "elbow" point, which indicates the optimal number of clusters. What value of K do you think is optimal based on the plot?   
+
+.Deliverables
+====
+- Function to segment an image using K-means
+- Image displayed using matplotlib for K=5 using the function
+- Elbow method plot showing compactness values for different K values
+- Optimal K value based on the elbow point
+====
+
+=== Question 4 (2 points)
+
+In the previous question, we determined the optimal number of clusters (K) by visually inspecting the elbow point in the compactness plot. However, in a proper machine learning pipeline, we would want to automate this process and select the optimal K programmatically. There are many ways we can do this, but one method is to find the K value that is furthest from the line connecting the first and last points in the compactness plot. Let's make a function that will take in the compactness values and return the optimal K value based on this method.
+
+[source,python]
+----
+def choose_optimal_k(compactness_values):
+    # Create an X array for the K values
+    X = np.arange(1, len(compactness_values) + 1)
+
+    # Convert the compactness values to a numpy array
+    compactness_values = np.array(compactness_values)
+
+    # Find the line connecting the first and last points
+    line_start = # The first point, a numpy array with the first X value and the first compactness value
+    line_end = # The last point, a numpy array with the last X value and the last compactness value
+
+    line_vector = # end point - start point, which is a vector from the first point to the last point
+
+    # Get the unit vector of the line
+    line_length = np.linalg.norm(line_vector)
+    line_unit_vector = line_vector / line_length
+
+    # Calculate the distances from each point to the line
+    distances = []
+    for i in range(len(X)):
+        point = np.array([X[i], compactness_values[i]])
+        
+        vector_to_point = # point - line_start  # Vector from the start of the line to the current point
+
+        projection = np.dot(vector_to_point, line_unit_vector) * line_unit_vector
+
+        distance = np.linalg.norm(vector_to_point - projection)
+
+        distances.append(distance)
+
+    # Find the index of the maximum distance using np.argmax
+    optimal_index = # YOUR CODE HERE
+
+    # return the X value at that index, which is the optimal K value
+    optimal_k = # YOUR CODE HERE
+
+    return optimal_k
+----
+
+Now that we have this function, we can use it to find the optimal K value based on the compactness values we computed earlier. You can use the following code to do this:
+
+[source,python]
+----
+compactness_values = plot_elbow_method(img_rgb, 10) # This will plot the compactness values for K=1 to K=10
+
+optimal_k = choose_optimal_k(compactness_values) # This will find the optimal K value based on the compactness values
+print(f"Optimal K value: {optimal_k}")
+----
+
+Think about what other methods you could use to determine the optimal K value. The method we used here is just one of many possible approaches, and there are other methods that may yield different results.
+
+.Deliverables
+====
+- Completed function to choose the optimal K value based on compactness values
+- Optimal K value printed to the console
+- Any ideas for other methods to determine the optimal K value
+====
+
+=== Question 5 (2 points)
+
+In the previous questions, we used K-means to segment an image based on color. However, it may also be beneficial to consider the spatial location of pixels when clustering. This can help preserve the structure of the image and create more meaningful segments, instead of grouping pixels that are far apart in space but have similar colors.
+
+To add spatial information to the clustering, we can add a spatial coordinate for each pixel to the feature vector. This means that instead of just using the RGB color values, we will also include the x and y coordinates of each pixel in the image. The new feature vector will be a 5-dimensional vector, with the first three dimensions being the RGB color values and the last two dimensions being the x and y coordinates.
+
+To do this, let's modify the `kmeans_segment_image` function we created earlier, creating a new `kmeans_segment_image_spatial` function. We will add the x and y coordinates to the feature vector before running K-means, and allow for scaling how much influence the spatial information has on the clustering by introducing a `compactness_scaler` parameter. Please use the below code as a starting point:
+
+[source,python]
+----
+def kmeans_segment_image_spatial(image, K, compactness_scaler=1.0):
+
+    # STEP 1: Get the height and width of the image using the shape attribute
+    height, width, _ = image.shape
+
+    # STEP 2: Preprocess the image, reshaping it and converting it to float32
+    pixels = # YOUR CODE HERE
+
+    # STEP 3: Create a grid of x and y coordinates for each pixel using numpy's meshgrid function, and then convert it to a 2D array
+    # There are a lot of numpy functions being used here, so here's a brief summary of what they do:
+    # np.arange creates a 1D array of evenly spaced values for a given range, similar to the range() function in Python
+    # np.meshgrid creates a grid of coordinates from two 1D arrays. In this case, we pass the arange of width and height to create a grid of x and y coordinates for each pixel in the image.
+    # np.stack combines multiple arrays on a new axis. In this case, we stack up the x and y coordinates to create a 2D array where each row is a pixel's coordinates
+    # ravel flattens the 2D array from meshgrid into a 1D array, which is then reshaped into a 2D array with two columns (x and y coordinates)
+    # Overall, this allows us to create a 2D array of coordinates for each pixel in the image, in a good structure that we can use to concatenate with the RGB values later on.
+    x_coords, y_coords = np.meshgrid(np.arange(width), np.arange(height))
+    coords = np.stack([x_coords.ravel(), y_coords.ravel()], axis=1).astype(np.float32)
+
+    # STEP 4: Normalize the spatial information to 0-1 so that width and height are not different scales
+    # Divide all of the coordinates by the maximum between width and height. This will ensure that the coordinates are in the range [0, 1].
+
+
+    # STEP 5: Scale the information to the same scale as the RGB values (0-255) by multiplying by 255. Then, further scale the compactness by a factor of compactness_scaler, which determines how much influence the spatial information has on the clustering.
+
+
+    # STEP 6: Concatenate the RGB values and the coordinates along the last axis to create a 5D feature vector
+    image_reformatted = np.concatenate((pixels, coords), axis=-1)
+
+    # STEP 7: Define the K-means parameters (criteria, bestLabels, attempts, flags)
+
+    # STEP 8: Run the K-means algorithm using cv2.kmeans
+
+    # STEP 9: Return the compactness, labels, and centers
+
+    return compactness, labels, centers
+----
+
+Once you have filled in the missing steps, you can test the modified function using the code below. This code will segment the image using our original K-means function, and our new function that includes spatial information. It will then display both segmented images side by side for comparison.
+
+[source,python]
+----
+compactness, labels, centers = kmeans_segment_image(img_rgb, 5)
+segmented_image1 = centers[labels.flatten()]
+segmented_image1 = segmented_image.reshape(img_rgb.shape)
+segmented_image1 = segmented_image1.astype(np.uint8)
+
+compactness_spatial, labels_spatial, centers_spatial = kmeans_segment_image_spatial(img_rgb, 5)
+segmented_image2 = centers_spatial[labels_spatial.flatten(), :3]  # Only take the RGB values from the centers
+segmented_image2 = segmented_image2.reshape(img_rgb.shape)
+segmented_image2 = segmented_image2.astype(np.uint8)
+plt.figure(figsize=(10, 5))
+plt.subplot(1, 2, 1)
+plt.imshow(segmented_image1)
+plt.title('K-means Segmentation (Color Only)')
+plt.subplot(1, 2, 2)
+plt.imshow(segmented_image2)
+plt.title('K-means Segmentation (Color + Spatial)')
+plt.show()
+----
+
+After running this code, you should see a segmented image that takes into account both the color and spatial location of the pixels. Experiment with different values of K and the `compactness_scaler` parameter to see how they affect the segmentation results, and display them. What happens if you increase the `compactness_scaler` to a large value? Why do you think this happens?
+
+.Deliverables
+====
+- Implemented `kmeans_segment_image_spatial` function that includes spatial coordinates in the feature vector
+- Segmented image displayed using matplotlib that includes spatial information
+- Experiment with different values of K and `compactness_scaler`, and display the results
+- What happens if you increase the `compactness_scaler` to a large value? Why do you think this happens?
+====
+
+=== Question 6 (2 points)
+
+There are many preprocessing techniques that can be applied to images before running clustering algorithms, such as blurring and morphological operations. These techniques can help reduce noise and improve the quality of the segmentation results.
+
+One of the most common preprocessing techniques is Gaussian blurring, which effectively smooths the image by averaging the pixel values near each pixel. This helps reduce noise and eliminates small details that may not be necessary and cause issues with clustering. 
+
+To apply Gaussian blurring to an image, we can use the `cv2.GaussianBlur` function. This function takes in the image, the size of the kernel (which determines how much blurring is applied), and the standard deviation of the Gaussian distribution (which controls the amount of blurring, where a larger value results in more blurring). An example of applying Gaussian blurring is shown below:
+
+[source,python]
+----
+gaussian_blurred_image = cv2.GaussianBlur(img_rgb, (13, 13), 3) # we can use the GaussianBlur function to apply Gaussian blurring to the image. The kernel size is (13, 13) and the standard deviation is 3.
+plt.imshow(blurred_image) # we can display the blurred image using matplotlib
+----
+
+[NOTE]
+====
+The kernel size should always be an odd number, at least 3x3. This is because the kernel needs to have a center pixel (the pixel being processed), and there can't be a precise center pixel if the kernel size is even.
+====
+
+Another form of blurring is median blurring. This is quite similar to Gaussian blurring, but instead of averaging the pixels, it replaces each pixel with the median value of pixels in the kernel. This helps maintain edges while still reducing noise. To apply median blurring, we can use the `cv2.medianBlur` function, which takes in the image and the size of the kernel. No standard deviation is needed for median blurring. An example of applying median blurring is shown below:
+
+[source,python]
+----
+median_blurred_image = cv2.medianBlur(img_rgb, 13) # we can use the medianBlur function to apply median blurring to the image. The kernel size is 13.
+plt.imshow(median_blurred_image) # we can display the median blurred image using matplotlib
+----
+
+Finally, morphological operations are another set of preprocessing (and postprocessing) techniques that can be applied to images. The goal of these operations is to process shapes in the image, such as removing small noise, filling in holes, smoothing edges, etc. On the contrary, they can be used in reverse, to highlight small holes or noise in the image. The most common morphological operations are erosion, dilation, opening, and closing. These operations are described below:
+
+[cols="1,1,1",options="header"]
+|===
+| Operation | Description | Function
+| Erosion | Removes pixels on object boundaries, effectively shrinking the objects in the image. This can help remove small noise and details. | `cv2.erode`
+| Dilation | Adds pixels to object boundaries, effectively expanding the objects in the image. This can help fill in small holes and gaps in the objects. | `cv2.dilate`
+| Opening | Erosion followed by dilation. This can help remove small noise while preserving the shape of larger objects. | `cv2.morphologyEx` with `cv2.MORPH_OPEN`
+| Closing | Dilation followed by erosion. This can help fill in small holes while preserving the shape of larger objects. | `cv2.morphologyEx` with `cv2.MORPH_CLOSE`
+|===
+
+[NOTE]
+====
+For morphological operations, the kernel size and shape can significantly affect the results. OpenCV provides a function `cv2.getStructuringElement` to create a kernel of a specific shape and size. This function can have many different morphological shapes, such as cv2.MORPH_RECT (rectangular), cv2.MORPH_ELLIPSE (elliptical), and cv2.MORPH_CROSS (cross-shaped). The kernel size can be specified as a tuple, such as (3, 3) for a 3x3 kernel.
+====
+
+An example of these can be seen below, where we apply erosion and dilation to an image:
+[source,python]
+----
+# Erosion
+kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5)) # we can create a rectangular kernel of size 5x5
+
+eroded_image = cv2.erode(img_rgb, kernel) # we can use the erode function to apply erosion to the image
+
+plt.imshow(eroded_image) # we can display the eroded image using matplotlib
+
+# Dilation
+dilated_image = cv2.dilate(img_rgb, kernel) # we can use the dilate function to apply dilation to the image
+plt.imshow(dilated_image) # we can display the dilated image using matplotlib
+
+# Opening
+opened_image = cv2.morphologyEx(img_rgb, cv2.MORPH_OPEN, kernel) # we can use the morphologyEx function to apply opening to the image
+plt.imshow(opened_image) # we can display the opened image using matplotlib
+
+# Closing
+closed_image = cv2.morphologyEx(img_rgb, cv2.MORPH_CLOSE, kernel) # we can use the morphologyEx function to apply closing to the image
+plt.imshow(closed_image) # we can display the closed image using matplotlib
+----
+
+Now that you have some familiarity with these preprocessing techniques, try applying them to the image we have been working with before clustering. How do the different techniques affect the segmentation results? 
+
+.Deliverables
+====
+- Apply Gaussian blurring to the image and display the result
+- Apply median blurring to the image and display the result
+- Apply erosion, dilation, opening, and closing to the image and display the results
+- Experiment with different kernel sizes and shapes for the morphological operations, and display the results
+- A brief description of how each preprocessing technique affects the segmentation results
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project##.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
