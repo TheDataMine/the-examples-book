@@ -1,0 +1,262 @@
+= TDM 32100: Project ## - SQL Introduction 3
+
+== Project Objectives
+
+Learn how to use SQL to join multiple tables (at least 3), and different types of joins, including composite keys and aggregations. Additionally, you will learn about grouping and filtering results using `GROUP BY` and `HAVING` clauses in SQLite.
+
+.Learning Objectives
+****
+- Understand how to join 3+ tables in a single query.
+- Learn the difference between different types of joins (e.g., INNER JOIN, LEFT OUTER JOIN).
+- Use composite join conditions to join on multiple keys.
+- Group and filter joined results using `GROUP BY` and `HAVING` clauses in SQLite
+- Explore the Lahman baseball dataset and its relationships between tables.
+****
+
+== Dataset
+- '/anvil/projects/tdm/data/lahman/lahman.db'
+
+== Questions
+
+=== Question 1 (2 points)
+
+By now, you should be somewhat familiar with the Lahman baseball dataset. If you haven't already, take a look at the `People` table to understand the structure and the columns it contains. This table contains information about players, such as their names, birth dates, and player IDs. Additionally, you can look at the `Salaries` table, which contains information about player salaries, and the `Teams` table, which contains information about teams and their IDs.
+
+When you look at the `Salaries` table, you will notice that it contains a column called `playerID`, which can be used to match up a player's information from the `People` table with their salary information in the `Salaries` table. This is useful, as it can let us further analyze data such as comparing player heights to their salaries, or finding the average salary of players by their birth year.
+
+Furthermore, the Teams table contains a column called `teamID`, which can be used to match up a player's team information with their salary information in the `Salaries` table. This is useful, as it can let us analyze team budgets and player salaries.
+
+Suppose you want to find the average salary of players by their team and year. To do this, you will need to join the `Salaries`, `People`, and `Teams` tables together.
+
+You should be familiar with joining two tables together, but joining three tables is a bit more complex. You will need to use the `JOIN` clause to join the `Salaries` table with the `People` table on the `playerID` column, and then join the resulting table with the `Teams` table on the `teamID` and `yearID` columns. A typical pattern for composite joins is as follows (feel free to run this query in your SQLite environment to see how it works):
+
+[source,sql]
+----
+SELECT
+    p.nameFirst || ' ' || p.nameLast AS fullName,
+    t.name AS teamName,
+    s.yearID,
+    s.salary
+FROM Salaries s
+JOIN People p ON p.playerID = s.playerID
+JOIN Teams t ON t.teamID = s.teamID AND t.yearID = s.yearID
+ORDER BY s.salary DESC
+LIMIT 10;
+----
+
+As you can see, we first join the `Salaries` table with the `People` table on the `playerID` column, and then we join the resulting table with the `Teams` table on both the `teamID` and `yearID` columns. This allows us to get the player's full name, team name, year, and salary in a single query.
+
+[NOTE]
+====
+You may notice the second line of that query uses the `||` operator to concatenate the first and last names of the player. This is a common way to create a full name in SQL. It is simply using string concatenation to combine the first and last names with a space in between.
+====
+
+Now that you have a basic understanding of how to join three tables together, you can try to write your own query to find the average salary of players by their team and year.
+
+[NOTE]
+====
+Last project, you used the `SUM()` function when using `GROUP BY`. This time, you will use the `AVG()` function to find the average salary of players by their team and year. It works the exact same way, but as you may guess, will average the grouped values instead of summing them.
+====
+
+.Deliverables
+====
+1.1. A single SQL query returning `fullName`, `teamName`, `yearID`, and `salary`.
+1.2. Order by `salary` descending and show at least 10 rows.
+1.3. A single SQL query returning the average salary of players by their team and year.
+1.4. What was the average salary of players on the New York Yankees in 2005?
+====
+
+=== Question 2 (2 points)
+
+Great! Now that you have successfully joined three tables together, let's look into the different types of joins available in SQL. In this question, you will compare `INNER JOIN` and `LEFT JOIN` on a three-table query.
+
+In SQL, an `INNER JOIN` returns only the rows that have matching values in both tables. For example, if you join the `Salaries` table with the `People` table using an `INNER JOIN`, you will only get the rows where there is a matching `playerID` in both tables.
+
+A `LEFT JOIN`, on the other hand, returns all the rows from the left table (the first table in the join) and the matching rows from the right table (the second table in the join). If there is no match, NULL values are returned for the columns of the right table. This means that if you join the `Salaries` table with the `People` table using a `LEFT JOIN`, you will get all the rows from the `Salaries` table, even if there is no matching `playerID` in the `People` table. 
+
+In this situation, when using `LEFT JOIN` the order of the tables is very important. For `INNER JOIN`, however, the order does not matter as long as the join conditions are correct.
+
+Let's look at an example of how to use `INNER JOIN` and `LEFT JOIN` in a three-table query. Starting with the `INNER JOIN`, you can use the following query:
+
+[source,sql]
+----
+SELECT
+    p.nameFirst || ' ' || p.nameLast AS fullName,
+    t.name AS teamName,
+    s.yearID,
+    s.salary
+FROM Salaries s
+INNER JOIN People p ON p.playerID = s.playerID
+INNER JOIN Teams t ON t.teamID = s.teamID AND t.yearID = s.yearID
+ORDER BY s.salary DESC
+LIMIT 10;
+----
+
+Now, let's look at the same query using `LEFT JOIN`:
+
+[source,sql]
+----
+SELECT
+    p.nameFirst || ' ' || p.nameLast AS fullName,
+    t.name AS teamName,
+    s.yearID,
+    s.salary
+FROM Salaries s
+LEFT JOIN People p ON p.playerID = s.playerID
+LEFT JOIN Teams t ON t.teamID = s.teamID AND t.yearID = s.yearID
+ORDER BY s.salary DESC
+LIMIT 10;
+----
+
+As you can see, both queries look the exact same as our original `JOIN` query from Question 1, but the difference is in the type of join used. Because the Lahman  database is extremely well-structured and maintained, you will not see a difference in the output of these queries. However, for more disorganized/less populated datasets, you may see a difference in the number of rows returned or the presence of NULL values in the output.
+
+[NOTE]
+====
+There also exists a `RIGHT JOIN`, which is the opposite of a `LEFT JOIN`, but SQLite does not support it natively. If you need to use a right join, you can typically just use a left join with the order of the tables flipped. Additionally, there is an `OUTER JOIN`, which is a combination of `LEFT JOIN` and `RIGHT JOIN`. It returns all rows from both tables, with NULLs in places where there is no match. However, SQLite does not support `FULL OUTER JOIN` natively either.
+====
+
+For this question, you will need to write two queries: one using `INNER JOIN` and one using `LEFT JOIN`. You can use the same query structure as above, but make sure to use the correct join type. Then, compare the results of the two queries and answer the following questions:
+
+- What is the difference in the number of rows returned by the `INNER JOIN` and `LEFT JOIN` queries?
+- Are there any NULL values in the `LEFT JOIN` results? If so, what do they represent?
+
+
+.Deliverables
+====
+2.1. A single SQL query using `INNER JOIN` returning `fullName`, `teamName`, `yearID`, and `salary`.
+2.2. A single SQL query using `LEFT JOIN` returning `fullName`, `teamName`, `yearID`, and `salary`.
+2.3. A brief explanation of the differences in the results of the two queries, including the number of rows returned and the presence of NULL values.
+====
+
+=== Question 3 (2 points)
+
+Now that you understand how to join three tables together and compare different types of joins, let's explore how to filter and group the results using `GROUP BY` and `HAVING` clauses.
+
+You've used the `GROUP BY` clause in previous projects to group results by a specific column, such as `yearID` or `teamID`. However, we can also use `HAVING` in conjunction with `GROUP BY` to filter the grouped results based on aggregate functions. For example, suppose you want to find the average salary of players by their team and year, but only for teams with an average salary greater than a certain amount. You can use the `HAVING` clause to filter the results after grouping.
+
+An example of using `GROUP BY` and `HAVING` together is as follows:
+[source,sql]
+----
+SELECT
+
+    t.name AS teamName,
+    s.yearID,
+    AVG(s.salary) AS avgSalary
+FROM Salaries s
+JOIN Teams t ON t.teamID = s.teamID AND t.yearID = s.yearID
+GROUP BY t.name, s.yearID
+HAVING AVG(s.salary) > 5000000
+ORDER BY avgSalary DESC
+LIMIT 10;
+----
+
+In this query, we first join the `Salaries` table with the `Teams` table to get the team names and years. Then, we group the results by `teamName` and `yearID`, calculating the average salary for each group. Finally, we use the `HAVING` clause to filter out teams with an average salary less than or equal to 5 million.
+
+[NOTE]
+====
+The `HAVING` clause is very similar to the `WHERE` clause that you've used in previous projects, but the key difference is that it is used to filter results after aggregation, while `WHERE` is used to filter results before aggregation.
+====
+
+For this question, write a query to join the `Salaries`, `People`, and `Teams` tables, group the results by team and year, and filter the results using the `HAVING` clause to only include teams with an average salary greater than 7.5 million. You can use the query structure provided above as a starting point.
+
+
+.Deliverables
+====
+3.1. A single SQL query returning `teamName`, `yearID`, and `avgSalary`.
+3.2. Use `HAVING` to filter teams with an average salary greater than 7.5 million.
+3.3. How many teams meet this criteria?
+====
+
+=== Question 4 (2 points)
+
+We can also use the `HAVING` clause to filter results based on conditions that involve multiple columns. For example, suppose you want to find teams where the average salary is greater than 5 million and the number of players on the team is greater than 20. You can use the `HAVING` clause to filter the results based on both conditions.
+
+An example of using `HAVING` with multiple conditions is as follows:
+[source,sql]
+----
+SELECT
+
+    t.name AS teamName,
+    s.yearID,
+    AVG(s.salary) AS avgSalary,
+    COUNT(s.playerID) AS numPlayers
+FROM Salaries s
+JOIN Teams t ON t.teamID = s.teamID AND t.yearID = s.yearID
+GROUP BY t.name, s.yearID
+HAVING AVG(s.salary) > 5000000 AND COUNT(s.playerID) > 20
+ORDER BY avgSalary DESC
+LIMIT 10;
+----
+
+This will return the team names, years, average salaries, and number of players for teams that have an average salary greater than 5 million and more than 20 players.
+
+For this question, please perform your join on the `People`, `Salaries`, and `Teams` tables, and then use the `WHERE` and `HAVING` clauses to filter the results based on the following conditions:
+- The average salary is greater than 6.8 million.
+- The number of players on the team is greater than 20.
+- The year is between 2010 and 2015.
+
+[NOTE]
+====
+Previously, you may have used multiple `WHERE` clauses to find matches between specific numbers. For example, you may think to type `WHERE s.yearID >= 2010 AND s.yearID <= 2015`. However, you can also use the `BETWEEN` operator to simplify this. For example, `WHERE s.yearID BETWEEN 2010 AND 2015` will return the same results. This helps to make your queries more readable and concise.
+====
+
+
+.Deliverables
+====
+4.1. A single SQL query returning `teamName`, `yearID`, `avgSalary`, and `numPlayers`.
+4.2. Use `HAVING` to filter teams with an average salary greater than 6.8 million and more than 20 players.
+4.3. Use `WHERE` to filter results for the years 2010 to 2015.
+4.4. How many teams meet this criteria?
+====
+
+=== Question 5 (2 points)
+
+You should have a good understanding of how to join multiple tables, filter results using `WHERE` and `HAVING`, and group results using `GROUP BY`. Now, let's put all of this knowledge together to answer a more complex question.
+
+Suppose you want to find the top 5 cheapest team-seasons where the total payroll exceeded $150 million and at least one batter on that team hit 30 or more home runs (HR) in the same year. To do this, you will need to:
+
+1. Create a payroll aggregation by `(teamID, yearID)` to compute the total payroll for each team in each year.
+2. Figure out the total number of home runs (HR) hit by each player in each year using the `SUM(HR)` function, and then aggregate this by `(teamID, yearID)` to compute the maximum HR for that team in that year using the `MAX(HR)` function.
+3. Join the two aggregates on `(teamID, yearID)`.
+4. Filter with `HAVING` (or a `WHERE` on the joined aggregates) to keep only qualifying team-seasons.
+5. Order the results by total payroll in ascending order and limit the results to the top 5.
+
+[NOTE]
+====
+This may sound complex, but creating these aggregations is very similar to what you've done in previous problems. For example, aggregating the payroll would look something like this:
+[source,sql]
+----
+WITH payroll AS (
+    SELECT
+        teamID,
+        yearID,
+        SUM(salary) AS totalPayroll
+    FROM Salaries
+    GROUP BY teamID, yearID
+)
+----
+
+This creates a Common Table Expression (CTE) called `payroll` that contains the total payroll for each team in each year. You can then use this CTE in your main query to join with the HR aggregation and filter the results, for example `SELECT * FROM payroll WHERE totalPayroll > 150000000`.
+====
+
+.Deliverables
+====
+5.1. A SQL query that meets the above criteria.
+5.2. What are the top 5 cheapest team-seasons that meet the criteria?
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project1.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
