@@ -1,117 +1,64 @@
 = Using GPU's on Anvil
 
-For some projects, GPU usage may become desirable. This guide explores how to use GPU's on Anvil. In general we recommend one of two ways:
+A great many computational tasks on anvil can be accomplished using CPU cores only.  This is the bulk of what most students do on Anvil.  However, certain tasks, particularly those involving machine learning and deep learning, can be greatly accelerated by using GPU's (Graphical Processing Units).  Generally, machine learning and deep learning programs are written in Python to initially use CPU cores, and then modified to use GPU's when the code is mature.  This is often as simple as changing a single line of code, but the details depend on the specific machine learning library being used.
 
-1. Starting a GPU session on Jupyter Lab (good to help set everything up, debug code, etc)
-2. Running batch jobs using the SLURM job scheduler (good when the code is ready and you want to start the training and let Anvil do the rest)
+Jupyter Notebooks are often used on Anvil to initially develop and test machine learning code.  However, on Anvil, GPU access is charged to our allocation for each minute a GPU is dedicated to a task.  That means if we were to assign a GPU to a Jupyter Notebook session, we would be charged for the entire time that session is open, even if we were just editing code cells and are not actively using the GPU.  This consumes our GPU allocation at a rapid rate.  Therefore, we recommend using Jupyter Notebooks with CPUs to develop and test code, transferring all of the Python code in the Jupyter Notebook to a Python file, and then running the Python code in batch mode using SLURM and sbatch when we are ready to do the full training run.  This ensures that we are only charged for GPU usage when the code is actually running and not while we are editing code and debugging.
 
-Keep in mind that there is a limited amount of GPU resources available to each group and the Data Mine monitors GPU usage. 
+GPU resources are scarce, and we must be good stewards of our allocation.  Please do not use GPU's for tasks that can be easily accomplished using CPU cores only.
 
-NOTE: As always, reach out to the Data Mine directly if you have any questions about using GPU's by sending an email to datamine-help@purdue.edu.
+== Scheduling a GPU SLURM job using sbatch
 
-== GPU Session using Jupyter Lab
+WARNING: Before we can proceed with using SLURM and sbatch on Anvil for use with GPU's, you must first read the sbatch guide and corresponding video.  It is an essential prerequisite to understanding the rest of this guide.
 
-Often it is easiest to develop and do basic testing within Jupyter Lab, then convert the notebook file into a .py script when we are ready to do the full computational run. Here we explore how to do just that.
+Now that you have read the SLURM / sbatch guide and watched the corresponding video, we can proceed with using SLURM to run a job that uses GPU's.
 
-To begin, login to Anvil: https://ondemand.anvil.rcac.purdue.edu/pun/sys/dashboard
-
-Select The Data Mine, and select Jupyter Notebook like you usually would to launch Jupyter Lab.
-
-Under "Allocation", select the `cis220051-gpu` option. Under "Queue", select `gpu`. 
-
-That's it! Launch the session, and you will be attached to the gpu partition for anything you run in that Jupyter Lab.
-
-=== Converting My Notebook File (.ipynb) into a Python script (.py)
-
-Unfortunately, this command won't work directly on Anvil. For now, you will have to download the .ipynb file, install Jupyter locally, and then run this command at your terminal locally. Then, once the file is converted, reupload the .py script to Anvil.
-
-WARNING: Be sure to replace the path to your notebook file.
-
-NOTE: We are working on a better solution for this!
+An example sbatch script that uses GPU's may look like this:
 
 [source,bash]
 ----
-jupyter nbconvert --to python /path/to/notebook.ipynb
+#!/bin/bash -l
+#SBATCH -N 1         # Number of nodes. ALWAYS set to 1
+#SBATCH -n 1         # Number of tasks. ALWAYS set to 1
+#SBATCH -c 32        # Number of CPU cores. Each GPU gets 32 CPU cores
+                     # so we should always ask for 32!
+#SBATCH -t 1:0:0     # Run for 1 hour.  Change as needed
+#SBATCH -A cis220051-gpu # the TDM account to charge for this
+#SBATCH -p gpu       # Must use the "gpu" or "gpu-debug" partition
+                     # The wait for "gpu-debug" is shorter, but there is a
+                     # maximum runtime of just 15 minutes!
+#SBATCH --gpus-per-node=1  # Must use just one GPU.  Do not change!
+
+
+# These three lines use the TDM python
+module use /anvil/projects/tdm/opt/core
+module load tdm
+module load python/seminar r/seminar
+
+# This is where you specify the program you want to run!
+python3 havegpu.py
 ----
 
-== Scheduling GPU batch job with SLURM
-
-Anvil uses SLURM, so when submitting GPU jobs we will be using SLURM. https://en.wikipedia.org/wiki/Slurm_Workload_Manager[SLURM] stands for Simple Linux Utility for Resource Management. It is commonly used in supercomputer and cluster computing environments to efficiently allocate computing resources. 
-
-To begin, login to Anvil: https://ondemand.anvil.rcac.purdue.edu/pun/sys/dashboard
-
-Go to the Job Composer like the image below:
-
-image::Anviljobcomposer.png[]
-
-Click New Job, and select Default Template:
-
-TIP: After you've made your first job, you can make a new template to copy from by using the Create Template in the middle right of the dialog if you find yourself creaing new jobs often.
-
-image::selectTemplate.png[]
-
-Our SLURM job runs by executing a shell script to start. We need to make sure this shell script is set up correctly to run our code. For this guide, we will set up our shell script to run a simple Python script and verify the output so we know the job was run.
-
-We will come back to the job composer momentarily, so leave it open and open another tab back at the Anvil dashboard and open a terminal at Anvil by clicking here:
-
-image::openshell.png[]
-
-Let's make a new Python file and write to it. Open the file using nano:
-[source,bash]
-----
-nano my_python_job.py
-----
-
-Now paste the code below into the nano prompt. When finished, press Ctrl+O to write to the file, and Ctrl+x to exit the nano prompt.
-
-WARNING: Be sure to replace `myusername` with your Access username in the first line.
-
-[source,python]
-----
-f = open("/home/x-myusername/output.txt", "a")
-f.write("Job was run successfully!")
-f.close()
-----
-
-Our Python script makes a new file called `output.txt` and writes the text `Job was run successfully!` to it. We haven't run the script yet, so this `output.txt` file doesn't exist. When we run our job, it will create the file so we know that it works.
-
-Now head back to the Job Composer. We could've made our shell script using nano like we did with the Python script, but Anvil has anot directly.
-
-Input the script below instead of the default template. 
-
-WARNING: Be sure to replace `myusername` with your Access username in `/home/x-myusername/my_python_job.py` at the bottom.
-
-WARNING: Be sure to hit save in the top left corner when done.
+If the above script were saved to a file named `rungpu1.sh`, you would submit it to SLURM using the command:
 
 [source,bash]
 ----
-#!/bin/sh -l
-# FILENAME:  main_job
-
-#SBATCH --partition=gpu
-#SBATCH -A cis220051-gpu
-#SBATCH --gres=gpu:1
-#SBATCH --ntasks=1 
-#SBATCH --time=00:02:00
-
-python3 /home/x-myusername/my_python_job.py
+sbatch rungpu1.sh
 ----
 
-NOTE: You will notice above that we had to tell SLURM to use the `gpu` partition, and also select our Data Mine GPU allocation (the `SBATCH -A cis220051-gpu` line). This is how you let SLURM know to use GPU's, but you could use any partition that was available to you by editing those lines.
+=== Show me!
 
-Back on the Job Composer, we are ready to run our script. Hit the Submit button to start the job. You will notice the status changes to "Queued" as SLURM queues it up. Once its finished, it will say "Completed". Once done, lets go back to the terminal and verify that our job was successful. We can use `cat` to print out the contents of our `output.txt` file:
+The following video demonstrates how to use sbatch with GPU's:
 
-WARNING: Once again, replace `myusername` with your Access username.
+++++
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_wdyymqn8&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_x2l6bd2q%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 608px;height: 402px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Using sbatch on Anvil with GPUs"></iframe>
+++++
 
-[source,bash]
-----
-cat /home/x-myusername/output.txt
-----
+== A few more things to know
 
-If your job ran successfully, you should've gotten the `Job was run successfully!` output.
+It's best to place the sbatch script in the same directory as the code you want to run.
 
-=== It Works! So Now What?
+You can check the status of your job using the `squeue --me` command.
 
-Now you know how to run your Python script from a job. All you have to do now is make your Python script, and replace the `python3 /home/x-myusername/my_python_job.py` line with the path to your Python script (that say, trains your model and saves the weights/model). You may also want to increase the time usage, or the number of tasks.
+You can cancel a job using the `scancel JOBID` command, where JOBID is the job number assigned to your job when you submitted it.  You can find this JOBID by using the `squeue --me` command.
 
-TIP: If you are interested in configuring your job script further, check out https://www.rcac.purdue.edu/knowledge/anvil/run/batch[the Anvil guide on running batch jobs].
+Our GPU allocation isn't infinite, so please be considerate of others when using these resources. You can have more than one job running at a time, but don't go crazy and submit dozens of jobs at once.  If you feel you need to submit many jobs at once, please contact someone on the Data Mine staff first to discuss.
