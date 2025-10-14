@@ -1,0 +1,673 @@
+= TDM 32100: Project ## - SQL Introduction 5
+
+== Project Objectives
+
+In this project, we will be learning about triggers, views, and transactions in SQL. We will continue working with your local copy of the Lahman database, and see how these concepts apply to an alternate dataset.
+
+.Learning Objectives
+****
+- Learn what a trigger is and how to create one
+- Learn where triggers can be useful
+- Learn how to create a view in SQL
+- Learn how to use a view in SQL
+- Learn what a transaction is and how to use it in SQL
+- Learn how to use transactions to ensure data integrity
+- Learn how to use transactions to rollback changes in case of an error
+****
+
+== Dataset
+- '/anvil/projects/tdm/data/lahman/lahman.db'
+- Alternative: '/anvil/projects/tdm/data/chinook/chinook.sqlite' (Chinook Music Database)
+
+[NOTE]
+====
+This project primarily uses the Lahman baseball database, but students may also practice with the Chinook music database for additional examples. The Chinook database contains information about music artists, albums, tracks, customers, and sales - providing a different domain to practice the same advanced SQL concepts like triggers, views, and transactions.
+====
+
+== Questions
+
+=== Question 1 (2 points)
+
+
+To start, let's connect to your local copy of the Lahman database and write a query that returns the first 5 rows of the "Teams" table. You can connect to your local version by using this command, assuming the database file is in the same directory as your Jupyter notebook:
+
+[source,python]
+----
+%sql sqlite:///./lahman.db
+----
+
+Last project, you learned how to modify a database and its tables with commands like `INSERT`, `ALTER`, and `DELETE`. In this project, we will continue to use these commands, but learn how to use them in a more advanced way. 
+
+A trigger is a type of stored procedure that is automatically executed whenever certain event(s) occur in the database. For example, you can create a trigger that automatically updates a column in a table whenever a row is inserted or updated. Or, you could delete a row from a table whenever a row is deleted from another table. Triggers can be very useful for maintaining the integrity of your data. 
+
+To start, let's learn how to create a trigger. The trigger command structure is a lot longer than the other commands we have learned so far, but it is still relatively simple. The basic structure of a trigger is as follows:
+
+[source,sql]
+----
+CREATE TRIGGER 
+IF NOT EXISTS trigger_name 
+(BEFORE|AFTER|INSTEAD OF) 
+(INSERT|UPDATE OF column_name|DELETE) 
+ON table_name
+[FOR EACH ROW]
+[WHEN condition]
+BEGIN
+-- SQL statement(s) to execute
+END;
+----
+
+Although that may seem quite complex at first glance, it is relatively simple. Sections surrounded by parenthesis are required and one of those options must be selected. Surrounded by square brackets are optional and change how the trigger works. Below is a line by line explanation of this code:
+
+The `CREATE TRIGGER` command is used to create a new trigger.
+
+The `IF NOT EXISTS` clause is optional and is used to prevent an error if the trigger already exists. 
+
+The `BEFORE`, `AFTER`, or `INSTEAD OF` keywords specify when the trigger should be executed relative to the event that triggers it. 
+
+The `INSERT`, `UPDATE`, or `DELETE` keywords specify which event should trigger the execution of the trigger. 
+
+The `ON` keyword specifies the table that the trigger is associated with.
+
+The `FOR EACH ROW` clause is optional and specifies that the trigger should be executed for each row affected by the event. For example, if you have a trigger that occurs after an `INSERT` operation and you insert 10 rows in a single `INSERT` statement, the sql statements in the trigger will be executed 10 times, once for each row inserted. If you do not include this clause, the trigger will only be executed once for the entire operation. 
+
+The `WHEN` clause is also optional and specifies a condition that must be met for the trigger to be executed. For example, you could specify that the trigger should only be executed if a certain column has a specific value, or if a certain condition is met similar to a `WHERE` clause in a `SELECT` statement. If the condition is not met, the trigger will not be executed. 
+
+Finally, the `BEGIN` and `END` keywords are used to define the body of the trigger, which contains the SQL statements to be executed when the trigger is fired. 
+
+You can read more about triggers in SQLite https://www.sqlite.org/lang_createtrigger.html[here].
+
+To test this out, let's create a trigger that automatically updates the "yearID" column in the "Teams" table to the current year whenever a new row is inserted. The trigger will look like this:
+
+[source,sql]
+----
+CREATE TRIGGER IF NOT EXISTS update_yearID
+AFTER INSERT ON Teams
+FOR EACH ROW
+BEGIN
+    UPDATE Teams
+    SET yearID = strftime('%Y', 'now')
+    WHERE teamID = NEW.teamID;
+END;
+----
+
+[NOTE]
+====
+For the **Chinook** dataset, you can create a similar trigger to automatically update the `created_date` when a new playlist is added, which first requires creating the `MyPlaylists` table.
+
+[source,sql]
+----
+CREATE TABLE MyPlaylists (
+    playlistID TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_date TEXT
+);
+----
+
+[source,sql]
+----
+CREATE TRIGGER IF NOT EXISTS update_playlist_date
+AFTER INSERT ON MyPlaylists
+FOR EACH ROW
+BEGIN
+    UPDATE MyPlaylists
+    SET created_date = strftime('%Y-%m-%d', 'now')
+    WHERE playlistID = NEW.playlistID;
+END;
+----
+====
+
+[NOTE]
+====
+There are a few new things in this trigger that we haven't seen before. Firstly, the `strftime` function is used to format the current date and time. In this case, it is used to get the current year. The `strftime('%Y', 'now')` function returns the current year as a string. If you wanted the year and month, you could use `strftime('%Y-%m', 'now')`, and if you wanted the full date, you could use `strftime('%Y-%m-%d', 'now')`. 
+
+Secondly, the `NEW` keyword refers to the new row that is inserted into the table. In this case, it is used to get the `teamID` of the new row that is inserted. This allows us to update the `yearID` column for the specific row that was just inserted. 
+
+Finally, the `UPDATE` statement is used to update the `yearID` column in the "Teams" table for the row that was just inserted. The `WHERE` clause is used to specify which row to update, in this case, the row with the same `teamID` as the new row that was just inserted.
+====
+
+To test if this works, let's insert a new row into the "Teams" table and see if the `yearID` column is automatically updated to the current year. You can do this by using the following command:
+
+[source,sql]
+----
+INSERT INTO Teams (teamID, name, yearID)
+VALUES ('team1', 'Test Team', 0);
+----
+
+[NOTE]
+====
+For the **Chinook** dataset, you would test the `update_playlist_date` trigger by inserting a new playlist:
+
+[source,sql]
+----
+INSERT INTO MyPlaylists (playlistID, name, description, created_date)
+VALUES ('test_playlist', 'Test Playlist', 'Testing trigger', '2024-01-01');
+----
+====
+
+Then, let's query the "Teams" table to see if the `yearID` column has been updated:
+
+[source,sql]
+----
+SELECT * FROM Teams WHERE teamID = 'team1';
+----
+
+[NOTE]
+====
+For the **Chinook** dataset, query the `MyPlaylists` table to verify the `created_date` was updated to the current date:
+
+[source,sql]
+----
+SELECT * FROM MyPlaylists WHERE playlistID = 'test_playlist';
+----
+====
+
+As you can see, originally we inserted a `yearID` of 0, but after the trigger was executed, the `yearID` column was automatically updated to the current year (2025).
+
+.Deliverables
+====
+1.1. Create a trigger called "update_yearID" that automatically updates the "yearID" column in the "Teams" table to the current year whenever a new row is inserted
+1.2. Insert a new row into the "Teams" table with a yearID of 0
+1.3. Query the "Teams" table to see if the `yearID` column has been updated
+====
+
+=== Question 2 (2 points)
+
+Now that you know how to create a trigger, try one out on your own. Firstly, create a new table called "DeathRecords" with `playerID`, `yearID`, `monthID`, and `dayID` columns that are not NULL using the `CREATE TABLE` command. The `playerID` column should be of type `TEXT`, and the `yearID`, `monthID`, and `dayID` columns should be of type `INTEGER`. Look back at the previous project for an example of how to create a table.
+
+[NOTE]
+====
+For the **Chinook** dataset, the equivalent is creating an activity log table, for example:
+
+[source,sql]
+----
+CREATE TABLE PlaylistActivity (
+    activityID TEXT PRIMARY KEY,
+    playlistID TEXT NOT NULL,
+    action TEXT NOT NULL,
+    timestamp TEXT NOT NULL
+);
+----
+====
+
+Now that you have this table, we want a trigger so that everytime a player is added to the "DeathRecords" table, the same player's `deathYear`, `deathMonth`, and `deathDay` columns in the "People" table are updated to match the values in the "DeathRecords" table.
+
+[NOTE]
+====
+For the **Chinook** dataset, the equivalent is creating a trigger to log the creation of a new playlist into the `PlaylistActivity` table:
+
+[source,sql]
+----
+CREATE TRIGGER IF NOT EXISTS log_playlist_creation
+AFTER INSERT ON MyPlaylists
+FOR EACH ROW
+BEGIN
+    INSERT INTO PlaylistActivity (activityID, playlistID, action, timestamp)
+    VALUES (NEW.playlistID || '_' || strftime('%Y%m%d%H%M%S', 'now'), 
+            NEW.playlistID, 
+            'CREATED', 
+            strftime('%Y-%m-%d %H:%M:%S', 'now'));
+END;
+----
+====
+
+[NOTE]
+====
+hint: we don't want to get the current date like we did, we want the same value that was inserted into the "DeathRecords" table. For example, `SET deathYear = NEW.yearID` will set the `deathYear` column in the "People" table to the value of the `yearID` column in the "DeathRecords" table that was just inserted. Be sure to use `FOR EACH ROW` so that the trigger is executed for each row inserted into the "DeathRecords" table.
+====
+
+
+Once you have made your trigger, let's test it out by inserting a new row into the "DeathRecords" table. You can do this by using the following command:
+
+[source,sql]
+----
+INSERT INTO DeathRecords (playerID, yearID, monthID, dayID)
+VALUES ('abreubo01', 2025, 1, 1);
+----
+
+Then, let's query the "People" table to see if the `deathYear`, `deathMonth`, and `deathDay` columns have been updated:
+[source,sql]
+----
+SELECT * FROM People WHERE playerID = 'abreubo01';
+----
+
+Once you have verified that the trigger works, let's test if it works for multiple rows at the same time. Run the below command to insert multiple players into the "DeathRecords" table:
+
+[source,sql]
+----
+INSERT INTO DeathRecords (playerID, yearID, monthID, dayID)
+VALUES
+('pintore01', 2025, 2, 1),
+('hundlni01', 2025, 3, 1),
+('detwiro01', 2025, 4, 1);
+----
+
+Then, query the "People" table to see if the `deathYear`, `deathMonth`, and `deathDay` columns have been updated for all of the players:
+[source,sql]
+----
+SELECT playerID, deathYear, deathMonth, deathDay FROM People
+WHERE playerID IN ('pintore01', 'hundlni01', 'detwiro01');
+----
+
+
+.Deliverables
+====
+2.1. Create a new table called "DeathRecords" with `playerID`, `yearID`, `monthID`, and `dayID` columns
+2.2. Create a trigger that automatically updates the `deathYear`, `deathMonth`, and `deathDay` columns in the "People" table whenever a new row is inserted into the "DeathRecords" table
+2.3. Insert a new row into the "DeathRecords" table and verify that the trigger works by checking the "People" table
+2.4. Insert multiple rows into the "DeathRecords" table and verify that the trigger works for all of the rows by checking the "People" table
+====
+
+=== Question 3 (2 points)
+
+Now that you know how to create a trigger, let's learn how to create a view. A view is a virtual table that is based on the result of a query. It is similar to a table, but it does not store any data itself. Instead, it stores the SQL query that defines the view. When you query a view, the SQL query is executed and the result is returned as if it were a table. 
+
+The basic structure of a view is as follows:
+[source,sql]
+----
+CREATE VIEW IF NOT EXISTS view_name AS
+SELECT column1, column2, ...
+FROM table_name
+WHERE condition;
+----
+
+The `CREATE VIEW` command is used to create a new view. 
+
+The `IF NOT EXISTS` clause is optional and is used to prevent an error if the view already exists, similar to triggers. 
+
+The `AS` keyword is used to specify the SQL query that defines the view. 
+
+The `SELECT` statement is used to select the columns that you want to include in the view, and the `FROM` clause specifies the table that the view is based on. 
+
+The `WHERE` clause is optional and can be used to filter the rows that are included in the view. 
+
+Try making a view called "TallPlayers" that returns the `playerID`, `nameFirst`, `nameLast`, `height`, and `weight` columns from the "People" table, but only for players who are taller than 6 feet (72 inches).
+
+[NOTE]
+====
+For the **Chinook** dataset, the view examples require that the `MyPlaylists` table has the `track_count` and `is_public` columns added, and some data inserted (e.g., from Project 4). The following code prepares the Chinook table and creates a view called `"PopularPlaylists"`.
+
+[source,sql]
+----
+ALTER TABLE MyPlaylists
+ADD COLUMN track_count INTEGER;
+
+ALTER TABLE MyPlaylists
+ADD COLUMN is_public INTEGER DEFAULT 0;
+
+INSERT INTO MyPlaylists (playlistID, name, description, track_count, is_public)
+VALUES
+('playlist1', 'Rock Classics', 'Best rock songs', 25, 1),
+('playlist2', 'Jazz Collection', 'Smooth jazz tracks', 20, 1),
+('playlist3', 'Private Mix', 'My personal favorites', 15, 0);
+
+CREATE VIEW IF NOT EXISTS PopularPlaylists AS
+SELECT playlistID, name, track_count, created_date
+FROM MyPlaylists
+WHERE track_count > 20 AND is_public = 1
+ORDER BY track_count DESC;
+----
+====
+
+To test this out, let's query the "TallPlayers" view to see if it returns the expected results:
+[source,sql]
+----
+SELECT * FROM TallPlayers LIMIT 5;
+----
+
+[NOTE]
+====
+For the **Chinook** dataset, query the `"PopularPlaylists"` view:
+
+[source,sql]
+----
+SELECT * FROM PopularPlaylists;
+----
+====
+
+You should see that the view returns only players who are taller than 6 feet. However, what exactly does this view do for us? Why not just run the `SELECT` statement directly? The benefit of using a view is that it allows you to save a complex query and reuse it multiple times without having to rewrite the entire query each time. For example, if you wanted to find the top 5 heaviest players who were born in 1994 and over 6 feet, you could use the following command:
+
+[source,sql]
+----
+SELECT * FROM People
+WHERE height > 72
+AND weight IS NOT NULL
+AND birthYear = 1994
+ORDER BY weight DESC
+LIMIT 5;
+----
+
+Or, you could use the "TallPlayers" view to simplify the query:
+[source,sql]
+----
+SELECT * FROM TallPlayers
+WHERE weight IS NOT NULL
+AND birthYear = 1994
+ORDER BY weight DESC
+LIMIT 5;
+----
+
+Create a view called "TallHeavyPlayers" with those same conditions (height > 72, weight IS NOT NULL, birthYear = 1994), that returns the `playerID`, `nameFirst`, `nameLast`, `height`, and `weight` columns from the "People" table, ordered by weight in descending order.
+
+[NOTE]
+====
+For the **Chinook** dataset, you can create a view called `"PlaylistStats"` that aggregates data from `MyPlaylists`:
+
+[source,sql]
+----
+CREATE VIEW IF NOT EXISTS PlaylistStats AS
+SELECT 
+    is_public,
+    COUNT(*) as playlist_count,
+    AVG(track_count) as avg_tracks,
+    MAX(track_count) as max_tracks
+FROM MyPlaylists
+GROUP BY is_public;
+----
+====
+
+Now, query the "TallHeavyPlayers" view to get the top 5 heaviest players who were born in 1994 and are over 6 feet tall:
+
+[source,sql]
+----
+SELECT * FROM TallHeavyPlayers LIMIT 5;
+----
+
+[NOTE]
+====
+For the **Chinook** dataset, query the `PlaylistStats` view:
+
+[source,sql]
+----
+SELECT * FROM PlaylistStats;
+----
+====
+
+What if we wanted to see the top 7 players instead? Instead of having to copy all of the conditions, ordering, etc from our previous queries, we can simply query the view again with a different limit:
+[source,sql]
+----
+SELECT * FROM TallHeavyPlayers LIMIT 7;
+----
+
+.Deliverables
+====
+3.1. Create a view called "TallPlayers" that returns the `playerID`, `nameFirst`, `nameLast`, `height`, and `weight` columns from the "People" table, but only for players who are taller than 6 feet (72 inches)
+3.2. Query the "TallPlayers" view to see if it returns the expected results
+3.3. Create a view called "TallHeavyPlayers" that returns the `playerID`, `nameFirst`, `nameLast`, `height`, and `weight` columns from the "People" table, but only for players who are taller than 6 feet (72 inches), have a non-NULL weight, and were born in 1994, ordered by weight in descending order
+3.4. Query the "TallHeavyPlayers" view to get the top 5 heaviest players who were born in 1994 and are over 6 feet tall
+3.5. Query the "TallHeavyPlayers" view again to get the top 7 heaviest players who were born in 1994 and are over 6 feet tall
+====
+
+=== Question 4 (2 points)
+
+Finally, let's look at transactions. A transaction is a sequence of one or more SQL statements that are executed as a single unit of work. Transactions are used to ensure that a series of SQL statements are executed together, and if any of the statements fail, the entire transaction is rolled back and none of the changes are made to the database. 
+
+For example, let's say you want to insert a new player into the "People" table, and then insert a new team into the "Teams" table, and then give that player a salary on the new team in the "Salaries" table. If you successfully did two of these but the third one failed, you would end up with an inconsistent state in your database. To prevent this, you can use a transaction to ensure that either all of the statements are executed successfully, or none of them are. 
+
+The basic structure of a transaction is as follows:
+
+[source,sql]
+----
+BEGIN TRANSACTION;
+-- SQL statements to execute
+COMMIT;
+----
+
+The `BEGIN TRANSACTION` command is used to start a new transaction. 
+
+The `COMMIT` command is used to save the changes made by the transaction to the database. If any of the SQL statements fail, you can use the `ROLLBACK` command to undo all of the changes made by the transaction. 
+
+However, if one of those SQL statements fails, the COMMIT command will not be executed. Then, we can use the `ROLLBACK` command to undo all of the changes made by the transaction. The rollback command is just used by itself, as follows:
+
+[source,sql]
+----
+ROLLBACK;
+----
+
+[NOTE]
+====
+In other versions of SQL, you can use `BEGIN TRY` and `BEGIN CATCH` to handle errors in transactions, to automatically commit or rollback the transaction based on whether the SQL statements were successful or not. However, SQLite does not support this syntax, so you will need to manually check for errors and use the `ROLLBACK` command if necessary.
+====
+
+One problem with this is that not all forms of SQL support transactions, including SQLite. However, the concept of transactions is still important, primarily the idea of not allowing partial updates to a database and ensuring data integrity. SQLite does provide an alternative approach with `SAVEPOINT` and `RELEASE`. These work very very similarly to transactions, but are more powerful as you can create nested transactions. For simplicity, when we refer to 'transactions' in this project, we are referring to SQLite's `SAVEPOINT`, `ROLLBACK TO`, and `RELEASE` commands. 
+
+The basic structure of a transaction using `SAVEPOINT` is as follows:
+[source,sql]
+----
+SAVEPOINT savepoint_name; -- Start a new savepoint that can be later referenced to release from memory or rollback to
+
+-- SQL statements to execute
+
+RELEASE savepoint_name; -- Commit the changes made since the savepoint was created and remove the savepoint from memory
+
+-- OR --
+
+ROLLBACK TO savepoint_name; -- Undo all changes made since the savepoint was created, but keep the savepoint in memory for potential future use
+----
+
+[NOTE]
+====
+There are some interesting interactions with how SQLite3 is run in our Jupyter notebooks through ipython-sql and SQLAlchemy. By default, each code cell is run as it's own cell, with SQLAlchemy automatically inserting a `COMMIT` command at the end of each cell. This means that if you attempt to start a transaction in one cell and continue it in another cell, that transaction will have already been commited. Additionally, if any operation in a code cell fails, the entire cell will be rolled back. This means that we need to add extra commands like `OR IGNORE` to our `INSERT` statements to prevent the entire cell from failing if one of the statements fails. This is not ideal, but it is a limitation of how we are running SQLite3 in our Jupyter notebooks. If you were running SQLite3 directly, or through python's `sqlite3` module using python code, you would have more control over how these cells are executed.
+====
+
+[IMPORTANT]
+====
+Before running any code, run a code cell with the following code: `%config SqlMagic.autocommit = False`. This sets the ipython-sql to not automatically commit after each statement, which is necessary to allow savepoints within a single code cell to work. However, this does not allow savepoints to span multiple code cells, so all SQL statements within a transaction must still be in a single code cell.
+====
+
+[source,sql]
+----
+%config SqlMagic.autocommit = False
+----
+
+[NOTE]
+====
+This configuration change is required for both the Lahman and Chinook databases when running in the Jupyter environment.
+====
+
+Let's try this out with our "DeathRecords" table. Start a transaction that has 3 `INSERT` statements, inserting 3 new rows into the DeathRecords table. The data you should insert is as follows:
+- playerID: 'bandyje01', yearID: 2025, monthID: 5, dayID: 1
+- playerID: 'meyeral01', yearID: 2025, monthID: 6, dayID: 1
+- playerID: 'perdoan01', yearID: 2025, monthID: 7, dayID: 1
+
+[NOTE]
+====
+Instead of just using `INSERT INTO`, use `INSERT OR IGNORE INTO` to prevent the entire cell from failing if one of the statements fails. If a statement fails, it will instead just ignore that statement and continue with the rest of the statements in the cell.
+====
+
+Then, run the transaction. If you run the following command, you should see that the transaction was successful and all 3 rows were inserted into the "DeathRecords" table:
+
+[source,sql]
+----
+SELECT * FROM DeathRecords;
+----
+
+[NOTE]
+====
+For the **Chinook** dataset, you can run a successful batch insert into the `MyPlaylists` table using `SAVEPOINT` and `RELEASE`:
+
+[source,sql]
+----
+SAVEPOINT playlist_batch;
+
+INSERT OR IGNORE INTO MyPlaylists (playlistID, name, description, track_count, is_public)
+VALUES
+('batch1', 'Batch Playlist 1', 'First batch playlist', 15, 1),
+('batch2', 'Batch Playlist 2', 'Second batch playlist', 25, 0),
+('batch3', 'Batch Playlist 3', 'Third batch playlist', 35, 1);
+
+RELEASE playlist_batch;
+----
+
+Verification:
+[source,sql]
+----
+SELECT * FROM MyPlaylists WHERE playlistID LIKE 'batch%';
+----
+====
+
+Now, let's see what happens if one of the `INSERT` statements fails. Try to insert the following rows into the "DeathRecords" table *without* a transaction:
+- playerID: 'castidi01', yearID: 2025, monthID: 8, dayID: 1
+- playerID: 'quezajo01', yearID: 2025, monthID: 9, dayID: NULL
+
+The second insert will fail because the `dayID` column is not allowed to be NULL. You should see from the output it says `0 rows affected.`, indicating that this row was ignored instead of added to the table. Now, let's query the "DeathRecords" table to see if any of the rows were inserted:
+[source,sql]
+----
+SELECT * FROM DeathRecords WHERE playerID in ('castidi01', 'quezajo01');
+----
+
+You should see that the first row was inserted because that `INSERT` statement was successful, but the second row was not inserted because the `INSERT` statement failed. 
+
+Now, let's try the same thing, but this time using a transaction and the the `ROLLBACK TO` command. Start a transaction that has 2 `INSERT` statements, inserting the same 2 new rows into the "DeathRecords" table, but make sure that one of the `INSERT` statements fails. Use the following command:
+
+[NOTE]
+====
+Use a different playerID for the first insert to avoid a conflict with the previous insert. For example, you could use 'castidi02' instead of 'castidi01'. Alternatively, you could delete the previous row with `DELETE FROM DeathRecords WHERE playerID = 'castidi01';` before running the transaction.
+====
+
+[NOTE]
+====
+For the **Chinook** dataset, you can demonstrate the `ROLLBACK TO` feature by inserting two rows and then rolling back the changes:
+
+[source,sql]
+----
+SAVEPOINT test_rollback;
+INSERT OR IGNORE INTO MyPlaylists (playlistID, name, description, track_count, is_public)
+VALUES
+('rollback1', 'Rollback Test', 'This should be rolled back', 10, 1),
+('rollback2', 'Another Test', 'This should also be rolled back', NULL, 1);
+ROLLBACK TO test_rollback;
+----
+====
+
+[source,sql]
+----
+SELECT * FROM DeathRecords WHERE playerID = 'castidi01';
+----
+
+You should see that the row with `playerID` 'castidi01' was removed because the transaction was rolled back.
+
+.Deliverables
+====
+4.1. Start a transaction that has 3 `INSERT` statements, inserting 3 new rows into the "DeathRecords" table
+4.2. Run the transaction and verify that all 3 rows were inserted into the "DeathRecords"
+4.3. Start a transaction that has 2 `INSERT` statements, inserting 2 new rows into the "DeathRecords" table, but make sure that one of the `INSERT` statements fails
+4.4. Rollback the transaction and verify that no rows were inserted into the "DeathRecords" table
+====
+
+=== Question 5 (2 points)
+
+Now, let's put all of these concepts together. Please create a trigger that automatically updates the "People" table whenever a new player is added to the "DeathRecords" table. The trigger will update the `deathYear`, `deathMonth`, and `deathDay` columns in the "People" table to match the values in the "DeathRecords" table. Then, create a view called "DeceasedPlayers" that returns the `playerID`, `nameFirst`, `nameLast`, `deathYear`, `deathMonth`, and `deathDay` columns from the "People" table, but only for players who have a non-NULL value in the `deathYear` column. 
+
+Finally, start a transaction that has 3 `INSERT` statements, inserting 3 new rows into the "DeathRecords" table. The data you should insert is as follows:
+- playerID: 'johndoe01', yearID: 2025, monthID: 10, dayID: 1
+- playerID: 'janedoe01', yearID: 2025, monthID: 11, dayID: 1
+- playerID: 'foobar01', yearID: 2025, monthID: 12, dayID: 1
+
+Then, run the transaction. If you run the following command, you should see that the transaction was successful and all 3 rows were inserted into the "DeathRecords" table:
+
+[source,sql]
+----
+SELECT * FROM DeathRecords WHERE playerID IN ('johndoe01', 'janedoe01', 'foobar01');
+----
+
+Then, query the "DeceasedPlayers" view to see if the new players were added to the view:
+[source,sql]
+----
+SELECT * FROM DeceasedPlayers WHERE playerID IN ('johndoe01', 'janedoe01', 'foobar01');
+----
+
+[source,sql]
+----
+CREATE TRIGGER IF NOT EXISTS update_myplayers_death
+AFTER INSERT ON DeathRecords
+FOR EACH ROW
+BEGIN
+    UPDATE People
+    SET deathYear = NEW.yearID,
+        deathMonth = NEW.monthID,
+        deathDay = NEW.dayID
+    WHERE playerID = NEW.playerID;
+END;
+----
+
+[source,sql]
+----
+CREATE VIEW IF NOT EXISTS DeceasedPlayers AS
+SELECT playerID, nameFirst, nameLast, deathYear, deathMonth, deathDay
+FROM People
+WHERE deathYear IS NOT NULL;
+----
+
+[NOTE]
+====
+For the **Chinook** dataset, the combined example involves a similar sequence: a trigger to update a timestamp, a view for recent activity, and a transaction to insert new data.
+
+**Trigger to update timestamp (if not already done):**
+[source,sql]
+----
+CREATE TRIGGER IF NOT EXISTS update_playlist_stats
+AFTER INSERT ON MyPlaylists
+FOR EACH ROW
+BEGIN
+    UPDATE MyPlaylists
+    SET created_date = strftime('%Y-%m-%d %H:%M:%S', 'now')
+    WHERE playlistID = NEW.playlistID;
+END;
+----
+
+**View for Recent Playlists:**
+[source,sql]
+----
+CREATE VIEW IF NOT EXISTS RecentPlaylists AS
+SELECT playlistID, name, track_count, created_date
+FROM MyPlaylists
+WHERE created_date >= date('now', '-7 days')
+ORDER BY created_date DESC;
+----
+
+**Transaction:**
+[source,sql]
+----
+SAVEPOINT final_batch;
+
+INSERT OR IGNORE INTO MyPlaylists (playlistID, name, description, track_count, is_public)
+VALUES
+('final1', 'Final Playlist 1', 'First final playlist', 20, 1),
+('final2', 'Final Playlist 2', 'Second final playlist', 30, 0),
+('final3', 'Final Playlist 3', 'Third final playlist', 40, 1);
+
+RELEASE final_batch;
+----
+
+**Verification:**
+[source,sql]
+----
+SELECT * FROM RecentPlaylists WHERE playlistID LIKE 'final%';
+----
+====
+
+.Deliverables
+====
+5.1. Create a trigger that automatically updates the "People" table whenever a new player is added to the "DeathRecords" table
+5.2. Create a view called "DeceasedPlayers" that returns the `playerID`, `nameFirst`, `nameLast`, `deathYear`, `deathMonth`, and `deathDay` columns from the "MyPlayers" table, but only for players who have a non-NULL value in the `deathYear` column
+5.3. Start a transaction that has 3 `INSERT` statements, inserting 3 new rows into the "DeathRecords" table
+5.4. Run the transaction and verify that all 3 rows were inserted into the "DeathRecords" table
+5.5. Query the "DeceasedPlayers" view to see if the new players were added to the view
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project1.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
