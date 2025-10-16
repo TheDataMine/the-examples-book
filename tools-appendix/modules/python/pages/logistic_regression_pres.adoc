@@ -1,6 +1,6 @@
 :page-mathjax: true
 
-= TDM 40100: Project 6 - Logistic Regression - Predicting Prescriptions Using Logistic Regression
+= Logistic Regression - Predicting Prescriptions Using Logistic Regression
 
 == Project Objectives
 
@@ -285,6 +285,8 @@ _Hint:_ `Use .isna().sum())`
 [source,python]
 ----
 numeric_cols = ['Cost_per_claim', 'Tot_30day_Fills', 'Tot_Day_Suply', 'Total_Patients']
+
+print(diabetes_prescriber_data[numeric_cols].isna().sum())
 ----
 
 **2b. Use the code below to group by `Semaglutide_drug` and calculate the mean of the numeric_cols. Then write 1–2 sentences on how the averages differ between the two classes and what that might suggest.**
@@ -293,8 +295,7 @@ numeric_cols = ['Cost_per_claim', 'Tot_30day_Fills', 'Tot_Day_Suply', 'Total_Pat
 ----
 # Group by Semaglutide_drug and calculate mean
 summary_stats = diabetes_prescriber_data.groupby("Semaglutide_drug")[numeric_cols].mean()
-
-# For YOU to do: write 1–2 sentences on how the averages differ between the two classes and what that might suggest.
+print(summary_stats)
 ----
 
 **2c. Use the code below to create a correlation matrix heatmap using the numeric columns to visualize how the variables are related. Make sure to label the plot and  write 1–2 sentences on whether you think any numeric variables are strongly correlated with each other.**
@@ -310,10 +311,12 @@ corr_matrix = diabetes_prescriber_data[numeric_cols].corr()
 # heatmap
 plt.figure(figsize=(8, 6))
 sns.heatmap(corr_matrix, annot=True, cmap="coolwarm", center=0)
-plt.title("________") # For YOU to fill in
+plt.title("Correlation Matrix of Numeric Features")
 plt.tight_layout()
 plt.show()
 ----
+
+image::cormatrixpres.png[width=600, height=450, caption="Figure 1: Correlation Matrix"]
 
 **2d. Use the code provided below to create a bar plot showing the number of prescribers in each Prscrbr_State_Region, split by Semaglutide_drug. Make sure to label the plot and write 1-2 sentences on whether different regions prescribe Semaglutide more or less often.**
 
@@ -321,12 +324,14 @@ plt.show()
 ----
 plt.figure(figsize=(10, 5))
 sns.countplot(data=diabetes_prescriber_data, x='Prscrbr_State_Region', hue='Semaglutide_drug')
-plt.title('____________')
+plt.title('Semaglutide Prescriptions by Region')
 plt.xticks(rotation=45)
 plt.tight_layout()
 plt.show()
 ----
 
+
+image::barplotpres.png[width=600, height=450, caption="Bar Plot Prescriptions"]
 
 NOTE: **Did you see the note regarding the new AI policy?** xref:ai-note[Click here and read it]
 ====
@@ -403,14 +408,21 @@ Finally, it is good to inspect each of the resulting subsets. How many observati
 [source,python]
 ----
 # Define model features
-model_features = ["Tot_30day_Fills", "Tot_Day_Suply", "Cost_per_claim", "Total_Patients", "Prscrbr_State_Region", "Prscrbr_Type_Grouped"]
+model_features = ["Tot_30day_Fills", "Tot_Day_Suply", "Cost_per_claim", "Total_Patients",
+    "Prscrbr_State_Region", "Prscrbr_Type_Grouped"]
 
 # Define target and predictors
+y = diabetes_prescriber_data["Semaglutide_drug"]
+X = diabetes_prescriber_data[model_features]
+
 target_col = "Semaglutide_drug"
 y = diabetes_prescriber_data[target_col]
 X = diabetes_prescriber_data[model_features]
 
-# For YOU to do: print the shape of `X` and `y` and display the first 5 rows of `X` to confirm everything looks correct.
+# For students to do 
+print(X.shape)
+print(y.shape)
+X.head()
 ----
 
 **3b. Using the provided code, split the dataset into 60% training, 20% validation, and 20% test. Then write 1–2 sentences, in your own words, explaining the purpose of each subset (train, validation, test).**
@@ -532,7 +544,7 @@ for df in [X_train, X_val, X_test]:
         df[col] = df[col].fillna("Missing")
 
 # Step 2: One-hot encode only the training set
-X_train = pd.get_dummies(data =______, columns = _______, drop_first=True)  # For YOU to fill in
+X_train = pd.get_dummies(data=X_train, columns=categorical_cols, drop_first=True)
 ----
 
 **4b. Using the code provided, one-hot encode the same two variables, `Prscrbr_State_Region` and `Prscrbr_Type_Grouped`, in the validation and test sets.**
@@ -541,12 +553,14 @@ _Note:_ The structure of the code is provided below. Your task is to complete th
 
 [source,python]
 ----
-X_test = pd.get_dummies(data=_____, columns=______, drop_first=True)  # For YOU to fill in
-X_val = pd.get_dummies(data=_______, columns=_______, drop_first=True)    # For YOU to fill in
+X_test = pd.get_dummies(data=X_test, columns=categorical_cols, drop_first=True)
+X_val = pd.get_dummies(data=X_val, columns=categorical_cols, drop_first=True)
+
 
 encoded_columns = X_train.columns
 
-# reindex `X_val` and `X_test` so their column structure matches `X_train`
+# Reindex to match training columns
+# we are rearranging columns so that they match in order
 X_test = X_test.reindex(columns=encoded_columns, fill_value=0)
 X_val = X_val.reindex(columns=encoded_columns, fill_value=0)
 ----
@@ -561,21 +575,20 @@ Most of the code has been provided for you. Your task is to complete the missing
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 
-# First identify numeric columns
+# Identify columns
 numeric_cols = ['Tot_30day_Fills', 'Tot_Day_Suply', 'Cost_per_claim', 'Total_Patients']
-
-# These are the categorical variables that we one-hot encoded
 one_hot_cols = [col for col in X_train.columns if col not in numeric_cols]
 
-# Then fill missing values in numeric columns
+# Fill missing values
+# Only Total_Patients had some missing values
 for df in [X_train, X_val, X_test]:
-    df[numeric_cols] = df[numeric_cols].fillna(  # For YOU to fill in: use medians from X_train
-        ________________
-    )
-    df[one_hot_cols] = df[one_hot_cols].fillna(  # For YOU to fill in: missing one-hot values will be 0 
-        ________________
-    )
+    df[numeric_cols] = df[numeric_cols].fillna(X_train[numeric_cols].median())  # use training medians
+    df[one_hot_cols] = df[one_hot_cols].fillna(0)
 
+# Scale numeric columns using training data only
+# fit_tranform calculates the mean and standard deviation from the training data.
+# then .tranform use the same mean and std from training (from .fit()) to scale validation and test data.
+#Then it applies the transformation (standardization) to X_train.
 scaler = StandardScaler()
 X_train[numeric_cols] = scaler.fit_transform(X_train[numeric_cols])
 X_val[numeric_cols] = scaler.transform(X_val[numeric_cols])
@@ -594,6 +607,13 @@ for col in X_train.select_dtypes(include='bool').columns:
 ----
 
 **4e. Confirm that X_train, X_val, and X_test all have the same number of columns. Then write 1-2 sentences on what one hot encoding is and why it was necessary to perform it separately on the training, test and validation set.**
+
+[source,python]
+----
+print("X_train shape:", X_train.shape)
+print("X_val shape:", X_val.shape)
+print("X_test shape:", X_test.shape)
+----
 
 
 NOTE: **Did you see the note regarding the new AI policy?** xref:ai-note[Click here and read it]
@@ -861,7 +881,7 @@ def calculate_vif_manual(X):
             vif = np.inf
         else:
             # For YOU to fill in: implement the VIF formula below
-            vif = _____
+            vif = 1 / (1 - r_squared)
 
         vif_dict[feature] = vif
 
@@ -873,6 +893,7 @@ X_for_vif = X_train.select_dtypes(include=[np.number]).astype(float)
 # Run VIF calculation
 vif_values = calculate_vif_manual(X_for_vif)
 print(vif_values)
+ 
 ----
 
 **5b. Drop any variables with a VIF greater than 10, except for `"Tot_Day_Suply"`, which you should keep regardless of its VIF value. Then write 1-2 sentences on what VIF is and why it is a necessary step in model building for logistic regression.**
@@ -999,10 +1020,12 @@ import statsmodels.api as sm
 import warnings
 warnings.filterwarnings("ignore")
 
+# Final feature matrix and target
 X_train_final = sm.add_constant(X_train[selected_features]).astype(float)
 
 final_model = sm.Logit(y_train, X_train_final).fit()
 
+# Display model summary and AIC
 print(final_model.summary())
 print(f"\nFinal AIC: {final_model.aic}")
 ----
@@ -1012,20 +1035,22 @@ print(f"\nFinal AIC: {final_model.aic}")
 import numpy as np
 import pandas as pd
 
-# Calculate odds ratios for final_model.params
-odds_ratio_values = np.exp(______)  # For YOU to fill in
-
+# Build odds ratio DataFrame
 odds_ratios = pd.DataFrame({
-    "Odds Ratio": odds_ratio_values,
-    "P-value": final_model.pvalues
-})
+    "Odds Ratio": np.exp(final_model.params),
+    "P-value": final_model.pvalues})
 
+# Add interpretation
 odds_ratios["Direction"] = odds_ratios["Odds Ratio"].apply(
-    lambda x: "Increases Odds" if x > 1 else ("Decreases Odds" if x < 1 else "No Effect")
-)
+    lambda x: "Increases Odds" if x > 1 else ("Decreases Odds" if x < 1 else "No Effect"))
 
+# Round for readability
 odds_ratios = odds_ratios.round({"Odds Ratio": 3, "P-value": 4})
+
+# Sort by Odds Ratio
 odds_ratios = odds_ratios.sort_values("Odds Ratio", ascending=False)
+
+# Display as DataFrame
 odds_ratios.reset_index().rename(columns={"index": "Feature"})
 ----
 
@@ -1106,9 +1131,9 @@ print("Validation AUC:", roc_auc_score(y_val, val_preds))
 print("Test AUC:", roc_auc_score(y_test, test_preds))
 ----
 
+image::roccurvepres.png[width=600, height=450, caption="ROC Curve Prescriptions"]
 
 
-NOTE: **Did you see the note regarding the new AI policy?** xref:ai-note[Click here and read it]
 ====
 
 ===  Question 6: Make Predictions on New Prescribers (2 points)
@@ -1171,6 +1196,11 @@ That’s how we “fit” the model and it’s also how we estimate the best val
 
 **6a. Select 20 random prescribers from `X_test` using the `.sample()` function and save it as `sample_prescribers`.  Make sure to set `n=20` and `random_state=123` to ensure reproducibility.**
 
+[source,python]
+----
+sample_prescribers = X_test.sample(n=20, random_state=42)
+----
+
 Note: Click here for more information on https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.sample.html[sample].
 
 **6b. Run the code below to predict the probability that each prescriber in the sample will prescribe Semaglutide using the final_model. Then, on your own, print the top 5 rows.**
@@ -1192,24 +1222,10 @@ scored_sample["Predicted_Probability"] = sample_preds
 
 **6c. Write 1–2 sentences interpreting the results. What do the top-scoring prescribers have in common? Does anything surprise you?**
 
+Students should get full credit if they write 1-2 sentences interpreting their results. For example, they may note that the top-scoring prescribers have higher `Cost_per_claim` values and are mostly from the West or South regions. Several belong to the “Primary Care” group, which may indicate they are more likely to prescribe Semaglutide. This aligns with patterns seen earlier in the data where cost, region, and specialty were important predictors.
 
-NOTE: **Did you see the note regarding the new AI policy?** xref:ai-note[Click here and read it]
+
 ====
 
 
-== Submitting your Work
-
-Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
-
-.Items to submit
-====
-- firstname_lastname_project6.ipynb
-====
-
-[WARNING]
-====
-You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
-
-You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
-====
 
