@@ -45,9 +45,9 @@ ____
 ____
 
 
-Time series forecasting is not just number crunching—it is the closest thing we have to a crystal ball. By recognizing patterns across time, we can uncover hidden structures in the data, anticipate what's coming, and even influence decisions before events unfold. It's not magic, it's just cool math behind the scenes.
+Time series forecasting is not just number crunching, it is the closest thing we have to a crystal ball. By recognizing patterns across time, we can uncover hidden structures in the data, anticipate what's coming, and even influence decisions before events unfold. It's not magic, it's just cool math behind the scenes.
 
-Climate is not random—it follows patterns, some obvious and others subtle. When we zoom out from daily weather reports and look at broader climate trends, we start to see the underlying patterns of our weather. In this project, we will work with nearly two decades of monthly-aggregated climate data from Indianapolis (2006–2024), sourced from NOAA (the National Oceanic and Atmospheric Administration).
+Climate is not random, it follows patterns, some obvious and others subtle. When we zoom out from daily weather reports and look at broader climate trends, we start to see the underlying patterns of our weather. In this project, we will work with nearly two decades of monthly-aggregated climate data from Indianapolis (2006–2024), sourced from NOAA (the National Oceanic and Atmospheric Administration).
 
 This time, the focus shifts from day-to-day fluctuations to monthly averages, a scale better suited for modeling long-term behavior and seasonal trends. The dataset includes:
 
@@ -62,22 +62,52 @@ The power of time series forecasting lies in its ability to take these past patt
 You will clean and transform the data, test for stationarity, evaluate model performance, and ultimately forecast future climate trends for Indianapolis. The goal? To understand not only what the temperature was—but what might be next — yes, we are going to try to predict the future!
 
 == Questions
+++++
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_gq21im7b&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_v6qnuw2d%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 960px; height: 540px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Fall 2025 Seminar Time Series Project 2 Question 1 Video"></iframe>
+++++
 
 === Question 1 - Get to Know the Data (2 points)
 
 .Deliverables
 ====
-- 1a. Load the dataset and display the first 5 rows to get a sense of the structure.
-- 1b. Check the number of rows columns and check for missing values. Hint:  you can `.shape` and `.isnull().sum()`.
-- 1c. Create a time series line plot of `Monthly_AverageDryBulbTemperature_Farenheit` over time.
-- 1d. In 1–2 sentences, describe any trends or seasonality you observe in the plot.
+**1a. Load the dataset and display the first 5 rows to get a sense of the structure. Save it as `monthly_df`.**
+
+[source,python]
+----
+import pandas as pd
+monthly_df = pd.read_csv("/anvil/projects/tdm/data/noaa_timeseries2/monthly_avg_df_NOAA.csv")
+----
+
+**1b. Check the number of rows columns and check for missing values. Hint:  you can `.shape` and `.isnull().sum()`.**
+
+**1c. Create a time series line plot of `Monthly_AverageDryBulbTemperature_Farenheit` over time using the code below. Make sure to label the plot.**
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+
+monthly_df['DATE'] = pd.to_datetime(monthly_df['DATE'])
+plt.plot(monthly_df['DATE'], monthly_df['Monthly_AverageDryBulbTemperature_Farenheit'])
+plt.title("______") # For YOU to fill in
+plt.xlabel("_____") # For YOU to fill in
+plt.ylabel("_______") # For YOU to fill in
+plt.grid()
+plt.show()
+----
+
+
+**1d. In 1–2 sentences, describe any trends or seasonality you observe in the plot.**
 ====
 
 === Question 2 - Understanding Lag through AR (2 points)
 
-Time series models are different than other models. From forecasting stock prices to anticipating weather patterns, people attempt it constantly. But when we narrow our focus to short-term forecasting—predicting the near future based on recent historical data—the task becomes more manageable.
+++++
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_wwkb4usj&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_ohhi91se%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 960px; height: 540px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Fall 2025 Seminar Time Series Part 2 Question 2"></iframe>
+++++
 
-Take, for example, your plot of average monthly temperature. One thing you will notice right away is that observations from month to month are not independent. Instead, they are correlated with one another! This is known as *autocorrelation*—when values close together in time tend to be similar.
+Time series models are different than other models. From forecasting stock prices to anticipating weather patterns, people attempt it constantly. But when we narrow our focus to short-term forecasting,  predicting the near future based on recent historical data—the task becomes more manageable.
+
+Take, for example, your plot of average monthly temperature. One thing you will notice right away is that observations from month to month are not independent. Instead, they are correlated with one another! This is known as *autocorrelation*, when values close together in time tend to be similar.
 
 This feature distinguishes time series data from other datasets you have likely seen, where each row can typically be treated as an independent observation. In time series, the order of the data matters. Patterns, cycles, and trends can all emerge over time—and understanding those structures is the key to effective forecasting.
 
@@ -126,15 +156,21 @@ Understanding this concept of *lag* is foundational before jumping into more com
 
 We will start by fitting an AR(1) model to see this in action. This foundation will help you better understand how more complex models work.
 
-**VIDEO IDEA: Generating a plot with time series and/or running an AR model**
+
 
 .Deliverables
 ====
 
-- 2a. Convert the `DATE` column to datetime format, then sort the DataFrame by `DATE` in ascending order.  
-  Print the first five rows of the sorted DataFrame using `.head()`.
+2a. Convert the `DATE` column to datetime format, then sort the DataFrame by `DATE` in ascending order using the code below.  Print the first five rows of the sorted DataFrame using `.head()`.
 
-- 2b. Create a new DataFrame that compares each month's average temperature to the previous month's.  Include `Date`, `Current`, and `Previous` columns. Output the first five rows.  Then in 1-2 sentences, describe the relationship between consecutive months in one sentence. 
+[source,python]
+----
+monthly_df['DATE'] = pd.to_datetime(monthly_df['DATE'])
+
+monthly_df = monthly_df.sort_values('DATE').reset_index(drop=True)
+----
+
+2b. Create a new DataFrame that compares each month's average temperature to the previous month's.  Include `Date`, `Current`, and `Previous` columns. Output the first five rows.  Then in 1-2 sentences, describe the relationship between consecutive months in one sentence. 
   
 Use the partial code below for question (2b). Take a moment to understand what the function is doing, and then complete the section labeled "For YOU to FILL in":
 
@@ -157,15 +193,18 @@ for i in range(1, len(monthly_df)):
 comparison_df = pd.DataFrame(monthly_comparisons)
 ----
 
-- 2c. Using your DataFrame from 2b, create a scatterplot with the previous month’s temperature on the x-axis  
-  and the current month’s temperature on the y-axis. Include axis labels and a title.  
+2c. Using your DataFrame from 2b, create a scatterplot with the `Previous` month’s temperature on the x-axis and the `Current` month’s temperature on the y-axis. Include axis labels and a title.  
   _Hint:_ You can use `.scatter()` from `matplotlib.pyplot` to make your plot.
 
-- 2d. After creating the plot in 2c, describe the relationship you observe in 1–2 sentences: does the current temperature appear to depend on the previous one? Is the pattern linear, scattered, or something else?
+2d. After creating the plot in 2c, describe the relationship you observe in 1–2 sentences: does the current temperature appear to depend on the previous one? Is the pattern linear, scattered, or something else?
 
 ====
 
 == Question 3 -  ARIMA and Stationarity
+
+++++
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_a5owejt6&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_2l8tu1xw%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 960px; height: 540px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Question 3 Fall 2025 Seminar Time Series Part 2"></iframe>
+++++
 
 **Why are we using ARIMA now?**
 
@@ -197,7 +236,7 @@ But there’s one important assumption that ARIMA makes: *stationarity*.
 
 **Why stationarity matters?**
 
-In time series modeling, stationarity means the statistical properties of the data like its mean, variance, and autocorrelation stay consistent over time. This consistency helps ARIMA detect patterns and relationships more reliably. If the series shows a trend or changing variance, ARIMA may struggle to learn anything meaningful. The model might misinterpret those trends as patterns it needs to learn—leading to poor forecasts. That is why before using ARIMA, we need to test whether our series is stationary. If it is not, various methods, such as data transformation and differencing, can be used to achieve stationarity.
+In time series modeling, stationarity means the statistical properties of the data like its mean, variance, and autocorrelation stay consistent over time. This consistency helps ARIMA detect patterns and relationships more reliably. If the series shows a trend or changing variance, ARIMA may struggle to learn anything meaningful. The model might misinterpret those trends as patterns it needs to learn, leading to poor forecasts. That is why before using ARIMA, we need to test whether our series is stationary. If it is not, various methods, such as data transformation and differencing, can be used to achieve stationarity.
 
 **How do we know if our series is stationary?**
 
@@ -281,8 +320,7 @@ test = monthly_df[
 
 ----
 
-**3b. Run the ADF test on the training set’s `Monthly_AverageDryBulbTemperature_Farenheit` column using the `adfuller()` function from `statsmodels`. 
-Then, in 1–2 sentences, explain whether the series appears stationary based on the p-value.**
+**3b. Run the ADF test on the training set’s `Monthly_AverageDryBulbTemperature_Farenheit` column using the `adfuller()` function from `statsmodels`. Print the ADF Statistic and p-value. Then, in 1–2 sentences, explain whether the series appears stationary based on the p-value.**
 
 - If the p-value is **greater than 0.05**, we fail to reject the null hypothesis — this suggests the series is **not stationary**.  
 - If the p-value is **0.05 or below**, the series is likely **stationary**.
@@ -306,7 +344,7 @@ print(f"p-value: {adf_result[......?]}") # For YOU to FILL in
 **3c. Apply first-order differencing to the `Monthly_AverageDryBulbTemperature_Farenheit` column in your training data, and create a plot of the result.**
 
 
-_Hint: Use the `.diff()` method to compute first-order differences. Fill in `train[...]` with your target variable and use `matplotlib.pyplot` to create the plot._
+_Hint: Use the `.diff()` method to compute first-order differences. Fill in `train[...]` with your target variable `Monthly_AverageDryBulbTemperature_Farenheit` and use `matplotlib.pyplot` to create the plot._
 
 You may use the code below to guide your approach:
 
@@ -324,7 +362,7 @@ plt.grid(True)
 plt.show()
 ----
 
-**3d. Now that you've applied first-order differencing, run the ADF test again—this time on the differenced series.In 1–2 sentences, compare the result to your original test.**
+**3d. Now that you've applied first-order differencing, run the ADF test again, this time on the differenced series. In 1–2 sentences, compare the result to your original test.**
 
 Has the p-value dropped below 0.05? If so, your series is now stationary and ready for ARIMA modeling.
 
@@ -350,7 +388,11 @@ print("p-value (differenced):", result_diff[1])
 
 === Question 4 – Fit a Baseline ARIMA Model (2 points)
 
-You’ve done the groundwork: explored the data, visualized trends, and confirmed stationarity by differencing. Now let’s fit a baseline ARIMA model using only the temperature data — no seasonality or external variables yet.
+++++
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_9udq24ke&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_lgiak2t8%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 960px; height: 540px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Question 4 Fall 2025 Seminar Time Series Part 2"></iframe>
+++++
+
+You’ve done the groundwork: explored the data, visualized trends, and confirmed stationarity by differencing. Now let’s fit a baseline ARIMA model using only the temperature data, no seasonality or external variables yet.
 
 Why start here?
 
@@ -365,7 +407,7 @@ ARIMA is a classic model used in time series forecasting. It stands for:
   _Example: If last month was hot, this month might also be hot (Not always!)._
 
 * *Integrated (I)*:  
-  Differencing is used to remove trends and make the series stationary — a key assumption for ARIMA models.  
+  Differencing is used to remove trends and make the series stationary, a key assumption for ARIMA models.  
   _Example: If temperatures are gradually rising due to climate change, differencing helps focus on short-term patterns rather than long-term trends._
 
 * *Moving Average (MA)*:  
@@ -373,7 +415,7 @@ ARIMA is a classic model used in time series forecasting. It stands for:
   _Example: If last month’s forecast was too low, the model may adjust this month’s prediction upward._
 
 
-Even though ARIMA doesn’t handle seasonality or external factors, it’s still a powerful tool — especially when you're just using one time series.
+Even though ARIMA doesn’t handle seasonality or external factors, it’s still a powerful tool,  especially when you're just using one time series. You can find more information about the ARIMA function in python https://www.statsmodels.org/stable/generated/statsmodels.tsa.arima.model.ARIMA.html[here].
 
 .Deliverables
 ====
@@ -383,7 +425,7 @@ Even though ARIMA doesn’t handle seasonality or external factors, it’s still
 What are you trying to predict? Save the name of that column (as a string) in a variable called `target_col`.
 
 
-**4b. Prepare the training data by resetting the index and extracting your target variable using the code below..**
+**4b. Run the code below to prepare the training data by resetting the index and extracting your target variable.**
 
 [source,python]
 ----
@@ -391,7 +433,7 @@ train = train.reset_index(drop=True)
 y_train = train[target_col]
 ----
 
-**4c. Fit an ARIMA(1,1,1) model using the code below and visualize the results. Write 1–2 sentences describing what your plot shows. How well does the ARIMA model match the trend?**
+**4c. Fit an ARIMA(1,1,1) model by running the code below and visualize the results. Write 1–2 sentences describing what your plot shows. How well does the ARIMA model match the trend?**
 
 [source,python]
 ----
@@ -425,7 +467,7 @@ plt.xticks(rotation=45)
 plt.show()
 ----
 
-**4d. Use the `mean_absolute_error()` function to assess the model's performance. Make sure to fill in the mean_absolute_error function with the appropriate values.**
+**4d. Use the `mean_absolute_error()` function to assess the model's performance. Make sure to fill in the mean_absolute_error function with the appropriate values. See documentation for the function https://scikit-learn.org/stable/modules/generated/sklearn.metrics.mean_absolute_error.html[here]. **
 
 [source,python]
 ----
@@ -552,6 +594,8 @@ exog_cols = [
     'Monthly_AverageWindSpeed',
     'Monthly_Snowfall']
 
+X_train = train[exog_cols]
+
 model = SARIMAX(
     y_train,
     exog=X_train,
@@ -646,8 +690,8 @@ plt.plot(test['DATE'], forecast, label='.....?', color='orange', linestyle='--')
 # Plot future forecast
 plt.plot(future_df['DATE'], future_df['Forecasted_Temp'], label='....?', color='green', linestyle='--')  # For YOU to FILL in
 
-plt.title(".....?")  # For YOU to FILL in
-plt.xlabel(".....?")  # For YOU to FILL in
+plt.title(".....")  # For YOU to FILL in
+plt.xlabel(".....")  # For YOU to FILL in
 plt.ylabel("....")  # For YOU to FILL in
 plt.xticks(rotation=45)
 plt.legend()
