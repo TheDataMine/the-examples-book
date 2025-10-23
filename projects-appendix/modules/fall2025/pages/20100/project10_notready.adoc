@@ -1,0 +1,494 @@
+= TDM 32100: Project ## - MongoDB Introduction 1
+
+== Project Objectives
+
+This project and the following project will introduce you to MongoDB, which is a powerful NoSQL database system. MongoDB stores data in flexible, JSON-like documents, making it ideal for modern applications that need to handle diverse data types and structures.
+
+.Learning Objectives
+****
+- Learn the basics of MongoDB syntax and structure
+- Learn how to create and manipulate collections
+- Understand document-based data storage
+- Learn basic CRUD operations in MongoDB
+****
+
+== Dataset
+
+- /anvil/projects/tdm/data/MovieLens/movies_metadata.csv
+
+== Questions
+
+=== Question 1 (2 points)
+
+MongoDB is a document-oriented NoSQL database that stores data in flexible, JSON-like documents called BSON (Binary JSON). Unlike traditional relational databases that use tables with fixed schemas, MongoDB collections can contain documents with different structures. This flexibility makes MongoDB particularly well-suited for modern applications that need to handle diverse data types and evolving schemas.
+
+To start, we will need to actually start a MongoDB instance. In Anvil, launch a new terminal window and run the following command:
+
+[source,bash]
+----
+mkdir -p $SCRATCH/mongodb_data; apptainer run -B $SCRATCH/mongodb_data:/data/db /anvil/projects/tdm/apps/containers/images/mongodb.sif
+----
+
+This will start a MongoDB instance inside of your scratch space, containerized so that multiple users can run their own MongoDB instances without interfering with each other.
+
+[NOTE]
+====
+It may take a minute or two to start the instance, so just wait a moment before proceeding. Once the terminal is not actively outputting messages, you are ready to proceed.
+====
+
+Once the instance is running, we can start working with MongoDB. First, let's connect to a MongoDB instance, create a database, and create a collection.
+
+[source,python]
+----
+from pymongo import MongoClient
+import pandas as pd
+import json
+
+# create a client to connect to the local MongoDB instance
+client = MongoClient('mongodb://localhost:27017/')
+
+# Create or connect to a database
+db = client['movies_db']
+
+# Create or connect to a collection
+movies = db['movies']
+----
+
+[NOTE]
+====
+In MongoDB, a database is a container for collections. A collection is a group of documents, and a document is a single record.
+For example, one movie would be a document, and all the movies would be a collection. Then, if we had a collection of movies and a collection of shows, it wou
+
+Now, let's import the movies data into the databse using our python client.
+
+Let's import the movies data using Python:
+
+[source,python]
+----
+# Read the CSV file and convert to MongoDB documents
+df = pd.read_csv('/anvil/projects/tdm/data/MovieLens/movies_metadata.csv')
+
+# Convert DataFrame to list of dictionaries
+movies_data = df.to_dict('records')
+
+# Insert the data into MongoDB
+result = movies.insert_many(movies_data)
+print(f"Inserted {len(result.inserted_ids)} movies")
+----
+
+
+Now let's explore the movies dataset. First, let's see what data we have:
+
+[source,python]
+----
+# Find all movies (limit to first 5 for display)
+sample_movies = list(movies.find().limit(5))
+print(f"Total movies in collection: {movies.count_documents({})}")
+print("\nSample movie documents:")
+for movie in sample_movies:
+    print(f"Title: {movie.get('title', 'N/A')}")
+    print(f"Release Date: {movie.get('release_date', 'N/A')}")
+    print(f"Vote Average: {movie.get('vote_average', 'N/A')}")
+    print("---")
+----
+
+Let's also examine the structure of a movie document:
+
+[source,python]
+----
+# Get the structure of a movie document
+sample_movie = movies.find_one()
+print("Movie document structure:")
+for key, value in sample_movie.items():
+    print(f"{key}: {type(value).__name__}")
+    if isinstance(value, str) and len(str(value)) > 100:
+        print(f"  Value: {str(value)[:100]}...")
+    else:
+        print(f"  Value: {value}")
+    print()
+----
+
+[NOTE]
+====
+The primary takeaway from these examples is that MongoDB is document-oriented, not table-oriented like SQL databases. The json-like documents make it very easy to store and query data in a flexible, pythonic way.
+====
+
+From this data, you should be able to answer the following questions about our dataset:
+
+1. How many movies are in the collection?
+2. What is the structure of a movie document?
+3. What are the different fields available in each movie document?
+4. What are some sample movie titles?
+
+.Deliverables
+====
+1.1. Connect to MongoDB and create a database called 'movies_db' with a collection called 'movies'
+
+1.2. Import the movies dataset from into the collection
+
+1.3. Write a query to find sample movies in the collection
+
+1.4. Answer the questions about the dataset based on your query results
+====
+
+=== Question 2 (2 points)
+
+Now, let's try using some slightly more advanced queries. We will continue to use the `movies` collection, but we will use MongoDB's query operators to filter the results based on certain conditions.
+
+MongoDB uses a different syntax than SQL for querying. Instead of SQL's `WHERE` clause, MongoDB uses query documents with operators. Here are some common MongoDB query operators:
+
+[cols="1,1,1",options="header"]
+|===
+| Operator | Description | Example
+| `$eq` | Equal to | `{"age": {"$eq": 25}}`
+| `$ne` | Not equal to | `{"age": {"$ne": 25}}`
+| `$gt` | Greater than | `{"age": {"$gt": 25}}`
+| `$gte` | Greater than or equal to | `{"age": {"$gte": 25}}`
+| `$lt` | Less than | `{"age": {"$lt": 25}}`
+| `$lte` | Less than or equal to | `{"age": {"$lte": 25}}`
+| `$in` | In array | `{"team": {"$in": ["Yankees", "Red Sox"]}}`
+| `$and` | Logical AND | `{"$and": [{"age": {"$gt": 20}}, {"height": {"$gt": 70}}]}`
+| `$or` | Logical OR | `{"$or": [{"team": "Yankees"}, {"team": "Red Sox"}]}`
+|===
+
+First, let's find all movies with a rating above 8.0. Here's how to do it:
+
+[source,python]
+----
+# Find movies with rating above 8.0
+high_rated_movies = list(movies.find({"vote_average": {"$gt": 8.0}}))
+print(f"Movies with rating above 8.0: {len(high_rated_movies)}")
+for movie in high_rated_movies[:5]:  # Show first 5
+    print(f"{movie['title']} - Rating: {movie['vote_average']}")
+----
+
+Now, let's find movies with high ratings AND released after 2000. Here's an example of how to use the `$and` operator:
+
+[source,python]
+----
+# Example: Find movies with rating above 7.0 AND released after 2000
+recent_good_movies = list(movies.find({
+    "$and": [
+        {"vote_average": {"$gt": 7.0}},
+        {"release_date": {"$regex": "200[0-9]|201[0-9]|202[0-9]"}}  # Regex for years 2000+, as the release year is a string. This is a common pattern for dates in MongoDB.
+    ]
+}))
+print(f"Good movies released after 2000: {len(recent_good_movies)}")
+for movie in recent_good_movies[:5]:  # Show first 5
+    print(f"{movie['title']} - Rating: {movie['vote_average']}, Year: {movie['release_date'][:4]}")
+----
+
+Now try it yourself! Write a query to find movies with rating above 6.0 AND released in the 1990s:
+
+[source,python]
+----
+# YOUR CODE HERE: Find movies with rating above 6.0 AND released in the 1990s
+# Hint: Use $and with vote_average > 6.0 and release_date matching "199[0-9]"
+----
+
+Let's also find movies from specific genres. Here's an example using the `$regex` operator:
+
+[source,python]
+----
+# Example: Find action movies using regex pattern matching
+action_movies = list(movies.find({
+    "genres": {"$regex": "Action", "$options": "i"}  # Case insensitive search
+}))
+print(f"Action movies: {len(action_movies)}")
+for movie in action_movies[:5]:  # Show first 5
+    print(f"{movie['title']} - Genres: {movie.get('genres', 'N/A')}")
+----
+
+Now try it yourself! Write a query to find comedy movies:
+
+[source,python]
+----
+# YOUR CODE HERE: Find comedy movies using regex pattern matching
+# Hint: Use genres field with $regex for "Comedy"
+----
+
+.Deliverables
+====
+2.1. Run the example query to find movies with rating above 8.0 and show the results,
+
+2.2. Write a MongoDB query to find movies with rating above 6.0 AND released in the 1990s,
+
+2.3. Write a MongoDB query to find comedy movies using regex pattern matching,
+
+2.4. How many movies meet each of these criteria? Show the count for each query.
+====
+
+=== Question 3 (2 points)
+
+Something that may be useful to us is to sort the results of our queries. For example, we could sort movies by their rating, release date, or popularity. To do this, we can use the `sort()` method in MongoDB. This method allows us to specify a field we want to sort by and whether we want it sorted in ascending (1) or descending (-1) order.
+
+Let's start by finding all movies and sorting them by rating in descending order. Here's how to do it:
+
+[source,python]
+----
+# Find all movies sorted by rating (descending)
+movies_by_rating = list(movies.find().sort("vote_average", -1))
+print("Movies sorted by rating (highest first):")
+for movie in movies_by_rating[:5]:  # Show top 5
+    print(f"{movie['title']} - Rating: {movie['vote_average']}")
+----
+
+We can also limit the number of results returned using the `limit()` method. Here's how to find the highest rated movie:
+
+[source,python]
+----
+# Find the highest rated movie
+highest_rated = movies.find().sort("vote_average", -1).limit(1)
+top_movie = list(highest_rated)[0]
+print(f"Highest rated movie: {top_movie['title']} - Rating: {top_movie['vote_average']}")
+----
+
+[NOTE]
+====
+The `limit()` method may seem somewhat redundant here. We are already sorting in descending order and the query returns a list, so we can just use the `[0]` index to get the first item in the list. However, by limiting the number of results, it makes the query much more effecient, especially when working with large datasets. This is a common pattern when working with MongoDB.
+====
+
+Now try it yourself! Find the 3 most popular movies released after 2000:
+
+[source,python]
+----
+# YOUR CODE HERE: Find the 3 most popular movies released after 2000
+# Hint: Use find() with release_date regex, sort by popularity descending, limit to 3
+----
+
+We can also use the `count_documents()` method to count how many documents match our criteria. Here's an example:
+
+[source,python]
+----
+# Example: Count movies by criteria
+total_movies = movies.count_documents({})
+high_rated_count = movies.count_documents({"vote_average": {"$gt": 8.0}})
+recent_movies_count = movies.count_documents({"release_date": {"$regex": "201[0-9]|202[0-9]"}})
+
+print(f"Total movies: {total_movies}")
+print(f"Movies with rating above 8.0: {high_rated_count}")
+print(f"Movies released in 2010s or 2020s: {recent_movies_count}")
+----
+
+Now try it yourself! Count movies with rating above 7.0 and movies released in the 1990s:
+
+[source,python]
+----
+# YOUR CODE HERE: Count movies with rating above 7.0 and movies released in the 1990s
+# Hint: Use count_documents() with appropriate conditions
+----
+
+.Deliverables
+====
+3.1. Run the example queries for sorting and limiting, and show the results
+
+3.2. Write a MongoDB query to find the 3 most popular movies released after 2000
+
+3.3. Write MongoDB queries to count movies with rating above 7.0 and movies released in the 1990s
+
+3.4. Show the results of all your queries with counts and sample data
+====
+
+=== Question 4 (2 points)
+
+Another useful operation in MongoDB is aggregation. Aggregation allows us to group documents together and perform calculations on the grouped data, similar to SQL's `GROUP BY` clause. MongoDB's aggregation framework is very powerful and flexible, and allows us to perform complex queries on data in a very easy to read and understand way.
+
+The basic structure of an aggregation pipeline in MongoDB is:
+
+[source,python]
+----
+pipeline = [
+    {"$match": {"field": "value"}},  # Filter documents (like WHERE)
+    {"$group": {"_id": "$field", "count": {"$sum": 1}}},  # Group and aggregate
+    {"$sort": {"count": -1}}  # Sort results
+    # ... # other operations can be added here
+]
+
+result = collection.aggregate(pipeline)
+----
+
+
+Let's start with a simple aggregation to count movies by genre. Complete the aggregation pipeline:
+
+[source,python]
+----
+# Count movies by genre (this is a simplified example - real genre data might be more complex)
+pipeline = [
+    {"$group": {"_id": "$genres", "count": {"$sum": 1}}},
+    {"$sort": {"count": -1}},
+    {"$limit": 10}
+]
+
+genre_counts = list(movies.aggregate(pipeline))
+
+print("Movies by genre (top 10):")
+for genre in genre_counts:
+    print(f"{genre['_id']}: {genre['count']} movies")
+----
+
+Now let's find the average rating of movies by release year. You'll need to use `$addFields` to extract the year:
+
+[source,python]
+----
+# Average rating by release year
+pipeline = [
+    {"$addFields": {
+        "year": {"$substr": ["$release_date", 0, 4]}  # Extract year from date
+    }},
+    {"$match": {"year": {"$ne": ""}}},  # Filter out empty years
+    {"$group": {
+        "_id": "$year",
+        "avg_rating": {"$avg": "$vote_average"},
+        "count": {"$sum": 1}
+    }},
+    {"$sort": {"_id": -1}},  # Sort by year descending
+    {"$limit": 10}
+]
+
+avg_ratings = list(movies.aggregate(pipeline))
+print("Average rating by year (recent years):")
+for year in avg_ratings:
+    print(f"{year['_id']}: {year['avg_rating']:.2f} rating ({year['count']} movies)")
+----
+
+We can also use the `$match` stage to filter documents before grouping and create custom categories. Try this more complex aggregation that analyzes movies by popularity ranges:
+
+[source,python]
+----
+# Average rating by popularity ranges
+pipeline = [
+    {"$match": {
+        "popularity": {"$exists": True, "$gt": 0},
+        "vote_average": {"$gt": 0}
+    }},
+    {"$addFields": {
+        "popularity_range": {
+            "$switch": {
+                "branches": [
+                    {"case": {"$lt": ["$popularity", 10]}, "then": "Low (0-10)"},
+                    {"case": {"$lt": ["$popularity", 50]}, "then": "Medium (10-50)"},
+                    {"case": {"$lt": ["$popularity", 100]}, "then": "High (50-100)"}
+                ],
+                "default": "Very High (100+)"
+            }
+        }
+    }},
+    {"$group": {
+        "_id": "$popularity_range",
+        "avg_rating": {"$avg": "$vote_average"},
+        "avg_popularity": {"$avg": "$popularity"},
+        "count": {"$sum": 1}
+    }},
+    {"$sort": {"avg_popularity": 1}}
+]
+
+popularity_ratings = list(movies.aggregate(pipeline))
+print("Average rating by popularity ranges:")
+for pop_range in popularity_ratings:
+    print(f"{pop_range['_id']}: {pop_range['avg_rating']:.2f} avg rating, {pop_range['avg_popularity']:.1f} avg popularity ({pop_range['count']} movies)")
+
+----
+
+.Deliverables
+====
+4.1. Write a MongoDB aggregation query to count movies by genre
+
+4.2. Write a MongoDB aggregation query to find the average rating of movies by release year
+
+4.3. Write a MongoDB aggregation query to find the average rating of movies grouped by popularity ranges
+
+4.4. What insights can you draw from these aggregation results?
+====
+
+=== Question 5 (2 points)
+
+Finally, let's learn about updating and deleting documents in MongoDB. These operations are essential for maintaining your database.
+
+To update documents, we use the `update_one()` or `update_many()` methods. Complete the update operations:
+
+[source,python]
+----
+# Update a single document (find a specific movie by title)
+result = movies.update_one(
+    {"title": "Toy Story"},
+    {"$set": {"our_rating": 9.5}}
+)
+print(f"Updated {result.modified_count} document")
+
+# Check the update
+updated_movie = movies.find_one({"title": "Toy Story"})
+print(f"Toy Story's our rating: {updated_movie.get('our_rating', 'No rating')}")
+----
+
+We can also update multiple documents at once. Update all movies to add a 'watched' field:
+
+[source,python]
+----
+# Update all movies to add a 'watched' field
+result = movies.update_many(
+    {},
+    {"$set": {"watched": False}}
+)
+print(f"Updated {result.modified_count} documents with watched field")
+----
+
+To delete documents, we use the `delete_one()` or `delete_many()` methods. Complete the delete operations:
+
+[source,python]
+----
+# Delete movies with very low ratings (be careful with this!)
+result = movies.delete_many({"vote_average": {"$lt": 2.0}})
+print(f"Deleted {result.deleted_count} movies with rating below 2.0")
+
+# Check how many movies remain
+remaining_movies = movies.count_documents({})
+print(f"Remaining movies: {remaining_movies}")
+----
+
+We can also delete multiple documents based on criteria. Delete movies from a specific year:
+
+[source,python]
+----
+# Delete movies from a specific year (example: 1990)
+result = movies.delete_many({"release_date": {"$regex": "1990"}})
+print(f"Deleted {result.deleted_count} movies from 1990")
+
+# Check remaining movies
+remaining_movies = movies.count_documents({})
+print(f"Remaining movies: {remaining_movies}")
+
+# Show some sample remaining movies
+sample_movies = list(movies.find().limit(3))
+print("Sample remaining movies:")
+for movie in sample_movies:
+    print(f"- {movie['title']} ({movie.get('release_date', 'N/A')})")
+----
+
+.Deliverables
+====
+5.1. Update a movie document to add a custom rating field
+
+5.2. Update all movies to add a 'watched' field set to False
+
+5.3. Delete movies with very low ratings (below 2.0)
+
+5.4. Delete movies from a specific year (e.g., 1990)
+
+5.5. Show the final state of your collection with sample movies
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_mongodb_project10.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
