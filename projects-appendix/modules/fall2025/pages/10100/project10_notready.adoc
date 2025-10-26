@@ -254,13 +254,19 @@ There is a great resource for customizing the readability of your plots https://
 <iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_g4vnka4w&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_0u8plkjl%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 800px;height: 585px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Data Cleaning"></iframe>
 ++++
 
-The Zillow dataset has many rows and columns, including `DaysOnZillow_AllHomes`, `MedianListingPrice_AllHomes`, `PctOfHomesDecreasingInValues_AllHomes`, and `PctOfHomesIncreasingInValues_AllHomes`.
+The Zillow dataset has many rows and columns, including `DaysOnZillow_AllHomes`, `MedianListingPrice_AllHomes`, `PctOfHomesDecreasingInValues_AllHomes`, and `PctOfHomesIncreasingInValues_AllHomes`. Read the data:
+
+[source, R]
+----
+zillow = read.csv("/anvil/projects/tdm/data/zillow/State_time_series.csv")
+----
 
 Check out the `DaysOnZillow_AllHomes` and `MedianListingPrice_AllHomes` columns. What sort of data do they have? Some values are missing, which can affect plots. 
 
 When you're cleaning these two columns, it is completely up to you on how you do this. `filter()` is good if you're using `dplyr`, or you can completely ignore that and use base R. Show that the NA values are removed once this cleaning is complete. 
 
 An example of using `filter()` to clean the data looks like: 
+
 [source,R]
 ----
 zillow_cleaned <- zillow %>%
@@ -268,16 +274,15 @@ zillow_cleaned <- zillow %>%
          !is.na(MedianListingPrice_AllHomes))
 ----
 
-Create a scatterplot using `geom_point()`. This plot should include both `DaysOnZillow_AllHomes` and `MedianListingPrice_AllHomes`. 
+Create a scatterplot using `geom_point()` with `DaysOnZillow_AllHomes` and `MedianListingPrice_AllHomes`. 
 
 [NOTE]
 ====
 Adjusting the size of your plot can also help with how it is shown. Use `options(repr.plot.width = 20, repr.plot.height = 16)` to adjust the width and height of the plot. Find what size ratio you like for this. 
 ====
 
-You have a lot of control over the color, size, and shape of the points.
+You have a lot of control over the color, size, and shape of the points. Some examples of color customizations you can use are:
 
-Some examples of color customizations you can use are:
 - A standard color like "blue" +
 - You can set a third column as the values for the color range; if your color range is red at the high end, blue at the low end, and you're using a column of price values, the high prices of the points on your plot will be red, and the low prices will be blue. +
 - A gradient can have more than two colors. In `scale_color_gradientn()`, you could even have colors = c("blue", "green", "yellow", "red"), and the gradient would go through all four colors. 
@@ -291,7 +296,37 @@ You can also customize the plotting space itself. Check out this page https://rd
 
 `PctOfHomesDecreasingInValues_AllHomes` and `PctOfHomesIncreasingInValues_AllHomes` are opposite columns: one measures the percentage of homes with decreasing values, while the other measures those with increasing values.
 
-For your scatterplot, use `PctOfHomesDecreasingInValues_AllHomes` as the third dimension by mapping it to the color gradient. Then, create a second scatterplot that is identical, but uses `PctOfHomesIncreasingInValues_AllHomes` for the color values instead. Comment on any patterns you notice between these two plots. 
+For your scatterplot, use `PctOfHomesDecreasingInValues_AllHomes` as the third dimension by mapping it to the color gradient such as
+
+[source, R]
+----
+# plot with homes with decreasing values
+p1 <- ggplot(zillow_cleaned, aes(x = DaysOnZillow_AllHomes, y=MedianListingPrice_AllHomes,
+                              color=PctOfHomesDecreasingInValues_AllHomes)) +
+geom_point( size = 3, shape = 2) +
+scale_color_gradient(low = "blue", high = "red")
+p1
+
+# you may notice in this example that a ggplot can be saved as an object (e.g.: p1) in R.
+----
+
+Then, create a second scatterplot that is identical, but uses `PctOfHomesIncreasingInValues_AllHomes` for the color values instead. Comment on any patterns you notice between these two plots. 
+
+[NOTE]
+====
+Assuming you saved the plot created with decreasing values as `p1` and the one with increasing values as `p2`, you can display these two plots in different arrangements. To do so, you can install the `patchwork` and `gridExtra`. They are not built into R by default, so you do need to load them once before using them:
+
+[source, R]
+----
+library(patchwork)
+p1 + p2
+
+# OR
+
+library(gridExtra)
+grid.arrange(p1, p2, ncol = 2)
+----
+====
 
 [NOTE]
 ====
@@ -300,16 +335,18 @@ You may see some points that do not color when you set your columns as the color
 
 Trend lines are used on plots to show the general direction of the data points. This can reveal underlying correlations/patterns, help us make predictions, and highlight hidden problem spots. They show the "average" movement of data, which helps us to visualize the trend's consistency. 
 
-Use `geom_smooth()` to add a trend line to track the median listing price of homes as their days on Zillow increase. 
+Use `geom_smooth()` to add a trend line to track the median listing price of homes as their days on Zillow increase such as:
 
-[NOTE]
-====
-Both `patchwork` and `gridExtra` are R packages you can install from CRAN (the main R package repository). They’re not built into R by default, so you do need to load them once before using them
-====
+[source, R]
+----
+p1 <- p1 + geom_smooth(method = "lm", se = FALSE, color = "black")
+----
+
+Please add a linear trend line to the `p2`, too.
 
 .Deliverables
 ====
-4.1 Explain why the missing data leads to gray points in ggplot2, and how you solved this +
+4.1 Explain why the missing data leads to gray points in ggplot2, and how you solved this. +
 4.2 Make a scatterplot of `DaysOnZillow_AllHomes` vs `MedianListingPrice_AllHomes`. Use `color = PctOfHomesDecreasingInValues_AllHomes` and `color = PctOfHomesIncreasingInValues_AllHomes` to create gradient color scales. Adjust the size and shape of the points in your plot, and add a trendline. +
 4.3 Write 2-3 sentences interpreting your scatterplot and trendline. Describe any relationship between listing price and days on Zillow. Point out any outliers or clusters. What does the trendline suggest about the data?
 ====
