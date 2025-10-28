@@ -1,0 +1,588 @@
+= TDM 32100: Project ## - MongoDB Introduction 2 (Advanced)
+
+== Project Objectives
+
+In this project, we will build upon the foundational MongoDB skills you learned in Project 1 and explore more advanced features. While Project 1 focused on basic CRUD operations and simple queries, this project will introduce you to complex data structures, advanced querying techniques, and realistic data analysis scenarios using MongoDB.
+
+This project will help you understand how MongoDB excels at handling complex, nested data structures that would be difficult to manage in traditional relational databases. You'll learn how to work with embedded documents, arrays, and perform sophisticated data analysis using MongoDB's powerful aggregation framework.
+
+.Learning Objectives
+****
+- Master advanced MongoDB query operations with complex data structures
+- Learn to design and implement sophisticated aggregation pipelines
+- Integrate MongoDB seamlessly with Python data analysis libraries
+- Work effectively with embedded documents and arrays
+- Implement proper indexing strategies for performance optimization
+- Understand when and why to use MongoDB over relational databases
+****
+
+== Dataset
+
+- '/anvil/projects/tdm/data/ecommerce/fake_ecommerce_dataset.json'
+
+== Questions
+
+=== Question 1 (2 points)
+
+To start, we will need to actually start a MongoDB instance. In Anvil, launch a new terminal window and run the following command:
+
+[source,bash]
+----
+mkdir -p $SCRATCH/mongodb_data; apptainer run -B $SCRATCH/mongodb_data:/data/db /anvil/projects/tdm/apps/containers/images/mongodb.sif
+----
+
+This will start a MongoDB instance inside of your scratch space, containerized so that multiple users can run their own MongoDB instances without interfering with each other.
+
+[NOTE]
+====
+It may take a minute or two to start the instance, so just wait a moment before proceeding. Once the terminal is not actively outputting messages, you are ready to proceed.
+====
+
+Once the instance is running, we can start working with MongoDB. First, let's connect to a MongoDB instance, create a database, and create collections.
+
+[source,python]
+----
+from pymongo import MongoClient
+import pandas as pd
+import json
+
+# create a client to connect to the local MongoDB instance
+client = MongoClient('mongodb://localhost:27017/')
+
+# Create or connect to a database
+db = client['ecommerce_db']
+
+# Create or connect to collections
+products = db['products']
+customers = db['customers']
+orders = db['orders']
+----
+
+For this project, we have created a dataset of fake but realistic e-commerce data, including products, customers, and orders. Let's load this dataset into the database using our Python client:
+
+[source,python]
+----
+# Load the e-commerce dataset from JSON file
+with open('/anvil/projects/tdm/data/ecommerce/fake_ecommerce_dataset.json', 'r') as file:
+    dataset = json.load(file)
+
+# Insert the data into MongoDB
+products.insert_many(dataset['products'])
+customers.insert_many(dataset['customers'])
+orders.insert_many(dataset['orders'])
+
+print("Dataset loaded successfully!")
+----
+
+In Project 1, you learned the fundamentals of MongoDB queries using simple operators like `$gt`, `$lt`, `$and`, and `$or`. Now we'll apply those same skills to our e-commerce dataset, but with more complex data structures. This question will help you practice the basic querying techniques you already know while working with nested documents and arrays.
+
+Before we start querying, let's understand what we're working with. Our e-commerce dataset contains three main collections: Products, Customers, and Orders. Each product document contains basic information (name, category, price) plus nested specifications and arrays of reviews. Each customer document contains personal information plus a nested address object and preferences. Each order document contains order details plus an array of items and nested shipping information.
+
+This structure is much more complex than the simple movie data from Project 1, but the querying principles remain the same. One key difference is that our data contains nested structures. For example, customer addresses are stored as nested objects, and product reviews are stored as arrays.
+
+In MongoDB, when you want to query nested fields, you use dot notation. For example, `"address.state"` queries the `state` field inside the `address` object, `"specifications.connectivity"` queries the `connectivity` field inside the `specifications` object, and `"preferences.newsletter"` queries the `newsletter` field inside the `preferences` object. This is similar to how you would access nested data in Python dictionaries, but in MongoDB queries.
+
+The nested structure of our documents provides several advantages over traditional relational databases. We can get all product information, including specifications and reviews, in a single query. When updating a product, all related data (specifications, reviews) is updated atomically. Different products can have different specification fields without affecting other products. No joins are needed, making queries faster and more efficient.
+
+This is particularly important in e-commerce scenarios where you frequently need to display complete product information, including all specifications and recent reviews, on product pages.
+
+For this question, you'll need to create the database and collections, load the dataset, and then write specific queries to explore the data structure. You'll find products in the "Electronics" and "Sports" categories, customers from California and Texas, and orders with "completed" and "shipped" statuses. You'll also need to understand how dot notation works for querying nested fields like `address.state` or `specifications.brand`.
+
+Here's an example of exploring the structure of our nested documents:
+
+[source,python]
+----
+# Examine a sample product document to understand its structure
+sample_product = products.find_one()
+print("Sample Product Structure:")
+print(f"Product Name: {sample_product['name']}")
+print(f"Category: {sample_product['category']}")
+print(f"Price: ${sample_product['price']}")
+print(f"Specifications: {sample_product['specifications']}")
+print(f"Number of Reviews: {len(sample_product['reviews'])}")
+print(f"Tags: {sample_product['tags']}")
+----
+
+This code demonstrates how to examine the structure of a MongoDB document with nested data. The `find_one()` method retrieves a single document, and we can access nested fields using dot notation or dictionary-style access. This helps you understand how the complex data is organized before writing queries.
+
+Here's an example of basic querying with our e-commerce data:
+
+[source,python]
+----
+# Find products in a specific category
+electronics = list(products.find({"category": "Electronics"}))
+print(f"Electronics products: {len(electronics)}")
+
+# Find products with price greater than $200
+expensive_products = list(products.find({"price": {"$gt": 200}}))
+print(f"Products over $200: {len(expensive_products)}")
+
+# Find customers from a specific state
+ca_customers = list(customers.find({"address.state": "CA"}))
+print(f"Customers from California: {len(ca_customers)}")
+
+# Find orders with specific status
+completed_orders = list(orders.find({"status": "completed"}))
+print(f"Completed orders: {len(completed_orders)}")
+----
+
+This code demonstrates basic querying techniques using the operators you learned in Project 1. The `$gt` operator finds products with prices greater than a specific value, dot notation accesses nested fields like `address.state`, and simple equality queries work the same way as in Project 1. These examples show how to apply your existing knowledge to the more complex e-commerce data structure.
+
+.Deliverables
+====
+1.1. Create a database called 'ecommerce_db' with collections for 'products', 'customers', and 'orders'
+
+1.2. Load the comprehensive e-commerce dataset from the JSON file into the appropriate collections
+
+1.3. Write a query to find all products in the "Electronics" category and count how many there are
+
+1.5. Write a query to find all customers from California (state: "CA") and count how many there are
+
+1.7. Write a query to find all orders with status "completed" and count how many there are
+
+1.9. Explain how dot notation works for querying nested fields in MongoDB (like address.state or specifications.brand)
+====
+
+=== Question 2 (2 points)
+
+In Project 1, you learned about basic query operators. Now we'll apply those same operators to more complex data structures, including arrays and deeply nested objects. The query operators remain the same, but we can now use them in more sophisticated ways.
+
+Our e-commerce data contains several array fields: product reviews (array of review objects), product tags (array of strings), order items (array of item objects), and customer preferences (nested objects with arrays). MongoDB provides special operators for working with arrays that you didn't need in Project 1.
+
+When querying arrays, there are two different approaches with very different results:
+
+- **Without `$elemMatch`**: `{"reviews.rating": 5, "reviews.user": "john_doe"}` finds products where ANY review has a rating of 5 AND ANY review is from john_doe (not necessarily the same review)
+- **With `$elemMatch`**: `{"reviews": {"$elemMatch": {"rating": 5, "user": "john_doe"}}}` finds products where THE SAME review has both a rating of 5 AND is from john_doe
+
+The key difference: without `$elemMatch`, conditions can be satisfied by different array elements. With `$elemMatch`, ALL conditions must be met by the SAME array element.
+
+The `$elemMatch` operator allows you to query arrays where at least one element matches multiple criteria. This is particularly useful for our product reviews. When you query an array field without `$elemMatch`, MongoDB will return documents where ANY element in the array matches the condition. This is different from `$elemMatch`, which requires ALL specified conditions to be met by the SAME array element.
+
+For example, `{"tags": "electronics"}` finds products where "electronics" appears anywhere in the tags array, while `{"reviews": {"$elemMatch": {"rating": 5, "user": "john_doe"}}}` finds products where the same review has both a 5-star rating AND is from john_doe.
+
+You can also query based on array size and content. MongoDB allows you to find documents based on how many elements are in an array, or whether specific values appear in the array. This is useful for finding products with multiple reviews, or products with specific tags.
+
+Combining multiple conditions using the operators you learned in Project 1 becomes more powerful when working with nested data. You can find products with high ratings AND specific features, or customers with specific preferences AND from specific states. The principles are the same, but now you can query across different levels of nesting.
+
+For this question, you'll practice these advanced querying techniques by finding products with 5-star reviews using `$elemMatch`, products with reviews from specific users using `$elemMatch`, products with reviews that meet multiple criteria using `$elemMatch`, customers from Texas, products with low stock, completed orders, and Sports products with high prices. You'll also need to explain the difference between querying arrays with and without `$elemMatch`.
+
+Here's an example of querying nested data and arrays:
+
+[source,python]
+----
+# Query nested fields using dot notation
+ca_customers = list(customers.find({"address.state": "CA"}))
+print(f"Customers from California: {len(ca_customers)}")
+
+# Query arrays using $elemMatch
+five_star_products = list(products.find({
+    "reviews": {"$elemMatch": {"rating": 5}}
+}))
+print(f"Products with 5-star reviews: {len(five_star_products)}")
+
+# Combine multiple conditions
+high_priced_electronics = list(products.find({
+    "$and": [
+        {"category": "Electronics"},
+        {"price": {"$gt": 100}}
+    ]
+}))
+----
+
+This code demonstrates three key concepts: dot notation for nested fields (`address.state`), `$elemMatch` for array queries, and combining conditions with `$and`. The dot notation accesses nested objects, `$elemMatch` finds documents where array elements match specific criteria, and `$and` allows you to combine multiple query conditions.
+
+.Deliverables
+====
+2.1. Write a query to find products with 5-star reviews using $elemMatch
+
+2.2. Write a query to find products with reviews from a specific user (e.g., "john_doe") using $elemMatch
+
+2.3. Write a query to find products with reviews that have both a rating of 4 or higher AND contain the word "excellent" in the comment using $elemMatch
+
+2.8. Explain the difference between querying arrays with and without $elemMatch
+====
+
+=== Question 3 (2 points)
+
+In Project 1, you learned the basics of MongoDB aggregation using simple grouping and counting operations. Now we'll apply those same aggregation concepts to our more complex e-commerce data, where we can group by nested fields and perform calculations on arrays.
+
+Our e-commerce data provides excellent opportunities for aggregation because we have products grouped by categories with various metrics, orders with multiple items that can be analyzed, customers with preferences that can be aggregated, and nested data that requires special handling.
+
+The `$unwind` operator is crucial for working with arrays in aggregations. It takes an array field and creates one output document for each element in the array. This allows you to count array elements, calculate averages, find specific elements, and perform calculations on array element values. This is much more powerful than simple SQL GROUP BY operations because you can work with complex nested data structures.
+
+For example, to calculate the average rating for each product, you would first unwind the reviews array to create one document per review, then group by product and calculate the average rating. This gives you access to individual review ratings that you can then aggregate.
+
+You can also perform aggregations on customer data, such as counting customers by state or analyzing newsletter subscription patterns. The same grouping principles from Project 1 apply, but now you can work with nested address information and preference data.
+
+When working with order data, you can analyze order patterns, calculate total revenue by different dimensions, and find customer purchasing behavior. The aggregation framework becomes particularly powerful when you need to analyze relationships between different collections or perform complex calculations on nested data.
+
+For this question, you'll create aggregation pipelines to calculate average ratings for each product, find the most expensive product in each category, count customers by state, calculate total revenue by product category from orders, and find customers who have made multiple orders. You'll also need to explain how the `$unwind` operator works and why it's essential for working with array data in aggregations.
+
+Here's an example of using aggregation with the $unwind operator:
+
+[source,python]
+----
+# Calculate average rating for each product using $unwind
+pipeline = [
+    {"$unwind": "$reviews"},  # Create one document per review
+    {"$group": {
+        "_id": "$product_id",
+        "product_name": {"$first": "$name"},
+        "avg_rating": {"$avg": "$reviews.rating"},
+        "review_count": {"$sum": 1}
+    }},
+    {"$sort": {"avg_rating": -1}}
+]
+
+top_rated = list(products.aggregate(pipeline))
+print("Top rated products:")
+for product in top_rated[:3]:  # Show top 3
+    print(f"{product['product_name']}: {product['avg_rating']:.2f}")
+----
+
+This aggregation pipeline first unwinds the reviews array to create separate documents for each review, then groups by product to calculate the average rating and count. The `$unwind` operator is essential for working with array data in aggregations, as it allows you to perform calculations on individual array elements.
+
+Here are some additional aggregation examples:
+
+[source,python]
+----
+# Count products by category with average price
+category_pipeline = [
+    {"$group": {
+        "_id": "$category",
+        "count": {"$sum": 1},
+        "avg_price": {"$avg": "$price"},
+        "total_stock": {"$sum": "$stock"}
+    }},
+    {"$sort": {"count": -1}}
+]
+
+category_stats = list(products.aggregate(category_pipeline))
+print("Products by category:")
+for category in category_stats:
+    print(f"{category['_id']}: {category['count']} products, avg price: ${category['avg_price']:.2f}")
+
+# Find customers by state with newsletter subscription rates
+state_pipeline = [
+    {"$group": {
+        "_id": "$address.state",
+        "customer_count": {"$sum": 1},
+        "newsletter_subscribers": {
+            "$sum": {"$cond": [{"$eq": ["$preferences.newsletter", True]}, 1, 0]}
+        }
+    }},
+    {"$sort": {"customer_count": -1}}
+]
+
+state_stats = list(customers.aggregate(state_pipeline))
+print("\nCustomers by state:")
+for state in state_stats:
+    print(f"{state['_id']}: {state['customer_count']} customers, {state['newsletter_subscribers']} newsletter subscribers")
+----
+
+This code demonstrates additional aggregation techniques. The first pipeline groups products by category and calculates multiple metrics (count, average price, total stock), while the second pipeline groups customers by state and uses conditional logic to count newsletter subscribers. These examples show how to perform complex calculations and grouping operations on your e-commerce data.
+
+Here's an example of using `$lookup` to join collections and calculate revenue by category:
+
+[source,python]
+----
+# Calculate total revenue by product category from orders using $lookup
+revenue_pipeline = [
+    {"$unwind": "$items"},  # Create one document per order item
+    {"$lookup": {
+        "from": "products",
+        "localField": "items.product_id",
+        "foreignField": "product_id",
+        "as": "product_info"
+    }},
+    {"$unwind": "$product_info"},  # Unwind the joined product data
+    {"$group": {
+        "_id": "$product_info.category",
+        "revenue": {"$sum": {"$multiply": ["$items.price", "$items.quantity"]}}
+    }},
+    {"$sort": {"revenue": -1}}
+]
+
+revenue_by_category = list(orders.aggregate(revenue_pipeline))
+print("Revenue by category:")
+for category in revenue_by_category:
+    print(f"{category['_id']}: ${category['revenue']:.2f}")
+----
+
+This pipeline demonstrates how to join collections using `$lookup`. First, we unwind the order items array, then join with the products collection to get category information, and finally group by category to calculate total revenue. This is essential for the "revenue by category" deliverable.
+
+.Deliverables
+====
+3.1. Write an aggregation to calculate average rating for each product
+
+3.2. Write an aggregation to find the most expensive product in each category
+
+3.3. Write an aggregation to count customers by state
+
+3.4. Write an aggregation to find total revenue by product category from orders
+
+3.5. Write an aggregation to find customers who have made more than 1 order
+
+3.6. Explain how the $unwind operator works and why it's useful for array data
+====
+
+=== Question 4 (2 points)
+
+Now we'll introduce new material that builds on your MongoDB skills. This question focuses on integrating MongoDB with Python's powerful data analysis libraries like pandas, which is essential for real-world data science workflows.
+
+While MongoDB is excellent for storing and querying complex data, Python libraries like pandas, numpy, and matplotlib provide superior tools for statistical analysis and data manipulation, data visualization and plotting, machine learning and advanced analytics, and data cleaning and preprocessing. By combining MongoDB's flexible data storage with Python's analytical capabilities, you get the best of both worlds.
+
+The first step in this integration is converting MongoDB documents to pandas DataFrames, which are much more suitable for data analysis. However, one challenge when converting MongoDB data to DataFrames is handling nested structures. Our e-commerce data contains nested structures that require special handling in pandas.
+
+For example, customer addresses are stored as nested objects, so you need to extract the state information from the nested address structure. Product specifications are also nested, requiring careful extraction of specific fields. Order items are stored as arrays, which may need to be flattened or processed differently depending on your analysis needs.
+
+Once you have the data in pandas DataFrames, you can perform sophisticated analysis that would be difficult with MongoDB alone. You can calculate inventory values by category, analyze price distributions, find products with highest and lowest prices, and perform complex statistical analysis. You can also create visualizations, perform data cleaning operations, and prepare data for machine learning algorithms.
+
+The integration of MongoDB with Python data analysis libraries provides several key benefits. MongoDB handles complex, nested data structures naturally, while Python libraries provide advanced statistical and analytical capabilities. Pandas makes it easy to clean, transform, and analyze data, and Python libraries like matplotlib and seaborn enable rich data visualization. This approach works well for both small datasets and big data scenarios.
+
+This combination is particularly powerful in data science workflows where you need to work with complex, semi-structured data. You can store your data in MongoDB's flexible format, then use Python's powerful analytical tools to extract insights and create visualizations.
+
+For this question, you'll convert MongoDB data to pandas DataFrames and perform various analyses including customer data by state and preferences, inventory value calculations by category, order pattern analysis by month, and finding the most popular product categories based on order quantities. You'll also need to explain the benefits of using MongoDB with Python data analysis libraries.
+
+Here's an example of how to convert MongoDB data to a pandas DataFrame:
+
+[source,python]
+----
+import pandas as pd
+from pymongo import MongoClient
+
+# Convert MongoDB collection to DataFrame
+def mongo_to_dataframe(collection, query=None):
+    if query is None:
+        query = {}
+    cursor = collection.find(query)
+    return pd.DataFrame(list(cursor))
+
+# Get products data
+products_df = mongo_to_dataframe(products)
+print(f"Products DataFrame shape: {products_df.shape}")
+----
+
+This function takes a MongoDB collection and converts it to a pandas DataFrame. The `find()` method returns a cursor, which we convert to a list and then to a DataFrame. This allows you to use all of pandas' powerful data analysis tools on your MongoDB data.
+
+Here's an example of analyzing the converted data with pandas:
+
+[source,python]
+----
+# Analyze product data with pandas
+products_df = mongo_to_dataframe(products)
+print("Product Analysis:")
+print(f"Total products: {len(products_df)}")
+print(f"Average price: ${products_df['price'].mean():.2f}")
+print(f"Price range: ${products_df['price'].min():.2f} - ${products_df['price'].max():.2f}")
+
+# Category analysis
+category_analysis = products_df.groupby('category').agg({
+    'price': ['mean', 'count'],
+    'stock': 'sum'
+}).round(2)
+print("\nCategory Analysis:")
+print(category_analysis)
+
+# Calculate inventory value
+products_df['inventory_value'] = products_df['price'] * products_df['stock']
+inventory_by_category = products_df.groupby('category')['inventory_value'].sum().sort_values(ascending=False)
+print("\nInventory Value by Category:")
+print(inventory_by_category)
+----
+
+This code demonstrates how to perform sophisticated data analysis that would be difficult with MongoDB alone. We can calculate statistics, group data by categories, and perform complex calculations like inventory value. The `groupby()` function allows us to aggregate data by different dimensions, and we can create new calculated columns like inventory value.
+
+Here's another example showing how to work with nested data in pandas:
+
+[source,python]
+----
+# Work with customer data and nested addresses
+customers_df = mongo_to_dataframe(customers)
+print(f"Total customers: {len(customers_df)}")
+
+# Extract state information from nested address
+customers_df['state'] = customers_df['address'].apply(lambda x: x['state'])
+state_analysis = customers_df['state'].value_counts()
+print("\nCustomers by State:")
+print(state_analysis)
+
+# Analyze newsletter subscriptions
+newsletter_subscribers = customers_df['preferences'].apply(lambda x: x['newsletter']).sum()
+print(f"\nNewsletter subscribers: {newsletter_subscribers}")
+print(f"Subscription rate: {newsletter_subscribers/len(customers_df)*100:.1f}%")
+----
+
+This example shows how to extract data from nested MongoDB structures in pandas. The `apply()` function with a lambda expression allows us to access nested fields and perform calculations on them. This is particularly useful for analyzing customer preferences and geographic distribution.
+
+Here's an example of exploding order items arrays into separate rows for analysis:
+
+[source,python]
+----
+# Explode order items array into separate rows for analysis
+orders_df = mongo_to_dataframe(orders)
+items_df = pd.DataFrame([item for row in orders_df["items"] for item in row])
+print(f"Total order items: {len(items_df)}")
+
+# Join with product information to get categories
+products_df = mongo_to_dataframe(products)
+items_df = items_df.merge(
+    products_df[["product_id", "category"]], 
+    on="product_id", 
+    how="left"
+)
+
+# Analyze items by category
+category_analysis = items_df.groupby("category").agg({
+    "quantity": "sum",
+    "price": "mean"
+}).round(2)
+print("\nOrder items by category:")
+print(category_analysis)
+----
+
+This example shows how to "explode" array fields in pandas by creating separate rows for each array element. This is useful when you need to analyze individual items within orders rather than treating each order as a single unit.
+
+.Deliverables
+====
+4.1. Convert MongoDB data to pandas DataFrame and perform basic analysis
+
+4.2. Analyze customer data by state and preferences
+
+4.3. Calculate inventory value by category
+
+4.4. Analyze order patterns by month
+
+4.5. Find the most popular product categories based on order quantities
+
+4.6. What are the benefits of using MongoDB with Python data analysis libraries?
+====
+
+=== Question 5 (2 points)
+
+This final question introduces advanced MongoDB concepts that are crucial for production applications. You'll learn about indexing strategies, query optimization, and performance monitoring - skills that are essential for working with MongoDB in real-world scenarios.
+
+Indexes are data structures that improve the speed of database operations. In Project 1, you didn't need to worry about performance, but with larger datasets and complex queries, proper indexing becomes crucial. Without indexes, MongoDB must scan every document in a collection to find matches. This is called a "collection scan" and becomes very slow as your data grows. Indexes create a separate data structure that maps field values to documents, allowing MongoDB to quickly locate the documents you need.
+
+MongoDB supports several types of indexes. Single field indexes are created on one field, compound indexes are created on multiple fields, multikey indexes are automatically created for array fields, text indexes are for full-text search capabilities, and sparse indexes only include documents that have the indexed field.
+
+**Why Indexes Matter:**
+Without indexes, MongoDB must scan every document in a collection to find matches (called a "collection scan"). This becomes very slow as your data grows. Indexes create a separate data structure that maps field values to documents, allowing MongoDB to quickly locate the documents you need.
+
+The `db.command("explain", ...)` method shows you how MongoDB executes your queries. **Important:** Always include `"cursor": {}` in your find operations and use `verbosity="executionStats"` to get detailed performance metrics. Key metrics to look for include execution time, how many documents MongoDB had to look at, how many documents were returned, and the actual steps MongoDB took. A good query should examine few documents and return the results quickly.
+
+For production applications, you need to consider several factors. Create indexes based on how you actually query your data, balance read vs. write performance since more indexes mean slower writes, monitor memory usage since indexes consume RAM, pay attention to the order of fields in compound indexes, and monitor index usage to remove unused indexes.
+
+Regular monitoring is essential for maintaining good performance. You should track query performance, index usage, memory consumption, and other key metrics. Set up alerts for performance issues and regularly review slow queries to identify optimization opportunities.
+
+When working with MongoDB in production, consider your index strategy, ensure sufficient RAM for your working set, use explain() to identify slow queries, set up monitoring and alerts for performance metrics, implement regular backups and point-in-time recovery, use authentication and authorization, and plan for horizontal scaling with sharding.
+
+For this question, you'll create appropriate indexes for the e-commerce collections, test query performance using the explain() method, create compound and text indexes for advanced queries, create indexes on nested fields like reviews.rating, test the performance of complex aggregation pipelines, and explain the key considerations for optimizing MongoDB performance in production.
+
+Here's an example of creating indexes and testing query performance:
+
+[source,python]
+----
+# Create indexes for better performance
+products.create_index("category")
+products.create_index("price")
+products.create_index([("category", 1), ("price", -1)])  # Compound index
+
+# Test query performance
+query = {"category": "Electronics"}
+explain_result = db.command("explain", {"find": "products", "filter": query, "cursor": {}}, verbosity="executionStats")
+print(f"Query execution time: {explain_result.get('executionStats', {}).get('executionTimeMillis', 'N/A')}ms")
+print(f"Documents examined: {explain_result.get('executionStats', {}).get('totalDocsExamined', 'N/A')}")
+----
+
+This code creates both single-field and compound indexes on the products collection. The compound index on category and price allows efficient queries that filter by both fields. The `db.command("explain", ...)` method shows you how MongoDB executes the query, including execution time and how many documents were examined.
+
+Here's an example of creating more advanced indexes and analyzing their impact:
+
+[source,python]
+----
+# Create additional specialized indexes
+products.create_index("tags")  # Multikey index for array fields
+products.create_index("specifications.brand")  # Index on nested field
+customers.create_index("email", unique=True)  # Unique index
+orders.create_index([("customer_id", 1), ("order_date", -1)])  # Compound index
+
+# Test different query patterns
+queries_to_test = [
+    {"category": "Electronics"},
+    {"tags": "wireless"},
+    {"specifications.brand": "Samsung"},
+    {"price": {"$gt": 200, "$lt": 500}}
+]
+
+print("Query Performance Analysis:")
+for i, query in enumerate(queries_to_test, 1):
+    explain_result = db.command("explain", {"find": "products", "filter": query, "cursor": {}}, verbosity="executionStats")
+    print(f"Query {i}: {query}")
+    print(f"  Execution time: {explain_result.get('executionStats', {}).get('executionTimeMillis', 'N/A')}ms")
+    print(f"  Documents examined: {explain_result.get('executionStats', {}).get('totalDocsExamined', 'N/A')}")
+    print(f"  Documents returned: {explain_result.get('executionStats', {}).get('totalDocsReturned', 'N/A')}")
+    print()
+----
+
+This example shows how to create different types of indexes and test their performance impact. Multikey indexes are automatically created for array fields like tags, nested field indexes work on embedded documents, and unique indexes ensure data integrity. Testing multiple query patterns helps you understand which indexes are most effective.
+
+Here's an example of monitoring index usage and performance:
+
+[source,python]
+----
+# Check index usage statistics
+db_stats = db.command("collStats", "products")
+print("Collection Statistics:")
+print(f"Total documents: {db_stats['count']}")
+print(f"Average document size: {db_stats['avgObjSize']:.2f} bytes")
+print(f"Total collection size: {db_stats['size']:.2f} bytes")
+print(f"Index size: {db_stats['totalIndexSize']:.2f} bytes")
+
+# List all indexes and their usage
+indexes = list(products.list_indexes())
+print(f"\nIndexes on products collection: {len(indexes)}")
+for index in indexes:
+    print(f"- {index['name']}: {index['key']}")
+
+# Test aggregation performance
+agg_pipeline = [
+    {"$group": {"_id": "$category", "count": {"$sum": 1}}},
+    {"$sort": {"count": -1}}
+]
+agg_explain = db.command("explain", {"aggregate": "products", "pipeline": agg_pipeline}, verbosity="executionStats")
+print(f"\nAggregation execution time: {agg_explain.get('executionStats', {}).get('executionTimeMillis', 'N/A')}ms")
+----
+
+This code demonstrates how to monitor database performance and index usage. The `collStats` command provides detailed information about collection size, document count, and index usage. Monitoring these metrics helps you identify performance bottlenecks and optimize your database configuration.
+
+.Deliverables
+====
+5.1. Create appropriate indexes for the e-commerce collections
+
+5.2. Test query performance using db.command("explain", ...) method
+
+5.3. Create compound and text indexes for advanced queries
+
+5.4. Create indexes on nested fields like reviews.rating
+
+5.5. Test the performance of complex aggregation pipelines
+
+5.6. What are the key considerations for optimizing MongoDB performance in production?
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_mongodb_project2.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
