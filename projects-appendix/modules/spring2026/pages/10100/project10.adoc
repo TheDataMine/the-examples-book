@@ -1,0 +1,450 @@
+= TDM 10100: Project 10 - Advanced Plotting
+
+== Project Objectives
+Motivation: You now know how to make visualizations. In this project, you will get to expand your knowledge of plotting while working with vastly different datasets. Each brings its own challenge, and allows you to work through these accordingly. 
+
+Context: We have some practice making plots from datasets. But it is also important to learn how to make these visualizations not just for the sake of plotting, but also for gaining insights and communicating findings clearly. 
+
+Scope: R, ggplot2, dplyr, scatterplots, barplots
+
+.Learning Objectives
+****
+- Create advanced plots in R and through the Tidyverse
+- Practice variety of plotting methods
+- Learn about how to assess plots for quality
+****
+
+== Dataset
+- /anvil/projects/tdm/data/ssa/yob2006.txt
+- /anvil/projects/tdm/data/ssa/yob1997.txt
+- /anvil/projects/tdm/data/zillow/State_time_series.csv
+
+[[ai-note]]
+[IMPORTANT]
+====
+If AI is used in any cases, such as for debugging, research, etc., we now require that you submit a link to the entire chat history. For example, if you used ChatGPT, there is an “Share” option in the conversation sidebar. Click on “Create Link” and please add the shareable link as a part of your citation.
+
+The project template in the Examples Book now has a “Link to AI Chat History” section; please have this included in all your projects. If you did not use any AI tools, you may write “None”.
+
+We allow using AI for learning purposes; however, all submitted materials (code, comments, and explanations) must all be your own work and in your own words. No content or ideas should be directly applied or copy pasted to your projects. Please refer to https://the-examples-book.com/projects/fall2025/syllabus#guidance-on-generative-ai. Failing to follow these guidelines is considered as academic dishonesty.
+====
+
+### Baby Names
+The United States Social Security Administration (SSA) has kept records tracking the popularity of each name given to a newborn throughout each year starting in 1880. Through https://www.ssa.gov/oact/babynames/[this site], you can sort through names across popularity, rank, decade, state, territory, and more. As the years have gone on, the population has increased. So the file for 2006 has thousands more rows of names data than the 1997 file. 
+
+The 2006 dataset contains 34107 rows, and the 1997 dataset contains 26976 rows of baby names, tracked across three columns:
+
+- `Name`: the name entered in the database
+- `Sex`: using 'F' or 'M' to track the sex assigned to the newborn
+- `Counts`: How many times this name-and-sex pairing occurred within the set year 
+
+### Zillow
+Zillow is a real estate marketplace company for discovering real estate, apartments, mortgages, and home values. It is the top U.S. residential real estate app, working to help people find home for almost 20 years. 
+
+This dataset provides information on Zillow's housing data, with 13212 row entries and 82 columns. Some of these columns include: 
+
+- `Date`: date of entry in YYYY-MM-DD format
+- `RegionName`: All 50 states + the District of Columbia + "United States"
+- `DaysOnZillow_AllHomes`: median days on market of homes sold within a given month across all homes
+- `MedianListingPrice_AllHomes`: median of the list price / asking price for all homes
+- `PctOfHomesDecreasingInValues_AllHomes`: percentage of homes decreasing in values across all homes
+- `PctOfHomesIncreasingInValues_AllHomes`: percentage of homes increasing in values across all homes
+
+
+[NOTE]
+====
+Dr Ward hopes that your fall 2025 semester is going well!  We encourage you to try to complete all 14 projects.  We only use your best 10 out of 14 projects for the overall project grade, but that is no reason to stop early.  Please feel welcome and encouraged to try all 14 projects this semester!
+
+Please also feel encouraged to connect with Dr Ward on LinkedIn: https://www.linkedin.com/in/mdw333/
+
+and also to connect with The Data Mine on LinkedIn: https://www.linkedin.com/company/purduedatamine/
+====
+
+
+== Questions
+
+[IMPORTANT]
+====
+For this project, you will need to load in both the `dplyr` and `ggplot2` libraries:
+
+[source, R]
+----
+library(dplyr)
+library(ggplot2)
+----
+====
+
+=== Question 1 (2 points)
+Sometimes you may want to make a plot in R. Now you have had some experience in that using just base R. But what if you would like to make more complex plots, and have more freedom with the customizations you add to them? 
+
+`ggplot2` is an R package that focuses on data visualization. This package is a part of the *Tidyverse*; a collection of R packages designed to make data science more human-accessible. `ggplot2` is often used alongside `dplyr`, but works just fine with data manipulations made in base R as well. 
+
+The philosophy of ggplot:
+
+* Mostly, start with `ggplot()` and it is followed by `+` to add component to the plot. 
+* Supply a dataset (*mandatory*)
+* Supply aesthetic mapping (*mandatory*)
+* Add on layers (such as geom_point())
+* Add on scales (such as scale_colour_brewer())
+* Specify the facet (such as facet_wrap())
+* Specify coordinate systems (such as coord_flip())
+
+The general frame of ggplot looks like 
+
+[source, R]
+----
+ggplot(df, aes(x, y, other aesthetics))
+----
+
+[TIP]
+====
+Read some of the documentation on `ggplot2` https://ggplot2.tidyverse.org/[here] to get a good base idea of what we're getting into. 
+====
+
+The original package was called `ggplot`. The initial version was wrote to implement the "Grammar of Graphics" ideas and got released as `ggplot`. It was originally released on CRAN in 2005 (read more about CRAN https://cran.r-project.org/index.html[here]). But everything gets updated. The package was rewritten and later released as `ggplot2` in 2009. The updated package was more powerful and stable than before, and is what is commonly used today. The library is `ggplot2` now, but the main function used from this package remains `ggplot()`.
+
+The Baby Names 2006 dataset is in `.txt` format. The data within this file is still comma delimited, but the file is not in the right format for us to just use `read.csv()` as we usually would. 
+
+[IMPORTANT]
+====
+Make sure to use `read.table()` when reading in both the Baby Names 1997 and 2006 datasets. For example:
+
+[source, R]
+----
+myDF <- read.table("/anvil/projects/tdm/data/ssa/yob2006.txt", sep = ",", header = FALSE)
+
+the_1997 <- read.table("/anvil/projects/tdm/data/ssa/yob1997.txt", sep = ",", header = FALSE)
+----
+====
+
+When you view the `head()` of this data, the rows display just fine, but there are no proper column names. Make sure to go back and add labels that correspond to each column's respective content:
+
+[source, R]
+----
+colnames(myDF) <- c("Name", "Sex", "Counts")
+colnames(the_1997) <- c("Name", "Sex", "Counts")
+----
+
+This Baby Names 2006 dataset contains the counts of the names used in the year 2006 for newborns. Subset the data and find the entry/entries specific to the popularity of the name `'Alan'`. Do the same for `'Eric'` and `'Avery'`. How does the popularity of these names change between 2006 and 1997? 
+
+Make a barplot (in base R) of the top 20 names in each year. Make a second barplot (showing the top 20 names in each year) in `ggplot2`. 
+
+[HINT]
+====
+Read about barplots in ggplot2 https://r-graph-gallery.com/barplot.html[here] to get some inspiration on how to customize your first `ggplot2` barplot!
+====
+
+.Deliverables
+====
+1.1 How has the popularity of the selected names shifted over the years? +
+1.2 Make 2 barplots, one of the top 20 names in 1997, the other of the top 20 names in 2006, both in base R. Do these same plots again, this time in `ggplot2`. You must customize these plots with things like title, axis labels, and at least one other customization. +
+1.3 Write 2-3 sentences explaining what you did to begin working in ggplot2, and what you tried for making this version of the barplot.
+====
+
+=== Question 2 (2 points) 
+The `ggplot2` package is generally a bit more complicated than plotting in base R, but its features are really nice for more complex plots, and it's coding structure good for readability for when we do come back to past code.
+
+In this question, we will be working in the 2006 Baby Names dataset. 
+
+*Extract the First Letters* +
+Use `mutate()` and `substr()` (`substring()` also works!) to create a new column containing the first letter of each name. For example:
+
+[source,R]
+----
+mutate([new_col_name] = substr([old_col_name], [start_position], [stop_position]))
+----
+
+*Group and Summarize* +
+Next, use `group_by()` to group by the new `first_letter` column, and `summarize()` to compute the total counts per first letter:
+
+[source, R]
+----
+df_grouped <- myDF %>%
+# the first_letter = each name, start at position 1 and end at position 1 (of the name)(meaning first letter)
+  mutate(first_letter = substr(Name, 1, 1)) %>% 
+# group by each first_letter
+  group_by(first_letter) %>%
+# create smaller dataset to aggregate the groups
+# calculate the sum of the Counts (of the names) of each first letter
+  summarise(total_count = sum(Counts))
+----
+
+*Plot* +
+If you Google "ggplot2 plotting", the result can be quite scary. They start throwing words at you like "geom_bar" and "aes" and "facet_wrap", and none of the formatting is familar. 
+
+In `ggplot2`, the main function is `ggplot()`. This is the starting point for creating a plot. It tells your environment that you are going to be creating a visualization. If you run it by itself (literally just "`ggplot()`" in a cell), it will create a blank gray mapping area. That is your plotting space!
+
+The next step is adding your grouped data to this space. Create a barplot of the counts per first letter with either `geom_col()` or `geom_bar()`. Read about the differences between and use cases of these functions https://ggplot2.tidyverse.org/reference/geom_bar.html[here].
+
+[NOTE]
+====
+Just like in `dplyr`, `ggplot2` uses piping. This is no one's favorite part, but you should remember to include a `'+'` after each line (except the final line) when you are plotting. 
+====
+
+*Experiment with Bad Plotting* +
+Another useful method of plotting is a histogram. Strangely enough, we will not be making use of the value they bring to plotting in this question. 
+
+Histograms don't care about categorical data - they show the distribution of numeric values. Our dataset is mostly made up of strings rather than numeric values. So we will have to find an alternative to plotting this data than how we did with the barplot, as we are currently plotting by categorical data (the first letters). 
+
+[NOTE]
+====
+The plot you are going to make should not be good. The x-axis should show the count values, and the y-axis should show how many letters had that count value. This plot *should* make no real usable sense to us!  
+====
+
+The histogram should show how the total counts themselves are distributed, not which letter they correspond to. *If* there was only one letter per total count value, it would be painful but you could eventually figure out which letter corresponded to which bar, by going back to the table of their values and matching each with its own. But this would be a terrible histogram, just as is the one we are currently working with. That being said, a histogram really isn't the best plotting method for *this* grouped data, but is very useful in other contexts. *We will explore more about (good) histograms in Project 11*.
+
+.Deliverables
+====
+2.1 Group the data to make a new dataframe containing two columns: `first_letter` and `total_count`. +
+2.2 Make a barplot showing the distributions of names starting with each of the 26 letters. Explain your method (geom_col or geom_bar) and why you chose it over the other. +
+2.3 Make a histogram (using `geom_histogram()`) to show the distribution of the counts of the letters. Explain (2-3 sentences) your thoughts about using a histogram how we did, and how/when it could be used better with a broader dataset.
+====
+
+=== Question 3 (2 points)
+
+In Question 2, we grouped the data by the first letter of each name and found the counts. In this question, let's bring back the `Sex` column from the original, ungrouped dataset. 
+
+Society has decided that some names are "girl names" and some are "boy names". But many names are switched for which sex they are used for with every year that passes.
+
+Look back at where we subsetted the data for the specific names (Alan, Eric, and Avery). There are two rows for each name, one for when it was used for a female, and one where it was used for a male. 
+
+The popularity of names across the sexes changes throughout the years as well. In 1997, Avery was more popular as a "boys" name, but this has since changed. In 2006, the number of females named Avery greatly outnumbered the males. 
+
+For this question, group the 2006 data again, this time grouping by both the first letter AND the sex. Each first letter should now have two rows (one for female, one for male) with separate counts:
+
+[source, R]
+----
+df_grouped_again <- myDF %>%
+  mutate(first_letter = substr(Name, 1, 1)) %>% 
+  group_by(first_letter, Sex) %>%
+  summarise(total_count = sum(Counts), .groups = 'drop')
+----
+
+When plotting, you can use color (or fill) to represent sex, which adds another layer of information.
+
+*Subplots* +
+`facet_wrap()` is used to break a plot into subplots. Here is an example usage of facet_wrap (for the different first letters):
+
+[source, R]
+----
+ggplot(df_grouped_again, aes(x = Sex, y = total_count, fill = Sex)) +
+# barplot
+  geom_col() +
+# facet_wrap makes a plot for each (first_letter) 
+  facet_wrap(~first_letter)
+----
+
+There are some fun examples https://r-charts.com/ggplot2/facets/[here] on how to further change your plot once it has been faceted.
+
+[NOTE]
+====
+There is a great resource for customizing the readability of your plots https://ggplot2.tidyverse.org/reference/labs.html[here].
+====
+
+.Deliverables
+====
+3.1 Make a barplot that shows the distribution of names across the letters, colored by sex. +
+3.2 Split your plot into subplots using `facet_wrap()`. Try using both `first_letter` and `Sex` in your `facet_wrap()` function (in *2 separate plots*). Label these plots accordingly with a title and axis labels. +
+3.3 Use `scale_fill_manual()` set the colors of select bars. This is useful to draw attention to certain parts of your plot. For example, in your plot resulting from `facet_wrap(~Sex)`, you could highlight letters A, E, and S, each in a different color from the rest.
+====
+
+=== Question 4 (2 points)
+
+++++
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_g4vnka4w&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_0u8plkjl%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 800px;height: 585px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Data Cleaning"></iframe>
+++++
+
+The Zillow dataset has many rows and columns, including `DaysOnZillow_AllHomes`, `MedianListingPrice_AllHomes`, `PctOfHomesDecreasingInValues_AllHomes`, and `PctOfHomesIncreasingInValues_AllHomes`. Read the data:
+
+[source, R]
+----
+zillow = read.csv("/anvil/projects/tdm/data/zillow/State_time_series.csv")
+----
+
+Check out the `DaysOnZillow_AllHomes` and `MedianListingPrice_AllHomes` columns. What sort of data do they have? Some values are missing, which can affect plots. 
+
+When you're cleaning these two columns, it is completely up to you on how you do this. `filter()` is good if you're using `dplyr`, or you can completely ignore that and use base R. Show that the NA values are removed once this cleaning is complete. 
+
+An example of using `filter()` to clean the data looks like: 
+
+[source,R]
+----
+zillow_cleaned <- zillow %>%
+  filter(!is.na(DaysOnZillow_AllHomes), 
+         !is.na(MedianListingPrice_AllHomes))
+----
+
+Create a scatterplot using `geom_point()` with `DaysOnZillow_AllHomes` and `MedianListingPrice_AllHomes`. 
+
+[NOTE]
+====
+Adjusting the size of your plot can also help with how it is shown. Use `options(repr.plot.width = 20, repr.plot.height = 16)` to adjust the width and height of the plot. Find what size ratio you like for this. 
+====
+
+You have a lot of control over the color, size, and shape of the points. Some examples of color customizations you can use are:
+
+- A standard color like "blue" +
+- You can set a third column as the values for the color range; if your color range is red at the high end, blue at the low end, and you're using a column of price values, the high prices of the points on your plot will be red, and the low prices will be blue. +
+- A gradient can have more than two colors. In `scale_color_gradientn()`, you could even have colors = c("blue", "green", "yellow", "red"), and the gradient would go through all four colors. 
+
+There are charts for the different ggplot2 https://www.datanovia.com/en/blog/ggplot-point-shapes-best-tips/[point shapes that can be used] in `geom_point()`. These customize the shape of the markers that make up on your scatterplot. 
+
+[NOTE]
+====
+You can also customize the plotting space itself. Check out this page https://rdpeng.github.io/RProgDA/customizing-ggplot2-plots.html[here] to learn more about the possibilities there. 
+====
+
+`PctOfHomesDecreasingInValues_AllHomes` and `PctOfHomesIncreasingInValues_AllHomes` are opposite columns: one measures the percentage of homes with decreasing values, while the other measures those with increasing values.
+
+For your scatterplot, use `PctOfHomesDecreasingInValues_AllHomes` as the third dimension by mapping it to the color gradient such as
+
+[source, R]
+----
+# plot with homes with decreasing values
+p1 <- ggplot(zillow_cleaned, aes(x = DaysOnZillow_AllHomes, y=MedianListingPrice_AllHomes,
+                              color=PctOfHomesDecreasingInValues_AllHomes)) +
+geom_point( size = 3, shape = 2) +
+scale_color_gradient(low = "blue", high = "red")
+p1
+
+# you may notice in this example that a ggplot can be saved as an object (e.g.: p1) in R.
+----
+
+Then, create a second scatterplot that is identical, but uses `PctOfHomesIncreasingInValues_AllHomes` for the color values instead. Comment on any patterns you notice between these two plots. 
+
+[NOTE]
+====
+Assuming you saved the plot created with decreasing values as `p1` and the one with increasing values as `p2`, you can display these two plots in different arrangements. To do so, you can install the `patchwork` and `gridExtra`. They are not built into R by default, so you do need to load them once before using them:
+
+[source, R]
+----
+library(patchwork)
+p1 + p2
+
+# OR
+
+library(gridExtra)
+grid.arrange(p1, p2, ncol = 2)
+----
+====
+
+[NOTE]
+====
+You may see some points that do not color when you set your columns as the color gradient keys. Why is this?
+====
+
+Trend lines are used on plots to show the general direction of the data points. This can reveal underlying correlations/patterns, help us make predictions, and highlight hidden problem spots. They show the "average" movement of data, which helps us to visualize the trend's consistency. 
+
+Use `geom_smooth()` to add a trend line to track the median listing price of homes as their days on Zillow increase such as:
+
+[source, R]
+----
+p1 <- p1 + geom_smooth(method = "lm", se = FALSE, color = "black")
+----
+
+Please add a linear trend line to the `p2`, too.
+
+.Deliverables
+====
+4.1 Explain why the missing data leads to gray points in ggplot2, and how you solved this. +
+4.2 Make a scatterplot of `DaysOnZillow_AllHomes` vs `MedianListingPrice_AllHomes`. Use `color = PctOfHomesDecreasingInValues_AllHomes` and `color = PctOfHomesIncreasingInValues_AllHomes` to create gradient color scales. Adjust the size and shape of the points in your plot, and add a trendline. +
+4.3 Write 2-3 sentences interpreting your scatterplot and trendline. Describe any relationship between listing price and days on Zillow. Point out any outliers or clusters. What does the trendline suggest about the data?
+====
+
+=== Question 5 (2 points)
+Line plots are a very common method for showing how values change over time. You have already learned about barplots, scatterplots, and color mapping. Now we will take the Zillow dataset and explore it more as a time series. 
+
+The Date column records when the housing data within each row entry was captured. The `MedianListingPrice_AllHomes` column shows the median listing price for all home types. By grouping these prices by date and region, you can track trends by location over time. 
+
+[IMPORTANT]
+====
+The `Date` column contains character data. Be sure to convert it to date format (`as.Date()` is simple, `lubridate` functions allow for easy customizability, etc.)
+====
+
+When working with time series data, it is important to make sure you:
+
+- convert `Date` values to actual date type, +
+- decide specific set time range included, +
+- summarize your measure of interest (mean, median, sum, etc.) per time period.
+
+[source,R]
+----
+zillow_cleaned$Date <- as.Date(zillow_cleaned$Date) 
+----
+
+You will need to group the data for this plot. Group by the `Date` column and this subset of `RegionName`:
+
+[source,R]
+----
+selected_regions <- c("Indiana", "Tennessee", "Utah", "NewHampshire")
+----
+
+There are many entries of each region throughout the `RegionName` column. Make sure to filter for the occurrences of these values in the column rather than just taking these four set values of `selected_regions`. 
+
+Summarize the grouped data to find the average price in `MedianListingPrice_AllHomes`:
+
+[source, R]
+----
+zillow_grouped_small <- zillow_cleaned %>%
+  filter(RegionName %in% selected_regions) %>%
+  group_by(Date, RegionName) %>%
+  summarise(
+    avg_price = mean(MedianListingPrice_AllHomes),
+    .groups = "drop"
+  )
+----
+
+A special feature that comes with `ggplot2` is the ability to save your plots to a variable. Run the code from Example #1, customizing anything in `[]` and adding labels accordingly. 
+
+
+[source,R]
+----
+# Example #1
+
+p <- ggplot(grouped_df, aes(x = [date_col], y = [price_col], color = [location_selection], group = [location_selection])) +
+  geom_line() +
+  labs(
+    title = "",
+    x = "",
+    y = ""
+  ) 
+----
+
+[WARNING]
+====
+Your plots will look different depending on whether or not you remember to remove the NA values
+====
+
+Filter the data again, this time taking only the entries listed in Example #2.
+
+[source,R]
+----
+# Example #2
+
+more_selected_regions <- c("California", "Delaware", "Florida", "Alaska")
+----
+
+Add these regions' lines to your plot by running `p + geom_line()`, filling in `geom_line()` with your plotting details. 
+
+.Deliverables
+====
+5.1 Make a new dataframe with `Date`, `avg_price`, and `RegionName`. Briefly describe how you handled NA values. +
+5.2 Create a line plot with `geom_line()` showing average listing prices over time by the values of `selected_regions`. Add lines to your plot for each location of `more_selected_regions`. +
+5.3 Write 2-3 sentences interpreting your final line plot. 
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project10.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====

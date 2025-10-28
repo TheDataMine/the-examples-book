@@ -1,0 +1,291 @@
+= TDM 40100: Project 10 - Image Segmentation with Watershed
+
+== Project Objectives
+
+This project will teach you how to use the watershed algorithm for image segmentation. You will use watershed through OpenCV to segment images, and learn how to visualize the results.
+
+.Learning Objectives
+****
+- Understand the watershed algorithm and how it can be used for image segmentation.
+- Implement the watershed algorithm using OpenCV.
+- Visualize the results of the watershed algorithm.
+****
+
+== Dataset
+
+- /anvil/projects/tdm/data/segmentation_images/157036.jpg
+
+[[ai-note]]
+[IMPORTANT]
+====
+If AI is used in any cases, such as for debugging, research, etc., we now require that you submit a link to the entire chat history. For example, if you used ChatGPT, there is an “Share” option in the conversation sidebar. Click on “Create Link” and please add the shareable link as a part of your citation.
+
+The project template in the Examples Book now has a “Link to AI Chat History” section; please have this included in all your projects. If you did not use any AI tools, you may write “None”.
+
+We allow using AI for learning purposes; however, all submitted materials (code, comments, and explanations) must all be your own work and in your own words. No content or ideas should be directly applied or copy pasted to your projects. Please refer to https://the-examples-book.com/projects/fall2025/syllabus#guidance-on-generative-ai. Failing to follow these guidelines is considered as academic dishonesty.
+====
+
+[NOTE]
+====
+Dr Ward hopes that your fall 2025 semester is going well!  We encourage you to try to complete all 14 projects.  We only use your best 10 out of 14 projects for the overall project grade, but that is no reason to stop early.  Please feel welcome and encouraged to try all 14 projects this semester!
+
+Please also feel encouraged to connect with Dr Ward on LinkedIn: https://www.linkedin.com/in/mdw333/
+
+and also to connect with The Data Mine on LinkedIn: https://www.linkedin.com/company/purduedatamine/
+====
+
+== Questions
+
+=== Question 1 (2 points)
+
+Watershed algorithm is an old school image segmentation algorithm based on topographical representation of an image. If we can view the intensity of a pixel as its "height" in a topographical map, then watershed algorithm can be thought of as flooding the image from the lowest points to find the boundaries where water would naturally flow. This results in distinct regions in the image, based on the water as the boundaries. Watershed is particularly useful for segmenting images with well-defined boundaries, such as colorful objects or distinct regions. It can also be used to help separate overlapping objects in an image.
+
+In order for watershed to work, it needs "markers", or points in the image that indicate where the boundaries of these regions are. These markers can represent foreground objects, background objects, unknown regions, etc.
+
+To start, let's load the image `'/anvil/projects/tdm/data/segmentation_images/157036.jpg'` and display it in RGB format. Then, convert the image to grayscale using `cv2.COLOR_RGB2GRAY``.
+
+[source,python]
+----
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+# Load the image
+img = # YOUR CODE HERE
+
+img_rgb = # YOUR CODE HERE
+img_gray = # YOUR CODE HERE
+# Display the image in RGB and grayscale side by side
+plt.figure(figsize=(10, 5))
+plt.subplot(1, 2, 1)
+plt.imshow(img_rgb)
+plt.title('Image in RGB')
+plt.axis('off')
+plt.subplot(1, 2, 2)
+plt.imshow(img_gray, cmap='gray')
+plt.title('Image in Grayscale')
+plt.axis('off')
+plt.show()
+----
+
+Now that the image is displayed in grayscale, we can convert it to a binary (black and white) image using a threshold. This will help us identify the regions of interest in the image. Use `cv2.threshold` to convert the grayscale image to a binary image. There are many options for thresholding, but for this project we will use `cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU` to automatically determine the optimal threshold value.
+[source,python]
+----
+# Convert the grayscale image to a binary image
+_, binary_img = cv2.threshold(img_gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+# Display the binary image
+plt.imshow(binary_img, cmap='gray')
+plt.title('Binary Image')
+plt.axis('off')
+plt.show()
+----
+
+.Deliverables
+====
+1.1. Display the original image in RGB format and the grayscale image side by side. +
+1.2. Display the binary image after applying the threshold.
+====
+
+=== Question 2 (2 points)
+
+In order to generate markers for watershed, we need to identify the foreground and background regions in the image. While this is easy for us to do visually, we need some way for the computer to do it. The best way to do this is with morphological operations and a distance transform. 
+
+We want to find precisely 3 regions in the image: the foreground, the background, and some unknown regions.
+
+First, we will perform the opening morphological operation on the binary image to remove noise and small objects. This will help us to better define the foreground region. This can be done using `cv2.morphologyEx` with `cv2.MORPH_OPEN` to perform the opening operation.
+
+[source,python]
+----
+# Perform morphological opening to remove noise
+opened_img = cv2.morphologyEx(binary_img, cv2.MORPH_OPEN, kernel=np.ones((5, 5), np.uint8))
+# Display the opened image
+plt.imshow(opened_img, cmap='gray')
+plt.show()
+----
+
+Then, we can find sure foreground and background regions. The sure background can be found by simply dilating the opened image, which will expand foreground regions. Any remaining pixels must be part of the background, as parts that we think are the foreground have already been expanded to take up more space. This can be done using `cv2.dilate` with a kernel of your choice, as shown below.
+
+[source,python]
+----
+# Create a kernel for morphological operations
+kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+# Dilate the binary image to overestimate the background
+dilated_img = cv2.dilate(binary_img, kernel, iterations=3)
+# Display the dilated image
+plt.imshow(dilated_img, cmap='gray')
+----
+
+Now that we have our sure background, we can find the sure foreground by using the distance transform. The distance transform will give us a map of the distance from each pixel to the nearest zero pixel (background). We can then threshold this distance map to find the sure foreground regions. Use `cv2.distanceTransform` to compute the distance transform, and then threshold it to find the sure foreground.
+
+[source,python]
+----
+dist_transform = cv2.distanceTransform(opened_img, cv2.DIST_L2, 5)
+# Threshold the distance transform to find sure foreground
+_, sure_fg = cv2.threshold(dist_transform, 0.05 * dist_transform.max(), 255, 0)
+# Convert sure foreground to uint8
+sure_fg = np.uint8(sure_fg)
+# Display the sure foreground
+plt.imshow(sure_fg, cmap='gray')
+----
+
+[NOTE]
+====
+In this case, we use a threshold of 0.05 times the maximum value of the distance transform to define the sure foreground. This means that any pixel within 5% of the maximum distance will be considered part of the sure foreground. You can adjust this value based on your specific image and requirements. A larger value will result in a smaller sure foreground region, while a smaller value will result in a larger sure foreground region.
+====
+
+Now that we have our sure foreground and sure background, we can find the unknown regions by subtracting the sure foreground from the dilated image. This will give us the unknown regions, which are the pixels that are neither part of the sure foreground nor part of the sure background. This can simply be done with the `cv2.subtract` function.
+
+[source,python]
+----
+# Find unknown regions by subtracting sure foreground from dilated image
+unknown_regions = cv2.subtract(dilated_img, sure_fg)
+# Display the unknown regions
+plt.imshow(unknown_regions, cmap='gray')
+----
+
+.Deliverables
+====
+2.1. Image showing the opened image after morphological operations. +
+2.2. Image showing the dilated image representing the sure background. +
+2.3. Image showing the sure foreground after applying the distance transform and thresholding. +
+2.4. Image showing the unknown regions after subtracting the sure foreground from the dilated image.
+====
+
+=== Question 3 (2 points)
+
+Now that we have our foreground, background, and unknown regions, we can create a marker image that will be used for the watershed algorithm. This can be done with OpenCV's `cv2.connectedComponents` function, which will label the connected components in the sure foreground image. This function finds these connected components based on pixel connectivity, and each group of connected pixels will be assigned a unique label/number/marker. This is shown in the code below.
+
+[source,python]
+----
+_, markers = cv2.connectedComponents(sure_fg)
+# Create a marker image with the same size as the original image
+markers = markers + 1  # Increment markers to avoid zero value, which is reserved for the unknown region(s)
+markers[unknown_regions == 255] = 0  # Set unknown region(s) to zero
+
+# show image with markers
+plt.imshow(markers, cmap='Grays')
+plt.title('Markers for Watershed Algorithm')
+plt.axis('off')
+plt.show()
+----
+
+Now that we have our markers, we can apply the watershed algorithm using `cv2.watershed`. This will segment the image based on the markers we created. The watershed algorithm will modify the original image to mark the boundaries of the segmented regions.
+
+[source,python]
+----
+img_copy = img_rgb.copy()  # Create a copy of the original image for visualization
+markers = cv2.watershed(img_copy, markers)
+img_copy[markers == -1] = [255, 0, 255]  # Mark the boundaries with purple color
+
+# Display the segmented image with boundaries
+plt.imshow(img_copy)
+plt.title('Segmented Image with Watershed Boundaries')
+plt.axis('off')
+plt.show()
+----
+
+.Deliverables
+====
+3.1. Image of markers created for watershed algorithm. +
+3.2. Image showing the segmented regions with boundaries marked in purple.
+====
+
+=== Question 4 (2 points)
+
+Currently, every segmented region is marked with the same color, which can make it challenging to distinguish between different regions that are close together or touching. To improve the visualization, we can assign a unique color to each segmented region.
+
+To do this, we will simply find all the unique markers, and give each one a random RGB value. We can use `np.unique` to find the unique markers, and use `np.random.randint` to generate random colors for each marker. Then, we will create a new image where each marker is colored with its corresponding random color.
+
+[source,python]
+----
+segmented_image = np.zeros_like(img_rgb)  # Create an empty image for the segmented output
+
+# Get all the unique markers
+unique_markers = # YOUR CODE HERE
+
+# Loop through each unique marker and assign a random color
+for marker in unique_markers:
+    if marker == 0: # Skip the background marker
+        continue
+    
+    # Generate a random RGB color
+    color = # YOUR CODE HERE
+
+    # Assign the color to the segmented image, similar to how we assigned the purple color for boundaries 
+    # YOUR CODE HERE
+
+# Display the segmented image with unique colors for each region
+plt.imshow(segmented_image)
+plt.title('Segmented Image with Unique Colors')
+plt.axis('off')
+plt.show()
+----
+
+Now that you can see the segmented regions with unique colors, how well did watershed perform? You can visually inspect the results to see if the segmentation is accurate and if the boundaries are well-defined. Please also try out some different kernel sizes, threshold values, etc., display their results, and explain how they affect the segmentation.
+
+.Deliverables
+====
+4.1. Image showing the segmented regions with unique colors for each region. +
+4.2. Multiple images showing the results of different kernel sizes, threshold values, etc. +
+4.3. Explanation of how different parameters affect the segmentation results.
+====
+
+=== Question 5 (2 points)
+
+In Question 3, we applied an opening operation to the binary image to remove some noise before finding the sure foreground. However, let's also try applying a Gaussian blur to the grayscale image before thresholding it. This can help smooth out the image and reduce noise, which may improve the segmentation results. For this question, simply apply a Gaussian blur with kernel size of 9x9 and standard deviation of 2 to the grayscale image before thresholding it. Then, repeat the steps from Questions 2 through 4 to display the results. Additionally, do the same with a median blur with kernel size of 9x9. Do you think either of these blurs improved the segmentation results? Why or why not?
+
+.Deliverables
+====
+5.1. Image showing the results of applying Gaussian blur before thresholding. +
+5.2. Image showing the results of applying median blur before thresholding. +
+5.3. Explanation of whether the blurs improved the segmentation results and why or why not.
+====
+
+=== Question 6 (2 points)
+
+In question 3, we used the `cv2.connectedComponents` function to create markers for the watershed algorithm. However, there are other ways to create markers that can yield better results. For this question, let's try a different method to create markers and see how it affects the segmentation results.
+
+One potential method we could use is to use `cv2.findContours` to find the contours of the sure foreground regions, and then use these contours as markers. This can help to create more precise markers that better represent the boundaries of the regions. This function works by finding boundaries of white regions in a binary image, and using an edge following algorithm to trace the shape of the contour.
+
+[source,python]
+----
+# Find contours in the sure foreground image
+contours, _ = cv2.findContours(sure_fg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+# Create an empty image with the same size as the sure_fg, similar to how we did for the segmented image in question 4
+markers_contours = # YOUR CODE HERE
+# Loop through each contour and assign a unique marker value
+for i, contour in enumerate(contours):
+    cv2.drawContours(markers_contours, [contour], -1, i + 1, -1)  # Fill the contour with a unique marker value
+
+# Set the unknown regions of markers_contours to zero
+# YOUR CODE HERE
+
+img_copy = img_rgb.copy()  # Create a copy of the original image for visualization
+
+# Apply the watershed algorithm using the contours as markers on the copy of the original image
+#YOUR CODE HERE
+
+# Create random colors for each marker, question 4 code
+----
+
+.Deliverables
+====
+6.1. Display the markers created using contours. +
+6.2. How does this method compare to the `cv2.connectedComponents` method in terms of segmentation results? Does it yield better or worse results? Why do you think that is?
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project10.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
+
