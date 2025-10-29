@@ -270,6 +270,59 @@ WHERE type = 'movie'
 
 Even when we use the wildcard (*) to select all columns, we still have to specify which column we want to apply the aggregation to. In this example, we use the `AVG` function to calculate the average of the runtime_minute column. The `AS` keyword then lets us assign a clear name, avg_runtime, to the resulting column, which helps make our query output easier to read and interpret.
 
+Dr. Ward found all the title_id for Marvel Cinematic Universe (MCU) before, we use them for this example to find how many we have each year:
+
+[source, sql]
+----
+SELECT premiered AS year, COUNT(*) AS n FROM titles 
+WHERE title_id IN ('tt0371746', 'tt0800080', 'tt1228705', 'tt0800369', 'tt0458339', 'tt0848228', 'tt1300854', 'tt1981115', 'tt1843866', 'tt2015381', 'tt2395427', 'tt0478970', 'tt3498820', 'tt1211837', 'tt3896198', 'tt2250912', 'tt3501632', 'tt1825683', 'tt4154756', 'tt5095030', 'tt4154664', 'tt4154796', 'tt6320628', 'tt3480822', 'tt9032400', 'tt9376612', 'tt9419884', 'tt10648342', 'tt9114286') GROUP BY premiered;
+----
+
+Lets modifying this query to get the percentage of MCU movies released in each year. First find the total:
+
+[source, sql]
+----
+SELECT COUNT(*) FROM titles 
+WHERE title_id IN ('tt0371746', 'tt0800080', 'tt1228705', 'tt0800369', 'tt0458339', 'tt0848228', 'tt1300854', 'tt1981115', 'tt1843866', 'tt2015381', 'tt2395427', 'tt0478970', 'tt3498820', 'tt1211837', 'tt3896198', 'tt2250912', 'tt3501632', 'tt1825683', 'tt4154756', 'tt5095030', 'tt4154664', 'tt4154796', 'tt6320628', 'tt3480822', 'tt9032400', 'tt9376612', 'tt9419884', 'tt10648342', 'tt9114286');
+----
+
+When you divide the counts to total, you get zeros:
+
+[source, sql]
+----
+SELECT premiered AS year, COUNT(*)/29 AS n FROM titles 
+WHERE title_id IN ('tt0371746', 'tt0800080', 'tt1228705', 'tt0800369', 'tt0458339', 'tt0848228', 'tt1300854', 'tt1981115', 'tt1843866', 'tt2015381', 'tt2395427', 'tt0478970', 'tt3498820', 'tt1211837', 'tt3896198', 'tt2250912', 'tt3501632', 'tt1825683', 'tt4154756', 'tt5095030', 'tt4154664', 'tt4154796', 'tt6320628', 'tt3480822', 'tt9032400', 'tt9376612', 'tt9419884', 'tt10648342', 'tt9114286') GROUP BY premiered;
+----
+
+Why?
+
+When we calculate a percentage using integer (numeric data without a decimal place) columns, SQLite performs integer division. That means it divides the numbers as integers and truncates any decimal part, instead of giving a decimal (floating-point) result. For example:
+
+[source, sql]
+----
+SELECT 5/2;
+----
+
+This returns the integer part (2) in SQLite, not 2.5, because both 1 and 2 are integers. We can fix it converting at least one of them to real number as following by :
+
+[source, sql]
+----
+SELECT CAST(5 AS real)/2;
+----
+
+“REAL” is equivalent to a float or double, meaning a number that can include decimal values.
+
+Lets fix it in the real data:
+
+[source, sql]
+----
+SELECT premiered AS year, CAST(COUNT(*) AS real)/29 AS n FROM titles 
+WHERE title_id IN ('tt0371746', 'tt0800080', 'tt1228705', 'tt0800369', 'tt0458339', 'tt0848228', 'tt1300854', 'tt1981115', 'tt1843866', 'tt2015381', 'tt2395427', 'tt0478970', 'tt3498820', 'tt1211837', 'tt3896198', 'tt2250912', 'tt3501632', 'tt1825683', 'tt4154756', 'tt5095030', 'tt4154664', 'tt4154796', 'tt6320628', 'tt3480822', 'tt9032400', 'tt9376612', 'tt9419884', 'tt10648342', 'tt9114286') GROUP BY premiered;
+----
+
+DELETE THIS:
+We can find the percentages using a subquery which is a query used to get a smaller result set from a larger result set.
+
 
 == 4. Joins: Combining Tables
 
