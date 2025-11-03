@@ -1,0 +1,298 @@
+= TDM 10100: Project 12 - Mapping
+
+== Project Objectives
+Motivation: Maps are another interesting way to view and interact with data. While making maps from location data is a bit more niche than how datasets are generally worked with, it is important to know how to make these sorts of maps as they can help provide some context for data when location is involved. 
+
+Context: We've worked with the dplyr library before. It is not required, but it interacts very nicely with the leaflet and sf libraries, which makes mapping from manipulated data far less challenging. 
+
+Scope: R, mapping, plots, leaflet, sf, tigris
+
+.Learning Objectives
+****
+- Learn about mapping in R
+- Practice creating maps using the leaflet and sf libraries
+- Create insightful interactive maps
+****
+
+== Dataset
+- '/anvil/projects/tdm/data/formula_1/circuits.csv'
+- '/anvil/projects/tdm/data/zillow/State_time_series.csv'
+
+### Formula 1 Circuits
+Formula 1 is the highest level of international single-seater auto racing, sanctioned by the Fédération Internationale de l'Automobile (FIA). The "1" in Formula 1 refers to it being the top tier of open-wheel racing - with lower tiers such as F2, F3, etc. 
+
+This motorsport is well-known for its incredible speed, advanced technology, and global fanbase. The races (aka Grands Prix) are held all over the world, reaching every continent except Antarctica.
+
+This dataset is really small - 77 rows, 9 columns. But our goal in using this specific data is to get the locations where the Formula 1 races take place, using the `lat` and `lng` columns. There is a `name` column that will be helpful when we go and look up certain circuits.
+
+### Zillow State Time Series
+Zillow is a real estate marketplace company for discovering real estate, apartments, mortgages, and home values. It is the top U.S. residential real estate app, working to help people find home for almost 20 years. 
+
+This dataset provides information on Zillow's housing data, with 13212 row entries and 82 columns. We will be using just a select few to learn about mapping in this project. These columns include:
+
+- `RegionName`: All 50 states + the District of Columbia + "United States"
+- `InventoryRaw_AllHomes`: median of weekly snapshot of for-sale homes within a region for a given month
+
+== Questions
+Two notes before you begin this project: 
+
+[IMPORTANT]
+====
+For this project, you should load in the `dplyr`, `leaflet`, `sf`, `tigris`, and `htmltools` libraries for best results. That is a lot of packages, but we're going to show you some different methods of creating maps and utilizing just a few of their features. 
+====
+
+[IMPORTANT]
+====
+Your notebook will likely slow down, fight you when you scroll, or take a while to load when reopened or when you are saving it. This is to be expected and is OK. These maps are not just a simple plot output - they are full interactive web apps that are being rendered inside of the notebook, so have patience when the environment is difficult.
+====
+
+=== Question 1 (2 points)
+Below are two vectors, one containing the latitude, the other containing the longitude for some coordinate pairs. These lat-lng pairs map to https://www.visithamiltoncounty.com/blog/stories/post/things-to-do-during-thanksgiving-weekend/[ten locations in the Hamilton County area] that are places 'visithamiltoncounty.com' suggests people visit during the November-December holiday season. These locations vary from a Christmas tree farm to a Christkindlmarkt - a traditional German Christmas market. 
+
+[source,R]
+----
+locationsDF <- data.frame(
+    c(39.9690677, 39.9783852, 40.0580584, 39.9846017, 
+     40.0630168, 39.9690023, 40.0760665, 40.0252969, 
+     39.9435076, 39.9697801), 
+    c(-86.1334242, -86.1274124, -86.0216274, -86.0331097,
+     -86.1544242, -86.13151, -86.2437839, -86.0497328, 
+     -86.017186, -86.1301692))
+names(locationsDF) <- c("latitude", "longitude")
+----
+
+The function `st_as_sf()` comes from the `sf` library, and is used to convert dataframes into simple features (sf), which can store geometry data. The `sf` package is fundamental for working with geospatial data in R. It works well when used with packages from the `Tidyverse` (such as `dplyr`), but it is not required. 
+
+Use `points \<- st_as_sf( [df], coords=c([longitude_col], [latitude_col]), crs=4326)` to convert the two columns' values to actual geospatial values that can be mapped (hence the 4326 (meaning EPSG:4326), which corresponds to WGS 84, the standard GPS coordinate system). 
+
+Now you can map the points. A standard format would be:
+[source,R]
+----
+leaflet() %>% 
+  addTiles() %>% 
+  addCircleMarkers(data = points, radius = 5)
+----
+
+The map will be very small. That is OK for now - we will come back to this. 
+
+[NOTE]
+====
+If, for whatever reason, you have turned off the Rich Display setting, your map will not render. Make sure to not do this (it is turned on by default), or you will need to use `options(jupyter.rich_display = T)` to turn back on the Rich Display.
+==== 
+
+For each point that you've plotted, use `addMarkers()` to add a marker icon. If you have a lot of data points being plotted, you may want to have specific values in this function. However, we are working with ten locations, so using `data = points` is alright here. 
+
+[NOTE]
+====
+Once you make a couple maps, you may notice that the Notebook environment resists it when you scroll upwards. Try drag-clicking the actual scroll bar to help with this issue. 
+====
+
+.Deliverables
+====
+1.1 Create the `locationsDF` that contains the latitude and longitude coordinates +
+1.2 Use the ten holiday destination locations and show them on the map +
+1.3 Highlight the mapped points by adding a marker icon to each using `addMarkers(data = points)`
+====
+
+=== Question 2 (2 points) 
+The map is very small, and is even cut off with the limited amount of space. But we did find a workaround to the standard Jupyter Notebook settings for these R maps. It is not as simple as if you were working in RStudio, but it does fix this issue here.
+
+[source,R]
+----
+lapply(list(1), function(s) {
+  div(
+    leaflet(width = "500px", height = "500px") %>% 
+    (other functions...)
+    .... 
+    ....
+  )
+})
+----
+
+Taking the locations stored in points, we can string these places together on the map. Use:
+
+[source,R]
+----
+line <- st_sfc(st_linestring(as.matrix(st_coordinates(points))), crs = st_crs(points))
+----
+
+...to take each of the points and connect them in order as a line
+
+This line-drawing method will connect the locations by following the order in which they are sorted in the dataframe. 
+
+[WARNING]
+====
+If you do not care about maintaining the order of the points from the original dataframe, an alternative way to create the line is to use `line \<- st_cast(st_union(points), "LINESTRING")`. *This will NOT keep the points in order* as they were listed in the dataframe.
+====
+
+Now when you are making your map, you will still use `addCircleMarkers()` to show those individual location points. BUT we will also now use `addPolylines()`, with `data = line`, to draw the lines to connect the points. 
+
+We've got our points, and now they're connected together. This type of map is very interactive, so we're able to design it just so, and scroll, and zoom in and out, and so on. Something else we can do is add a popup to each of the points. 
+
+A popup can be a very simple thing. For example, you could add 
+
+[source,R]
+----
+popup = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10")
+----
+
+....to your markers or icons and call it done. Or each of your popups could display the name of the attraction/event at each specific location. And there are many more possibilities for what you could choose to include here. 
+
+.Deliverables
+====
+2.1 Use the `lappy()`.... resizing method to reshape your outputted maps. Try a few sizes to see which you like the best +
+2.2 Connect the 10 locations together with lines on the map +
+2.3 Add meaningful popups to each location's circle marker or marker icon
+====
+
+=== Question 3 (2 points)
+++++
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_cjs46f6o&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_1z50ht4l%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 400px;height: 285px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Project12_Question3"></iframe>
+++++
+
+Read in the Formula 1 Circuits data. 
+
+If you look at the `head()` of the dataset, you can see that these latitude and longitude columns are called `lat` and `lng`, respectively. We're going to create a new dataframe `testDF` containing just these two columns. 
+
+[NOTE]
+====
+If you would like to rename the two columns in testDF, this is really easy to do: `names(testDF) \<- c("Latitude","Longitude")`. Just ensure the new column names relate to the contents of each column.
+====
+
+Take `testDF` and plot the values onto a map. These values are a lot more spread out than those just from the Indianapolis area in Questions 1 and 2. So while this dataset was smaller and somewhat limited on some topics, the number of points we can plot from it is actually a lot to take in at once. 
+
+https://en.wikipedia.org/wiki/List_of_Formula_One_circuits[This Wikipedia page] lists the Formula 1 racetracks and some further information about each. Choose one of the racetracks, and use `setView()` to zoom the map in on that specific course. 
+
+.Deliverables
+====
+3.1 Show the `head()` of `testDF` to ensure that latitude and longitude columns are correct +
+3.2 Plot the points for the locations of the F1 racetracks onto a map +
+3.3 Zoom the map in to focus on the location of a racetrack
+====
+
+=== Question 4 (2 points)
+Read in the Zillow State Times Series as `myDF`. We will be using the columns `InventoryRaw_AllHomes` and `RegionName`, so make sure to clear these of NA values. 
+
+[HINT]
+====
+myDF_cleaned \<- myDF %>%
+  filter(!is.na(InventoryRaw_AllHomes), !is.na(RegionName))
+====
+
+This is a large dataset. We could potentially use all of the data row entries, but maps already slow down the environment. Instead, we will use a subset of the data - the first 1000 rows. 
+
+[IMPORTANT]
+====
+You do not *have to* use specifically the first 1000 rows. But this is a good sample size, and not too many rows that the maps make the notebook environment not work. 
+====
+
+From the `tigris` libray, there is the funciton `states()` that downloads the U.S. state boundary shapefiles from the U.S. Census Bureau. Use
+
+[source, R]
+----
+states_sf <- states(cb = TRUE) %>% 
+  st_transform(crs = 4326)
+----
+
+....to get a spatial dataframe of all of the U.S. states. Once again, this uses the `crs = 4326`, to map similar to how GPS does. 
+
+Taking this `states_sf` data, we need to merge it with the subset of myDF (where there are just 1000 rows), so the Zillow data can be put onto the country map. But, looking at the `head()` of both datasets, it is noticable that the formatting of the states listed are different:
+
+- `NAME` column: `West Virginia`
+- `RegionName` column: `WestVirginia`
+
+Make sure to convert the `RegionName` column of `subsetDF` to match the formatting of the `NAME` column of `states_sf`:
+[source,R]
+----
+subsetDF <- subsetDF %>%
+  mutate(RegionName = gsub("([a-z])([A-Z])", "\\1 \\2", RegionName))
+----
+
+There is one more problematic part with this column: there are more than one row entry per state. We need to take the average `InventoryRaw_AllHomes` score across each state. 
+
+[HINT]
+====
+One method of doing this is to use `group_by()` and `summarise()`:
+[source,R]
+----
+myDF_avg <- myDF %>%
+  group_by([states_col]) %>%
+  summarise([value_col] = mean([value_col]))
+----
+====
+
+With the final cleaned RegionName column, you can now combine these two dataframes by joining on the `NAME` and `RegionName` columns. 
+
+.Deliverables
+====
+4.1 Remove the NA values from the `InventoryRaw_AllHomes` and `RegionName` columns of `myDF` +
+4.2 Create `states_sf`, containg spatial data for the U.S. states map +
+4.3 Join the Zillow data with `states_sf`, and display the `head()` and the `shape()` to ensure the data has been grouped correctly
+====
+
+=== Question 5 (2 points)
+We're going to be making a map of the U.S., where the states are filled with color based on their `InventoryRaw_AllHomes` value.
+
+[source,R]
+----
+# Set the color gradient values to be based on the actual InventoryRaw_AllHomes values
+pal <- colorNumeric(
+  palette = "plasma",
+  domain = us50_sf$InventoryRaw_AllHomes
+)
+----
+
+We can use the `leafet()` function on the new merged dataframe, and add polygons (mapped shapes) to show each of the U.S. states.  
+
+[NOTE]
+====
+Specify the dataframe in the leaflet function this time: `leaflet(merged_df) %>% ......`
+====
+
+In the `addPolygons()` function, there are actually a lot of things you can and should customize in your plot:
+
+- `fillColor` - color to fill the shapes
+- `weight` - line weight of border lines
+- `color` - color of border lines
+- `fillOpacity` - opacity of the fill color
+- `highlight` - how shapes behave when hovered over
+- `label` - text popup when shape is hovered over
+- and many more. 
+
+The `fillColor` argument of `addPolygons()` function here is very important for this question. This is where we will put the color gradient that is based on the `InventoryRaw_AllHomes` column. 
+
+In the highlight argument, it is common to have `highlight = highlightOptions()`, and fill in `highlightOptions()` with:
+ 
+- `weight` - line weight of border lines
+- `color` - color of border lines
+- `bringToFront` - TRUE/FALSE value
+- etc.
+
+to customize what happens when each shape is hovered over. 
+
+For the label argument of `addPolygons()`, you should have `label = ~paste0(NAME, ": ", InventoryRaw_AllHomes)`. 
+
+Adding a legend to this plot is extremely useful, as it helps us to understand the values that relate to the colors shown on the map. 
+
+.Deliverables
+====
+5.1 Plot a map to show the `InventoryRaw_AllHomes` value for each state +
+5.2 Customize `addPolygons()` to make the map interactive and useful +
+5.3 Add a legend that relates to the mapped data to the plotting space
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project12.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
