@@ -1,0 +1,373 @@
+= WSDS Notes
+
+This page was prepared for the Women in Statistics and Data Science conference, held November 12–14, 2025. You are welcome to use it to practice working with SQLite.
+
+JupyterLab on https://www.rcac.purdue.edu/compute/anvil[Anvil], a supercomputer supported by the National Science Foundation, will be used for this workshop.
+
+== Data Sets: IMDb 
+
+We will use https://developer.imdb.com/non-commercial-datasets/[IMDb] SQLite data located at: `/anvil/projects/tdm/data/movies_and_tv/imdb.db`[1]
+
+The following is an illustration of the database to help you understand the data.
+
+image::figure14.webp[Database diagram from https://dbdiagram.io, width=792, height=500, loading=lazy, title="Database diagram from https://dbdiagram.io"]
+
+
+[1] There are 7 data files provided by IMDb:
+
+[source,bash]
+----
+name.basics.tsv.gz
+title.akas.tsv.gz
+title.basics.tsv.gz
+title.crew.tsv.gz
+title.episode.tsv.gz
+title.principals.tsv.gz
+title.ratings.tsv.gz
+----
+
+We will use the SQLite database format created from those tsv (Tab-Separated Values) files.
+
+== Structured Query Language (SQL)
+
+Structured Query Language (SQL) is a language used for querying and manipulating data in a database and it provides a relational database management system. SQL allows users to efficiently create, read, update, and delete data in databases. It is widely used across applications, from small projects to large-scale industry systems. For data analysts, data scientists, and software developers, understanding SQL is essential for working effectively with databases.
+
+We use SQLite, which does not require a server to run. (https://sqlite.org[*]). The database is built into the application, and the app reads from and writes to the database files directly on disk.  SQLite source code is public and free to everyone.
+
+
+== 1. Basics of Querying
+
+For today's practices, please select the `seminar` kernel. To run SQL queries in a JupyterLab notebook, first run the following in a cell at the top of your notebook to establish a connection with the database:
+
+[source, sql]
+----
+%sql sqlite:////anvil/projects/tdm/data/movies_and_tv/imdb.db
+----
+
+[TIP]
+====
+In sqlite, you can show the tables using the following query:
+
+[source, sql]
+----
+.tables
+----
+
+Unfortunately, sqlite-specific functions can't be run in a JupyterLab cell like that. Instead, we need to use a different query as follows:
+
+[source, sql]
+----
+SELECT tbl_name FROM sqlite_master WHERE type='table';
+----
+====
+
+See first five lines of `people` table and `titles`:
+
+[source, sql]
+----
+SELECT * FROM people LIMIT 5;
+
+SELECT * FROM titles LIMIT 5;
+----
+
+It is a good idea to run this query on each table in the dataset to identify the common keys that can be used to connect the tables in SQL. It is also helpful to limit the number of rows you display, viewing an entire table at once is not practical. 
+
+[TIP]
+====
+In SQL and certain other languages like bash or batch, the asterisk (*) acts as a wildcard that represents "everything". For instance, the command SELECT * FROM table retrieves all columns from the table named table, regardless of their names, data types, or values. This feature is convenient when you want to extract every piece of data from a table without listing each column one by one.
+====
+
+
+Now, let’s check how many records are in the people table:
+
+[source, sql]
+----
+SELECT COUNT(*) FROM people;
+----
+
+As you can see, there are more than 11 million records, so displaying the full table would not be feasible.
+
+Let’s take a closer look at the titles table by running the following query:
+
+[source, sql]
+----
+SELECT * FROM titles LIMIT 5;
+----
+
+As you can see, each row includes a `title_id` that corresponds to the title of a movie, TV show, or another type of media. But what exactly is this `title_id`? Take a look at the following link:
+
+https://www.imdb.com/title/tt0111161
+
+
+== 2. Filtering and Sorting 
+
+At this point, you might guess that this is the ID IMDb uses to identify a movie or TV show. Let’s test that assumption by running a query on our database to find any titles in the `titles` table that match the `title_id` provided in the link above:
+
+[source, sql]
+----
+SELECT * FROM titles 
+WHERE title_id = 'tt0111161';
+----
+
+It is The Shawshank Redemption, the top rated movie in IMDb! 
+
+Let's try this one :)
+
+[source, sql]
+----
+SELECT * FROM titles 
+WHERE title_id = 'tt0108778';
+----
+
+You can even find some episodes, when you go to search in https://imdb.com for your favorite one. For example: "the one where Rose pivots" and we see the episode is this one (The one where Ross moves in):
+
+https://www.imdb.com/title/tt0583486
+
+image::friends-ross.gif[Database diagram from https://tenor.com/search/ross-pivot-gifs, width=292, height=100, loading=lazy]
+
+[NOTE]
+====
+We can also check for how many unique types we have in our dataset by using `SELECT DISTINCT`:
+
+[source, sql]
+----
+SELECT DISTINCT type
+FROM titles
+ORDER BY type;
+----
+
+If you want to see how many unique combinations of `type` and `genres` exist, you can use the `COUNT()` function by combining both columns into one expression using the concatenation operator `||` and count the distinct values in a single line:
+
+[source, sql]
+----
+%%sql
+SELECT COUNT(DISTINCT type || genres) FROM titles;
+----
+====
+
+Let's check if `title_id` also works for `episodes` table, too:
+
+[source, sql]
+----
+SELECT * FROM episodes 
+WHERE episodes_title_id = 'tt0108778';
+----
+
+No, since it is the title of the show not the title of the episode. Let us change it to `show_title_id`:
+
+[source, sql]
+----
+SELECT * FROM episodes 
+WHERE show_title_id = 'tt0108778';
+----
+
+Of course, if you try `show_title_id` for `tt0111161`, you will not get any result, since it is a movie instead of a show. 
+
+Let's see who was staring in Friends:
+
+[source, sql]
+----
+SELECT * FROM crew 
+WHERE show_title_id = 'tt0108778';
+----
+
+We can create a new code cell and write a SQL query to select all columns from the `titles` table where the `original_title` is 'Friends' and premiered 1994:
+
+[source, sql]
+----
+SELECT * FROM titles 
+WHERE original_title = 'Friends' AND premiered = '1994';
+----
+
+[NOTE]
+====
+You can use the `AND` operator to combine multiple conditions within a `WHERE` clause. Simply place the operator between each condition you want to evaluate. You can also use other logical operators. For example, `OR` checks if at least one condition is true, and `NOT` is used to reverse a condition.
+
+However, orders matters in here. The order of evaluation (operator precedence) for logical operators is:
+
+`NOT` — evaluated first +
+`AND` — evaluated second +
+`OR` — evaluated last +
+
+You can test it with the following two commands:
+
+[source, sql]
+----
+SELECT COUNT(*) FROM titles 
+WHERE original_title = 'Friends' OR premiered = 1994 AND ended = 2004;
+----
+
+[source, sql]
+----
+SELECT COUNT(*) FROM titles 
+WHERE original_title = 'Friends' AND premiered = 1994 OR ended = 2004;
+----
+====
+
+We can ask more questions and use a new command `ORDER BY`: Find the top 10 longest movies in the dataset:
+
+[source, sql]
+----
+SELECT * FROM titles 
+WHERE type = 'movie' ORDER BY runtime_minutes DESC LIMIT 10;
+----
+
+We can even have some cluse which movies are coming:
+
+[source, sql]
+----
+SELECT * FROM titles 
+WHERE type = 'movie' ORDER BY premiered DESC LIMIT 10;
+----
+
+[NOTE]
+====
+You should generally use the `LIMIT` command to restrict the number of rows returned by your query. This is especially important when working with large datasets, as it helps improve performance and reduces the amount of data that needs to be processed.
+====
+
+.Deliverables
+====
+1.1. Run the SQL query to see all tables in the IMDb dataset. +
+1.2. Write a SQL query to select all columns from the `titles` table, limiting the results to 10 records. +
+1.3. Write a SQL query to find the duration of Titanic movie premiered in 1997? +
+1.4. What is the oldest movie according to this database?
+====
+
+== 3. Aggregation and Grouping 
+
+Another useful command in SQL is the `GROUP BY`. This command allows us to group rows together if they have the same values in one or more specified columns. It is especially helpful when we want to summarize or aggregate data, for instance, counting the number of titles per genre or calculating the average rating for each year.
+
+Similar to how the `WHERE` command can be combined with logical operators such as `AND` and `OR`, the `GROUP BY` command is often used together with aggregation functions such as `COUNT`, `SUM`, `AVG`, `MIN`, and `MAX`. These functions let us perform calculations on each group of data.
+
+For example, we want to find the number of rows for each `type` in `titles` table:
+
+[source, sql]
+----
+SELECT type, COUNT(*) FROM titles GROUP BY type; 
+----
+
+Add average run time in minutes for each type:
+
+[source, sql]
+----
+SELECT type, COUNT(*), AVG(runtime_minutes) FROM titles GROUP BY type; 
+----
+
+Or we only care about the movies: 
+
+[source, sql]
+----
+SELECT type, COUNT(*) AS n, AVG(runtime_minutes) 
+FROM titles WHERE type = 'movie'; 
+----
+
+In another example, suppose we want to find the average runtime of movies in each genre. We can use the `WHERE` command to filter the results to only include movies (for instance, `type = 'movie'`), the `GROUP BY` command to group the data by genre, and the `AVG` function to calculate the average runtime for each group. The SQL query would look like this:
+
+[source, sql]
+----
+SELECT genres, AVG(runtime_minutes) AS avg_runtime
+FROM titles
+WHERE type = 'movie'
+GROUP BY genres;
+----
+
+We can check only for 'Action':
+
+[source, sql]
+----
+SELECT AVG(runtime_minutes) AS avg_runtime
+FROM titles
+WHERE type = 'movie'
+  AND genres LIKE '%Action%';
+----
+
+Even when we use the wildcard (*) to select all columns, we still have to specify which column we want to apply the aggregation to. In this example, we use the `AVG` function to calculate the average of the runtime_minute column. The `AS` keyword then lets us assign a clear name, avg_runtime, to the resulting column, which helps make our query output easier to read and interpret.
+
+Dr. Ward found all the title_id for Marvel Cinematic Universe (MCU) before, we use them for this example to find how many we have each year:
+
+[source, sql]
+----
+SELECT premiered AS year, COUNT(*) AS n FROM titles 
+WHERE title_id IN ('tt0371746', 'tt0800080', 'tt1228705', 'tt0800369', 'tt0458339', 'tt0848228', 'tt1300854', 'tt1981115', 'tt1843866', 'tt2015381', 'tt2395427', 'tt0478970', 'tt3498820', 'tt1211837', 'tt3896198', 'tt2250912', 'tt3501632', 'tt1825683', 'tt4154756', 'tt5095030', 'tt4154664', 'tt4154796', 'tt6320628', 'tt3480822', 'tt9032400', 'tt9376612', 'tt9419884', 'tt10648342', 'tt9114286') GROUP BY premiered;
+----
+
+Let's modify this query to get the percentage of MCU movies released in each year. First find the total:
+
+[source, sql]
+----
+SELECT COUNT(*) FROM titles 
+WHERE title_id IN ('tt0371746', 'tt0800080', 'tt1228705', 'tt0800369', 'tt0458339', 'tt0848228', 'tt1300854', 'tt1981115', 'tt1843866', 'tt2015381', 'tt2395427', 'tt0478970', 'tt3498820', 'tt1211837', 'tt3896198', 'tt2250912', 'tt3501632', 'tt1825683', 'tt4154756', 'tt5095030', 'tt4154664', 'tt4154796', 'tt6320628', 'tt3480822', 'tt9032400', 'tt9376612', 'tt9419884', 'tt10648342', 'tt9114286');
+----
+
+When you divide the counts to total, you get zeros:
+
+[source, sql]
+----
+SELECT premiered AS year, COUNT(*)/29 AS n FROM titles 
+WHERE title_id IN ('tt0371746', 'tt0800080', 'tt1228705', 'tt0800369', 'tt0458339', 'tt0848228', 'tt1300854', 'tt1981115', 'tt1843866', 'tt2015381', 'tt2395427', 'tt0478970', 'tt3498820', 'tt1211837', 'tt3896198', 'tt2250912', 'tt3501632', 'tt1825683', 'tt4154756', 'tt5095030', 'tt4154664', 'tt4154796', 'tt6320628', 'tt3480822', 'tt9032400', 'tt9376612', 'tt9419884', 'tt10648342', 'tt9114286') GROUP BY premiered;
+----
+
+Why?
+
+When we calculate a percentage using integer (numeric data without a decimal place) columns, SQLite performs integer division. That means it divides the numbers as integers and truncates any decimal part, instead of giving a decimal (floating-point) result. For example:
+
+[source, sql]
+----
+SELECT 5/2;
+----
+
+This returns the integer part (2) in SQLite, not 2.5, because both 5 and 2 are integers. We can fix it converting at least one of them to real number as following by :
+
+[source, sql]
+----
+SELECT CAST(5 AS REAL)/2 as result;
+----
+
+`REAL` is equivalent to a float or double, meaning a number that can include decimal values.
+
+Lets fix it in the real data:
+
+[source, sql]
+----
+SELECT premiered AS year, CAST(COUNT(*) AS real)/29 AS n FROM titles 
+WHERE title_id IN ('tt0371746', 'tt0800080', 'tt1228705', 'tt0800369', 'tt0458339', 'tt0848228', 'tt1300854', 'tt1981115', 'tt1843866', 'tt2015381', 'tt2395427', 'tt0478970', 'tt3498820', 'tt1211837', 'tt3896198', 'tt2250912', 'tt3501632', 'tt1825683', 'tt4154756', 'tt5095030', 'tt4154664', 'tt4154796', 'tt6320628', 'tt3480822', 'tt9032400', 'tt9376612', 'tt9419884', 'tt10648342', 'tt9114286') GROUP BY premiered;
+----
+
+
+== 4. Joins: Combining Tables
+
+The `JOIN` command lets us combine data from two or more tables by matching values in a shared column. Lets assume that you want to see what type of movies Christopher Nolan is mainly working on. So, you need the following information: name of the director, movies he  and genre
+
+
+== 5. SQL in R
+
+Please use `seminar-r` for this part. The following library used to call SQL queries in R:
+
+[source, r]
+====
+library(sqldf)
+====
+
+There is only one function we need to focus on: `sqldf`. This function executes a given SQL query, such as:
+
+[source, r]
+====
+SELECT tbl_name FROM sqlite_master WHERE type='table';
+====
+
+[NOTE]
+====
+For the ease of reading, please write SQL syntax in all UPPER CASE and variable names/database names in lower case. Actually, SQL syntax is NOT case sensitive. However, remember that R is case sensitive, so please be careful with the capitalization of data frame and variable names.
+====
+
+== 6. Real-World Querying Challenge
+
+
+== Resources 
+
+- You can find more information about SQL commands in the https://www.sqlite.org/lang.html[SQLite documentation].
+
+- The Data Mine, Example Book, dedicated SQL page: https://the-examples-book.com/tools/sql/
+
+- The following tutorial provides a step-by-step guide on how to download and use SQLite tools on your computer: https://www.sqlitetutorial.net/download-install-sqlite/
+
