@@ -1,0 +1,332 @@
+= TDM 20100: Project 11 - More Practise in Awk
+
+== Project Objectives
+
+This project focuses exclusively on associative arrays in `awk`, which allow you to use strings as array indices instead of just integers. This is a powerful feature that enables counting, grouping, and aggregating data in ways that would be very difficult with regular arrays.
+
+.Learning Objectives
+****
+- Understand what associative arrays are and how they work
+- Learn how to use string indices in awk arrays
+- Practice counting occurrences and tracking values
+- Learn how to loop through associative arrays
+- Apply associative arrays to real-world data analysis problems
+****
+
+== Dataset
+- '/anvil/projects/tdm/data/restaurant/orders.csv'
+- '/anvil/projects/tdm/data/restaurant/test_full.csv'
+
+
+== Questions
+
+=== Question 1 (2 points)
+
+Associative arrays in `awk` are like dictionaries in Python or hash maps in other languages. Instead of using numbers as indices (like `array[1]`, `array[2]`), you can use strings as indices (like `array["apple"]`, `array["banana"]`).
+
+Here's a simple example:
+
+[source,bash]
+----
+# Basic associative array example
+echo "apple banana apple orange banana apple" | awk '
+{
+    # Loop through each word in the input
+    for (i = 1; i <= NF; i++) {
+        # Increment the count for the word
+        # $i is the current word
+        # count[$i] is the count for the word
+        # ++ is the increment operator
+        count[$i]++
+    }
+}
+END {
+    print "Word counts:"
+    for (word in count) {
+        print word ": " count[word]
+    }
+}'
+----
+
+This script counts how many times each word appears in the input.
+
+Let's start with a simple counting example. We'll count how many orders each customer made in the orders.csv file.
+
+First, let's look at the structure of the orders.csv file:
+
+[source,bash]
+----
+head -n 3 /anvil/projects/tdm/data/restaurant/orders.csv
+----
+
+This will show use the first 3 rows of the file, where the first row is the header/column names.
+
+From that, we can see that the customer ID is in column 2. Let's count orders per customer:
+
+[source,bash]
+----
+cat /anvil/projects/tdm/data/restaurant/orders.csv | awk -F',' '
+NR > 1 {  # Skip header row
+    customer_id = $2
+    if (customer_id != "") {
+        order_count[customer_id]++
+    }
+}
+END {
+    print "Customer ID, Number of Orders"
+    for (customer in order_count) {
+        print customer "," order_count[customer]
+    }
+}' | sort -t, -k2,2nr | head -n 10
+----
+
+[NOTE]
+====
+The `sort -t, -k2,2nr` command sorts the results by the second column in descending order, where the second column is the number of orders, as we print just two columns (customer ID, order count).
+====
+
+Now that you see how to count orders per customer, please modify the command to count orders per vendor.
+
+[NOTE]
+====
+hint: the vendor ID is in column $22
+====
+
+.Deliverables
+====
+1.1. Run the above command and show the results
+1.2. Which customer has the most orders? How many orders do they have?
+1.3. Which vendor has the most orders? How many orders do they have?
+====
+
+=== Question 2 (2 points)
+
+Now let's work with the test_full.csv file and count restaurants by category. The vendor category is in column 15.
+
+[source,bash]
+----
+head -n 3 /anvil/projects/tdm/data/restaurant/test_full.csv
+----
+
+Let's count how many restaurants are in each category:
+
+[source,bash]
+----
+cat /anvil/projects/tdm/data/restaurant/test_full.csv | awk -F',' '
+NR > 1 {  # Skip header row
+    category = $15
+    if (category != "") {
+        category_count[category]++
+    }
+}
+END {
+    print "Category, Number of Restaurants"
+    for (cat in category_count) {
+        print cat "," category_count[cat]
+    }
+}' | sort -t, -k2,2nr | head -n 10
+----
+
+Now, instead of counting the number of restaurants in each category, can you count the number of restaurants with each rating? (4.0, 4.1, 4.2, etc.). Sort your output by the rating in descending order.
+
+[NOTE]
+====
+hint: the vendor rating is in column $30
+====
+
+.Deliverables
+====
+2.1. Run the above command and show the results
+2.2. What category has the most restaurants? How many restaurants are in that category?
+2.3. How many different categories are there in total?
+2.4. How many restaurants have a rating of 4.0? Do any restaurants have a 5.0 rating?
+====
+
+=== Question 3 (2 points)
+
+Now, let's learn how to find average information. To calculate an average, we need a total and a count. Therefore, we can use two associative arrays to track this information.
+
+We need to track:
+- Total amount spent by each customer (sum)
+- Number of orders by each customer (count)
+- Then calculate average = sum / count
+
+In this example, we are tracking the total amount spent by each customer, and the number of orders made by each customer. This way, at the end, we can divide the total amount spent by the number of orders to get the average amount spent per order, on a per-customer basis.
+
+[source,bash]
+----
+cat /anvil/projects/tdm/data/restaurant/orders.csv | awk -F',' '
+NR > 1 {  # Skip header row
+    customer_id = $2
+    order_amount = $4 + 0  # Convert string to number by adding 0
+    if (customer_id != "" && order_amount > 0) { # ensure that the customer and order actually exist
+        total_spent[customer_id] += order_amount
+        order_count[customer_id]++
+    }
+}
+END {
+    print "Customer ID, Total Spent, Number of Orders, Average Order"
+    for (customer in total_spent) {
+        avg = total_spent[customer] / order_count[customer]
+        printf "%s,%.2f,%d,%.2f\n", customer, total_spent[customer], order_count[customer], avg
+    }
+}' | sort -t, -k4,4nr | head -n 10
+----
+
+With -k4,4nr, we are sorting by the fourth column in descending order, to see the customers with the highest average order amount. Please modify this command to show the customers with the highest total spent and run it.
+
+Additionally, let's look at some different information. Can you write a command to find the average number of items ordered in each order per vendor?
+
+[NOTE]
+====
+The vendor ID is in column $22, and the number of items ordered is in column $3 and must be converted to a number by adding 0.
+====
+
+.Deliverables
+====
+3.1. Run the above command and show the results
+3.2. Which customer has the highest average order amount?
+3.3. What is the highest average order amount?
+3.4. Modify the command to show the customers with the highest total spent. Which customer spent the most money, and how much did they spend?
+3.5. Which vendor has the highest average number of items ordered per order? How many items are ordered on average per order for this vendor?
+====
+
+=== Question 4 (2 points)
+
+Let's continue working with multiple arrays to track multiple statistics, including average and minimum/maximum values.
+
+To track minimum/maximum values, we can simply use if statements alongside our associative arrays. For example:
+
+[source,bash]
+----
+cat /anvil/projects/tdm/data/restaurant/orders.csv | awk -F',' '
+NR > 1 {  # Skip header row
+    vendor_id = $22
+    rating = $11 + 0  # Convert to number
+    if (vendor_id != "" && rating > 0) {
+        rating_count[vendor_id]++
+        rating_sum[vendor_id] += rating
+        # Check if the vendor_id doesnt have a minimum rating yet, or if the current rating is less than the current minimum
+        if (rating_min[vendor_id] == "" || rating < rating_min[vendor_id]) {
+            # Set the stored minimum to the current rating for the current vendor_id
+            rating_min[vendor_id] = rating
+        }
+        # Check if the vendor_id doesnt have a maximum rating yet, or if the current rating is greater than the current maximum
+        if (rating_max[vendor_id] == "" || rating > rating_max[vendor_id]) {
+            # Set the stored maximum to the current rating for the current vendor_id
+            rating_max[vendor_id] = rating
+        }
+    }
+}
+END {
+    print "Vendor ID, Count, Sum, Min, Max, Average"
+    for (vendor in rating_count) {
+        avg = rating_sum[vendor] / rating_count[vendor]
+        printf "%s,%d,%.2f,%.2f,%.2f,%.2f\n", vendor, rating_count[vendor], rating_sum[vendor], rating_min[vendor], rating_max[vendor], avg
+    }
+}' | sort -t, -k6,6nr | head -n 10
+----
+
+Now, can you modify the command to find the minimum and maximum order amount per customer?
+
+.Deliverables
+====
+4.1. Run the above command and show the results
+4.2. Which vendor has the highest average rating?
+4.3. What is the range (max - min) for the vendor with the most ratings (rating count)?
+4.3. Which vendor has the highest minimum rating? What is the minimum rating for this vendor?
+4.5. Which customer has the highest minimum order amount?
+====
+
+=== Question 5 (2 points)
+
+Now, it's up to you. Please choose a couple or few columns from the orders.csv file and use associative arrays to track some form of statistics. Explain what you are tracking, and how this may be beneficial information to have. Also explain how you use associative arrays to accomplish this
+
+.Deliverables
+====
+5.1. Select columns to gather/aggregate statistics with
+5.2. Explain why these statistics may be useful
+5.3. Explain how you use associative arrays to accomplish this
+5.4. Run
+====
+
+=== Question 6 (2 points) [ Extra Credit ]
+
+Currently, we have just been using one file with our awk commands. However, awk actually supports reading multiple files at once. Think back to the SQLite projects, where data was stored in different tables, and we could join multiple tables together with a common column. We can achieve something similar to this in awk by reading multiple files together, and using associative arrays to track the data. An example of this is:
+
+[source,bash]
+----
+awk -F',' '
+
+# First file
+# FNR represents the number of records read from the current file
+# NR represents the total number of records read from all files
+# So, if FNR == NR, that means we are still reading the first file
+FNR==NR {
+    # Skip header row
+    if (FNR == 1) next
+    vendor_id = int($11)
+    category = $15
+    if (vendor_id != "" && category != "") {
+        vendor_to_category[vendor_id] = category
+    }
+}
+
+# Now, lets read if we are NOT on the first file, and we are past the header row in the current file
+FNR != NR {
+    # Skip header row
+    if (FNR==1) next
+    vendor_id = int($22)
+    order_amount = $4 + 0
+    if (vendor_id in vendor_to_category && order_amount > 0) {
+        category = vendor_to_category[vendor_id]
+        category_sales[category] += order_amount
+        category_orders[category]++
+    }
+}
+END {
+    print "Category, Total Sales, Number of Orders, Average Order"
+    for (category in category_sales) {
+        avg = category_sales[category] / category_orders[category]
+        printf "%s,%.2f,%.2f,%.2f\n", category, category_sales[category], category_orders[category], avg
+    }
+}' /anvil/projects/tdm/data/restaurant/test_full.csv /anvil/projects/tdm/data/restaurant/orders.csv | sort -t, -k3,3nr
+----
+
+The above command reads firstly from test_full.csv, to create an associative array that maps vendor_id to the category (Restaurants or Sweets & Bakes). Then, it reads from orders.csv, and uses the associative array to group orders by category, and track the total sales and orders for each category.
+
+[NOTE]
+====
+There are a couple of key things to keep in mind when using this approach:
+In previous questions, we used the 'NR' variable to track the number of records read. This is fine for single file operations. However, the 'NR' variable is not reset between files, so we need to also use the 'FNR' variable to track the number of records read from the current file. If FNR is ever different from NR, that means we are reading a different file.
+
+Additionally, we need to ensure that the types of the columns we want to join on are the same, or else there may be duplicate keys with different types in our associative array. In the above example, we cast the vendor_id from both test_full.csv and orders.csv to integers to ensure they are the same type.
+====
+
+Now, similarly to the previous question, please pick a column you want to join these two files on, and track some form of statistics. Explain what you are tracking, and how this may be beneficial information to have. Also explain how you use associative arrays to accomplish this, as well as how you are using multiple files at once.
+
+.Deliverables
+====
+6.1. Select columns to gather/aggregate statistics with
+6.2. Explain why these statistics may be useful
+6.3. Explain how you use associative arrays to accomplish this
+6.4. Show the results
+6.5. Explain how you are using multiple files at once
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_awk2.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
+
