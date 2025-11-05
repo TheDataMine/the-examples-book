@@ -19,10 +19,87 @@ image::sql-join-types.png[JOINS, width=792, height=500, loading=lazy, title="4 t
 Maggie still needs to add content. 
 ====
 
+The `JOIN` command lets us combine data from two or more tables by matching values in a shared column. There are several ways of joining tables, we will compare `INNER JOIN` and `LEFT JOIN`.
+In SQL, an `INNER JOIN` returns only the rows that have matching values in both tables. For example, if we join the `crew` table with the `people` table using an `INNER JOIN`, we will only get the rows where there is a matching person_id in both tables.
 
+A `LEFT JOIN`, on the other hand, returns all the rows from the left table (the first table in the join) and the matching rows from the right table (the second table in the join). If there is no match, `NULL` values are returned for the columns of the right table. This means that if we join the `crew` table with the `people` table using a `LEFT JOIN`, we will get all the rows from the `crew` table, even if there is no matching `person_id` in the `people` table.
 
 
 == Demo
+
+Let us simply `INNER JOIN` two tables first:
+
+[source, sql]
+----
+SELECT * FROM crew as c INNER JOIN people as p
+ON c.person_id = p.person_id LIMIT 5;
+----
+
+WE can use the `WHERE` clause and the `IS NULL` operator to list only crew members who do not have a matching record in the `people` table.
+
+[source, sql]
+----
+SELECT * FROM crew as c LEFT JOIN people as p  
+ON c.person_id = p.person_id 
+WHERE p.name IS NULL
+LIMIT 20;
+----
+
+[NOTE]
+====
+There also exists a `RIGHT JOIN`, which is the opposite of a `LEFT JOIN`, but SQLite does not support it natively. If you need to use a right join, you can typically just use a left join with the order of the tables flipped. Additionally, there is an `OUTER JOIN`, which is a combination of `LEFT JOIN` and `RIGHT JOIN`. It returns all rows from both tables, with NULLs in places where there is no match. However, SQLite does not support FULL OUTER JOIN natively either.
+====
+
+
+== Join three tables
+
+Let us see all the movies Christopher Nolan worked on:
+
+[source, sql]
+====
+SELECT * FROM crew 
+INNER JOIN people ON crew.person_id = people.person_id
+INNER JOIN titles ON crew.title_id = titles.title_id
+WHERE people.name = 'Christopher Nolan' AND titles.type = 'movie';
+====
+
+We can order them by premiered year:
+
+[source, sql]
+====
+SELECT * FROM crew 
+INNER JOIN people ON crew.person_id = people.person_id
+INNER JOIN titles ON crew.title_id = titles.title_id
+WHERE people.name = 'Christopher Nolan' AND titles.type = 'movie'
+ORDER BY titles.premiered;
+====
+
+Now, we want to see what type of productions (movies, video, etc.) Christopher Nolan is mainly working on (executing this code will take some time):
+
+[source, sql]
+====
+SELECT t.type, COUNT(*) AS count
+FROM titles AS t
+JOIN crew AS c ON t.title_id = c.title_id
+JOIN people AS p ON c.person_id = p.person_id
+WHERE p.name = 'Christopher Nolan' 
+GROUP BY t.type
+ORDER BY count DESC;
+====
+
+We can see find what type of movies Christopher Nolan is mainly working on:
+
+[source, sql]
+====
+SELECT t.genres, COUNT(*) AS count
+FROM titles AS t
+JOIN crew AS c ON t.title_id = c.title_id
+JOIN people AS p ON c.person_id = p.person_id
+WHERE p.name = 'Christopher Nolan' AND t.type = 'movie'
+GROUP BY t.genres
+ORDER BY count DESC;
+====
+
 
 [Warning]
 ====
