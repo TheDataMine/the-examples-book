@@ -71,6 +71,55 @@ This dataset contains real-world prescribing behavior. Using logistic regression
 
 == 1. Data Cleaning and Feature Engineering
 
+
+**Class Distributions**
+
+Before we can analyze or model anything, we need to clean the data and add few new features (do some feature engineering). One of the first things you will do is create a _binary target variable_ to indicate whether a record involves Semaglutide. This kind of variable only takes on two values: 1 if the drug is Semaglutide, and 0 if it is not. In Python, you can create a binary variable using a Boolean expression and then convert the result to integers using `.astype(int)`. 
+
+For example:
+
+[source,python]
+----
+df["Semaglutide_drug"] = (df["Gnrc_Name"] == "Semaglutide").astype(int)
+----
+
+This creates a column where any row with Semaglutide is marked as 1, and all others are marked as 0. This will eventually serve as the outcome we try to predict.
+
+**Feature Engineering - Creating New Columns**
+
+Another important task we will perform is called *feature engineering*. Feature engineering is the process of transforming raw data into meaningful features that better represent the underlying problem to the predictive model. This includes creating, modifying, or grouping existing variables to enhance model performance or interpretability.
+
+One simple but powerful example is *creating a new column* that provides more insight than the raw data alone. For instance, to understand how costly each prescription claim is, we can divide `Tot_Drug_Cst` (total drug cost) by `Tot_Clms` (total number of claims) to compute a new column called `Cost_per_claim`:
+
+[source,python]
+----
+diabetes_prescriber_data["Cost_per_claim"] = diabetes_prescriber_data["Tot_Drug_Cst"] / diabetes_prescriber_data["Tot_Clms"]
+----
+
+This gives us a per-claim cost that may be more meaningful for comparison across prescribers or regions.
+
+Another useful technique is *mapping existing values into broader categories*. For example, individual state abbreviations in the `Prscrbr_State_Abrvtn` column can be mapped to broader U.S. Census regions. This can help us spot regional trends more easily than looking at each state individually:
+
+[source,python]
+----
+state_region_map = {
+    "CT": "Northeast", "CA": "West", "TX": "South", ...
+}
+
+diabetes_prescriber_data["Prscrbr_State_Region"] = diabetes_prescriber_data["Prscrbr_State_Abrvtn"].map(state_region_map)
+----
+
+By grouping states into regions, we reduce granularity while retaining useful geographic patterns, a valuable preprocessing step before modeling.
+
+However, not all states in the dataset may appear in the dictionary. In those cases, `.map()` returns a missing value (`NaN`). To handle this, you can fill in those missing values with a default label like `"Missing"` using `.fillna("Missing")`.
+
+**Value Counts**
+
+Finally, it is often useful to explore the _distribution_ of values in a column. For example, how many rows fall into each region or how many are Semaglutide prescriptions. You can do this using `.value_counts()` for counts and `.value_counts(normalize=True)` for proportions.
+
+These basic data preparation steps: binary indicators, feature engineering, mapping, and counting are critical in setting up a dataset for modeling. Now, you are ready for exploratory analysis.
+
+
 Before building the model, we’ll create our target variable, add informative features, and prepare categorical groupings.
 
 ++++
@@ -175,6 +224,53 @@ diabetes_prescriber_data["Prscrbr_State_Region"].value_counts(dropna=False)
 At this stage, we’ve created a structured dataset suitable for exploratory data analysis.
 
 == 2. Exploratory Data Analysis
+
+
+Before we build any models, we need to take a step back and *get to know* our data. This is the purpose of **exploratory data analysis**, (EDA). You look for patterns, inconsistencies, and clues that might be helpful to understand how different variables relate to the outcome you're trying to predict. In our case, that outcome is `Semaglutide_drug`, a column that tells us whether or not a prescription record involves the diabetes drug Semaglutide.
+
+Each of the questions below helps uncover different aspects of the data structure and variability that may influence our model's performance or interpretability.
+
+**Missing Values**
+
+We will start by checking for missing values in the numeric columns. This might seem minor, but it is actually really important. If a feature is missing data for just a few rows, we might be able to fill it in or move on. But if half the values are missing, it could be a sign that the variable is not reliable for modeling.
+
+To calculate the percentage of missing values, we can use the `.isna()` method to find missing entries, then apply `.mean()` to calculate the proportion of missing values in each column. Multiplying this by 100 gives us the percentage. You can also use `.sum()` if you want the raw count.
+
+**Group Statistics: Mean and Standard Deviation**
+
+Next, we will split the data into two groups: one where Semaglutide was prescribed and one where it was not. Then we will calculate the *mean* (average) and *standard deviation* (a measure of spread) for key numeric features in each group. This gives us insight into whether, for example, Semaglutide is associated with higher costs or larger patient counts. These statistics can help us start forming hypotheses, like whether prescribers who use Semaglutide tend to prescribe more 30-day fills or serve more patients.
+
+To do this, we can use `.groupby("Semaglutide_drug")` followed by `.agg(["mean", "std"])` on the numeric columns. This will create a side-by-side comparison table showing the average and variability for each group.
+
+**Correlation Between Numeric Variables**
+
+We will also explore how the numeric features relate to one another using *correlation*. Correlation is a measure that ranges from -1 to 1 and tells us how strongly two variables move together. A value close to 1 means they move together in the same direction, while -1 indicates that one tends to decrease as the other increases. A value near 0 suggests no clear relationship.
+
+**Heatmap Visualization**
+
+To visualize these relationships, we will use a *heatmap*. A heatmap is a color-coded grid where darker or brighter colors represent stronger relationships. This allows us to quickly see which variables are closely linked and potentially redundant.
+
+To create the heatmap, we first use `.corr()` on the numeric columns to compute all pairwise correlations. Then we pass that matrix into `sns.heatmap()`, a Seaborn function that creates the visualization. By setting `annot=True`, we can print the correlation values directly on the plot, which makes it easier to interpret.
+
+**Geographic Patterns**
+
+Lastly, we will examine regional prescribing patterns. We want to know: do certain prescribers in certain regions prescribe Semaglutide more often? A good way to check this is with a *count plot*, which shows how many records come from each region — and whether Semaglutide was prescribed.
+
+Using `sns.countplot()`, we can plot the number of prescribers in each `Prscrbr_State_Region` and split the bars by `Semaglutide_drug` using the `hue` parameter. This lets us compare across regions in one chart and spot any geographic trends in prescription behavior.
+
+[TIP]
+====
+Learn more about count plots and how to use `hue` to split categories:
+https://seaborn.pydata.org/generated/seaborn.countplot.html[Seaborn `countplot()` Documentation]
+====
+
+To explore relationships between numeric variables (like cost and total fills), we can use `.corr()` to compute pairwise correlations and `sns.heatmap()` to visualize them as a color-coded matrix.
+
+[TIP]
+====
+See how to create heatmaps from correlation matrices:
+https://seaborn.pydata.org/generated/seaborn.heatmap.html[Seaborn `heatmap()` Documentation]
+====
 
 ++++
 <iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_h56tpj05&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_ieb34sc3%22%7D'  style="width: 940px;height: 540px;border: 0;" allowfullscreen></iframe>
