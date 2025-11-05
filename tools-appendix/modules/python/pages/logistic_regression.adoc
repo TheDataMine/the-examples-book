@@ -4,9 +4,16 @@ Ashley Arroyo
 
 == Introduction
 
-This guide introduces logistic regression through a real-world healthcare analytics example: predicting which prescribers are most likely to issue prescriptions for **Ozempic** (generic name **Semaglutide**). You’ll follow a full modeling workflow — from cleaning and preparing the data to interpreting the final model’s coefficients, evaluating predictive accuracy, and making new predictions.
+This guide introduces logistic regression through a real-world healthcare analytics example: predicting which prescribers are most likely to issue prescriptions for **Ozempic** (generic name **Semaglutide**). You’ll follow a full modeling workflow — from cleaning and preparing the data to interpreting the final model’s coefficients, evaluating predictive accuracy, and making new predictions. This guide was originially a seminar project so you may find it follows a question answer similar format but it should still be helpful and guide on how to build a model
 
 By walking through this case step by step, you’ll learn how logistic regression can reveal the relationships between features like prescriber specialty, region, and cost patterns, and how these factors influence the likelihood of prescribing Semaglutide.
+
+[NOTE]
+====
+This guide was originally created as a seminar project, so you may notice it follows a question-and-answer format.  
+Even so, it should still serve as a helpful resource to guide you through the process of building your own model.
+====
+
 
 ++++
 <iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_n5c4yl04&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_5zljkma8%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 940px;height: 540px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Fall 2025 Logistic Regression Project Data Background"></iframe>
@@ -38,8 +45,11 @@ We’ll use a subset of the *Centers for Medicare & Medicaid Services (CMS)* 202
 image::PrescriberImage.jpg[width=600, height=450, caption="Figure 1: Prescriber Injection Image. Source: Fox News Ozempic Article (accessed July 11, 2025)."]
 
 This dataset contains real-world prescribing behavior. Using logistic regression, we’ll explore questions such as:  
+
 - Which prescribers are most likely to prescribe Semaglutide?  
+
 - Are there regional or specialty-based trends?  
+
 - What financial or volume indicators influence prescription likelihood?
 
 === Key Variables
@@ -231,6 +241,65 @@ image::barplotpres.png[width=600, height=450, caption="Figure 2: Semaglutide Pre
 
 == 3. Splitting Data for Modeling
 
+
+In predictive modeling, one of the first steps is to distinguish between *predictors* (also known as features or independent variables) and *response* (or target). The predictors are the pieces of information the model will use to make its decisions, while the response is the variable we wish to predict. In this context, we are interested in predicting whether a prescriber issued a prescription for Semaglutide which is a binary outcome that will form the basis of our classification model.
+
+**Splitting the Data**
+
+Models are not trained on entire datasets. Instead, we partition the data into multiple subsets to serve distinct roles in the model development process. The most common partitioning scheme involves three subsets:
+
+- **Training data** is what the model actually learns from. It’s used to find patterns and relationships between the features and the target.
+
+- **Validation data** helps us make decisions about the model such as choosing which features to keep or which settings (hyperparameters) work best. We use it to check how well it's doing while we’re still building it.
+
+- **Test data** is completely held out until the very end. It gives us a final check to see how well the model is likely to perform on brand-new data it has never seen before.
+
+**Understanding the Subsets**
+
+In supervised learning, our dataset is split into *predictors (`X`)* and a *target variable (`y`)*. We further divide these into training, validation, and test subsets to properly evaluate model performance and prevent overfitting.
+
+Here is what each of these variables means:
+
+[cols="1,2,2", options="header"]
+|===
+| Subset | X (Predictors) | y (Target Labels)
+
+| **Training**
+| `X_train`  
+Contains only features such as total patients, cost per claim, prescriber type.  
+Does *not* include the Semaglutide outcome.
+| `y_train`  
+Binary values (0 or 1) indicating whether the prescription was for Semaglutide.
+
+| **Validation**
+| `X_val`  
+Same features as training data.  
+Used to evaluate the model during development.
+| `y_val`  
+Binary outcome labels (0 or 1) used to evaluate model performance on the validation set.
+
+| **Test**
+| `X_test`  
+Held-out feature data.  
+Never seen by the model during training or tuning.
+| `y_test`  
+Final set of target labels (0 or 1) used for unbiased model evaluation on the test set.
+|===
+
+
+These splits are crucial to simulate how the model will perform in real-world settings and ensure that we’re not simply memorizing the data.
+
+[NOTE]
+====
+In practice, it's recommended to use **cross-validation**, which provides a more reliable estimate of a model’s performance by repeatedly splitting the data into training and validation sets and averaging the results. This helps reduce the variability that can come from a single random split. However, for this project, we will only perform a single random train/validation/test split using a fixed random seed.
+====
+
+**Stratified Sampling**
+
+One subtle but essential consideration is that we must maintain the distribution of the response variable, particularly in classification settings with imbalanced classes. To achieve this, we use *stratified sampling*, which ensures that the proportion of cases (e.g., Semaglutide = 1 vs. 0) remains consistent across the training, validation, and test sets. This avoids the model performing poorly simply because the subsets are not represented in the data.
+
+Finally, it is good to inspect each of the resulting subsets. How many observations are in each split? Is the class balance preserved? These simple diagnostics are foundational checks that ensure the integrity of downstream modeling efforts which you will perform in the questions below.
+
 ++++
 <iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_blns87hn&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_wb1b7gip%22%7D'  style="width: 940px;height: 540px;border: 0;" allowfullscreen></iframe>
 ++++
@@ -274,6 +343,59 @@ for name, arr in [("Train", y_train), ("Validation", y_val), ("Test", y_test)]:
 
 
 == 4. Data Preprocessing
+
+
+Before we can fit our logistic regression model, we need to make sure our dataset is clean and formatted correctly. This stage, called **preprocessing**, ensures that our features are in a numerical format, have no missing values, are properly scaled, and are aligned across all datasets. Logistic regression, like many models, assumes that the data has been prepared in a certain way. If we skip these steps or do them incorrectly, our model may perform poorly or fail to train altogether.
+
+These question will walk you through five key preprocessing steps, some of which have partially completed code to help guide you.
+
+**Handling Missing Values in Categorical Variables**
+
+Missing values can cause errors during modeling and interfere with scaling or encoding. For categorical columns like `Prscrbr_State_Region` and `Prscrbr_Type_Grouped`, we’ll fill in missing values with the string `"Missing"`. This way, even rows with unknown data are retained and can be captured as their own category during encoding.
+
+For numeric columns like `Tot_30day_Fills`, `Tot_Day_Suply`, `Cost_per_claim`, and `Total_Patients`, we’ll fill missing values using the **median from the training set**. This is preferred over the mean because the median is less sensitive to outliers. You’ll use `.fillna()` to perform this replacement.
+
+For one-hot encoded (binary) columns, we’ll fill missing values with `0`. These columns represent the presence or absence of a category, so `0` safely indicates that the feature was not activated for that row.
+
+**One-Hot Encoding Categorical Variables**
+
+Machine learning models can’t interpret text categories directly. We convert them into numeric form using **one-hot encoding**, which creates a separate binary column for each unique category. You may hear them as *dummy variables*, too. For example, the column `Prscrbr_State_Region` might be transformed into:
+
+- `Prscrbr_State_Region_Midwest`
+- `Prscrbr_State_Region_South`
+- `Prscrbr_State_Region_Northeast`
+- etc.
+
+We use `pd.get_dummies()` to apply one-hot encoding. The option `drop_first=True` tells pandas to omit the first category — this prevents duplicate, which is especially important in models like logistic regression.
+
+**Why We Encode Train, Validation, and Test Separately**
+
+We always apply one-hot encoding to `X_train` **first**. That’s because we want the model to learn from the structure of the training data, including which categories exist. We then apply the same process to `X_val` and `X_test` — but here’s the tricky part:
+
+- These datasets may contain **a different set of categories** (some categories might be missing, or new ones might appear).
+- If we encoded all three together, we would risk **leaking information** from validation or test sets into training — which we want to avoid to ensure fair model evaluation.
+
+To resolve this, we:
+
+1. Encode each dataset separately using `pd.get_dummies()`.
+
+2. Then use `.reindex(columns=encoded_columns, fill_value=0)` on `X_val` and `X_test` to ensure their columns match the training set exactly — any missing columns will be added with `0`s.
+
+This guarantees that the model sees inputs with the same structure at all stages (training, validation, testing), even if the underlying data varies.
+
+**Standardizing Numeric Features**
+
+Features that are on very different numeric scales can cause issues for models like logistic regression. For example, `Tot_Day_Suply` might be in the hundreds while `Cost_per_claim` could be in the thousands. If we don’t scale them, the model might assign disproportionate importance to the larger features.
+
+To address this, we use `StandardScaler()` from `sklearn.preprocessing`. This function subtracts the mean and divides by the standard deviation, resulting in a column with mean 0 and standard deviation 1. We fit the scaler on `X_train[numeric_cols]`, and apply the transformation to `X_train`, `X_val`, and `X_test`.
+
+**Converting Boolean Columns**
+
+Some features may be stored as `True`/`False`. Most models, including logistic regression, expect numeric input. We use `.astype(int)` to convert all Boolean columns into `1`/`0` format, which the model can interpret as binary indicators.
+
+**Final Structure Check**
+
+After all these steps, it’s important to verify that `X_train`, `X_val`, and `X_test` all have the same number and order of columns. This ensures the model receives a consistent input structure during training and evaluation.
 
 ++++
 <iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_0wn7iau1&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_gtbd1jfd%22%7D'  style="width: 940px;height: 540px;border: 0;" allowfullscreen></iframe>
@@ -333,6 +455,236 @@ X_test shape: (9698, 26)
 
 
 == 5. Model Building and Evaluation
+
+
+**Logistic Regression and the Sigmoid Function**
+
+In binary classification problems, our goal is to predict the probability of a binary outcome: such as success/failure or 1/0. Unlike linear regression, which can produce any real number, logistic regression bounds the output between 0 and 1 by applying the **sigmoid function**. This lets us model probabilities directly using the equation:
+
+$p = 1 / (1 + e^{(-(\beta_0 + \beta_1 \times X)})$
+
+where
+
+- $p$ is the predicted probability of success (e.g., winning)
+- $\beta_0$ is the intercept
+- $\beta_1$ is the coefficient for the input variable $X$
+- $e$ is Euler’s number (approximately 2.718)
+
+The result is an S-shaped curve that flattens near 0 and 1, making it ideal for modeling probabilities.
+
+image::SigmoidFunction.jpg[width=600, height=450, caption="Figure 1: Sigmoid function. Source: Educational article on activation functions (accessed July 11, 2025)."]
+
+[NOTE]
+====
+**Why can't this equation give probabilities outside of 0 to 1?**
+
+No matter what value $X$ takes, the exponentiated term is always positive. 
+
+- As X increases, the exponent **e^-{(β₀ + β₁·X)}** gets smaller, pushing **p** closer to 1.
+- As X decreases, the exponent grows, pushing **p** closer to 0.
+
+So the sigmoid function always produces values strictly between 0 and 1.
+====
+
+**Log Odds (Logit) Transformation**
+
+Modeling probability with a linear equation (like in linear regression) does not work because probabilities must stay between 0 and 1. To make logistic regression behave like linear regression, we apply a transformation to the probability using **log-odds**, or the **logit** function:
+
+- $\log\left(\dfrac{p}{1 - p}\right) = \beta_0 + \beta_1 X$
+where
+
+- $\dfrac{p}{1 - p}$ is called the odds — the probability of success divided by the probability of failure.
+
+- $\log\left(\dfrac{p}{1 - p}\right)$ is the log-odds, which maps probabilities (between 0 and 1) to the entire real number line.
+
+[NOTE]
+====
+If odds = 4, that means the event is 4 times more likely to happen than not.  
+In other words, the probability of success is 4× greater than the probability of failure.
+====
+
+**Three Equivalent Forms of the Logistic Model**
+
+[cols="1,2", options="header"]
+|===
+| Form | Expression
+
+| **Log-odds (logit)**  
+| $\log\left(\dfrac{p}{1 - p}\right) = \beta_0 + \beta_1 X$
+
+| **Odds**  
+| $\dfrac{p}{1 - p} = e^{\beta_0 + \beta_1 X}$
+
+| **Probability (sigmoid)**  
+| $p = \dfrac{1}{1 + e^{-(\beta_0 + \beta_1 X)}}$
+|===
+
+Each form is mathematically equivalent, and which one you use depends on the context:
+
+- Use **log-odds** when modeling or interpreting coefficients.
+- Use **odds** when communicating risk ratios.
+- Use **probability** when making predictions.
+
+**Key Features of the Logistic Curve**
+
+1. It always produces outputs between 0 and 1, making it ideal for probability modeling.
+2. The log-odds transformation allows us to model the predictors in a linear way, just like in linear regression.
+
+**How to Interpret Coefficients**
+
+In a logistic regression model, each coefficient (**β**) represents the **change in the log-odds** of the outcome for a one-unit increase in the predictor, holding all else constant.
+
+[cols="1,2", options="header"]
+|===
+| Interpretation Type | What It Means
+
+| **Raw Coefficient (β)**  
+| A one-unit increase in **X** increases the **log-odds** of the outcome by **β**.
+
+| **Exponentiated Coefficient (e^β)**  
+| A one-unit increase in **X** multiplies the **odds** of the outcome by **e^β**. This is called the **odds ratio**.
+
+| **Odds Ratio > 1**  
+| The predictor increases the likelihood of the outcome.
+
+| **Odds Ratio < 1**  
+| The predictor decreases the likelihood of the outcome.
+
+| **Odds Ratio = 1**  
+| The predictor has no effect on the odds of the outcome.
+|===
+
+[IMPORTANT]
+====
+To interpret a coefficient as an **odds ratio**, you must exponentiate it:  
+**Odds Ratio = e^β**
+
+This is especially helpful when explaining or interpreting the results in plain language! For example, if **β = 0.75**, then **e^β ≈ 2.12**, meaning a one-unit increase in that predictor makes the outcome about **2.1× more likely** — or increases the odds by **112%**.
+====
+
+
+**Checking Multicollinearity with VIF**
+
+Before fitting our model, we use *Variance Inflation Factor (VIF)* to check for multicollinearity:
+
+VIF(Xᵢ) = 1 / (1 – R²ᵢ)
+
+where ${R_i}^2$ is the $R^2$ from a regression of $X_i$ onto all of other predictors. You can easily see that having ${R_i}^2$ close to one refer to collinearity and so the VIF will be large. 
+
+A VIF above 10 suggests the variable is highly collinear and may need to be removed.
+
+**Feature Selection with AIC and Forward Selection**
+
+To reduce the number of features, we use *forward selection* guided by *Akaike Information Criterion (AIC)*:
+
+AIC = 2·_k_ – 2·log(_L_),
+
+where
+
+* _k_ is the number of parameters in the model  
+* _L_ is the likelihood of the model
+
+The model with the lowest AIC fits the data by striking a balance between fit and the number of parameters (features) used. If we pick the model with the smallest AIC, we are choosing the model with a low _k_ (fewer features) while still ensuring it has a high likelihood log(_L_).  
+
+*Forward selection* begins with no predictors and adds them one at a time, at each step choosing the variable that leads to the greatest reduction in AIC.
+
+[NOTE]
+====
+**AIC is one of several possible criteria for feature selection.**  
+While we are using AIC in this project, you could also use:
+
+- **R²**: Choose features that increase the model’s explained variance.
+- **p-values**: Add features that are statistically significant.
+- **BIC** (Bayesian Information Criterion): Similar to AIC but with a stronger penalty for complexity.
+
+Each criterion has trade-offs. AIC is popular because it balances model fit and complexity, making it a solid choice when comparing logistic regression models. For consistency, we'll use AIC throughout this project.
+====
+
+**Interpreting Model Coefficients with Odds Ratios**
+
+Once the model is fit, we convert coefficients into *odds ratios* to interpret them:
+
+Odds Ratio = exp(β)
+
+[cols="1,2", options="header"]
+|===
+|Odds Ratio Value |Interpretation
+|Greater than 1   |Increases odds of prescribing Semaglutide
+|Less than 1      |Decreases odds of prescribing Semaglutide
+|Equal to 1       |No effect on the odds
+|===
+
+**Evaluating Model Performance**
+
+**Confusion Matrix**
+
+A *confusion matrix* compares the model’s predicted classes with the actual outcomes. It is used to calculate accuracy, precision, recall, and more.
+
+[cols="1,1,1", options="header"]
+|===
+|               | Predicted: No (0) | Predicted: Yes (1)
+|Actual: No (0) | True Negative (TN) | False Positive (FP)
+|Actual: Yes (1)| False Negative (FN)| True Positive (TP)
+|===
+
+[NOTE]
+====
+* True Positives (TP): correctly predicted Semaglutide prescribers  
+* False Positives (FP): predicted prescriber, but was not  
+* True Negatives (TN): correctly predicted non-prescriber  
+* False Negatives (FN): predicted non-prescriber, but was
+====
+
+From the confusion matrix, we can compute key metrics:
+
+[cols="1,2", options="header"]
+|===
+|Metric | Formula
+|Accuracy        | (TP + TN) / Total
+|Precision       | TP / (TP + FP)
+|Recall (Sensitivity) | TP / (TP + FN)
+|Specificity     | TN / (TN + FP)
+|===
+
+**ROC Curve and AUC**
+
+A *Receiver Operating Characteristic (ROC)* curve plots the tradeoff between:
+
+* True Positive Rate (Recall)  
+* False Positive Rate (1 – Specificity)
+
+image::ROC_Curve.png[width=600, height=450, caption="Figure 3: ROC Curve Image. Source: Evidently AI Article (accessed July 14, 2025)."]
+
+It shows how the model performs across all classification thresholds.
+
+The *Area Under the Curve (AUC)* is a summary metric:
+
+[cols="1,2", options="header"]
+|===
+|AUC Score | Interpretation
+|0.5       | No better than random guessing
+|0.7–0.8   | Fair performance
+|0.8–0.9   | Strong performance
+|1.0       | Perfect classification
+|===
+
+[IMPORTANT]
+====
+AUC is *threshold-independent* — it evaluates how well the model ranks positive cases above negative ones, regardless of where we place the 0.5 decision boundary.
+====
+
+You should compute and compare AUC scores for:
+
+* Training set  
+* Validation set  
+* Test set
+
+This helps check for *overfitting*, which occurs when a model learns the noise or specific quirks of the training data rather than the underlying patterns. An overfitted model may perform very well on the training set but poorly on new, unseen data (test and validation dataset!). By evaluating performance on validation and test sets, we can ensure the model generalizes well to other data.
+
+**Ready to Model**
+
+Now that you've reviewed the key concepts, proceed with training your logistic regression model and interpreting the results using this knowledge!
+
 
 ++++
 <iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_pw8jtmwn&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_i2u5dqo2%22%7D'  style="width: 940px;height: 540px;border: 0;" allowfullscreen></iframe>
@@ -595,6 +947,60 @@ image::roccurvepres.png[width=600, height=450, caption="Figure: ROC Curve Compar
 
 == 6. Making Predictions on New Prescribers
 
+
+Now that you’ve trained your final model, let’s use it to predict how likely new prescribers are to prescribe Semaglutide.
+
+**The Sigmoid Function and Likelihood in Logistic Regression (Semaglutide Example)**
+
+Let’s say we have a prescriber with the following characteristics:
+
+- 22 total 30-day fills
+- $450 per claim
+- Practices in the South
+- Internal Medicine specialist
+
+Using the sigmoid function, the model calculates **p = 0.83**, meaning there's an 83% chance this provider prescribes Semaglutide.
+
+So:
+
+- If this provider **did prescribe** Semaglutide, their likelihood = 0.83  
+- If this provider **did not prescribe** Semaglutide, their likelihood = 1 – 0.83 = 0.17
+
+**Maximum Likelihood Estimation (MLE)**
+
+To train the model, we use **maximum likelihood estimation**.
+
+This means we:
+
+- Calculate the **likelihood** for each prescriber in the data (based on whether or not they prescribed Semaglutide).
+
+- Multiply all the individual likelihoods together to get a total likelihood.
+
+- Adjust the coefficients (β₀, β₁, etc.) to **maximize** that total likelihood.
+
+Example:
+
+If the model predicts:
+
+- Prescriber A: p = 0.75, and they did prescribe → likelihood = 0.75  
+
+- Prescriber B: p = 0.20, and they did not prescribe → likelihood = 0.80  
+
+- Prescriber C: p = 0.55, and they did prescribe → likelihood = 0.55  
+
+Then the total likelihood is:
+
+**Likelihood = 0.75 × 0.80 × 0.55**
+
+We want to find the coefficients that **maximize this product** across all rows in the dataset.
+
+[IMPORTANT]
+====
+Logistic regression finds the coefficients that maximize the likelihood of the observed outcomes.
+
+That’s how we “fit” the model and it’s also how we estimate the best values for the βs in the sigmoid equation.
+====
+
 At this point, our model is trained and evaluated. Let’s see how it performs on *new, unseen prescribers*.
 
 We’ll sample 20 new records from the test set and compute their predicted probability of prescribing Semaglutide.
@@ -633,11 +1039,18 @@ This consistent pattern suggests that both geographic and specialty factors infl
 == Conclusion
 
 You’ve completed a full logistic regression pipeline:
+
 - Data cleaning and feature engineering
+
 - Exploratory analysis and visualization
+
 - Data splitting and preprocessing
-- Multicollinearity diagnostics and feature selection
+
+- Multicollinearity diagnostics and feature 
+selection
+
 - Model fitting, evaluation, and interpretation
+
 - Predictive scoring on unseen prescribers
 
 This workflow represents a robust and interpretable approach to understanding binary outcomes — a method widely used in both healthcare and business analytics.
