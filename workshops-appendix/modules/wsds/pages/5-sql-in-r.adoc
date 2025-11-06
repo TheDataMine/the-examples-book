@@ -12,26 +12,73 @@ Maggie still needs to add content.
 
 [IMPORTANT]
 ====
-Fulya still needs to add content. 
+Please use `seminar-r` for this part. 
 ====
 
-Please use `seminar-r` for this part. The following library used to call SQL queries in R:
+We will show how to make SQL calls from R, so that we can (for example) make plots related to our SQL queries. When we make a SQL call in R, the data is returned as an R database.
 
-[source, r]
-====
-library(sqldf)
-====
+Connect to the IMDb SQLite database
 
-There is only one function we need to focus on: `sqldf`. This function executes a given SQL query, such as:
+[source, R]
+----
+conn <- dbConnect(RSQLite::SQLite(), "/anvil/projects/tdm/data/movies_and_tv/imdb.db")
+----
 
-[source, r]
-====
-SELECT tbl_name FROM sqlite_master WHERE type='table';
-====
+Also load libraries we will be using in R:
+
+[source, R]
+----
+library(RSQLite)
+library(dplyr)
+library(ggplot2)
+----
+
+Check available tables:
+
+[source, R]
+----
+dbListTables(conn)
+----
+
+Write the first SQL query in R:
+
+[source, R]
+----
+dbGetQuery(conn, "SELECT * FROM titles LIMIT 5;")
+----
+
+Start asking some questions: what type of titles Quentin Tarantino mainly works on (following query takes some time)
+
+[source, R]
+----
+tarantino_types <- dbGetQuery(conn, "
+SELECT t.type, COUNT(*) AS count
+FROM titles AS t
+JOIN crew AS c ON t.title_id = c.title_id
+JOIN people AS p ON c.person_id = p.person_id
+WHERE p.name = 'Quentin Tarantino'
+GROUP BY t.type
+ORDER BY count DESC;
+")
+
+tarantino_types
+----
+
+Plot title types
+
+[source, R]
+----
+ggplot(tarantino_types, aes(x = reorder(type, count), y = count)) +
+  geom_bar(stat = "identity", fill = "#0073C2FF") +
+  coord_flip() +
+  labs(title = "Types of Titles Quentin Tarantino Worked On",
+       x = "Title Type", y = "Count") +
+  theme_minimal()
+----
 
 [NOTE]
 ====
-For the ease of reading, please write SQL syntax in all UPPER CASE and variable names/database names in lower case. Actually, SQL syntax is NOT case sensitive. However, remember that R is case sensitive, so please be careful with the capitalization of data frame and variable names.
+SQL syntax is NOT case sensitive. However, remember that R is case sensitive, so please be careful with the capitalization of data frame and variable names.
 ====
 
 == Practice on your own 
