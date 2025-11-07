@@ -48,10 +48,10 @@ Two notes before you begin this project:
 
 [IMPORTANT]
 ====
-For this project, you should load in the `dplyr`, `leaflet`, `sf`, `tigris`, and `htmltools` libraries for best results. That is a lot of packages, but we're going to show you some different methods of creating maps and utilizing just a few of their features. 
+For this project, you should load in the `dplyr`, `leaflet`, `sf`, `tigris`, and `htmltools` libraries for best results. That may be look a lot of packages, but we are going to show you some different methods of creating maps and utilizing just a few of their features. 
 ====
 
-[IMPORTANT]
+[TIP]
 ====
 Your notebook will likely slow down, fight you when you scroll, or take a while to load when reopened or when you are saving it. This is to be expected and is OK. These maps are not just a simple plot output - they are full interactive web apps that are being rendered inside of the notebook, so have patience when the environment is difficult.
 ====
@@ -71,11 +71,12 @@ locationsDF <- data.frame(
 names(locationsDF) <- c("latitude", "longitude")
 ----
 
+The use `points <- st_as_sf(locationsDF, coords=c("longitude", "latitude"), crs=4326)` to convert the two columns' values to actual geospatial values that can be mapped (hence the 4326 (meaning EPSG:4326), which corresponds to WGS 84, the standard GPS coordinate system). 
+
 The function `st_as_sf()` comes from the `sf` library, and is used to convert dataframes into simple features (sf), which can store geometry data. The `sf` package is fundamental for working with geospatial data in R. It works well when used with packages from the `Tidyverse` (such as `dplyr`), but it is not required. 
 
-Use `points \<- st_as_sf( [df], coords=c([longitude_col], [latitude_col]), crs=4326)` to convert the two columns' values to actual geospatial values that can be mapped (hence the 4326 (meaning EPSG:4326), which corresponds to WGS 84, the standard GPS coordinate system). 
-
 Now you can map the points. A standard format would be:
+
 [source,R]
 ----
 leaflet() %>% 
@@ -105,28 +106,46 @@ Once you make a couple maps, you may notice that the Notebook environment resist
 ====
 
 === Question 2 (2 points) 
-The map is very small, and is even cut off with the limited amount of space. But we did find a workaround to the standard Jupyter Notebook settings for these R maps. It is not as simple as if you were working in RStudio, but it does fix this issue here.
+
+The map is very small, and is even cut off with the limited amount of space. But we did find a workaround to the standard Jupyter Notebook settings for these R maps. It is not as simple as if you were working in RStudio, but it does fix this issue here if you render it in Firefox:
 
 [source,R]
 ----
 lapply(list(1), function(s) {
   div(
-    leaflet(width = "500px", height = "500px") %>% 
-    (other functions...)
-    .... 
-    ....
+    leaflet(width = "500px", height = "500px") %>%
+      addTiles() %>%
+      addCircleMarkers(data = points, radius = 5) %>%
+      addMarkers(data = points)
   )
 })
 ----
+
+[NOTE]
+====
+Using **lapply** for this purpose is not something we usually do, but it seems to be the most practical solution we have found for Firefox.
+
+If you are using Safari, making the following adjustment works simply instead:
+
+[source, R]
+----
+leaflet(width = "800px", height = "800px") %>%
+  addTiles() %>%
+  addCircleMarkers(data = points, radius = 5) %>%
+  addMarkers(data = points)
+----
+
+====
 
 Taking the locations stored in points, we can string these places together on the map. Use:
 
 [source,R]
 ----
 line <- st_sfc(st_linestring(as.matrix(st_coordinates(points))), crs = st_crs(points))
+
 ----
 
-...to take each of the points and connect them in order as a line
+...to take each of the points and connect them in order as a line.
 
 This line-drawing method will connect the locations by following the order in which they are sorted in the dataframe. 
 
@@ -135,11 +154,18 @@ This line-drawing method will connect the locations by following the order in wh
 If you do not care about maintaining the order of the points from the original dataframe, an alternative way to create the line is to use `line \<- st_cast(st_union(points), "LINESTRING")`. *This will NOT keep the points in order* as they were listed in the dataframe.
 ====
 
-Now when you are making your map, you will still use `addCircleMarkers()` to show those individual location points. BUT we will also now use `addPolylines()`, with `data = line`, to draw the lines to connect the points. 
+Now when you are making your map, you will still use `addCircleMarkers()` to show those individual location points. BUT we will also now use `addPolylines()`, with `data = line`, to draw the lines to connect the points:
 
-We've got our points, and now they're connected together. This type of map is very interactive, so we're able to design it just so, and scroll, and zoom in and out, and so on. Something else we can do is add a popup to each of the points. 
+[source, R]
+----
+leaflet(width = "500px", height = "500px") %>%
+      addTiles() %>%
+      addCircleMarkers(data = points, radius = 5) %>%
+      addMarkers(data = points) %>%
+      addPolylines(data = line)
+----
 
-A popup can be a very simple thing. For example, you could add 
+We have got our points, and now they are connected together. This type of map is very interactive, so we are able to design it just so, and scroll, and zoom in and out, and so on. Something else we can do is add a popup to each of the points. A popup can be a very simple thing. For example, you could add 
 
 [source,R]
 ----
@@ -150,9 +176,9 @@ popup = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10")
 
 .Deliverables
 ====
-2.1 Use the `lappy()`.... resizing method to reshape your outputted maps. Try a few sizes to see which you like the best +
-2.2 Connect the 10 locations together with lines on the map +
-2.3 Add meaningful popups to each location's circle marker or marker icon
+2.1 Use the `lappy()`.... resizing method to reshape your outputted maps (in Firefox. If you do not use Firefox, you can resize your map inside the leaflet function). Try a few sizes to see which you like the best. +
+2.2 Connect the 10 locations together with lines on the map. +
+2.3 Add meaningful popups to each location's circle marker or marker icon.
 ====
 
 === Question 3 (2 points)
@@ -160,9 +186,19 @@ popup = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10")
 <iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_cjs46f6o&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_1z50ht4l%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 800px;height: 485px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Project12_Question3"></iframe>
 ++++
 
-Read in the Formula 1 Circuits data. 
+Read in the Formula 1 Circuits data:
 
-If you look at the `head()` of the dataset, you can see that these latitude and longitude columns are called `lat` and `lng`, respectively. We're going to create a new dataframe `testDF` containing just these two columns. 
+[source, R]
+----
+f1 <- read.csv('/anvil/projects/tdm/data/formula_1/circuits.csv')
+----
+
+If you look at the `head()` of the dataset, you can see that these latitude and longitude columns are called `lat` and `lng`, respectively. We are going to create a new dataframe `testDF` containing just these two columns:
+
+[source, R]
+----
+testDF <- data.frame(f1$lat, f1$lng)
+----
 
 [NOTE]
 ====
@@ -175,28 +211,37 @@ https://en.wikipedia.org/wiki/List_of_Formula_One_circuits[This Wikipedia page] 
 
 .Deliverables
 ====
-3.1 Show the `head()` of `testDF` to ensure that latitude and longitude columns are correct +
-3.2 Plot the points for the locations of the F1 racetracks onto a map +
-3.3 Zoom the map in to focus on the location of a racetrack
+3.1 Show the `head()` of `testDF` to ensure that latitude and longitude columns are correct. +
+3.2 Plot the points for the locations of the F1 racetracks onto a map. +
+3.3 Zoom the map in to focus on the location of a racetrack.
 ====
 
 === Question 4 (2 points)
-Read in the Zillow State Times Series as `myDF`. We will be using the columns `InventoryRaw_AllHomes` and `RegionName`, so make sure to clear these of NA values. 
+Read in the Zillow State Times Series as `myDF`:
 
-[HINT]
-====
+[source, R]
+----
+myDF <- read.csv('/anvil/projects/tdm/data/zillow/State_time_series.csv')
+----
+
+We will be using the columns `InventoryRaw_AllHomes` and `RegionName`, so make sure to clear these of NA values. 
+
+[source, R]
+----
 myDF_cleaned \<- myDF %>%
   filter(!is.na(InventoryRaw_AllHomes), !is.na(RegionName))
+----
+
+This is relatively a large dataset. We could potentially use all of the data row entries, but maps already slow down the environment. Instead, we will use a subset of the data - the first 1000 rows. 
+
+[NOTE]
+====
+You do not *have to* use specifically the first 1000 rows. But this is a good sample size, and not too many rows that the maps make the notebook environment not work.
+
+You  do not *have to* limit yourself to the first 1000 rows specifically. However, this is a good sample size (large enough to be meaningful, but small enough to prevent the maps from slowing down or crashing the notebook).
 ====
 
-This is a large dataset. We could potentially use all of the data row entries, but maps already slow down the environment. Instead, we will use a subset of the data - the first 1000 rows. 
-
-[IMPORTANT]
-====
-You do not *have to* use specifically the first 1000 rows. But this is a good sample size, and not too many rows that the maps make the notebook environment not work. 
-====
-
-From the `tigris` libray, there is the funciton `states()` that downloads the U.S. state boundary shapefiles from the U.S. Census Bureau. Use
+From the `tigris` library, the function `states()` allows you to download U.S. state boundary shapefiles directly from the U.S. Census Bureau.
 
 [source, R]
 ----
@@ -204,14 +249,15 @@ states_sf <- states(cb = TRUE) %>%
   st_transform(crs = 4326)
 ----
 
-....to get a spatial dataframe of all of the U.S. states. Once again, this uses the `crs = 4326`, to map similar to how GPS does. 
+This code returns a spatial dataframe containing all U.S. states. The `st_transform(crs = 4326)` ensures that the coordinate reference system matches the standard GPS format, making it compatible with typical mapping tools.
 
-Taking this `states_sf` data, we need to merge it with the subset of myDF (where there are just 1000 rows), so the Zillow data can be put onto the country map. But, looking at the `head()` of both datasets, it is noticable that the formatting of the states listed are different:
+Taking this `states_sf` data, we need to merge it with the subset of `myDF` (where there are just 1000 rows), so the Zillow data can be put onto the country map. But, looking at the `head()` of both datasets, it is noticeable that the formatting of the states listed are different:
 
 - `NAME` column: `West Virginia`
 - `RegionName` column: `WestVirginia`
 
 Make sure to convert the `RegionName` column of `subsetDF` to match the formatting of the `NAME` column of `states_sf`:
+
 [source,R]
 ----
 subsetDF <- subsetDF %>%
@@ -223,6 +269,7 @@ There is one more problematic part with this column: there are more than one row
 [HINT]
 ====
 One method of doing this is to use `group_by()` and `summarise()`:
+
 [source,R]
 ----
 myDF_avg <- myDF %>%
@@ -231,13 +278,13 @@ myDF_avg <- myDF %>%
 ----
 ====
 
-With the final cleaned RegionName column, you can now combine these two dataframes by joining on the `NAME` and `RegionName` columns. 
+With the final cleaned `RegionName` column, you can now combine these two dataframes by joining on the `NAME` and `RegionName` columns. 
 
 .Deliverables
 ====
-4.1 Remove the NA values from the `InventoryRaw_AllHomes` and `RegionName` columns of `myDF` +
-4.2 Create `states_sf`, containg spatial data for the U.S. states map +
-4.3 Join the Zillow data with `states_sf`, and display the `head()` and the `shape()` to ensure the data has been grouped correctly
+4.1 Remove the NA values from the `InventoryRaw_AllHomes` and `RegionName` columns of `myDF`. +
+4.2 Create `states_sf`, containg spatial data for the U.S. states map. +
+4.3 Join the Zillow data with `states_sf`, and display the `head()` and the `shape()` to ensure the data has been grouped correctly.
 ====
 
 === Question 5 (2 points)
@@ -252,7 +299,7 @@ pal <- colorNumeric(
 )
 ----
 
-We can use the `leafet()` function on the new merged dataframe, and add polygons (mapped shapes) to show each of the U.S. states.  
+We can use the `leaflet()` function on the new merged dataframe, and add polygons (mapped shapes) to show each of the U.S. states.  
 
 [NOTE]
 ====
@@ -286,9 +333,9 @@ Adding a legend to this plot is extremely useful, as it helps us to understand t
 
 .Deliverables
 ====
-5.1 Plot a map to show the `InventoryRaw_AllHomes` value for each state +
-5.2 Customize `addPolygons()` to make the map interactive and useful +
-5.3 Add a legend that relates to the mapped data to the plotting space
+5.1 Plot a map to show the `InventoryRaw_AllHomes` value for each state. +
+5.2 Customize `addPolygons()` to make the map interactive and useful. +
+5.3 Add a legend that relates to the mapped data to the plotting space.
 ====
 
 == Submitting your Work
