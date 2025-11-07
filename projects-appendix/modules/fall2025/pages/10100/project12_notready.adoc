@@ -76,6 +76,7 @@ The use `points <- st_as_sf(locationsDF, coords=c("longitude", "latitude"), crs=
 The function `st_as_sf()` comes from the `sf` library, and is used to convert dataframes into simple features (sf), which can store geometry data. The `sf` package is fundamental for working with geospatial data in R. It works well when used with packages from the `Tidyverse` (such as `dplyr`), but it is not required. 
 
 Now you can map the points. A standard format would be:
+
 [source,R]
 ----
 leaflet() %>% 
@@ -105,28 +106,46 @@ Once you make a couple maps, you may notice that the Notebook environment resist
 ====
 
 === Question 2 (2 points) 
-The map is very small, and is even cut off with the limited amount of space. But we did find a workaround to the standard Jupyter Notebook settings for these R maps. It is not as simple as if you were working in RStudio, but it does fix this issue here.
+
+The map is very small, and is even cut off with the limited amount of space. But we did find a workaround to the standard Jupyter Notebook settings for these R maps. It is not as simple as if you were working in RStudio, but it does fix this issue here if you render it in Firefox:
 
 [source,R]
 ----
 lapply(list(1), function(s) {
   div(
-    leaflet(width = "500px", height = "500px") %>% 
-    (other functions...)
-    .... 
-    ....
+    leaflet(width = "500px", height = "500px") %>%
+      addTiles() %>%
+      addCircleMarkers(data = points, radius = 5) %>%
+      addMarkers(data = points)
   )
 })
 ----
+
+[NOTE]
+====
+Using **lapply** for this purpose is not something we usually do, but it seems to be the most practical solution we have found for Firefox.
+
+If you are using Safari, making the following adjustment works simply instead:
+
+[source, R]
+----
+leaflet(width = "800px", height = "800px") %>%
+  addTiles() %>%
+  addCircleMarkers(data = points, radius = 5) %>%
+  addMarkers(data = points)
+----
+
+====
 
 Taking the locations stored in points, we can string these places together on the map. Use:
 
 [source,R]
 ----
 line <- st_sfc(st_linestring(as.matrix(st_coordinates(points))), crs = st_crs(points))
+
 ----
 
-...to take each of the points and connect them in order as a line
+...to take each of the points and connect them in order as a line.
 
 This line-drawing method will connect the locations by following the order in which they are sorted in the dataframe. 
 
@@ -135,11 +154,18 @@ This line-drawing method will connect the locations by following the order in wh
 If you do not care about maintaining the order of the points from the original dataframe, an alternative way to create the line is to use `line \<- st_cast(st_union(points), "LINESTRING")`. *This will NOT keep the points in order* as they were listed in the dataframe.
 ====
 
-Now when you are making your map, you will still use `addCircleMarkers()` to show those individual location points. BUT we will also now use `addPolylines()`, with `data = line`, to draw the lines to connect the points. 
+Now when you are making your map, you will still use `addCircleMarkers()` to show those individual location points. BUT we will also now use `addPolylines()`, with `data = line`, to draw the lines to connect the points:
 
-We've got our points, and now they're connected together. This type of map is very interactive, so we're able to design it just so, and scroll, and zoom in and out, and so on. Something else we can do is add a popup to each of the points. 
+[source, R]
+----
+leaflet(width = "500px", height = "500px") %>%
+      addTiles() %>%
+      addCircleMarkers(data = points, radius = 5) %>%
+      addMarkers(data = points) %>%
+      addPolylines(data = line)
+----
 
-A popup can be a very simple thing. For example, you could add 
+We have got our points, and now they are connected together. This type of map is very interactive, so we are able to design it just so, and scroll, and zoom in and out, and so on. Something else we can do is add a popup to each of the points. A popup can be a very simple thing. For example, you could add 
 
 [source,R]
 ----
@@ -150,9 +176,9 @@ popup = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10")
 
 .Deliverables
 ====
-2.1 Use the `lappy()`.... resizing method to reshape your outputted maps. Try a few sizes to see which you like the best +
-2.2 Connect the 10 locations together with lines on the map +
-2.3 Add meaningful popups to each location's circle marker or marker icon
+2.1 Use the `lappy()`.... resizing method to reshape your outputted maps (in Firefox. If you do not use Firefox, you can resize your map inside the leaflet function). Try a few sizes to see which you like the best. +
+2.2 Connect the 10 locations together with lines on the map. +
+2.3 Add meaningful popups to each location's circle marker or marker icon.
 ====
 
 === Question 3 (2 points)
