@@ -457,7 +457,7 @@ Indexes are data structures that improve the speed of database operations. In Pr
 
 MongoDB supports several types of indexes. Single field indexes are created on one field, compound indexes are created on multiple fields, multikey indexes are automatically created for array fields, text indexes are for full-text search capabilities, and sparse indexes only include documents that have the indexed field.
 
-The `db.command("explain", ...)` method shows you how MongoDB executes your queries. **Important:** Always include `"cursor": {}` in your find operations and use `verbosity="executionStats"` to get detailed performance metrics. Key metrics to look for include execution time, how many documents MongoDB had to look at, how many documents were returned, and the actual steps MongoDB took. A good query should examine few documents and return the results quickly.
+The `db.command("explain", ...)` method shows you how MongoDB executes your queries. **Important:** Some commands require you to include the `"cursor": {}` param. Also ensure to use `verbosity="executionStats"` to get detailed performance metrics. Key metrics to look for include execution time, how many documents MongoDB had to look at, how many documents were returned, and the actual steps MongoDB took. A good query should examine few documents and return the results quickly.
 
 For production applications, you need to consider several factors. Create indexes based on how you actually query your data, balance read vs. write performance since more indexes mean slower writes, monitor memory usage since indexes consume RAM, pay attention to the order of fields in compound indexes, and monitor index usage to remove unused indexes.
 
@@ -478,9 +478,12 @@ products.create_index([("category", 1), ("price", -1)])  # Compound index
 
 # Test query performance
 query = {"category": "Electronics"}
-explain_result = db.command("explain", {"find": "products", "filter": query, "cursor": {}}, verbosity="executionStats")
-print(f"Query execution time: {explain_result.get('executionStats', {}).get('executionTimeMillis', 'N/A')}ms")
-print(f"Documents examined: {explain_result.get('executionStats', {}).get('totalDocsExamined', 'N/A')}")
+explain_result = db.command("explain", {"find": "products", "filter": query})
+stats = explain_result.get("executionStats", {})
+print("\nQuery Performance (category = Electronics):")
+print("Execution time (ms):", stats.get("executionTimeMillis", "N/A"))
+print("Documents examined:", stats.get("totalDocsExamined", "N/A"))
+print("Documents returned:", stats.get("nReturned", stats.get("totalDocsReturned", "N/A")))
 ----
 
 This code creates both single-field and compound indexes on the products collection. The compound index on category and price allows efficient queries that filter by both fields. The `db.command("explain", ...)` method shows you how MongoDB executes the query, including execution time and how many documents were examined.
@@ -490,26 +493,29 @@ Here's an example of creating more advanced indexes and analyzing their impact:
 [source,python]
 ----
 # Create additional specialized indexes
-products.create_index("tags")  # Multikey index for array fields
+products.create_index("tags")  # Multikey index for arrays
 products.create_index("specifications.brand")  # Index on nested field
 customers.create_index("email", unique=True)  # Unique index
 orders.create_index([("customer_id", 1), ("order_date", -1)])  # Compound index
+products.create_index([("name", "text")])  # Text index for product names
+print("\nCreated specialized indexes (tags, brand, email(unique), compound, text).")
 
 # Test different query patterns
 queries_to_test = [
     {"category": "Electronics"},
     {"tags": "wireless"},
     {"specifications.brand": "Samsung"},
-    {"price": {"$gt": 200, "$lt": 500}}
+    {"price": {"$gt": 200, "$lt": 500}},
 ]
 
-print("Query Performance Analysis:")
+print("\nQuery Performance Analysis:")
 for i, query in enumerate(queries_to_test, 1):
-    explain_result = db.command("explain", {"find": "products", "filter": query, "cursor": {}}, verbosity="executionStats")
+    result = db.command("explain", {"find": "products", "filter": query})
+    stats = result.get("executionStats", {})
     print(f"Query {i}: {query}")
-    print(f"  Execution time: {explain_result.get('executionStats', {}).get('executionTimeMillis', 'N/A')}ms")
-    print(f"  Documents examined: {explain_result.get('executionStats', {}).get('totalDocsExamined', 'N/A')}")
-    print(f"  Documents returned: {explain_result.get('executionStats', {}).get('totalDocsReturned', 'N/A')}")
+    print("  Execution time (ms):", stats.get("executionTimeMillis", "N/A"))
+    print("  Docs examined:", stats.get("totalDocsExamined", "N/A"))
+    print("  Docs returned:", stats.get("nReturned", stats.get("totalDocsReturned", "N/A")))
     print()
 ----
 
@@ -522,25 +528,66 @@ Here's an example of monitoring index usage and performance:
 # Check index usage statistics
 db_stats = db.command("collStats", "products")
 print("Collection Statistics:")
-print(f"Total documents: {db_stats['count']}")
-print(f"Average document size: {db_stats['avgObjSize']:.2f} bytes")
-print(f"Total collection size: {db_stats['size']:.2f} bytes")
-print(f"Index size: {db_stats['totalIndexSize']:.2f} bytes")
+print(f"Total documents: {db_stats.get('count', 'N/A')}")
+print(f"Average document size: {db_stats.get('avgObjSize', 0):.2f} bytes")
+print(f"Total collection size: {db_stats.get('size', 0)/1024:.2f} KB")
+print(f"Total index size: {db_stats.get('totalIndexSize', 0)/1024:.2f} KB")
 
-# List all indexes and their usage
+# List all indexes
 indexes = list(products.list_indexes())
-print(f"\nIndexes on products collection: {len(indexes)}")
-for index in indexes:
-    print(f"- {index['name']}: {index['key']}")
+print(f"\nIndexes on 'products' collection: {len(indexes)}")
+for idx in indexes:
+    print(f"- {idx['name']}: {idx['key']}")
 
 # Test aggregation performance
 agg_pipeline = [
     {"$group": {"_id": "$category", "count": {"$sum": 1}}},
     {"$sort": {"count": -1}}
 ]
-agg_explain = db.command("explain", {"aggregate": "products", "pipeline": agg_pipeline}, verbosity="executionStats")
+agg_explain = db.command("explain", {"aggregate": "products", "pipeline": agg_pipeline, "cursor": {}}, verbosity="executionStats")
 print(f"\nAggregation execution time: {agg_explain.get('executionStats', {}).get('executionTimeMillis', 'N/A')}ms")
 ----
+
+[IMPORTANT]
+====
+You need to include the `"cursor": {}` param for aggregration commands. See more https://www.mongodb.com/docs/manual/reference/command/aggregate/#mongodb-dbcommand-dbcmd.aggregate[here].
+====
+
+What you may notice here is that we have `N/A` for our execution time. If you print out `agg_explain` and look at the returned JSON, you will notice that it is structured a little different than the previous JSON return values. Aggregation commands often returns 'per-stage' stats with estimates meaning the JSON returned may be a little more dynamic than what we have previously been dealing with. 
+
+We can handle this by 'scanning' for the execution time amongst the stages:
+
+[source,python]
+----
+exec_ms = None
+
+# 1) Some versions place it top-level:
+exec_ms = exec_ms or agg_explain.get("executionStats", {}).get("executionTimeMillis")
+
+# 2) Aggregation often returns per-stage stats with estimates — scan for them:
+def _find_time(d):
+    if isinstance(d, dict):
+        if "executionTimeMillis" in d:
+            return d["executionTimeMillis"]
+        if "executionTimeMillisEstimate" in d:
+            return d["executionTimeMillisEstimate"]
+        for v in d.values():
+            t = _find_time(v)
+            if t is not None:
+                return t
+    elif isinstance(d, list):
+        for x in d:
+            t = _find_time(x)
+            if t is not None:
+                return t
+    return None
+
+# If returned in stages, use our scan function:
+exec_ms = exec_ms or _find_time(agg_explain.get("stages", []))
+print("Aggregation execution time (ms):", exec_ms)
+----
+
+Now we see a real number estimate for execution time! (It is small amount of data so a small execution time is expect).
 
 This code demonstrates how to monitor database performance and index usage. The `collStats` command provides detailed information about collection size, document count, and index usage. Monitoring these metrics helps you identify performance bottlenecks and optimize your database configuration.
 
