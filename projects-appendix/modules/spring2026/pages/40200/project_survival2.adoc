@@ -611,6 +611,7 @@ results.print_summary()
 ====
 
 === Question 5 (2 points)
+
 **The Cox Proportional Hazards Model**
 
 The **Cox Proportional Hazards model** describes how patient characteristics (**covariates**) affect the risk of death over time using the dataset `survival_data`.
@@ -621,80 +622,59 @@ $h(t) = h_0(t)\exp(\beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_p X_p)$
 
 where:
 
-* $h(t)$ is the hazard (instantaneous risk of death) at time $t$
-* $h_0(t)$ is the **baseline hazard** (when all covariates equal 0)
-* $X_1,\ldots,X_p$ are covariates from `survival_data`, including:
-  `age`, `sex`, `ph.ecog`, `ph.karno`, `pat.karno`, `meal.cal`, and `wt.loss`
-* $\beta_1,\ldots,\beta_p$ are the coefficients estimated by the Cox model
+* $h(t)$ is the instantaneous risk of death at time $t$  
+* $h_0(t)$ is the **baseline hazard** (when all covariates equal 0)  
+* $X_1,\ldots,X_p$ are covariates from `survival_data`, including  
+  `age`, `sex`, `ph.ecog`, `ph.karno`, `pat.karno`, `meal.cal`, and `wt.loss`  
+* $\beta_1,\ldots,\beta_p$ are the estimated model coefficients  
 
 Each covariate receives one coefficient.
 
+**Example model using our dataset**
 
+Suppose our Cox model includes `age`, `sex`, and `ph.ecog`.  
+The fitted model is written as:
 
-**Example Cox Model using our dataset**
+$h(t) = h_0(t)\exp(\beta_1(\text{age}) + \beta_2(\text{sex}) + \beta_3(\text{ph.ecog}))$
 
-Suppose we fit a Cox model using:
+Each coefficient represents the **log hazard ratio** of that variable while holding all others constant.
 
-* `age` (years)
-* `sex` (1 = male, 2 = female)
-* `ph.ecog` (ECOG performance status)
+**Log hazard coefficients**
 
-The model is written as:
-
-$$
-h(t) = h_0(t)\exp\Big(
-\beta_1(\text{age})
-+ \beta_2(\text{sex})
-+ \beta_3(\text{ph.ecog})
-\Big)
-$$
-
-Each coefficient measures the **log hazard ratio** of that variable while holding the others constant.
-
-
-
-**Log Hazard Coefficients**
-
-Example coefficients output from a fitted model:
+Example coefficient output:
 
 [cols="3,3,4"]
 |===
-| *Covariate* | *Log Hazard Coefficient ($\beta$)* | *Interpretation*
+| *Covariate* | *Log hazard coefficient ($\beta$)* | *Interpretation*
 
 | Age
 | 0.02
-| Positive → higher age increases risk of death
+| Higher age increases hazard
 
 | Sex (female vs male)
 | -0.60
-| Negative → lower risk for females
+| Lower hazard for females
 
 | ph.ecog
 | 0.90
-| Higher ECOG score → worse health → higher risk
+| Worse ECOG score increases hazard
 |===
 
+**From coefficients to hazard ratios**
 
+Coefficients are converted to hazard ratios using:
 
-**From Coefficients to Hazard Ratios**
+$HR = e^{\beta}$
 
-Coefficients are converted into **hazard ratios** using:
-
-$$
-HR = e^{\beta}
-$$
-
-
-
-**Hazard Ratios**
+**Hazard ratios**
 
 [cols="3,3,4"]
 |===
-| *Covariate* | *Hazard Ratio (HR)* | *Interpretation*
+| *Covariate* | *Hazard ratio (HR)* | *Interpretation*
 
 | Age
 | 1.02
-| About a **2% increase in risk for each additional year**
+| ~2% higher risk per year
 
 | Sex (female)
 | 0.55
@@ -702,51 +682,42 @@ $$
 
 | ph.ecog
 | 2.46
-| $HR > 1$ → more than double the risk for each 1-unit increase
+| $HR > 1$ → more than double the risk
 |===
 
+**How to interpret hazard ratios**
 
+* $HR = 1$ → no difference in hazard  
+* $HR > 1$ → increased hazard  
+* $HR < 1$ → decreased hazard  
 
-**How to Interpret Hazard Ratios**
-
-* $HR = 1$ → no difference in risk
-* $HR > 1$ → increased risk
-* $HR < 1$ → decreased risk
-
-Example interpretations using our dataset:
+Example interpretations:
 
 * $HR(\text{age}) = 1.02$  
-  → Each additional year of age increases the hazard of death by ~2%.
+  → Each additional year of age increases hazard by ~2%.
 
 * $HR(\text{sex}) = 0.55$ (female)  
-  → Female patients have about **45% lower risk** of death compared to males.
+  → Female patients have ~45% lower hazard than males.
 
 * $HR(\text{ph.ecog}) = 2.46$  
-  → Patients with worse ECOG scores have substantially higher risk of death.
+  → Each 1-unit increase in ECOG roughly doubles hazard.
 
-
-
-**Applying the Cox Model to Individual Patients**
+**Applying the model to real patients**
 
 Using rows from `survival_data`:
 
-* Patient 0:
-  - age = 74, sex = 1 (male), ph.ecog = 1  
-* Patient 2:
-  - age = 56, sex = 1 (male), ph.ecog = 0  
+* Patient 0: age = 74, sex = 1 (male), ph.ecog = 1  
+* Patient 2: age = 56, sex = 1 (male), ph.ecog = 0  
 
-Because Patient 0 is older and has a worse ECOG score, the Cox model predicts that:
+Because Patient 0 is older and has worse ECOG performance, the Cox model predicts:
 
-*Patient 0’s hazard of death is higher than Patient 2’s.*
+*Patient 0 has a higher hazard of death than Patient 2.*
 
-
-**Sample Cox Output Table**
-
-Example of Cox regression output using `survival_data`:
+**Sample Cox output**
 
 [cols="3,2,2,2,3"]
 |===
-| *Covariate* | *Coefficient ($\beta$)* | *Std. Error* | *p-value* | *Hazard Ratio (95% CI)*
+| *Covariate* | *Coefficient ($\beta$)* | *Std Error* | *p-value* | *HR (95% CI)*
 
 | Age
 | 0.020
@@ -767,34 +738,31 @@ Example of Cox regression output using `survival_data`:
 | 2.46 (1.42 – 4.28)
 |===
 
----
+**Statistical significance**
 
-**Statistical Significance**
+* p-value < 0.05 → statistically significant  
+* Confidence intervals:
 
-* **p-value < 0.05** → statistically significant effect.
-* 95% confidence intervals:
-
-  - CI includes 1 → not significant
-  - CI entirely above 1 → increased risk
-  - CI entirely below 1 → decreased risk
+  - CI includes 1 → not significant  
+  - CI above 1 → increased hazard  
+  - CI below 1 → decreased hazard  
 
 Example:
 
-* $HR(\text{ph.ecog}) = 2.46$  
-* 95% CI = $(1.42,4.28)$
+$HR(\text{ph.ecog}) = 2.46$, CI $(1.42,4.28)$
 
-Since the confidence interval does not include 1 and $p < 0.05$, ECOG performance status is a **significant predictor of mortality** in this dataset.
+Because the CI does not include 1 and the p-value is < 0.05, ECOG performance status is a **significant predictor of mortality**.
 
+**Key takeaways**
 
-
-**Key Takeaways**
-
-* Cox coefficients represent **log hazard ratios**.
-* Convert coefficients to hazard ratios using $HR = e^\beta$.
+* Cox coefficients are **log hazard ratios**.  
+* Convert coefficients with $HR = e^{\beta}$.  
 * Interpretation:
 
-  - $HR > 1$ → increased hazard of death
-  - $HR < 1$ → decreased hazard of death
+  - $HR > 1$ → higher hazard  
+  - $HR < 1$ → lower hazard  
+  - $HR = 1$ → no effect  
+
 
 
 .Deliverables
