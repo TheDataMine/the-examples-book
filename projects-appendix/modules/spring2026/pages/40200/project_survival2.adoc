@@ -32,19 +32,13 @@ image::StethoscopeImage.jpg[width=600, height=450, title="A close-up view of a s
 
 
 In many studies, we are interested in whether an event occurs, such as whether a patient survives surgery.  
-In those cases, a binary modeling approach like logistic regression may seem like it can be used. However, when the **timing of the event matters**, this approach is not adequate.
+In those cases, a binary modeling approach like logistic regression may seem like it can be used. However, when the **timing of the event matters**, survival analysis is more adequate.
 
 For example, a patient who dies during a medical procedure and a patient who dies two months later both experience death, yet a simple yes or no model would give them the same label. Ignoring how long it took for the event to occur removes valuable information and limits our ability to see important patterns.
 
 This is where **survival analysis** becomes useful.
 
-Instead of modeling only whether an event occurs, survival analysis models:
-
-**the time until an event occurs**.
-
-This time is called the **survival time** or **event time**.
-
-The survival time is measured from a clearly defined starting point until the event happens.
+Instead of modeling only whether an event occurs, survival analysis models **the time until an event occurs.** This time is called the **survival time** or **event time**. The survival time is measured from a clearly defined starting point until the event happens.
 
 Common examples of events include
 
@@ -60,8 +54,8 @@ In all of these situations, the main response variable is the **time from a defi
 
 In survival analysis, we imagine that each individual has two underlying time values:
 
-* **True survival time** \(T): the time when the event actually occurs  
-* **True censoring time** \(C): the time when observation of that individual stops
+* **True survival time** $T$: the time when the event actually occurs  
+* **True censoring time** $C$: the time when observation of that individual stops
 
 We do not usually observe both of these. Instead, we only see whichever occurs first.
 
@@ -94,8 +88,7 @@ For each patient
 * Time ends at **death**, if the patient dies during the study, or at the **last recorded contact**, if the patient is still alive or no longer in contact with the study team. Those patients are treated as censored observations, which we describe next.
 
 The data set does not record calendar dates for diagnosis or death.  
-Instead, it records **elapsed time in days** between study start and the outcome.  
-Each recorded survival time therefore represents how many days a patient lived after diagnosis or enrollment.
+Instead, it records **elapsed time in days** between study start and the outcome.  Each recorded survival time therefore represents how many days a patient lived after diagnosis or enrollment.
 
 
 == Questions
@@ -343,9 +336,7 @@ $$
 S(t) = Pr(T > t)
 $$
 
-This expression means
-
-**The probability that an individual survives beyond time \(t\).**
+This expression means the probability that an individual survives beyond time $t$.
 
 The survival function can also be written using the Kaplan Meier product formula:
 
@@ -507,10 +498,10 @@ event_times = (
 print("First two event times:", event_times[:2])
 ----
 
-**3b. Calculate the first survival probability \(S(5)\). Then write 1 sentence explaining what \(S(5)\) means for patients in this study.**
+**3b. Calculate the first survival probability \(S(5)\). Then write 1 sentence explaining what $S(5)$ means for patients in this study.**
 
 
-**3c. Using the value of \(S(5)\) from Question 3b, calculate the updated survival probability \(S(11)\). Then write 1 sentence explaining what \(S(11)\) means for patients in this study.**
+**3c. Using the value of $S(5)$) from Question 3b, calculate the updated survival probability $S(11)$. Then write 1 sentence explaining what $S(11)$ means for patients in this study.**
 
 
 ====
@@ -620,6 +611,192 @@ results.print_summary()
 ====
 
 === Question 5 (2 points)
+**The Cox Proportional Hazards Model**
+
+The **Cox Proportional Hazards model** describes how patient characteristics (**covariates**) affect the risk of death over time using the dataset `survival_data`.
+
+The hazard function is:
+
+$$
+h(t) = h_0(t)\exp(\beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_p X_p)
+$$
+
+where:
+
+* $h(t)$ is the hazard (instantaneous risk of death) at time $t$
+* $h_0(t)$ is the **baseline hazard** (when all covariates equal 0)
+* $X_1,\ldots,X_p$ are covariates from `survival_data`, including:
+  `age`, `sex`, `ph.ecog`, `ph.karno`, `pat.karno`, `meal.cal`, and `wt.loss`
+* $\beta_1,\ldots,\beta_p$ are the coefficients estimated by the Cox model
+
+Each covariate receives one coefficient.
+
+
+
+**Example Cox Model using our dataset**
+
+Suppose we fit a Cox model using:
+
+* `age` (years)
+* `sex` (1 = male, 2 = female)
+* `ph.ecog` (ECOG performance status)
+
+The model is written as:
+
+$$
+h(t) = h_0(t)\exp\Big(
+\beta_1(\text{age})
++ \beta_2(\text{sex})
++ \beta_3(\text{ph.ecog})
+\Big)
+$$
+
+Each coefficient measures the **log hazard ratio** of that variable while holding the others constant.
+
+
+
+**Log Hazard Coefficients**
+
+Example coefficients output from a fitted model:
+
+[cols="3,3,4"]
+|===
+| *Covariate* | *Log Hazard Coefficient ($\beta$)* | *Interpretation*
+
+| Age
+| 0.02
+| Positive → higher age increases risk of death
+
+| Sex (female vs male)
+| -0.60
+| Negative → lower risk for females
+
+| ph.ecog
+| 0.90
+| Higher ECOG score → worse health → higher risk
+|===
+
+
+
+**From Coefficients to Hazard Ratios**
+
+Coefficients are converted into **hazard ratios** using:
+
+$$
+HR = e^{\beta}
+$$
+
+
+
+**Hazard Ratios**
+
+[cols="3,3,4"]
+|===
+| *Covariate* | *Hazard Ratio (HR)* | *Interpretation*
+
+| Age
+| 1.02
+| About a **2% increase in risk for each additional year**
+
+| Sex (female)
+| 0.55
+| $HR < 1$ → lower hazard than males
+
+| ph.ecog
+| 2.46
+| $HR > 1$ → more than double the risk for each 1-unit increase
+|===
+
+
+
+**How to Interpret Hazard Ratios**
+
+* $HR = 1$ → no difference in risk
+* $HR > 1$ → increased risk
+* $HR < 1$ → decreased risk
+
+Example interpretations using our dataset:
+
+* $HR(\text{age}) = 1.02$  
+  → Each additional year of age increases the hazard of death by ~2%.
+
+* $HR(\text{sex}) = 0.55$ (female)  
+  → Female patients have about **45% lower risk** of death compared to males.
+
+* $HR(\text{ph.ecog}) = 2.46$  
+  → Patients with worse ECOG scores have substantially higher risk of death.
+
+
+
+**Applying the Cox Model to Individual Patients**
+
+Using rows from `survival_data`:
+
+* Patient 0:
+  - age = 74, sex = 1 (male), ph.ecog = 1  
+* Patient 2:
+  - age = 56, sex = 1 (male), ph.ecog = 0  
+
+Because Patient 0 is older and has a worse ECOG score, the Cox model predicts that:
+
+*Patient 0’s hazard of death is higher than Patient 2’s.*
+
+
+**Sample Cox Output Table**
+
+Example of Cox regression output using `survival_data`:
+
+[cols="3,2,2,2,3"]
+|===
+| *Covariate* | *Coefficient ($\beta$)* | *Std. Error* | *p-value* | *Hazard Ratio (95% CI)*
+
+| Age
+| 0.020
+| 0.008
+| 0.010
+| 1.02 (1.01 – 1.03)
+
+| Sex
+| -0.60
+| 0.25
+| 0.014
+| 0.55 (0.34 – 0.88)
+
+| ph.ecog
+| 0.90
+| 0.28
+| 0.002
+| 2.46 (1.42 – 4.28)
+|===
+
+---
+
+**Statistical Significance**
+
+* **p-value < 0.05** → statistically significant effect.
+* 95% confidence intervals:
+
+  - CI includes 1 → not significant
+  - CI entirely above 1 → increased risk
+  - CI entirely below 1 → decreased risk
+
+Example:
+
+* $HR(\text{ph.ecog}) = 2.46$  
+* 95% CI = $(1.42,4.28)$
+
+Since the confidence interval does not include 1 and $p < 0.05$, ECOG performance status is a **significant predictor of mortality** in this dataset.
+
+
+
+**Key Takeaways**
+
+* Cox coefficients represent **log hazard ratios**.
+* Convert coefficients to hazard ratios using $HR = e^\beta$.
+* Interpretation:
+
+  - $HR > 1$ → increased hazard of death
+  - $HR < 1$ → decreased hazard of death
 
 
 .Deliverables
@@ -702,11 +879,7 @@ This means:
 * If one group has higher risk early in the study, that same group should continue to have higher risk later.
 * The survival curves for different groups should not cross dramatically over time.
 
-In other words, the effect of a predictor on risk is assumed to be **stable across the entire follow-up period**.
-
-**Testing the Assumption**
-
-The proportional hazards assumption can be tested statistically using tests such as the **Schoenfeld residual test**, which produces a **p-value** for each predictor.
+In other words, the effect of a predictor on risk is assumed to be stable across the entire follow-up period. The proportional hazards assumption can be tested statistically using tests such as the **Schoenfeld residual test**, which produces a **p-value** for each predictor.
 
 * A **large p-value (typically > 0.05)** suggests that the assumption holds — there is **no evidence** that the effect of the predictor changes over time.
 * A **small p-value (typically < 0.05)** suggests that the assumption may be violated — the predictor’s effect **may vary across time**, meaning the reported hazard ratio may not be valid.
@@ -737,7 +910,7 @@ This means:
 .Deliverables
 ====
 
-**6a.One key assumption of the Cox model is that the effect of each predictor on patient risk stays constant over time. To evaluate this for the variable age, use the Schoenfeld residual test below and examine the resulting p-value. After viewing the output, write 1 sentence stating whether the proportional hazards assumption seems reasonable for age.**
+**6a. One key assumption of the Cox model is that the effect of each predictor on patient risk stays constant over time. To evaluate this for the variable age, use the Schoenfeld residual test below and examine the resulting p-value. After viewing the output, write 1 sentence stating whether the proportional hazards assumption seems reasonable for age.**
 
 
 
@@ -766,7 +939,6 @@ hr_table.columns = ['Predictor', 'Log_Hazard_Ratio (coef)', 'p_value']
 hr_table['Hazard_Ratio (HR)'] = np.___(hr_table['Log_Hazard_Ratio (coef)']) # For YOU to fill in
 
 
-# Using the table above, fill in the Effect column:
 # * If the hazard ratio is greater than 1, fill in whether it increases or decreases hazard.
  #* If the hazard ratio is less than 1, fill in whether it increases or decreases hazard.
 
