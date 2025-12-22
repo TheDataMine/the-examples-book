@@ -1,0 +1,529 @@
+= TDM 20200: Project 1 - Web Scraping Introduction 1
+
+== Project Objectives
+
+This project introduces you to web scraping using Python and the `lxml` library. Web scraping is the process of programmatically extracting data from HTML documents. Before we can scrape live websites, we need to understand how to parse HTML and extract information from it.
+
+.Learning Objectives
+****
+- Understand the basics of HTML structure and how web pages are organized
+- Learn how to use `lxml` to parse HTML documents
+- Extract text content and attributes from HTML elements
+- Navigate HTML document structure using XPath and CSS selectors
+- Work with simple HTML strings before moving to live websites
+****
+
+== Understanding HTML Structure
+
+Before we can scrape websites, we need to understand how web pages are structured. HTML (HyperText Markup Language) is the standard language for creating web pages. HTML uses "tags" to structure content. Tags are enclosed in angle brackets like `<tag>` and typically come in pairs: an opening tag `<tag>` and a closing tag `</tag>`. A pair of tags is typically called an "element".
+
+Here's a simple example of HTML:
+
+[source,html]
+----
+<html>
+  <head>
+    <title>My Web Page</title>
+  </head>
+  <body>
+    <h1>Welcome</h1>
+    <p>This is a paragraph with <strong>bold text</strong>.</p>
+    <a href="https://example.com">Click here</a>
+  </body>
+</html>
+----
+
+Common HTML elements you'll encounter:
+- `<html>` - The root element of an HTML page
+- `<head>` - Contains metadata about the page (not visible)
+- `<body>` - Contains the visible content
+- `<div>` - A container/division (used for layout)
+- `<p>` - A paragraph
+- `<a>` - A link (anchor tag)
+- `<h1>`, `<h2>`, etc. - Headings of different sizes
+- `<span>` - Inline text container
+- `<ul>`, `<ol>` - Unordered and ordered lists
+- `<li>` - List items
+- `<table>` - Tables
+- `<tr>` - Table rows
+- `<td>` - Table cells
+
+Tags can have "attributes" that provide additional information. For example, `<a href="https://example.com">` has an `href` attribute that specifies the link destination.
+
+== Questions
+
+=== Question 1 (2 points)
+
+Let's start with the basics. We'll work with a simple HTML string and learn how to parse it using `lxml`. First, let's create a simple HTML string and parse it:
+
+[source,python]
+----
+from lxml import html
+
+# A simple HTML string
+html_string = """
+<html>
+  <head>
+    <title>My First Web Page</title>
+  </head>
+  <body>
+    <h1>Welcome to Web Scraping</h1>
+    <p>This is a paragraph.</p>
+    <p>This is another paragraph.</p>
+  </body>
+</html>
+"""
+
+# Parse the HTML string into a tree structure
+tree = html.fromstring(html_string)
+
+# Now we can extract elements from the tree
+print("HTML parsed successfully!")
+print(f"Type of tree: {type(tree)}")
+----
+
+[NOTE]
+====
+The `html.fromstring()` function takes an HTML string and converts it into a tree structure that we can query. This tree represents the structure of the HTML document, and we can navigate through it to find specific elements.
+====
+
+Now let's extract some basic information from our HTML:
+
+[source,python]
+----
+# Extract the title (it's inside a <title> tag)
+title = tree.xpath('//title/text()')
+print(f"Page title: {title[0] if title else 'Not found'}")
+
+# Extract all paragraph text
+paragraphs = tree.xpath('//p/text()')
+print(f"\nFound {len(paragraphs)} paragraphs:")
+for i, para in enumerate(paragraphs, 1):
+    print(f"{i}. {para}")
+
+# Extract the heading
+heading = tree.xpath('//h1/text()')
+print(f"\nHeading: {heading[0] if heading else 'Not found'}")
+----
+
+[NOTE]
+====
+XPath is a language for selecting nodes in an XML/HTML document. The `//` means "find anywhere in the document", `/text()` extracts the text content of the element. The result is a list, so we use `[0]` to get the first (and usually only) result.
+====
+
+Now try it yourself! Create your own HTML string and extract:
+1. The page title
+2. All paragraph text
+3. The text content of the `<h1>` heading
+
+.Deliverables
+====
+1.1. Create an HTML string with at least a title, heading, and multiple paragraphs
+
+1.2. Parse the HTML using `lxml.html.fromstring()`
+
+1.3. Extract and display the page title
+
+1.4. Extract and display all paragraph text
+
+1.5. Extract and display the `<h1>` heading text
+====
+
+=== Question 2 (2 points)
+
+Let's work with a slightly more complex HTML structure. We'll learn about different XPath patterns:
+
+[source,python]
+----
+from lxml import html
+
+# HTML with more structure
+html_string = """
+<html>
+  <body>
+    <div class="quote">
+      <span class="text">The only way to do great work is to love what you do.</span>
+      <small class="author">Steve Jobs</small>
+    </div>
+    <div class="quote">
+      <span class="text">Innovation distinguishes between a leader and a follower.</span>
+      <small class="author">Steve Jobs</small>
+    </div>
+    <div class="quote">
+      <span class="text">Stay hungry, stay foolish.</span>
+      <small class="author">Steve Jobs</small>
+    </div>
+  </body>
+</html>
+"""
+
+tree = html.fromstring(html_string)
+
+# Different XPath patterns:
+# //tag - Find all 'tag' elements anywhere in the document
+# //tag[@attribute='value'] - Find elements with specific attribute value
+# //tag/text() - Get text content of elements
+
+# Find all quotes (they're in <span> tags with class="text")
+quotes = tree.xpath('//span[@class="text"]/text()')
+print(f"Found {len(quotes)} quotes:")
+for i, quote in enumerate(quotes, 1):
+    print(f"{i}. {quote}")
+
+# Find all authors (they're in <small> tags with class="author")
+authors = tree.xpath('//small[@class="author"]/text()')
+print(f"\nFound {len(authors)} authors:")
+for i, author in enumerate(authors, 1):
+    print(f"{i}. {author}")
+----
+
+[NOTE]
+====
+The `[@class="text"]` syntax filters elements by their `class` attribute. In HTML, the `class` attribute is used to group elements with similar styling or purpose. Multiple classes can be assigned to an element, separated by spaces. When we write `[@class="text"]`, we're looking for elements where the class attribute exactly equals "text".
+====
+
+CSS selectors are another way to select elements. `lxml` supports CSS selectors through the `cssselect` method:
+
+[source,python]
+----
+# Using CSS selectors (alternative to XPath)
+# CSS selector syntax:
+# tag - Select all 'tag' elements
+# .classname - Select elements with class="classname"
+# #id - Select element with id="id"
+# tag.classname - Select 'tag' elements with class="classname"
+
+quotes_css = tree.cssselect('span.text')
+print(f"Found {len(quotes_css)} quotes using CSS selector:")
+for i, quote_elem in enumerate(quotes_css, 1):
+    print(f"{i}. {quote_elem.text_content()}")
+----
+
+[NOTE]
+====
+CSS selectors can be more readable than XPath for simple selections. The `.text_content()` method extracts all text from an element and its children, while `.text` only gets the direct text content. Notice that CSS selectors return element objects, not just text, so we need to call `.text_content()` to get the text.
+====
+
+Now, create an HTML string with multiple quotes (like the example above) and extract:
+1. All quote texts
+2. All author names
+3. Display them together (e.g., "Quote: [text] - Author: [name]")
+
+.Deliverables
+====
+2.1. Create an HTML string with at least 3 quotes, each in a div with class="quote"
+
+2.2. Extract all quote texts using XPath
+
+2.3. Extract all author names using XPath
+
+2.4. Try extracting quotes using CSS selectors as well
+
+2.5. Display the results pairing each quote with its author
+====
+
+=== Question 3 (2 points)
+
+Sometimes elements are nested, and we need to extract related data together. Let's learn about relative XPath (using `.//`):
+
+[source,python]
+----
+from lxml import html
+
+# HTML with nested structure
+html_string = """
+<html>
+  <body>
+    <div class="quote">
+      <span class="text">The only way to do great work is to love what you do.</span>
+      <small class="author">Steve Jobs</small>
+      <div class="tags">
+        <a class="tag">inspiration</a>
+        <a class="tag">work</a>
+      </div>
+    </div>
+    <div class="quote">
+      <span class="text">Innovation distinguishes between a leader and a follower.</span>
+      <small class="author">Steve Jobs</small>
+      <div class="tags">
+        <a class="tag">innovation</a>
+        <a class="tag">leadership</a>
+      </div>
+    </div>
+  </body>
+</html>
+"""
+
+tree = html.fromstring(html_string)
+
+# Find all quote containers (divs with class="quote")
+quote_containers = tree.xpath('//div[@class="quote"]')
+
+print(f"Found {len(quote_containers)} quote containers\n")
+
+# Extract data from each container
+for i, container in enumerate(quote_containers, 1):
+    # Extract quote text from within this container
+    # Notice the .// - the dot means "starting from the current element"
+    quote_text = container.xpath('.//span[@class="text"]/text()')[0]
+    
+    # Extract author from within this container
+    author = container.xpath('.//small[@class="author"]/text()')[0]
+    
+    # Extract tags from within this container
+    tags = container.xpath('.//a[@class="tag"]/text()')
+    
+    print(f"Quote {i}:")
+    print(f"  Text: {quote_text}")
+    print(f"  Author: {author}")
+    print(f"  Tags: {', '.join(tags)}")
+    print()
+----
+
+[NOTE]
+====
+Notice the `.//` in the XPath - the leading dot means "starting from the current element" rather than searching the entire document. This is important when you want to extract related data from a specific container. Without the dot, `//span` would search the entire document. With `.//span`, it only searches within the current container.
+====
+
+Now, create an HTML string with nested quote containers and extract:
+1. Each quote's text, author, and tags together (as shown above)
+2. Make sure you use relative XPath (`.//`) to search within each container
+
+.Deliverables
+====
+3.1. Create an HTML string with at least 2 quote containers, each containing text, author, and tags
+
+3.2. Find all quote containers using XPath
+
+3.3. For each container, extract the quote text, author, and tags using relative XPath (`.//`)
+
+3.4. Display the results showing all information for each quote
+
+3.5. Explain the difference between `//` and `.//` in XPath
+====
+
+=== Question 4 (2 points)
+
+Sometimes we need to extract attributes from elements, not just text. Common attributes include:
+- `href` - Links (where the link goes)
+- `src` - Images (image source URL)
+- `class` - CSS class names
+- `id` - Unique identifier
+- `data-*` - Custom data attributes
+
+[source,python]
+----
+from lxml import html
+
+# HTML with links
+html_string = """
+<html>
+  <body>
+    <a href="/author/steve-jobs">Steve Jobs</a>
+    <a href="/author/albert-einstein">Albert Einstein</a>
+    <a href="/author/maya-angelou">Maya Angelou</a>
+    <a href="/tag/inspiration">Inspiration</a>
+    <a href="/tag/work">Work</a>
+  </body>
+</html>
+"""
+
+tree = html.fromstring(html_string)
+
+# Extract href attributes from links
+# Method 1: Using XPath with @attribute
+author_links = tree.xpath('//a[contains(@href, "/author/")]/@href')
+print("Author links (Method 1 - direct attribute extraction):")
+for link in author_links:
+    print(f"  {link}")
+
+# Method 2: Get the element first, then access attributes
+author_link_elements = tree.xpath('//a[contains(@href, "/author/")]')
+print("\nAuthor links (Method 2 - get element then attribute):")
+for elem in author_link_elements:
+    print(f"  Text: {elem.text}")
+    print(f"  Href: {elem.get('href')}")
+    print()
+----
+
+[NOTE]
+====
+The `contains()` function in XPath checks if an attribute contains a substring. The `@href` syntax extracts the `href` attribute value directly. You can also get elements first and use `.get('attribute_name')` to access attributes. Both methods work, but sometimes one is more convenient than the other.
+====
+
+Let's also learn about extracting data from tables, which is a common scraping task:
+
+[source,python]
+----
+# Example: Scraping a simple HTML table
+html_table = """
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Age</th>
+    <th>City</th>
+  </tr>
+  <tr>
+    <td>Alice</td>
+    <td>25</td>
+    <td>New York</td>
+  </tr>
+  <tr>
+    <td>Bob</td>
+    <td>30</td>
+    <td>London</td>
+  </tr>
+  <tr>
+    <td>Charlie</td>
+    <td>35</td>
+    <td>Tokyo</td>
+  </tr>
+</table>
+"""
+
+tree = html.fromstring(html_table)
+
+# Extract table headers
+headers = tree.xpath('//th/text()')
+print(f"Headers: {headers}")
+
+# Extract all rows
+rows = tree.xpath('//tr')
+data = []
+for row in rows[1:]:  # Skip header row (index 0)
+    cells = row.xpath('.//td/text()')
+    if cells:  # Only add non-empty rows
+        data.append(cells)
+
+print("\nTable data:")
+for row in data:
+    print(row)
+----
+
+Now, create HTML strings and practice extracting:
+1. Links with their `href` attributes and text content
+2. A table with headers and multiple rows of data
+3. Create a dictionary mapping link text to their href values
+
+.Deliverables
+====
+4.1. Create an HTML string with multiple links and extract both text and href attributes
+
+4.2. Create an HTML string with a table and extract headers and all row data
+
+4.3. Create a dictionary mapping link text to href values
+
+4.4. Display the table data in a readable format
+
+4.5. Show both methods of extracting attributes (direct `@attribute` and `.get()`)
+====
+
+=== Question 5 (2 points)
+
+Let's put it all together with a more complex example. We'll work with HTML that has multiple types of elements:
+
+[source,python]
+----
+from lxml import html
+
+# More complex HTML structure
+html_string = """
+<html>
+  <body>
+    <div class="book">
+      <h3><a title="The Great Gatsby">The Great Gatsby</a></h3>
+      <p class="price">$12.99</p>
+      <p class="availability">In stock</p>
+      <p class="rating star-rating Four">Rating: 4 stars</p>
+    </div>
+    <div class="book">
+      <h3><a title="1984">1984</a></h3>
+      <p class="price">$10.99</p>
+      <p class="availability">In stock</p>
+      <p class="rating star-rating Five">Rating: 5 stars</p>
+    </div>
+    <div class="book">
+      <h3><a title="To Kill a Mockingbird">To Kill a Mockingbird</a></h3>
+      <p class="price">$11.99</p>
+      <p class="availability">Out of stock</p>
+      <p class="rating star-rating Three">Rating: 3 stars</p>
+    </div>
+  </body>
+</html>
+"""
+
+tree = html.fromstring(html_string)
+
+# Find all book containers
+books = tree.xpath('//div[@class="book"]')
+
+print(f"Found {len(books)} books\n")
+
+# Extract information from each book
+for i, book in enumerate(books, 1):
+    # Book title (stored in title attribute of <a> tag)
+    title_elem = book.xpath('.//h3/a')[0]
+    title = title_elem.get('title')
+    
+    # Book price
+    price = book.xpath('.//p[@class="price"]/text()')[0]
+    
+    # Availability
+    availability = book.xpath('.//p[@class="availability"]/text()')[0]
+    
+    # Star rating (stored in class name like "star-rating Four")
+    rating_elem = book.xpath('.//p[contains(@class, "star-rating")]')[0]
+    rating_class = rating_elem.get('class')
+    # Extract the rating word (Four, Five, Three, etc.)
+    rating = rating_class.split()[-1] if rating_class else "Unknown"
+    
+    print(f"Book {i}:")
+    print(f"  Title: {title}")
+    print(f"  Price: {price}")
+    print(f"  Availability: {availability}")
+    print(f"  Rating: {rating}")
+    print()
+----
+
+[NOTE]
+====
+This example shows several important concepts:
+- Data can be stored in attributes (like `title` in the `<a>` tag)
+- We use relative XPath (`.//`) to search within each book container
+- Class names can contain multiple values (we extract the rating from the class name by splitting)
+- We need to handle different types of data extraction (text, attributes, parsing class names)
+====
+
+Now, create a complex HTML string with multiple items (books, products, quotes, etc.) and extract:
+1. Multiple pieces of information from each item
+2. Store the data in a list of dictionaries, where each dictionary represents one item
+3. Handle attributes, text content, and nested structures
+
+.Deliverables
+====
+5.1. Create an HTML string with at least 3 items (books, products, quotes, etc.)
+
+5.2. Extract multiple pieces of information from each item (at least 3 fields per item)
+
+5.3. Store the data in a list of dictionaries
+
+5.4. Display the first few items in a readable format
+
+5.5. Print the total number of items found
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_webscraping_project1.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
