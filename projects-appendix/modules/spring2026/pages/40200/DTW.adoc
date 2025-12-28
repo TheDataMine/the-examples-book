@@ -14,21 +14,54 @@ In this project, you will explore Dynamic Time Warping (DTW), a method for measu
 ****
 
 == Dataset
-- '/anvil/projects/tdm/data/noaa_dtw/*.csv'
+- `/anvil/projects/tdm/data/noaa_dtw/*.csv`
 
 == Introduction to Dynamic Time Warping
 
-Time series data appears in many settings, including weather measurements, user behavior over time, sales trends, medical signals, and financial indicators. Dynamic Time Warping (DTW) offers a different way to think about similarity in time series. Instead of asking whether two sequences match at the same time index, DTW asks whether they follow a similar pattern or shape, even if they unfold at different speeds. This shift in perspective is what makes DTW both powerful and widely applicable.
+:imagesdir: ../../images
+image::DTWImage1.png[width=600, height=450, caption="Dynamic Time Warping matching. Source: Wiki Commons]
+
+Time series data appears in many settings, including weather measurements, user behavior over time, sales trends, medical signals, and financial indicators. Dynamic Time Warping (DTW) offers a different way to think about similarity in time series. Instead of asking whether two sequences match at the same time index, DTW asks whether they follow a similar pattern or shape.
+
+As for the data used for this project, we will use daily weather data from NOAA covering January 2024 through December 2024. The dataset contains one full year of temperature observations for the capital city of each U.S. state, giving us 50 separate temperature time series—one per capital. Let's look at one time series of Weekly Average Temperature in Desmoines, Iowa: 
+
+:imagesdir: ../../images
+
+image::DTWImage2.png[width=600, height=450, caption="Using DTW to Cluster Time Series in Our Temperature Data"]
+
+If our goal is to predict next week's average temperature, it would seem that the most straightforward approach would be to build 50 separate time series models, one for each capital. While feasible, this can become difficult to maintain. Instead, we ask a more strategic question: what if some capitals follow similar temperature patterns over time and we could group them?
+
+This is where Dynamic Time Warping (DTW) comes in. DTW allows us to measure similarity between time series based on their overall shape rather than exact timing. By grouping capitals with similar temperature dynamics, we can cluster time series together and use those clusters to inform model building reducing complexity.
+
+**Columns in the dataset:**
+
+- Station: NOAA weather station identifier
+
+- Date: Timestamp of the observation
+
+- DailyAverageDryBulbTemperature: Daily average air temperature (°C)
+
+- State: U.S. state name
+
+- Capital: Capital city of the state
+
+Each row represents a temperature observation at a given time for a specific capital city. Some timestamps may contain missing temperature values, which we will address during data cleaning and aggregation before applying DTW and time series modeling.
 
 DTW was originally developed in the nineteen seventies in the context of speech recognition. Researchers were interested in comparing spoken words that were clearly the same but spoken faster or slower by different speakers. When sound signals like these are compared point by point, they often appear dissimilar because peaks and pauses do not align in time. However, when attention is given to the overall structure of the signal, the similarity becomes much more apparent. DTW was designed to capture this idea by allowing flexibility in how time is aligned.
 
 At a high level, Dynamic Time Warping is an algorithm that aligns two time series by allowing the time axis to stretch or compress where necessary. Rather than enforcing a one to one comparison between observations, DTW finds an alignment that minimizes the total distance between the two sequences after accounting for differences in timing. As a result, a single observation in one series may align with multiple observations in the other if doing so improves the overall match.
 
-An intuitive way to understand DTW is to imagine two people performing the same task at different speeds. One person may pause longer, move faster in certain sections, or slow down in others. Even though the timing differs, the overall pattern of behavior remains the same. DTW formalizes this intuition by identifying the best possible way to align these patterns while preserving the natural order of events.
+:imagesdir: ../../images
+image::DTWImage3.png[width=600, height=450, caption="Dynamic Time Warping alignment between two time series, showing the optimal warping path and aligned observations. Source  Mark Stent (Medium, 2019)"]
 
 Internally, DTW compares every point in one time series with every point in another and organizes these comparisons into a grid. It then searches for a path through this grid that respects the ordering of time and produces the smallest cumulative distance. The alignment path itself is just as important as the final distance value. It reveals where one series had to be stretched, where it was compressed, and where both series progressed at a similar pace.
 
-Because of this flexibility, DTW is especially useful in settings where timing differences are meaningful rather than problematic. It has been applied in speech and audio analysis, healthcare signals such as heart rate data, financial and economic time series, marketing and user behavior patterns, and environmental and climate data. In each of these cases, the goal is not perfect synchronization in time, but similarity in structure.
+DTW distance can be defined as:
+
+:imagesdir: ../../images
+image::DTWImage4.png[width=600, height=450, caption="Dynamic Time Warping Formula Source: Mark Stent (Medium, 2019)"]
+
+Because of this flexibility, DTW is especially useful in settings where timing differences are meaningful rather than problematic. It has been applied in speech and audio analysis, healthcare signals such as heart rate data, financial and economic time series, marketing and user behavior patterns, and environmental and climate data. In each of these cases, the goal is to find similarity in structure.
 
 In this project, DTW will be used as a tool for understanding and comparing time series patterns rather than as a standalone distance metric. The focus will be on how DTW aligns sequences, what those alignments reveal about the data, and how this information can support clustering and downstream modeling decisions.
 
@@ -202,6 +235,9 @@ n_series = (
 
 === Question 3 (2 points)
 
+:imagesdir: ../../images
+image::DTWImage5.png[width=600, height=450, caption="Dynamic Time Warping Formula Source: Mark Stent (Medium, 2019)"]
+
 In this section, we will review how time series data must be represented and prepared before it can be compared using Dynamic Time Warping. The focus is on reshaping, standardizing, and organizing the data so that each sequence can be treated as a single analytical object.
 
 We will begin by restructuring the data from a long format to a wide format. By pivoting the dataset so that each State and Capital pair occupies one row with dates running across columns, each time series becomes explicit. This reinforces the idea that a time series is not a collection of rows but a single ordered sequence of values. This step is essential because DTW compares entire sequences rather than individual timestamps.
@@ -290,6 +326,9 @@ for cluster in range(n_clusters):
 
 === Question 4 (2 points)
 
+:imagesdir: ../../images
+image::DTWImage6.png[width=600, height=450, caption="Dynamic Time Warping Formula Source: Mark Stent (Medium, 2019)"]
+
 Now we will focus on interpreting and contextualizing the DTW clustering results. After grouping capital cities based on seasonal temperature patterns, it is important to understand what those clusters represent geographically and how they relate to existing regional definitions.
 
 We will begin by creating a clean table that links each State and Capital pair to its assigned DTW cluster. This step formalizes the clustering output and produces a structure that can be merged with other datasets. Organizing cluster assignments in a standalone table reinforces the idea that clusters are properties of entire time series, not individual observations.
@@ -300,6 +339,7 @@ We will then introduce geographic context by assigning each state to a U.S. Cens
 Using `GeoPandas` and publicly available Census boundary data, we will visualize both DTW clusters and Census regions side by side on a map. Mapping the results allows us to assess spatial coherence, identify regional transitions, and detect mismatches between climate based clusters and political or geographic regions. This step emphasizes that clustering results should be interpreted visually and contextually, not just numerically.
 
 Finally, we will merge the DTW cluster labels back onto the weekly temperature dataset. This integration step is essential for downstream analysis. By attaching cluster assignments to each observation, we enable cluster level modeling, forecasting, and evaluation in later questions. This reinforces the idea that clustering is not an endpoint, but a tool that informs subsequent time series analysis.
+
 
 Together, these steps show how DTW clustering can support modeling and decision making.
 
