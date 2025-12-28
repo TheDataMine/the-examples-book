@@ -1,0 +1,699 @@
+= TDM 32100: Project ## - Title
+
+== Project Objectives
+
+In this project, you will explore Dynamic Time Warping (DTW), a method for measuring similarity between time series. DTW focuses on the shape of each time series, allowing sequences with similar behavior to be compared. This makes DTW well suited for clustering large collections of time series, helping uncover shared temporal patterns that can help build later forecasting time series models. 
+
+.Learning Objectives
+****
+- You will learn how to clean and structure time series data so it is suitable for both traditional time series analysis and Dynamic Time Warping.
+- You will build intuition for how DTW works behind the scenes, then apply it to cluster time series with similar temporal and seasonal patterns.
+- You will visualize the resulting DTW-based clusters to better understand how different time series are grouped together.
+- You will use insights from DTW clustering to guide time series modeling decisions. Rather than fitting a separate forecasting model for every individual time series, you will explore how grouping similar series allows you to build and evaluate models developed for similar time series. 
+****
+
+== Dataset
+- '/anvil/projects/tdm/data/noaa_dtw/*.csv'
+
+== Introduction to Dynamic Time Warping
+
+Time series data appears in many settings, including weather measurements, user behavior over time, sales trends, medical signals, and financial indicators. Dynamic Time Warping (DTW) offers a different way to think about similarity in time series. Instead of asking whether two sequences match at the same time index, DTW asks whether they follow a similar pattern or shape, even if they unfold at different speeds. This shift in perspective is what makes DTW both powerful and widely applicable.
+
+DTW was originally developed in the nineteen seventies in the context of speech recognition. Researchers were interested in comparing spoken words that were clearly the same but spoken faster or slower by different speakers. When sound signals like these are compared point by point, they often appear dissimilar because peaks and pauses do not align in time. However, when attention is given to the overall structure of the signal, the similarity becomes much more apparent. DTW was designed to capture this idea by allowing flexibility in how time is aligned.
+
+At a high level, Dynamic Time Warping is an algorithm that aligns two time series by allowing the time axis to stretch or compress where necessary. Rather than enforcing a one to one comparison between observations, DTW finds an alignment that minimizes the total distance between the two sequences after accounting for differences in timing. As a result, a single observation in one series may align with multiple observations in the other if doing so improves the overall match.
+
+An intuitive way to understand DTW is to imagine two people performing the same task at different speeds. One person may pause longer, move faster in certain sections, or slow down in others. Even though the timing differs, the overall pattern of behavior remains the same. DTW formalizes this intuition by identifying the best possible way to align these patterns while preserving the natural order of events.
+
+Internally, DTW compares every point in one time series with every point in another and organizes these comparisons into a grid. It then searches for a path through this grid that respects the ordering of time and produces the smallest cumulative distance. The alignment path itself is just as important as the final distance value. It reveals where one series had to be stretched, where it was compressed, and where both series progressed at a similar pace.
+
+Because of this flexibility, DTW is especially useful in settings where timing differences are meaningful rather than problematic. It has been applied in speech and audio analysis, healthcare signals such as heart rate data, financial and economic time series, marketing and user behavior patterns, and environmental and climate data. In each of these cases, the goal is not perfect synchronization in time, but similarity in structure.
+
+In this project, DTW will be used as a tool for understanding and comparing time series patterns rather than as a standalone distance metric. The focus will be on how DTW aligns sequences, what those alignments reveal about the data, and how this information can support clustering and downstream modeling decisions.
+
+== Questions
+
+=== Question 1 (2 points)
+
+.Deliverables
+====
+**1a. You are given multiple CSV files containing daily weather observations, where each file corresponds to 50 unique U.S. state capital weather data for 2024. Fill in the code below to read all files from the provided directory, extract the state and capital names from each filename, and append the data into a single DataFrame. Retain only the `STATION`, `DATE`, and `DailtAverageDryBulbTemperature`, then add `state` and `capital` columns.**
+
+[source,python]
+----
+import pandas as pd
+import glob
+import os
+
+data_path = os.path.expanduser("~/data/noaa_dtw/*.csv")
+
+files = glob.glob(data_path)
+
+print(f"Number of files found: {len(files)}")
+
+dfs = []
+
+for file in files:
+    filename = os.path.basename(file).replace(".csv", "")
+    state, capital = filename.split("_")
+
+    df = pd.read_csv(
+        file,
+        usecols=["____", "_____", "_____"], # For YOU to fill in 
+        engine="python",
+        on_bad_lines="skip"
+    )
+
+    df["State"] = # For YOU to fill in 
+    df["Capital"] =  # For YOU to fill in 
+
+    dfs.append(df)
+
+combined_df = pd.concat(dfs, ignore_index=True)
+combined_df.head()
+----
+
+**1b. Complete the code below to convert the DATE column to a datetime object and ensure that `DailyAverageDryBulbTemperature` is numeric. Then, sort the dataset by `State`, `Capital`, and `DATE`. Display the first few rows of the cleaned DataFrame to verify that the transformations were applied correctly and In 2–3 sentences, explain why these steps are necessary when preparing data for time series analysis.**
+
+[source,python]
+----
+combined_df["DATE"] = pd.to_datetime(combined_df["DATE"])
+combined_df["______"] = pd.to_numeric(combined_df["________"],errors="coerce")
+
+combined_df = (
+    combined_df
+    .sort_values(["____", "_____", "_____"])
+    .reset_index(drop=True))
+----
+
+**1c. As part of this preparation, you’ll notice that we’ll need to remove rows that are missing the `DailyAverageDryBulbTemperature` measurements. Carefully observe the pattern of missingness in the data before removing these rows. Report the number of missing values remaining in each column and in 1–2 sentences, explain why rows with no  `DailyAverageDryBulbTemperature` weather information should be excluded prior to time series modeling.**
+
+[source,python]
+----
+cols_to_check = [
+    col for col in combined_df.columns
+    if col not in ["______", "______", "_____", "______"]]  # For YOU to Fill in
+
+combined_df = combined_df.dropna(
+    subset=_______, # For YOU to Fill in
+    how="all")
+
+combined_df.isna().sum()
+----
+
+**1d. Convert the cleaned daily temperature data into weekly data by computing the mean weekly temperature for each (State, Capital) pair, using weeks that end on Sunday. Check for missing weekly values and use forward-fill and backward-fill within each group to address them. Confirm that the final weekly temperature series contains no missing values.**
+
+[source,python]
+----
+combined_df = (
+    combined_df
+    .set_index("DATE")
+    .groupby(["State", "Capital"])["DailyAverageDryBulbTemperature"]
+    .resample("W-SUN")
+    .mean()
+    .reset_index(name="WeeklyAvgTemp")
+    .sort_values(["State", "Capital", "DATE"])
+    .reset_index(drop=True)
+)
+
+combined_df["WeeklyAvgTemp"] = (
+    combined_df
+    .groupby(["____", "______"])["WeeklyAvgTemp"] # For YOU to fill in
+    .ffill()
+    .bfill()
+)
+----
+====
+
+== Question 2 (2 points)
+
+In this section, we focus on getting to know our data at a deeper level. We explore how temperature patterns vary across locations and how multiple time series are represented within a single dataset. By visually examining weekly temperature trends for different capital cities, we begin to build intuition around seasonality, variability, and timing differences across series.
+
+Randomly sampling states allows us to explore a manageable subset of the data without relying on arbitrary or biased choices. Using a fixed random seed ensures that this exploration is reproducible, which is important as the analysis builds and evolves.
+
+Plotting each capital’s weekly temperature as its own time series reinforces the idea that each location represents a complete sequence rather than a collection of independent observations. This step encourages thinking in terms of overall patterns and structure before introducing formal similarity measures.
+
+Taken together, this exploratory work helps us understand what similarity might look like in the data. These observations motivate the use of methods that compare entire sequences based on their overall structure rather than exact alignment in time. This foundation is essential for clustering approaches that rely on sequence level similarity, such as Dynamic Time Warping.
+
+.Deliverables
+====
+**2a. Rather than selecting states manually, use the function below t to randomly select a fixed number of unique states from the dataset. The function should allow the number of states and the random seed to be specified so that the selection is reproducible. Use this function to select five random states.**
+
+[source,python]
+----
+import numpy as np
+
+def sample_states(df, n_states=5, seed=42):
+    np.random.seed(seed)
+    
+    states = (
+        df["State"]
+        .drop_duplicates()
+        .sample(n_states)
+        .tolist()
+    )
+    
+    return states
+
+random_states = sample_states(_____, n_states=__, seed=__) # For YOU to fill in 
+random_states
+----
+
+**2b. Using the selected states, weekly average dry bulb temperature time series are plotted for each corresponding capital city. These plots allow you to visually compare seasonal patterns and temperature variability across locations. Briefly describe any similarities or differences you observe in the trends.**
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+
+plot_df = combined_df[combined_df["State"].isin(______)] # For YOU to fill in
+
+for (state, capital), group in plot_df.groupby(["State", "Capital"]):
+    
+    plt.figure(figsize=(10, 4))
+    
+    plt.plot(
+        group["DATE"],
+        group["WeeklyAvgTemp"]
+    )
+    
+    plt.xlabel("_____")  # For YOU to fill in
+    plt.ylabel("______")  # For YOU to fill in
+    plt.title(f"{capital}, {state}: Weekly Average Dry Bulb Temperature")
+    
+    plt.tight_layout()
+    plt.show()
+----
+
+**2c. Each (State, Capital) pair represents a distinct weekly temperature time series in the dataset. The total number of unique series is computed by identifying these pairs. Report the total number and explain in 1-2 sentences why this count is important for later time-series analysis.**
+
+
+[source,python]
+----
+n_series = (
+    combined_df[[_____, _____]] # For YOU to fill in
+    .drop_duplicates()
+    .shape[0]
+)
+----
+
+
+====
+
+=== Question 3 (2 points)
+
+In this section, we will review how time series data must be represented and prepared before it can be compared using Dynamic Time Warping. The focus is on reshaping, standardizing, and organizing the data so that each sequence can be treated as a single analytical object.
+
+We will begin by restructuring the data from a long format to a wide format. By pivoting the dataset so that each State and Capital pair occupies one row with dates running across columns, each time series becomes explicit. This reinforces the idea that a time series is not a collection of rows but a single ordered sequence of values. This step is essential because DTW compares entire sequences rather than individual timestamps.
+
+Next, we will convert the wide table into a numerical array and apply z score normalization to each time series independently. This introduces an important modeling concept: scale matters. Without normalization, DTW would primarily capture differences in absolute temperature levels rather than similarities in seasonal patterns. By centering and scaling each series, the comparison focuses on shape and timing instead of magnitude.
+
+We will then apply DTW within a clustering framework using the TimeSeriesKMeans class from the tslearn package. In this step, k means clustering is performed with dtw specified as the distance metric, which means similarity between time series is determined by Dynamic Time Warping rather than by point by point differences. This allows the model to group capital cities based on the overall shape and seasonal structure of their temperature patterns, even when peaks and troughs occur at slightly different times across locations.
+
+Finally, we will visualize the clustering results using the original temperature values. Plotting non normalized series by cluster keeps the seasonal patterns interpretable and helps us connect the cluster assignments back to real world temperature dynamics. This step reinforces the idea that normalization is a modeling tool, not a visualization tool.
+
+Together, these steps will help us understand how DTW clustering works, why careful data preparation is critical, and how to interpret the resulting clusters in a meaningful way.
+
+.Deliverables
+====
+**3a. To apply DTW, the weekly temperature data must be reshaped so that each (State, Capital) pair corresponds to a single row, with dates running across columns. This wide format allows each row to be treated as an individual time series. Fill in the code below to create a wide DataFrame containing weekly average temperatures indexed by state and capital.**
+
+[source,python]
+----
+wide_df = combined_df.pivot_table(
+    index=["____", "_____"], # For YOU to fill in 
+    columns="DATE",
+    values="WeeklyAvgTemp"
+)
+----
+
+**3b. DTW operates on numerical arrays rather than pandas DataFrames. Use the code below to convert the wide table into a NumPy array and apply z-score normalization so that each time series has mean zero and unit variance. This ensures that DTW compares temperature patterns instead of absolute temperature levels.**
+
+[source,python]
+----
+import numpy as np
+
+X = wide_df.values
+
+X = (X - X.mean(axis=1, keepdims=True)) / X.std(axis=1, keepdims=True)
+----
+
+**3c. Cluster the normalized time series using Dynamic Time Warping (DTW) to group capital cities with similar seasonal temperature patterns. Using the code below, set the number of clusters to 4 and fit a k-means model with `dtw` as the distance metric and store the resulting cluster assignment for each state–capital pair in a new DataFrame. Then, write 1–2 sentences explaining how DTW is used to group capitals into clusters.**
+
+[source,python]
+----
+from tslearn.clustering import TimeSeriesKMeans
+
+n_clusters = _ # For YOU to fill in
+
+dtw_km = TimeSeriesKMeans(
+    n_clusters=n_clusters,
+    metric="____",
+    random_state=42
+)
+
+labels = dtw_km.fit_predict(X)
+
+cluster_df = wide_df.reset_index()[["State", "Capital"]].copy()
+cluster_df["Cluster"] = labels
+
+cluster_df.head()
+----
+
+**3d. To interpret the DTW clustering results, the weekly temperature time series for each capital are visualized by cluster. For each cluster, plot all member time series using the original (non-normalized) temperature values so the seasonal patterns remain interpretable. Examine how temperature dynamics differ across clusters. Write 2-3 sentences about your obervations of each cluster. What patters do you notice?**
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+
+dates = wide_df.columns        # calendar dates
+wide_values = wide_df.values  # original (non-normalized) temperatures
+
+for cluster in range(n_clusters):
+    plt.figure(figsize=(10, 4))
+    
+    for i, label in enumerate(labels):
+        if label == cluster:
+            plt.plot(
+                dates,
+                wide_values[i],
+                alpha=0.4
+            )
+    
+    plt.title(f"DTW Cluster {cluster}")
+    plt.xlabel("___") # For YOU to fill in
+    plt.ylabel("_____")  # For YOU to fill in
+    plt.tight_layout()
+    plt.show()
+----
+====
+
+=== Question 4 (2 points)
+
+Now we will focus on interpreting and contextualizing the DTW clustering results. After grouping capital cities based on seasonal temperature patterns, it is important to understand what those clusters represent geographically and how they relate to existing regional definitions.
+
+We will begin by creating a clean table that links each State and Capital pair to its assigned DTW cluster. This step formalizes the clustering output and produces a structure that can be merged with other datasets. Organizing cluster assignments in a standalone table reinforces the idea that clusters are properties of entire time series, not individual observations.
+
+Next, we will address a common but critical data preparation issue: inconsistent naming conventions. To successfully merge cluster information with geographic boundary files, state names must match exactly across datasets. Applying a cleaning function allows us to standardize state names and avoid silent merge failures. This highlights the importance of careful string handling and data validation when working across multiple data sources.
+We will then introduce geographic context by assigning each state to a U.S. Census region. These regions provide a familiar baseline that reflects traditional geographic groupings. Comparing DTW based clusters to Census regions helps us evaluate whether temperature driven patterns align with established regional boundaries or reveal different groupings driven by climate rather than geography.
+
+Using `GeoPandas` and publicly available Census boundary data, we will visualize both DTW clusters and Census regions side by side on a map. Mapping the results allows us to assess spatial coherence, identify regional transitions, and detect mismatches between climate based clusters and political or geographic regions. This step emphasizes that clustering results should be interpreted visually and contextually, not just numerically.
+
+Finally, we will merge the DTW cluster labels back onto the weekly temperature dataset. This integration step is essential for downstream analysis. By attaching cluster assignments to each observation, we enable cluster level modeling, forecasting, and evaluation in later questions. This reinforces the idea that clustering is not an endpoint, but a tool that informs subsequent time series analysis.
+
+Together, these steps show how DTW clustering can support modeling and decision making.
+
+
+.Deliverables
+====
+**4a. To visualize DTW clusters geographically, each state must be associated with a single cluster label. Create a DataFrame that contains one row per `State` and `Capital` along with its assigned DTW cluster. This table will later be merged with geographic boundary data.**
+
+[source,python]
+----
+cluster_df = wide_df.reset_index()[["____", "_____"]].copy() # For YOU to fill in
+cluster_df["Cluster"] = labels
+
+cluster_df.head()
+----
+
+**4b. To successfully merge cluster data with geographic boundary files and develop a map, state names must follow a consistent naming convention. Some state names contain formatting differences or errors introduced during file ingestion. Use the code provided below to ampply a cleaning function to standardize state names.**
+
+[source,python]
+----
+state_name_fix = {
+    "NewYork": "New York",
+    "NewJersey": "New Jersey",
+    "NewMexico": "New Mexico",
+    "NewHampshire": "New Hampshire",
+    "NorthCarolina": "North Carolina",
+    "NorthDakota": "North Dakota",
+    "SouthCarolina": "South Carolina",
+    "SouthDakota": "South Dakota",
+    "WestVirginia": "West Virginia",
+    "RhodeIsland": "Rhode Island",
+    "Atlanta": "Georgia",
+    "Tallahassee": "Florida",
+    "OklahomaCity": "Oklahoma"
+}
+
+def clean_state(s):
+    return s.replace(_____).str.strip().str.title() # For YOU to fill in
+
+cluster_df["State"] = clean_state(cluster_df["State"])
+combined_df["State"] = clean_state(combined_df["State"])
+----
+
+**4c. To add geographic context, assign each state to its corresponding U.S. Census region. Use the code below to merge region information into a state-level summary table. Then write 1–2 sentences explaining why it may be informative to compare DTW-based temperature clusters with traditional Census region groupings.**
+
+[source,python]
+----
+import pandas as pd
+
+region_df = pd.DataFrame({
+    "State": [
+        # Northeast
+        "Connecticut","Maine","Massachusetts","New Hampshire","Rhode Island",
+        "Vermont","New Jersey","New York","Pennsylvania",
+        # Midwest
+        "Illinois","Indiana","Michigan","Ohio","Wisconsin","Iowa","Kansas",
+        "Minnesota","Missouri","Nebraska","North Dakota","South Dakota",
+        # South
+        "Delaware","Florida","Georgia","Maryland","North Carolina","South Carolina",
+        "Virginia","West Virginia","Alabama","Kentucky","Mississippi","Tennessee",
+        "Arkansas","Louisiana","Oklahoma","Texas",
+        # West
+        "Arizona","Colorado","Idaho","Montana","Nevada","New Mexico","Utah",
+        "Wyoming","Alaska","California","Hawaii","Oregon","Washington"
+    ],
+    "Region": (
+        ["Northeast"] * 9 +
+        ["Midwest"] * 12 +
+        ["South"] * 16 +
+        ["West"] * 13
+    )
+})
+
+state_to_region = dict(zip(region_df["State"], region_df["Region"]))
+
+combined_df["Region"] = combined_df["State"].map(_____) # For YOU to fill in
+----
+
+**4d. Using the code below and geographic boundary data for U.S. states, visualize the DTW cluster assignments and U.S. Census regions side by side on a map. These maps allow you to compare temperature-based clusters with established geographic regions. Briefly describe any alignments or mismatches you observe between the DTW clusters and Census regions in 2-3 sentences.**
+
+[source,python]
+----
+import geopandas as gpd
+import matplotlib.pyplot as plt
+
+state_summary = cluster_df[["State", "Cluster"]].merge(
+    combined_df[["State", "Region"]].drop_duplicates(),
+    on="State",
+    how="left"
+)
+
+us_states = (
+    gpd.read_file(
+        "https://www2.census.gov/geo/tiger/GENZ2021/shp/cb_2021_us_state_20m.zip"
+    )
+    .query("STUSPS not in ['PR','VI','GU','MP','AS','DC']")
+    .assign(State=lambda df: df["NAME"].str.strip().str.title())
+)
+
+map_df = us_states.merge(state_summary, on="State", how="left")
+
+fig, axes = plt.subplots(1, 2, figsize=(22, 10))
+
+map_df.plot(column="Cluster", categorical=True, cmap="Set2",
+            legend=True, edgecolor="white", ax=axes[0])
+axes[0].set_title("DTW Clusters")
+axes[0].axis("off")
+
+map_df.plot(column="Region", categorical=True, cmap="tab10",
+            legend=True, edgecolor="white", ax=axes[1])
+axes[1].set_title("Census Regions")
+axes[1].axis("off")
+
+plt.tight_layout()
+plt.show()
+----
+
+**4e. Each weekly temperature observation must be associated with its DTW cluster in order to build cluster-level models. Use the code below to merge the cluster assignments onto the weekly dataset using `State` and `Capital` identifiers. Verify that the resulting dataset contains both temperature and cluster information.**
+
+[source,python]
+----
+df_labeled = combined_df.merge(
+    cluster_df[["State", "Capital", "Cluster"]],
+    on=["____", "____"], # For YOU to fill in
+    how="inner")
+----
+====
+
+=== Question 5 (2 points)
+
+In this section, we will move from clustering to forecasting and evaluation. The goal is to use the structure uncovered by DTW clusters to build forecasting models that operate at the cluster level rather than fitting a separate model for every capital.
+
+We will begin by creating a proper train and test split for each capital’s time series. Sorting the data by State, Capital, and Date ensures the time ordering is correct, and using positional indexing with iloc allows us to reserve the final four weekly observations as a true out of sample test set. This reinforces a core time series principle: models should only be trained on past data when forecasting the future.
+
+Next, we will estimate a standardized average temperature pattern for each DTW cluster. Each capital’s training series is converted to a z score and then averaged across all capitals in the same cluster. This produces a smooth cluster level representation that captures shared seasonal behavior while reducing location specific noise. Modeling this shared structure allows us to learn more stable patterns than fitting separate models for every capital.
+
+We will then fit SARIMAX models to these cluster level patterns using the SARIMAX class from the statsmodels package. In a SARIMAX model, the non seasonal order $(p, d, q)$ controls how the series is modeled over time. The parameter $p$ represents the number of autoregressive terms, meaning how many past values are used to predict the current value. The parameter $d$ represents the degree of differencing applied to remove long term trends and improve stationarity. The parameter $q$ represents the number of moving average terms, which model dependence on past forecast errors.
+
+We will evaluate a small grid of candidate $(p, d, q)$ values to identify a configuration that performs well for each cluster. Rather than selecting these parameters arbitrarily, we assess performance using a short validation window and RMSE, reinforcing the idea that model selection should be data driven.
+
+In addition to the non seasonal components, we will include a seasonal structure through the seasonal order $(P, D, Q, s)$. Here, we fix the seasonal order to $(0, 1, 0, 52)$. The seasonal differencing term $D = 1$ removes repeating yearly patterns, while $s = 52$ reflects annual seasonality in weekly data. Setting $P$ and $Q$ to zero keeps the seasonal component simple while allowing the model to focus on the dominant yearly cycle in temperature data.
+Once the cluster level models are selected, we will generate forecasts for each individual capital by applying the cluster specific model and transforming predictions back to the original temperature scale. 
+
+Here is a table of the parameters in SARIMAX model:
+
+[cols="1,1,3", options="header"]
+|===
+| Parameter | Name | What it Controls
+| $p$
+| Autoregressive order
+| How many past values of the time series are used to predict the current value. Larger values allow the model to use longer memory but may increase complexity.
+| $d$
+| Differencing order
+| How many times the series is differenced to remove long term trends and make the series more stable over time. A value of 1 is common for trending data.
+| $q$
+| Moving average order
+| How many past forecast errors are used to correct current predictions. This helps capture short term noise and shocks in the data.
+| $P$
+| Seasonal autoregressive order
+| The autoregressive component applied at the seasonal scale. This models relationships between values separated by one full seasonal cycle.
+| $D$
+| Seasonal differencing order
+| How many times seasonal differencing is applied to remove repeating seasonal patterns. A value of 1 removes yearly seasonality when using weekly data.
+| $Q$
+| Seasonal moving average order
+| The moving average component applied at the seasonal scale, modeling seasonal error patterns.
+| $s$
+| Seasonal period
+| The number of observations in one seasonal cycle. For weekly temperature data, $s = 52$ represents one year.
+|===
+
+
+This step bridges the gap between standardized modeling and interpretable temperature values.
+Finally, we will evaluate and visualize forecast performance. RMSE provides a numerical summary of accuracy, while forecast plots allow us to assess whether the model captures seasonal timing, smoothness, and overall trend. Comparing these visual cues with RMSE values helps us understand both the strengths and limitations of cluster based forecasting.
+
+Together, these steps show how DTW clustering, thoughtful model selection, and SARIMAX forecasting work together to produce scalable and interpretable time series predictions.
+
+.Deliverables
+====
+**5a. To evaluate forecasting performance, split each capital’s time series into training and test sets. Use the last four weekly observations as the test set and all prior observations for training. Pay close attention to the use of iloc, which selects rows based on their position within each grouped time series rather than on date values. This ensures that the split is strictly time-ordered and reflects true out-of-sample forecasting.**
+
+[source,python]
+----
+# Ensure consistent ordering for time series operations
+combined_df = (
+    combined_df
+    .sort_values(["State", "Capital", "DATE"])
+    .reset_index(drop=True))
+
+train_df = (
+    combined_df
+    .groupby(["State", "Capital"], group_keys=False)
+    .apply(lambda g: g.iloc[:__], include_groups=False)) # For YOU to fill in
+
+test_df = (
+    combined_df
+    .groupby(["State", "Capital"], group_keys=False)
+    .apply(lambda g: g.iloc[__:], include_groups=False)) # For YOU to fill in
+----
+
+**5b. Rather than fitting a separate model for each capital, use the code below to estimate a standardized “average shape” for each DTW cluster. Weekly temperature series are standardized within each capital and then averaged across capitals in the same cluster. These cluster-level patterns form the basis for forecasting. In 1–2 sentences, describe how creating a standardized “average shape” at the cluster level helps capture common temperature dynamics across capitals. Why might this approach be preferable to modeling each capital independently?**
+
+[source,python]
+----
+import numpy as np
+
+capital_scale = {}
+cluster_shapes = {}
+
+for cluster, grp in train_df.groupby("Cluster"):
+    z_series = []
+
+    for (state, capital), g in grp.groupby(["State", "Capital"]):
+        y = g.set_index("DATE")["WeeklyAvgTemp"].asfreq("W-SUN").interpolate()
+
+        mu, sigma = y.mean(), y.std(ddof=0)
+        if sigma > 0:
+            capital_scale[(state, capital)] = (mu, sigma)
+            z_series.append((y - mu) / sigma)
+
+    cluster_shapes[cluster] = pd.concat(z_series, axis=1).mean(axis=1)
+----
+
+**5c. Rather than fitting a separate model for each capital, select a SARIMAX model for each DTW cluster using the cluster-level standardized temperature pattern. A small grid of candidate non-seasonal ARIMA parameters is evaluated using a short validation window. Rather than fitting a separate model for each capital, select a SARIMAX model for each DTW cluster using the cluster-level standardized temperature pattern. A small grid of candidate non-seasonal ARIMA parameters is evaluated using a short validation window. In the SARIMAX model below, use seasonal_order = $(0, 1, 0, 52)$. Fill in these values directly in the code. Then, in 1–2 sentences, explain what each part of this seasonal order is doing and why a 52-week seasonal period makes sense for weekly temperature data.**
+
+[source,python]
+----
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+import itertools
+import warnings
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+
+def rmse(y, yhat):
+    return np.sqrt(np.mean((y - yhat) ** 2))
+
+# Grid over non-seasonal ARIMA parameters
+param_grid = list(itertools.product([0, 1, 2], [0, 1], [0, 1, 2]))
+best_cluster_params = {}
+
+for cluster, z in cluster_shapes.items():
+    z = z.asfreq("W-SUN").interpolate()
+    z_train, z_val = z.iloc[:-4], z.iloc[-4:]
+
+    best_score, best_cfg = np.inf, None
+
+    for order in param_grid:
+        try:
+            res = SARIMAX(
+                z_train,
+                order=order,
+                # Annual seasonality fixed using domain knowledge
+                seasonal_order=(0, 1, 0, 52),
+                enforce_stationarity=False,
+                enforce_invertibility=False
+            ).fit(disp=False)
+
+            preds = res.get_forecast(4).predicted_mean
+            score = rmse(z_val, preds)
+
+            if score < best_score:
+                best_score, best_cfg = score, order
+
+        except Exception:
+            continue
+
+    best_cluster_params[cluster] = best_cfg
+    print(f"Cluster {cluster}: RMSE={best_score:.3f}, order={best_cfg}")
+
+----
+
+**5d. Using the selected cluster-level SARIMAX models, generate forecasts for each capital’s held-out test period using the code below. Predictions are transformed back to the original temperature scale and compared against observed values. Compute the RMSE for each capital and visualize forecasts for the best-performing locations. In 2-3 sentences, interpret the RMSE values and describe whether it indicates strong or weak model performance.**
+
+[source,python]
+----
+predictions = {}
+
+for (state, capital), g in train_df.groupby(["State", "Capital"]):
+    cluster = int(g["Cluster"].iloc[0])
+
+    if (state, capital) not in capital_scale:
+        continue
+
+    mu, sigma = capital_scale[(state, capital)]
+    z = cluster_shapes[cluster]
+
+    model = SARIMAX(
+        z,
+        order=best_cluster_params[cluster],
+        seasonal_order=(0, 1, 0, 52),
+        enforce_stationarity=False,
+        enforce_invertibility=False).fit(disp=False)
+
+    y_test = (
+        test_df
+        .query("State == @state and Capital == @capital")
+        .set_index("DATE")["WeeklyAvgTemp"]
+        .asfreq("W-SUN")
+        .interpolate())
+
+    z_pred = model.get_forecast(len(y_test)).predicted_mean
+    predictions[(state, capital)] = (y_test, z_pred * sigma + mu)
+
+rmse_df = pd.DataFrame([
+    {
+        "State": s,
+        "Capital": c,
+        "Cluster": train_df.query(
+            "State == @s and Capital == @c"
+        )["Cluster"].iloc[0],
+        "RMSE": rmse(y.values, yhat.values)
+    }
+    for (s, c), (y, yhat) in predictions.items()])
+
+top3 = rmse_df.nsmallest(3, "RMSE")
+----
+
+**5e. Use the code below to plot the test-set forecasts for selected capitals from different DTW clusters. Examine how well the predicted temperatures track the observed values across the seasonal cycle. In 1–2 sentences, explain what visual cues (such as timing of peaks and troughs, smoothness, or systematic bias) indicate good or poor model performance and how these observations relate to differences in RMSE across capitals.**
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+
+for _, row in top3.iterrows():
+
+    state   = row["State"]
+    capital = row["Capital"]
+    cluster = int(row["Cluster"])
+    score   = row["RMSE"]
+
+    train_obs = (
+        train_df
+        .query("State == @state and Capital == @capital")
+        .set_index("DATE")["WeeklyAvgTemp"]
+        .asfreq("W-SUN")
+        .interpolate())
+
+    test_obs = (
+        test_df
+        .query("State == @state and Capital == @capital")
+        .set_index("DATE")["WeeklyAvgTemp"]
+        .asfreq("W-SUN")
+        .interpolate())
+
+    _, y_pred = predictions[(state, capital)]
+
+    plt.figure(figsize=(11, 4))
+
+    # Training observations
+    plt.plot(train_obs, label="Train (Observed)", linewidth=2)
+
+    # Explicit connection from train → test
+    plt.plot(
+        [train_obs.index[-1], test_obs.index[0]],
+        [train_obs.iloc[-1], test_obs.iloc[0]],
+        color="black",
+        linewidth=2)
+
+    # Test observations
+    plt.plot(test_obs, label="Test (Observed)", color="black", linewidth=2)
+    # Test predictions
+    plt.plot(y_pred, "--", linewidth=2, label="Test (Predicted)")
+
+    # Train/test split marker
+    plt.axvline(
+        test_obs.index.min(),
+        color="gray",
+        linestyle=":",
+        label="Train/Test Split")
+    plt.title(f"{capital}, {state} — Cluster {cluster}\nRMSE = {score:.2f}")
+    plt.xlabel("Date")
+    plt.ylabel("Weekly Avg Temperature")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+----
+
+
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project1.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
