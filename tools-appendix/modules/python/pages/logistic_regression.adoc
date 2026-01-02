@@ -897,40 +897,39 @@ final_model = sm.Logit(y_train, X_train_final).fit()
 print(final_model.summary())
 print(f"AIC: {final_model.aic}")
 ----
+[source,text]
+----
+Optimization terminated successfully.
+         Current function value: 0.262632
+         Iterations 10
+                           Logit Regression Results                           
+==============================================================================
+Dep. Variable:       Semaglutide_drug   No. Observations:                29091
+Model:                          Logit   Df Residuals:                    29079
+Method:                           MLE   Df Model:                           11
+Date:                Tue, 30 Dec 2025   Pseudo R-squ.:                  0.4312
+Time:                        16:35:04   Log-Likelihood:                -7640.2
+converged:                       True   LL-Null:                       -13431.
+Covariance Type:            nonrobust   LLR p-value:                     0.000
+=======================================================================================================
+                                          coef    std err          z      P>|z|      [0.025      0.975]
+-------------------------------------------------------------------------------------------------------
+const                                  -2.3807      0.038    -63.081      0.000      -2.455      -2.307
+Cost_per_claim                          2.4191      0.036     66.890      0.000       2.348       2.490
+Prscrbr_Type_Grouped_Primary Care       1.2536      0.045     28.164      0.000       1.166       1.341
+Prscrbr_Type_Grouped_GI/Renal/Rheum    -4.8014      0.357    -13.449      0.000      -5.501      -4.102
+Tot_Day_Suply                          -0.7831      0.044    -17.731      0.000      -0.870      -0.697
+Prscrbr_Type_Grouped_Endocrinology      1.8776      0.148     12.667      0.000       1.587       2.168
+Prscrbr_Type_Grouped_Neuro/Psych       -6.7406      0.959     -7.027      0.000      -8.621      -4.861
+Prscrbr_Type_Grouped_Missing           -1.4901      0.136    -10.951      0.000      -1.757      -1.223
+Prscrbr_Type_Grouped_Surgery           -2.5203      0.343     -7.348      0.000      -3.193      -1.848
+Prscrbr_Type_Grouped_Other             -1.6574      0.268     -6.196      0.000      -2.182      -1.133
+Prscrbr_Type_Grouped_Women's Health    -2.0414      0.451     -4.524      0.000      -2.926      -1.157
+Prscrbr_State_Region_South              0.2295      0.043      5.301      0.000       0.145       0.314
+=======================================================================================================
 
-.Logit Regression Results
-[cols="1,1,1,1,1,1", options="header"]
-|===
-| Term | coef | std err | z | P>|z| | [0.025, 0.975]
-
-| const | -2.3807 | 0.038 | -63.081 | 0.000 | [-2.455, -2.307]
-| Cost_per_claim | 2.4191 | 0.036 | 66.890 | 0.000 | [2.348, 2.490]
-| Prscrbr_Type_Grouped_Primary Care | 1.2536 | 0.045 | 28.164 | 0.000 | [1.166, 1.341]
-| Prscrbr_Type_Grouped_GI/Renal/Rheum | -4.8014 | 0.357 | -13.449 | 0.000 | [-5.501, -4.102]
-| Tot_Day_Suply | -0.7831 | 0.044 | -17.731 | 0.000 | [-0.870, -0.697]
-| Prscrbr_Type_Grouped_Endocrinology | 1.8776 | 0.148 | 12.667 | 0.000 | [1.587, 2.168]
-| Prscrbr_Type_Grouped_Neuro/Psych | -6.7406 | 0.959 | -7.027 | 0.000 | [-8.621, -4.861]
-| Prscrbr_Type_Grouped_Missing | -1.4901 | 0.136 | -10.951 | 0.000 | [-1.757, -1.223]
-| Prscrbr_Type_Grouped_Surgery | -2.5203 | 0.343 | -7.348 | 0.000 | [-3.193, -1.848]
-| Prscrbr_Type_Grouped_Other | -1.6574 | 0.268 | -6.196 | 0.000 | [-2.182, -1.133]
-| Prscrbr_Type_Grouped_Women's Health | -2.0414 | 0.451 | -4.524 | 0.000 | [-2.926, -1.157]
-| Prscrbr_State_Region_South | 0.2295 | 0.043 | 5.301 | 0.000 | [0.145, 0.314]
-|===
-
-[NOTE]
-====
-*Optimization terminated successfully.*  
-**Model Information:**  
-- Dependent Variable: `Semaglutide_drug`  
-- Observations: 29,091  
-- Pseudo R²: 0.4312  
-- Log-Likelihood: -7640.2  
-- LL-Null: -13431  
-- AIC: 15304.48  
-- Converged: True  
-- Covariance Type: nonrobust  
-- LLR p-value: 0.000  
-====
+Final AIC: 15304.476049756959
+----
 
 
 
@@ -1040,6 +1039,54 @@ print("Test AUC:", roc_auc_score(y_test, final_model.predict(X_test_final)))
 ----
 
 image::roccurvepres.png[width=600, height=450, caption="Figure: ROC Curve Comparison"]
+
+=== Calibration Plot
+
+*What Is a Calibration Plot?**
+
+A calibration plot, is a tool used to evaluate how well a classification model’s predicted probabilities align with actual observed outcomes. Rather than measuring how well the model ranks observations, a calibration plot assesses whether the probabilities produced by the model are trustworthy.
+
+To create a calibration plot, predicted probabilities are grouped into bins (for example, 0–0.1, 0.1–0.2, and so on). For each bin, the average predicted probability is plotted against the observed proportion of positive outcomes. The x-axis represents the mean predicted probability, while the y-axis represents the observed fraction of positives.
+
+A perfectly calibrated model will produce points that lie close to the diagonal line $y = x$. Points below this line indicate that the model is overconfident, meaning it predicts probabilities that are too high. Points above the line indicate that the model is underconfident, meaning it predicts probabilities that are too low.
+
+Calibration is especially important in probability-based decision settings, such as healthcare analytics, where predicted probabilities are often used to inform risk assessment and decision-making rather than simple yes/no classifications.
+
+[source,python]
+----
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.calibration import calibration_curve
+
+# Predicted probabilities on the test set
+test_probs = final_model.predict(X_test_final)
+
+# Compute calibration curve
+# n_bins controls how many probability bins are used
+prob_true, prob_pred = calibration_curve(
+    y_test,
+    test_probs,
+    n_bins=10,
+    strategy="uniform"
+)
+
+# Plot calibration curve
+plt.figure(figsize=(7, 7))
+plt.plot(prob_pred, prob_true, marker="o", label="Model")
+plt.plot([0, 1], [0, 1], linestyle="--", color="gray", label="Perfectly Calibrated")
+
+plt.xlabel("Mean Predicted Probability")
+plt.ylabel("Observed Proportion of Positives")
+plt.title("Calibration Plot (Test Set)")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+----
+image::CalibrationPlot.jpg[width=600, height=450, caption="Calibration Plot using the Data."]
+
+This calibration plot shows how well the model’s predicted probabilities match the actual outcomes. The dashed diagonal line represents perfect calibration, where predicted probabilities equal the observed proportion of prescribers. Points close to this line indicate reliable probability estimates, while points below the line indicate overconfidence and points above the line indicate underconfidence. For example, if a point lies on the diagonal line of a calibration plot, the model’s predicted probabilities closely match what actually occurs in the data. If a point falls below the diagonal, the model is overconfident: for instance, predicting an 80% chance when only about 60% of prescribers actually prescribe the drug. Conversely, if a point falls above the diagonal, the model is underconfident, such as predicting a 30% chance when about 50% of prescribers end up prescribing it. Overall, points above the line indicate underconfidence, while points below the line indicate overconfidence.
+
 
 == 6. Making Predictions on New Prescribers
 
