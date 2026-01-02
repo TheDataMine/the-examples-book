@@ -19,19 +19,37 @@ In this project, you will explore Dynamic Time Warping (DTW), a method for measu
 == Introduction to Dynamic Time Warping
 
 :imagesdir: ../../images
-image::DTWImage1.png[width=600, height=450, caption="Dynamic Time Warping matching. Source: Wiki Commons]
+:figure-title:
+
+image::DTWImage1.png[width=600, height=450, title="Dynamic Time Warping matching. Source: Wiki Commons"]
+
 
 Time series data appears in many settings, including weather measurements, user behavior over time, sales trends, medical signals, and financial indicators. Dynamic Time Warping (DTW) offers a different way to think about similarity in time series. Instead of asking whether two sequences match at the same time index, DTW asks whether they follow a similar pattern or shape.
 
-As for the data used for this project, we will use daily weather data from NOAA covering January 2024 through December 2024. The dataset contains one full year of temperature observations for the capital city of each U.S. state, giving us 50 separate temperature time series—one per capital. Let's look at one time series of Weekly Average Temperature in Desmoines, Iowa: 
+
+DTW was originally developed in the nineteen seventies in the context of speech recognition. Researchers were interested in comparing spoken words that were clearly the same but spoken faster or slower by different speakers. When sound signals like these are compared point by point, they often appear dissimilar because peaks and pauses do not align in time. However, when attention is given to the overall structure of the signal, the similarity becomes much more apparent. DTW was designed to capture this idea by allowing flexibility in how time is aligned.
+
+At a high level, Dynamic Time Warping is an algorithm that aligns two time series by allowing the time axis to stretch or compress where necessary. Rather than enforcing a one to one comparison between observations, DTW finds an alignment that minimizes the total distance between the two sequences after accounting for differences in timing. As a result, a single observation in one series may align with multiple observations in the other if doing so improves the overall match.
+
+:imagesdir: ../../images
+image::DTWImage3.png[width=600, height=450, title="Dynamic Time Warping alignment between two time series, showing the optimal warping path and aligned observations. Source  Mark Stent (Medium, 2019)"]
+
+Internally, DTW compares every point in one time series with every point in another and organizes these comparisons into a grid. It then searches for a path through this grid that respects the ordering of time and produces the smallest cumulative distance. The alignment path itself is just as important as the final distance value. It reveals where one series had to be stretched, where it was compressed, and where both series progressed at a similar pace.
+
+DTW distance can be defined as:
+
+:imagesdir: ../../images
+image::DTWImage4.png[width=600, height=450, title="Dynamic Time Warping Formula Source: Mark Stent (Medium, 2019)"]
+
+Because of this flexibility, DTW is especially useful in settings where timing differences are meaningful rather than problematic. It has been applied in speech and audio analysis, healthcare signals such as heart rate data, financial and economic time series, marketing and user behavior patterns, and environmental and climate data. In each of these cases, the goal is to find similarity in structure.
+
+As for **the data** used for this project, we will use daily weather data from NOAA covering January 2024 through December 2024. The dataset contains one full year of temperature observations for the capital city of each U.S. state, giving us 50 separate temperature time series, with one per capital. Let's look at one time series of Weekly Average Temperature in Desmoines, Iowa: 
 
 :imagesdir: ../../images
 
-image::DTWImage2.png[width=600, height=450, caption="Using DTW to Cluster Time Series in Our Temperature Data"]
+image::DTWImage2.png[width=600, height=450, title="Using DTW to Cluster Time Series in Our Temperature Data"]
 
-If our goal is to predict next week's average temperature, it would seem that the most straightforward approach would be to build 50 separate time series models, one for each capital. While feasible, this can become difficult to maintain. Instead, we ask a more strategic question: what if some capitals follow similar temperature patterns over time and we could group them?
-
-This is where Dynamic Time Warping (DTW) comes in. DTW allows us to measure similarity between time series based on their overall shape rather than exact timing. By grouping capitals with similar temperature dynamics, we can cluster time series together and use those clusters to inform model building reducing complexity.
+If our goal is to predict next week's average temperature, it would seem that the most straightforward approach would be to build 50 separate time series models, one for each capital. While feasible, this can become difficult to maintain. Instead, we ask a more strategic question: what if some capitals follow similar temperature patterns over time and we could group them? This is where Dynamic Time Warping (DTW) comes in. DTW allows us to measure similarity between time series based on their overall shape rather than exact timing. By grouping capitals with similar temperature dynamics, we can cluster time series together and use those clusters to inform model building reducing complexity.
 
 **Columns in the dataset:**
 
@@ -47,22 +65,6 @@ This is where Dynamic Time Warping (DTW) comes in. DTW allows us to measure simi
 
 Each row represents a temperature observation at a given time for a specific capital city. Some timestamps may contain missing temperature values, which we will address during data cleaning and aggregation before applying DTW and time series modeling.
 
-DTW was originally developed in the nineteen seventies in the context of speech recognition. Researchers were interested in comparing spoken words that were clearly the same but spoken faster or slower by different speakers. When sound signals like these are compared point by point, they often appear dissimilar because peaks and pauses do not align in time. However, when attention is given to the overall structure of the signal, the similarity becomes much more apparent. DTW was designed to capture this idea by allowing flexibility in how time is aligned.
-
-At a high level, Dynamic Time Warping is an algorithm that aligns two time series by allowing the time axis to stretch or compress where necessary. Rather than enforcing a one to one comparison between observations, DTW finds an alignment that minimizes the total distance between the two sequences after accounting for differences in timing. As a result, a single observation in one series may align with multiple observations in the other if doing so improves the overall match.
-
-:imagesdir: ../../images
-image::DTWImage3.png[width=600, height=450, caption="Dynamic Time Warping alignment between two time series, showing the optimal warping path and aligned observations. Source  Mark Stent (Medium, 2019)"]
-
-Internally, DTW compares every point in one time series with every point in another and organizes these comparisons into a grid. It then searches for a path through this grid that respects the ordering of time and produces the smallest cumulative distance. The alignment path itself is just as important as the final distance value. It reveals where one series had to be stretched, where it was compressed, and where both series progressed at a similar pace.
-
-DTW distance can be defined as:
-
-:imagesdir: ../../images
-image::DTWImage4.png[width=600, height=450, caption="Dynamic Time Warping Formula Source: Mark Stent (Medium, 2019)"]
-
-Because of this flexibility, DTW is especially useful in settings where timing differences are meaningful rather than problematic. It has been applied in speech and audio analysis, healthcare signals such as heart rate data, financial and economic time series, marketing and user behavior patterns, and environmental and climate data. In each of these cases, the goal is to find similarity in structure.
-
 In this project, DTW will be used as a tool for understanding and comparing time series patterns rather than as a standalone distance metric. The focus will be on how DTW aligns sequences, what those alignments reveal about the data, and how this information can support clustering and downstream modeling decisions.
 
 == Questions
@@ -71,7 +73,7 @@ In this project, DTW will be used as a tool for understanding and comparing time
 
 .Deliverables
 ====
-**1a. You are given multiple CSV files containing daily weather observations, where each file corresponds to 50 unique U.S. state capital weather data for 2024. Fill in the code below to read all files from the provided directory, extract the state and capital names from each filename, and append the data into a single DataFrame. Retain only the `STATION`, `DATE`, and `DailtAverageDryBulbTemperature`, then add `state` and `capital` columns.**
+**1a. You are given multiple CSV files containing daily weather observations, where each file corresponds to 50 unique U.S. state capital weather data for 2024. Fill in the code below to read all files from the provided directory, extract the state and capital names from each filename, and append the data into a single DataFrame. Retain only the `STATION`, `DATE`, and `DailyAverageDryBulbTemperature`, then add `state` and `capital` columns.**
 
 [source,python]
 ----
@@ -236,7 +238,7 @@ n_series = (
 === Question 3 - Using DTW to Cluster Our Time Series Weather Data of State Capitals (2 points)
 
 :imagesdir: ../../images
-image::DTWImage5.png[width=600, height=450, caption="Dynamic Time Warping Formula Source: Mark Stent (Medium, 2019)"]
+image::DTWImage5.png[width=600, height=450, title="Dynamic Time Warping Formula Source: Mark Stent (Medium, 2019)"]
 
 In this section, we will review how time series data must be represented and prepared before it can be compared using Dynamic Time Warping. The focus is on reshaping, standardizing, and organizing the data so that each sequence can be treated as a single analytical object.
 
@@ -327,7 +329,7 @@ for cluster in range(n_clusters):
 === Question 4 Comparing DTW Clusters to Regional Clusters (2 points)
 
 :imagesdir: ../../images
-image::DTWImage6.png[width=600, height=450, caption="Dynamic Time Warping Formula Source: Mark Stent (Medium, 2019)"]
+image::DTWImage6.png[width=600, height=450, title="Dynamic Time Warping Formula Source: Mark Stent (Medium, 2019)"]
 
 Now we will focus on interpreting and contextualizing the DTW clustering results. After grouping capital cities based on seasonal temperature patterns, it is important to understand what those clusters represent geographically and how they relate to existing regional definitions.
 
@@ -470,19 +472,30 @@ df_labeled = combined_df.merge(
 
 === Question 5 Transition To Forecast Models (2 points)
 
-In this section, we will move from clustering to forecasting and evaluation. The goal is to use the structure uncovered by DTW clusters to build forecasting models that operate at the cluster level rather than fitting a separate model for every capital.
+In this section, we shift from discovering structure to building forecasts. Up to this point, Dynamic Time Warping helped us identify groups of capital cities that share similar temperature patterns over time. We now use that structure to guide forecasting, allowing us to model behavior at the cluster level rather than fitting a separate model for every capital.
 
-We will begin by creating a proper train and test split for each capital’s time series. Sorting the data by State, Capital, and Date ensures the time ordering is correct, and using positional indexing with iloc allows us to reserve the final four weekly observations as a true out of sample test set. This reinforces a core time series principle: models should only be trained on past data when forecasting the future.
+**Establishing a time-aware train–test split**
 
-Next, we will estimate a standardized average temperature pattern for each DTW cluster. Each capital’s training series is converted to a z score and then averaged across all capitals in the same cluster. This produces a smooth cluster level representation that captures shared seasonal behavior while reducing location specific noise. Modeling this shared structure allows us to learn more stable patterns than fitting separate models for every capital.
+We'll split each capital’s time series into training and test sets. The data is first sorted by State, Capital, and Date to ensure the observations are in correct chronological order. We then reserve the final four weekly observations as a test set using positional indexing with iloc. 
+This choice reflects a core principle of time series analysis: when forecasting the future, models should be trained only on past data. Holding out the most recent observations creates a realistic out-of-sample evaluation.
 
-We will then fit SARIMAX models to these cluster level patterns using the SARIMAX class from the statsmodels package. In a SARIMAX model, the non seasonal order $(p, d, q)$ controls how the series is modeled over time. The parameter $p$ represents the number of autoregressive terms, meaning how many past values are used to predict the current value. The parameter $d$ represents the degree of differencing applied to remove long term trends and improve stationarity. The parameter $q$ represents the number of moving average terms, which model dependence on past forecast errors. 
+**Constructing a cluster-level temperature pattern**
 
+With training data defined, we can focus on capturing the shared behavior within each DTW cluster. Each capital’s training series is standardized using a z-score transformation, removing differences in average temperature and variability across locations. These standardized series are then averaged within each cluster. The resulting cluster-level pattern represents a smooth “average shape” that emphasizes common seasonal dynamics while reducing city-specific noise.
 
-We will evaluate a small grid of candidate $(p, d, q)$ values to identify a configuration that performs well for each cluster. Rather than selecting these parameters arbitrarily, we assess performance using a short validation window and RMSE, reinforcing the idea that model selection should be data driven.
+**Modeling with SARIMAX**
 
-In addition to the non seasonal components, we will include a seasonal structure through the seasonal order $(P, D, Q, s)$. Here, we fix the seasonal order to $(0, 1, 0, 52)$. The seasonal differencing term $D = 1$ removes repeating yearly patterns, while $s = 52$ reflects annual seasonality in weekly data. Setting $P$ and $Q$ to zero keeps the seasonal component simple while allowing the model to focus on the dominant yearly cycle in temperature data.
-Once the cluster level models are selected, we will generate forecasts for each individual capital by applying the cluster specific model and transforming predictions back to the original temperature scale. 
+Now let's have the cluster-level patterns form the basis for forecasting for us. Rather than modeling individual capitals directly, we fit SARIMAX models to each cluster-level series using the statsmodels package. The non-seasonal order $(p, d, q)$ controls how the series evolves over time: $p$ determines how many past values influence current predictions, $d$ governs differencing to address long-term trends, and $q$ accounts for short-term dependence in forecast errors.
+
+**Selecting model parameters using validation performance**
+
+To determine appropriate values for $(p, d, q)$, we evaluate a small grid of candidate models using a short validation window and RMSE as the evaluation metric. This approach reinforces the idea that model selection should be guided by empirical performance rather than arbitrary choices. For each cluster, the parameter configuration that minimizes validation error is selected.
+
+**Accounting for yearly seasonality**
+Because weekly temperature data exhibits strong annual seasonality, we incorporate a fixed seasonal structure of $(0, 1, 0, 52)$. Seasonal differencing with $D = 1$ removes repeating yearly patterns, while $s = 52$ reflects the length of one seasonal cycle in weekly data. Keeping the seasonal autoregressive and moving average terms at zero maintains model simplicity while allowing the dominant seasonal signal to be captured effectively
+
+**Applying cluster models to individual capitals**
+Once cluster-level models are selected, we can apply them back to individual capitals. Forecasts are generated on the standardized scale and then transformed back to the original temperature units using each capital’s mean and standard deviation. This step connects the shared cluster-level structure to city-specific predictions. 
 
 Here is a table of the parameters in SARIMAX model:
 
@@ -725,7 +738,9 @@ for _, row in top3.iterrows():
 
 ====
 
-== Question 6 (2 points)
+=== Question 6 - Evaluating the Model on Each Cluster (2 points)
+
+
 .Deliverables
 ====
 **6a. Using the rmse_df created in Question 5, compute the average RMSE for each DTW cluster. This summary provides a high-level view of how well the cluster-level SARIMAX models perform across different temperature pattern groups.**
