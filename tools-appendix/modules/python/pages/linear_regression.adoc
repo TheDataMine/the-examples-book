@@ -221,14 +221,13 @@ Parts of these explanations have been adapted from *Applied Statistics with R* (
 
 - We can expand the model by adding more features (`loudness`, `danceability`, `energy`, `valence`, etc.) for better predictions -> this is called **Multiple Linear Regression** which we will explain in question 2.  
 
+== Reading and Preparing the Data
 
-== Questions
+In this section, we will load the Spotify popularity dataset and prepare it for modeling. This includes reading the data into Python, removing unnecessary columns, and separating the prediction target from the feature variables.
 
-=== Question 1 Reading and Preparing the Data (2 points)
+=== Step 1: Read the Data
 
-.Deliverables
-====
-**1a. Read in the data and print the first five rows of the dataset. Save the dataframe as `spotify_popularity_data`.**
+We begin by reading the dataset into Python using pandas. After loading the data, we print the first five rows to get an initial sense of the structure and variables included in the dataset. We will store the dataset in a DataFrame called `spotify_popularity_data`.
 
 [source,python]
 ----
@@ -239,9 +238,12 @@ spotify_popularity_data = pd.read_csv("/anvil/projects/tdm/data/spotify/linear_r
 spotify_popularity_data.head()
 ----
 
-**1b. Use the code provided to drop the columns listed from `spotify_popularity_data`. After dropping them, print the columns still in the data.**
+=== Step 2: Remove Unnecessary Columns
 
-_Note: For more information on the drop function in pandas you can go here https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.drop.html[here]._ 
+The original dataset contains many columns that are not needed for our analysis, such as identifiers, text-based fields, and metadata related to albums and artists. To simplify the dataset and focus on numeric features relevant for modeling, we drop these columns.
+
+For more information on the `drop` function, you can refer to the pandas documentation:
+https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.drop.html
 
 [source,python]
 ----
@@ -249,15 +251,17 @@ drop_cols = [
     "Unnamed: 0", "Unnamed: 0.1", "track_id", "track_name", "available_markets", "href",
     "album_id", "album_name", "album_release_date", "album_type",
     "artists_names", "artists_ids", "principal_artist_id",
-    "principal_artist_name", "artist_genres", "analysis_url", "duration_min"]
+    "principal_artist_name", "artist_genres", "analysis_url", "duration_min"
+]
 
 # Drop unnecessary columns
 spotify_popularity_data = spotify_popularity_data.drop(columns=drop_cols)
 
-for col in spotify_popularity_data: 
+for col in spotify_popularity_data:
     print(col)
-
 ----
+
+After dropping these columns, the dataset now includes the following variables:
 
 [source,python]
 ----
@@ -283,10 +287,11 @@ valence
 year
 ----
 
+=== Step 3: Define the Target and Features
 
-**1c. Use the code provided to set up your prediction target and features. Then, print the shape of `X` and `y` using `.shape()`. **
+Next, we separate the dataset into a prediction target and a set of feature variables.
 
-_Note: We are using the “popularity” column as y, and use all the other columns as X._
+In this project, we are interested in predicting song popularity. Therefore, we use the `popularity` column as our target variable `y`, and all remaining columns as the feature matrix `X`.
 
 [source,python]
 ----
@@ -299,13 +304,14 @@ print(X.shape)
 print(y.shape)
 ----
 
+This confirms that we have 1,500 observations and 19 feature variables, with one corresponding popularity value for each observation.
+
 [source,python]
 ----
 (1500, 19)
 (1500,)
 ----
 
-====
 
 === Question 2 Splitting the Data and Understanding the Data (2 points)
 
@@ -367,23 +373,29 @@ In supervised learning, our dataset is split into *predictors (`X`)* and a *targ
 ====
 In practice, it's recommended to use **cross-validation**, which provides a more reliable estimate of a model’s performance by repeatedly splitting the data into training and validation sets and averaging the results. This helps reduce the variability that can come from a single random split. However, for this project, we will only perform a single random train/test split using a fixed random seed.
 ====
+== Splitting the Data and Exploring the Target Variable
 
-.Deliverables
-====
-**2a. Use the code provided to create an 80/20 train/test split (use random_state=42). Then, print the shapes of X_train, X_test, y_train, and y_test using `.shape()`.**
+Now that the data has been cleaned and structured, we move on to splitting the dataset into training and testing sets and exploring the distribution of the response variable. These steps are essential for building and evaluating predictive models.
 
+=== Step 1: Create a Train/Test Split
+
+To evaluate model performance fairly, we split the dataset into training and testing subsets. We use an 80/20 split, where 80% of the data is used for training and 20% is reserved for testing. A fixed `random_state` is set to ensure reproducibility.
 
 [source,python]
 ----
 from sklearn.model_selection import train_test_split
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
 
-print("X_train shape:", X_train.shape) 
-print("X_test  shape:", X_test.shape) 
-print("y_train shape:", y_train.shape) 
-print("y_test  shape:", y_test.shape) 
+print("X_train shape:", X_train.shape)
+print("X_test  shape:", X_test.shape)
+print("y_train shape:", y_train.shape)
+print("y_test  shape:", y_test.shape)
 ----
+
+This confirms that the training set contains 1,200 observations and the test set contains 300 observations.
 
 [source,python]
 ----
@@ -393,9 +405,9 @@ y_train shape: (1200,)
 y_test  shape: (300,)
 ----
 
-**2b. Generate a histogram of y_train (popularity) using the code provided. Be sure to include clear axis labels and a title for the plot.**
+=== Step 2: Examine the Distribution of Popularity
 
-Note: See documentation on using `.histplot` in seaborn library https://seaborn.pydata.org/generated/seaborn.histplot.html[here].
+Before fitting any models, it is helpful to understand the distribution of the target variable. We begin by visualizing the popularity values in the training set using a histogram.
 
 [source,python]
 ----
@@ -403,45 +415,40 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 plt.figure(figsize=(8,5))
-sns.histplot(y, bins=30, kde=True, color="skyblue")
-plt.xlabel("Popularity") 
-plt.ylabel("Count") 
-plt.title("Distribution of Track Popularity") 
+sns.histplot(y_train, bins=30, kde=True)
+plt.xlabel("Popularity")
+plt.ylabel("Count")
+plt.title("Distribution of Track Popularity (Training Set)")
 plt.show()
 ----
 
 image::distribution_track_popularity.png[Distribution of Track Popularity, width=600, height=450, loading=lazy, title="Track Popularity"]
 
-**2c. Examine the plot above and determine whether the distribution appears roughly symmetric. In 2–3 sentences, note your observations of it's skewness and distribution (mean, min, max).**
+After examining the histogram, we observe that the popularity distribution appears roughly symmetric and approximately normal. There is a slight right tail near the upper bound (around 100), but no strong outliers. Most popularity values fall between roughly 45 and 100, with the mean near the upper-middle of this range.
 
+=== Step 3: Explore the Relationship Between Popularity and Duration
 
-Students should note that the y_train looks roughly normal and symmetric. They may note additional observations such as slight right tail near the cap (~99) but no strong outliers. Mean is arount 70 and min is 45 while max is around 100.
-
-
-**2d. Using the provided code, generate a scatterplot of popularity versus duration (in minutes) and include a fitted regression line. In 2–3 sentences, describe (1) the relationship you observe between the two variables, and (2) how the regression line is constructed to represent the overall trend in the data using residuals. Make sure to include labels for the plot.**
+Next, we explore the relationship between song duration and popularity. Since duration is measured in milliseconds, we first convert it to minutes for easier interpretation. We then create a scatterplot using the training data and overlay a fitted linear regression line.
 
 [source,python]
 ----
-import matplotlib.pyplot as plt
-import seaborn as sns
-
 # Convert duration to minutes for training data
 duration_min_train = X_train["duration_ms"] / 60000
 
 plt.figure(figsize=(8,5))
 sns.scatterplot(x=duration_min_train, y=y_train, alpha=0.6)
-sns.regplot(x=duration_min_train, y=y_train, scatter=False, color="red", ci=None) 
+sns.regplot(x=duration_min_train, y=y_train, scatter=False, ci=None)
 
-plt.xlabel("Duration (minutes)") 
-plt.ylabel("Popularity") ) 
-plt.title("Popularity vs. Duration (train set)") ) 
+plt.xlabel("Duration (minutes)")
+plt.ylabel("Popularity")
+plt.title("Popularity vs. Duration (Training Set)")
 plt.show()
-
 ----
 
 image::RegressionLineSpotify.png[Regression line for Spotify data, width=600, height=450, loading=lazy, title="Scatter Plot with a Simple Linear Regression Line - Spotify Data"]
 
-====
+From the scatterplot, we observe a weak relationship between track duration and popularity, with popularity varying widely across different song lengths. The regression line represents the best-fitting linear trend by minimizing the sum of squared residuals, providing a simple summary of the overall direction of the relationship despite substantial variability in the data.
+
 
 === Question 3 Checking for Multicollinearity and Influential Points (2 points)
 
@@ -511,13 +518,15 @@ How we use it:
 - `n` = number of rows in your training data.
 - As `n` gets larger, `4/n` gets smaller, the bar for “unusually influential” gets stricter.
 
+== Addressing Multicollinearity and Influential Observations
 
+Before fitting a linear regression model, it is important to ensure that the feature set does not suffer from severe multicollinearity and that influential outliers are appropriately handled. In this section, we use Variance Inflation Factor (VIF) to diagnose multicollinearity and Cook’s Distance to identify influential observations in the training data.
 
-.Deliverables
-====
-**3a. Using the provided code, keep only the numeric columns and compute the Variance Inflation Factor (VIF) values. Be sure to specify the threshold 10 in the function.**
+=== Step 1: Evaluate Multicollinearity Using VIF
 
-_Note: The function is provided and operates iteratively by removing the variable with the highest VIF at each step until all remaining variables have VIF values less than or equal to the chosen threshold (commonly set at 10). Your task is to run the function and fill in the appropriate threshold._
+We begin by assessing multicollinearity among the predictor variables using the Variance Inflation Factor (VIF). VIF measures how strongly each feature is linearly related to the other features in the model. Large VIF values indicate high multicollinearity, which can inflate standard errors and destabilize coefficient estimates.
+
+Before computing VIF, we ensure that all variables are numeric by converting boolean columns to integers. We then use a provided iterative function that repeatedly removes the variable with the highest VIF until all remaining variables have VIF values below a specified threshold. In this project, we use a commonly accepted threshold of 10.
 
 [source,python]
 ----
@@ -531,12 +540,15 @@ if len(bool_cols):
     X_train[bool_cols] = X_train[bool_cols].astype(int)
 
 
-def calculate_vif_iterative(X, thresh=10.0): 
+def calculate_vif_iterative(X, thresh=10.0):
     X_ = X.astype(float).copy()
     while True:
         vif_df = pd.DataFrame({
             "variable": X_.columns,
-            "VIF": [variance_inflation_factor(X_.values, i) for i in range(X_.shape[1])]
+            "VIF": [
+                variance_inflation_factor(X_.values, i)
+                for i in range(X_.shape[1])
+            ]
         }).sort_values("VIF", ascending=False).reset_index(drop=True)
 
         max_vif = vif_df["VIF"].iloc[0]
@@ -547,13 +559,11 @@ def calculate_vif_iterative(X, thresh=10.0):
 
         print(f"Dropping '{worst}' with VIF={max_vif:.2f}")
         X_ = X_.drop(columns=[worst])
-
-
 ----
 
-**3b. Using the provided code, keep only the columns with VIF ≤ 10 and update the X_train dataset. Then, print the kept columns along with their VIF using `vif_summary`.**
+=== Step 2: Filter Features Based on VIF
 
-_Note: Your task is to print the VIF summary table._
+Next, we run the iterative VIF function using a threshold of 10. The function returns two objects: a filtered version of `X_train` containing only variables with acceptable VIF values, and a summary table listing the remaining variables and their corresponding VIFs.
 
 [source,python]
 ----
@@ -565,6 +575,8 @@ X_train = result_vif[0]
 vif_summary = result_vif[1]
 ----
 
+During this process, several highly collinear variables are removed:
+
 [source,python]
 ----
 Dropping 'year' with VIF=320.29
@@ -575,10 +587,7 @@ Dropping 'danceability' with VIF=19.10
 Dropping 'tempo' with VIF=12.17
 ----
 
-[source,python]
-----
-vif_summary
-----
+The remaining variables and their VIF values are shown below:
 
 [cols="1,1", options="header"]
 |===
@@ -598,43 +607,44 @@ vif_summary
 | duration_ms | 9.724675
 |===
 
+All remaining features now have VIF values at or below the threshold, indicating acceptable levels of multicollinearity.
 
+=== Step 3: Identify Influential Observations Using Cook’s Distance
 
+After addressing multicollinearity, we examine the training data for influential observations using Cook’s Distance. Cook’s Distance measures how much each observation influences the fitted regression coefficients. Observations with unusually large Cook’s Distance values can disproportionately affect the model’s results.
 
-**3c. Use the provided code to calculate Cook’s Distance and identify potential outliers.  Use the `.drop(index=____)` function on both X_train and y_train to remove `cooks_outliers`.**
-
-_Note: This code identifies influential outliers in the training data using Cook’s Distance. It begins by aligning and cleaning X_train and y_train, then fits a regression model. Cook’s Distance is computed for each observation, and any values exceeding the threshold 4/n are flagged as influential points. Your task is to ensure these flagged observations are removed from both the X_train and y_train dataframes._
+We fit a linear regression model on the cleaned training data and compute Cook’s Distance for each observation. Any observation with Cook’s Distance greater than $4/n$, where $n$ is the number of observations, is flagged as potentially influential.
 
 [source,python]
 ----
-import numpy as np
-import pandas as pd
 import statsmodels.api as sm
 
 # Align and clean training data
 X_train_cook = X_train.loc[X_train.index.intersection(y_train.index)]
 y_train_cook = y_train.loc[X_train_cook.index]
 
-# Keep only rows without missing/infinite values
+# Keep only rows without missing or infinite values
 mask = np.isfinite(X_train_cook).all(1) & np.isfinite(y_train_cook.to_numpy())
 X_train_cook, y_train_cook = X_train_cook.loc[mask], y_train_cook.loc[mask]
 
 # Fit model on the cleaned data
-ols_model_cook = sm.OLS(y_train_cook, sm.add_constant(X_train_cook, has_constant="add")).fit()
+ols_model_cook = sm.OLS(
+    y_train_cook,
+    sm.add_constant(X_train_cook, has_constant="add")
+).fit()
 
-# Cook's Distance values for each observation
+# Cook's Distance values
 cooks_distance = ols_model_cook.get_influence().cooks_distance[0]
 cooks_threshold = 4 / len(X_train_cook)
 
-# Identify outlier indices
+# Identify influential observations
 cooks_outliers = X_train_cook.index[cooks_distance > cooks_threshold]
 
 print(f"Flagged {len(cooks_outliers)} outliers (Cook's D > 4/n).")
 
-
-X_train = X_train.drop(index=cooks_outliers) 
-y_train = y_train.drop(index=cooks_outliers) 
-
+# Remove influential observations
+X_train = X_train.drop(index=cooks_outliers)
+y_train = y_train.drop(index=cooks_outliers)
 ----
 
 [source,python]
@@ -642,11 +652,10 @@ y_train = y_train.drop(index=cooks_outliers)
 Flagged 61 outliers (Cook's D > 4/n).
 ----
 
+=== Step 4: Reflection on Model Stability
 
-**3d. In 2–3 sentences, explain why it is important to (1) remove features with high multicollinearity and (2) remove outliers identified by Cook’s Distance before building a linear regression model.**
+Removing features with high multicollinearity is important because strongly correlated predictors can inflate standard errors and make it difficult to interpret which variables are truly associated with the response. Similarly, outliers identified by Cook’s Distance can exert an outsized influence on regression coefficients and distort the model’s fit. By addressing both multicollinearity and influential observations, we build a linear regression model that is more stable, reliable, and interpretable.
 
-Students should get full credit if they write something along the lines like: Removing features with high multicollinearity is important because correlated predictors can inflate standard errors and make it difficult to interpret which variables are truly significant. Outliers identified by Cook’s Distance can have an outsized influence on regression coefficients, which may distort the model’s fit. By addressing both, we build a regression model that is more stable, reliable, and interpretable.
-====
 
 
 === Question 4 Feature Selection and Model Summary (2 points)
@@ -689,12 +698,15 @@ While we are using AIC in this project, you could also use:
 Each criterion has trade-offs. AIC is popular because it balances model fit and complexity, making it a solid choice when comparing linear regression models. For consistency, we'll use AIC throughout this project.
 
 ====
+== Feature Selection and Model Interpretation
 
-.Deliverables
-====
-**4a. Use the code provided below to perform feature selection using stepwise selection with the AIC criterion. Then write 1–2 sentences explaining how stepwise selection with AIC works and why feature selection is useful in model building.**
+With a cleaned feature set and influential observations removed, we are now ready to build a linear regression model. Before fitting a final model, we perform feature selection to identify a subset of predictors that best explain variation in song popularity while balancing model complexity and goodness of fit.
 
-_Note: The function has been provided. Your task is to run it successfully and then write 1-2 sentences about feature selection._
+=== Step 1: Perform Feature Selection Using Stepwise AIC
+
+To select an appropriate set of predictors, we use stepwise selection with the Akaike Information Criterion (AIC). AIC rewards models that fit the data well but penalizes unnecessary complexity, helping to prevent overfitting.
+
+The provided function implements a hybrid stepwise approach. At each iteration, it considers adding variables (forward selection) while also checking whether any previously added variables should be removed (backward pruning) if doing so further reduces AIC.
 
 [source,python]
 ----
@@ -715,17 +727,24 @@ def stepwise_aic(X_train, y_train, max_vars=None, verbose=True):
         best_aic, best_var = min(aics, key=lambda t: t[0])
 
         if best_aic + 1e-6 < current_aic:
-            selected.append(best_var); remaining.remove(best_var); current_aic = best_aic
-            if verbose: print(f"+ {best_var} (AIC {best_aic:.2f})")
-            # backward 
+            selected.append(best_var)
+            remaining.remove(best_var)
+            current_aic = best_aic
+            if verbose:
+                print(f"+ {best_var} (AIC {best_aic:.2f})")
+
+            # Backward step
             improved = True
             while improved and len(selected) > 1:
                 backs = [(sm.OLS(y, sm.add_constant(X[[v for v in selected if v != d]], has_constant='add')).fit().aic, d)
                          for d in selected]
                 back_aic, drop_var = min(backs, key=lambda t: t[0])
                 if back_aic + 1e-6 < current_aic:
-                    selected.remove(drop_var); remaining.add(drop_var); current_aic = back_aic
-                    if verbose: print(f"- {drop_var} (AIC {back_aic:.2f})")
+                    selected.remove(drop_var)
+                    remaining.add(drop_var)
+                    current_aic = back_aic
+                    if verbose:
+                        print(f"- {drop_var} (AIC {back_aic:.2f})")
                 else:
                     improved = False
         else:
@@ -735,19 +754,23 @@ def stepwise_aic(X_train, y_train, max_vars=None, verbose=True):
     return selected, model
 ----
 
-Students should get full credit if they run the code succesfully and also explain feature selection. They should also write something along the lines: Stepwise selection is a hybrid approach: it adds variables like forward selection but also considers removing variables at each step (backward pruning) if doing so reduces AIC further.
+Stepwise selection is useful because it helps identify a parsimonious model that balances interpretability and predictive performance. By reducing redundancy and excluding weak predictors, feature selection often leads to more stable coefficient estimates and better generalization.
 
-**4b. Use the provided code to run the stepwise_aic function on your training data. Then print the `selected_cols` and interpret the results of the feature selection method in 1-2 sentences.**
+=== Step 2: Run Stepwise Selection on the Training Data
+
+Next, we apply the stepwise AIC function to the training data. The function returns both the selected feature names and a fitted OLS model using those features.
 
 [source,python]
 ----
 results_feature_selection = stepwise_aic(X_train, y_train, max_vars=None, verbose=True)
 
-selected_cols = results_feature_selection[0]   # list of features
+selected_cols = results_feature_selection[0]   # list of selected features
 model = results_feature_selection[1]           # fitted OLS model
 
 print(selected_cols)
 ----
+
+During the selection process, features are added sequentially as long as they improve the AIC:
 
 [source,python]
 ----
@@ -764,76 +787,21 @@ print(selected_cols)
 + speechiness (AIC 7857.16)
 ----
 
+The final selected model includes variables related to artist popularity, audio characteristics, and track structure. This suggests that both musical features and artist-level signals contribute to explaining song popularity.
 
-**4c. Print the `model` summary and write 2-3 sentences interpreting the results about the variables in the model and their relationship to our target variable `popularity`.**
+=== Step 3: Interpret the Final Regression Model
 
-_Hint: for printing the model summary, use the `.summary()` function to see the summary of the model._
+We now examine the summary of the fitted regression model to interpret coefficient estimates, statistical significance, and overall model performance.
 
 [source,python]
 ----
 print(model.summary())
 ----
 
-[cols="2,2", options="header"]
-|===
-| **OLS Regression Results** | 
+The model explains approximately 29% of the variability in song popularity ($R^2 = 0.289$), which is reasonable given the complexity of popularity as an outcome. Several predictors, such as `principal_artist_followers`, `loudness`, `acousticness`, and `explicit`, have statistically significant positive relationships with popularity. Other variables, including `album_total_tracks`, `mode`, and `track_number`, show significant negative associations.
 
-| **Dependent Variable:** | popularity  
-| **Model:** | OLS  
-| **Method:** | Least Squares  
-| **Date:** | Wed, 15 Oct 2025  
-| **Time:** | 08:43:29  
-| **No. Observations:** | 1139  
-| **Df Residuals:** | 1127  
-| **Df Model:** | 11  
-| **R-squared:** | 0.289  
-| **Adj. R-squared:** | 0.282  
-| **F-statistic:** | 41.60  
-| **Prob (F-statistic):** | 7.07e-76  
-| **Log-Likelihood:** | -3916.6  
-| **AIC:** | 7857.0  
-| **BIC:** | 7918.0  
-| **Covariance Type:** | nonrobust  
-|===
+Not all variables are statistically significant at conventional levels; for example, `key` and `speechiness` have larger p-values, suggesting weaker evidence of association with popularity. Overall, the results indicate that while the model captures meaningful trends, there remains substantial unexplained variability, leaving room for improvement through additional features or alternative modeling approaches.
 
-.Coefficients
-[cols="1,1,1,1,1,1,1", options="header"]
-|===
-| Variable | Coef | Std Err | t | P>|t| | [0.025 | 0.975]
-| const | 82.1306 | 1.483 | 55.366 | 0.000 | 79.220 | 85.041
-| principal_artist_followers | 1.706e-07 | 1.32e-08 | 12.938 | 0.000 | 1.45e-07 | 1.97e-07
-| duration_ms | -2.986e-05 | 4.1e-06 | -7.287 | 0.000 | -3.79e-05 | -2.18e-05
-| loudness | 0.6164 | 0.074 | 8.274 | 0.000 | 0.470 | 0.763
-| album_total_tracks | -0.1788 | 0.037 | -4.819 | 0.000 | -0.252 | -0.106
-| acousticness | 5.4814 | 0.972 | 5.642 | 0.000 | 3.575 | 7.388
-| explicit | 2.7251 | 0.629 | 4.336 | 0.000 | 1.492 | 3.958
-| mode | -1.9647 | 0.497 | -3.956 | 0.000 | -2.939 | -0.990
-| valence | -3.5808 | 0.969 | -3.696 | 0.000 | -5.482 | -1.680
-| track_number | -0.1283 | 0.059 | -2.173 | 0.030 | -0.244 | -0.012
-| key | 0.1134 | 0.064 | 1.766 | 0.078 | -0.013 | 0.239
-| speechiness | -4.6218 | 2.966 | -1.558 | 0.119 | -10.442 | 1.198
-|===
-
-.Diagnostic Tests
-[cols="2,2", options="header"]
-|===
-| **Omnibus:** | 43.762  
-| **Prob(Omnibus):** | 0.000  
-| **Jarque-Bera (JB):** | 20.356  
-| **Prob(JB):** | 3.80e-05  
-| **Skew:** | 0.077  
-| **Kurtosis:** | 2.363  
-| **Durbin-Watson:** | 1.960  
-| **Cond. No.:** | 2.71e+08  
-|===
-
-
-
-
-Students should get full credit if they write 2-3 sentences interpreting the summary results of the model. For example they might say that some variables, like key, explicit, and acousticness, have a positive effect on popularity. Others, like album_total_tracks, mode, and track_number, are negative predictors. Not all variables are significant though, for example, key and speechiness do not have a singificant p-value. They may note that R^2 isn't really that high and can be improved as well.
-
-
-====
 
 === Question 5 Checking Assumptions of Linear Regression Model (2 points)
 
@@ -898,10 +866,13 @@ What to look for:
 
 image::fittedvsresspotify.png[width=600, height=450, caption="Fitted vs Residuals Plot Spotify Data"]
 
+== Model Diagnostics and Assumption Checking
 
-.Deliverables
-====
-**5a. Use the provided code to test for normality assumption. Make sure to label the plot and write 2-3 sentences on whether or not you think the model passes the normality assumption.**
+After fitting the linear regression model, it is important to evaluate whether the key assumptions of linear regression are reasonably satisfied. In this section, we examine the normality, independence, and homoscedasticity assumptions by analyzing the model residuals.
+
+=== Step 1: Check Normality Using a Histogram of Residuals
+
+We begin by examining the normality of the residuals using a histogram of standardized residuals overlaid with a standard normal density curve. Standardizing the residuals allows us to directly compare their distribution to a normal distribution with mean 0 and variance 1.
 
 [source,python]
 ----
@@ -915,18 +886,22 @@ resid = model.resid
 z = (resid - np.mean(resid)) / np.std(resid, ddof=1)
 
 # Histogram with normal curve
-plt.hist(z, bins=30, density=True, alpha=0.6, color="skyblue", edgecolor="black")
+plt.hist(z, bins=30, density=True, alpha=0.6, edgecolor="black")
 x = np.linspace(z.min(), z.max(), 100)
 plt.plot(x, stats.norm.pdf(x, 0, 1), "r", linewidth=2)
 plt.title("Histogram of Standardized Residuals with Normal Curve")
+plt.xlabel("Standardized Residuals")
+plt.ylabel("Density")
 plt.show()
 ----
-image::histogramstandarizedresiduals.png[width=600, height=450, caption="Histogram of Standarized Residuals"]
 
+image::histogramstandarizedresiduals.png[width=600, height=450, caption="Histogram of Standardized Residuals"]
 
-Students should get full credit if they also write 2-3 sentences on whether the model passes the normality assumption. The histogram looks normal visually, so it looks like it does pass.
+The histogram appears approximately symmetric and closely follows the overlaid normal curve, suggesting that the residuals are reasonably normally distributed. While minor deviations may exist in the tails, there is no strong evidence of severe non-normality. Overall, the model appears to satisfy the normality assumption.
 
-**5b. Use the provided code to test for normality using the q-q plot. Make sure to label your plot and interpret the results in 2-3 sentences.**
+=== Step 2: Check Normality Using a Q–Q Plot
+
+Next, we assess residual normality using a quantile–quantile (Q–Q) plot. In a Q–Q plot, normally distributed residuals should fall approximately along the 45-degree reference line.
 
 [source,python]
 ----
@@ -936,18 +911,16 @@ plt.title("Q–Q Plot of Residuals")
 plt.show()
 ----
 
-image::qqplotresiduals.png[width=600, height=450, caption="Q-Q Plot of Residuals"]
+image::qqplotresiduals.png[width=600, height=450, caption="Q–Q Plot of Residuals"]
 
+The residuals closely follow the reference line, with only slight deviations at the extremes. This visual evidence further supports the conclusion that the normality assumption is reasonably met for this model.
 
+=== Step 3: Test Independence Using the Durbin–Watson Statistic
 
-Students should get full credit if they also write 1-2 sentences on whether the model passes the normality assumption using q-q plot. It does visually, so it looks like it does pass.
-
-
-**5c. Run the code below to test for independence assumption in regression using the Durbin Watson test. Write 2-3 sentences interpreting the results and why testing for independence is important when building a linear regression model.**
+We now test the independence assumption using the Durbin–Watson statistic, which detects autocorrelation in the residuals. Values close to 2 indicate little to no autocorrelation, while values far from 2 suggest potential dependence among residuals.
 
 [source,python]
 ----
-# Durbin–Watson independence test
 from statsmodels.stats.stattools import durbin_watson
 
 dw_stat = durbin_watson(resid)
@@ -970,17 +943,14 @@ H0: Residuals are independent (no autocorrelation).
 -> Pass (approx. independent)
 ----
 
-Students should get full credit if they also write 2-3 sentences interpreting the results and why independence is important.
+The Durbin–Watson statistic is very close to 2, indicating that the residuals are approximately independent. Independence is important because correlated residuals can lead to biased standard errors and invalid inference. Based on this test, the model satisfies the independence assumption.
 
-For example, they may write the Durbin-Watson test checks for autocorrelation in the residuals, with values close to 2 indicating independence. Independence is important because if residuals are correlated, it can lead to invalid linear regression results. The model passes the test.
+=== Step 4: Check Linearity and Homoscedasticity Using Residuals vs. Fitted Values
 
-
-**5d. Run the code provided below to plot a residuals vs fitted values plot. Make sure to label your plot and interpret the results in 2-3 sentences.**
+Finally, we examine a residuals versus fitted values plot to assess the assumptions of linearity and constant variance (homoscedasticity). Ideally, residuals should be randomly scattered around zero with no clear patterns or changes in spread.
 
 [source,python]
 ----
-import matplotlib.pyplot as plt
-
 plt.scatter(model.fittedvalues, resid, alpha=0.6)
 plt.axhline(0, color="red", linestyle="--")
 plt.title("Residuals vs. Fitted Values")
@@ -989,46 +959,47 @@ plt.ylabel("Residuals")
 plt.show()
 ----
 
-Students should get full credit if they label the plot and interpret the results in 2-3 sentences. The residuals vs. fitted values plot shows that the residuals are scattered fairly evenly around the horizontal red line at zero. This suggests that the model’s assumptions of linearity and homoscedasticity (equal variance of residuals) are reasonably satisfied.
+image::residualsfittedvals.png[width=600, height=450, caption="Residuals vs. Fitted Values"]
 
-image::residualsfittedvals.png[width=600, height=450, caption="Residuals Fitted Values"]
+The residuals appear to be evenly scattered around the horizontal reference line with no obvious patterns or funnel shapes. This suggests that the assumptions of linearity and homoscedasticity are reasonably satisfied, supporting the overall validity of the fitted linear regression model.
 
-====
+== Model Evaluation and Predicting Song Popularity
 
-=== Question 6 Calculating R-squared and Predicting Popularity (2 points)
+In the final stage of the analysis, we evaluate the model’s performance on unseen data and use the fitted regression model to interpret feature effects and make predictions for a new song. These steps help assess how well the model generalizes and how it can be used in practice.
 
-.Deliverables
-====
-**6a. Use the provided code below to get the $R^2$ on the test set. Write 2-3 sentences interpreting the results of the $R^2$ on the test set.**
+=== Step 1: Evaluate Model Performance on the Test Set
+
+To assess how well the model generalizes to new data, we compute the coefficient of determination ($R^2$) on the test set. This measures the proportion of variability in song popularity that is explained by the model when applied to unseen observations.
 
 [source,python]
 ----
 from sklearn.metrics import r2_score
 import statsmodels.api as sm
 
-# Making sure test data has the same selected columns
+# Ensure test data uses the selected features
 X_test = X_test[selected_cols].copy()
 mask = np.isfinite(X_test).all(1)
 X_test = X_test.loc[mask]
 y_test = y_test.loc[X_test.index]
 
-# Predict with statsmodels OLS
+# Predict using the trained OLS model
 y_pred = model.predict(sm.add_constant(X_test, has_constant='add'))
 
 # R² on the test set
-r2 = r2_score(y_test, y_pred) 
+r2 = r2_score(y_test, y_pred)
 print(f"Test R²: {r2:.3f}")
 ----
-Students may write that the R^2 can still improved but it is close to the R^2 of the training dataset which means there are not many signs of overfitting.
 
 [source,python]
 ----
 Test R²: 0.250
 ----
 
-**6b. Run the code provided to generate a table displaying each variable along with its coefficient, direction of effect (positive or negative), p-value, and significance. Then, write 2–3 sentences interpreting the results. Highlight any findings that stand out or seem surprising.**
+The test set $R^2$ of approximately 0.25 indicates that the model explains about 25% of the variability in song popularity on unseen data. While there is room for improvement, the test $R^2$ is reasonably close to the training $R^2$, suggesting that the model does not suffer from severe overfitting and generalizes moderately well.
 
-_Note: The code has been provided, your task is to interpret the table's results._
+=== Step 2: Interpret Feature Effects and Statistical Significance
+
+Next, we examine a summary table that displays each selected variable’s coefficient, direction of effect, p-value, and statistical significance. This allows us to interpret which features are most strongly associated with popularity and whether their effects are statistically meaningful.
 
 [source,python]
 ----
@@ -1036,24 +1007,23 @@ import pandas as pd
 
 alpha = 0.05  # significance threshold
 
-# Collect pieces from the statsmodels OLS result
+# Extract model components
 coef = model.params.rename("coef")
 pval = model.pvalues.rename("p_value")
 ci = model.conf_int()
 
-# Assemble table
+# Build summary table
 coef_tbl = (
     pd.concat([coef, pval, ci], axis=1)
-      .drop(index="const", errors="ignore")             # drop intercept row
+      .drop(index="const", errors="ignore")
       .assign(
           effect=lambda d: d["coef"].apply(lambda x: "Positive" if x > 0 else "Negative"),
           significant=lambda d: d["p_value"] < alpha
       )
       [["coef", "effect", "p_value", "significant"]]
-      .sort_values("p_value")                            # most significant first
+      .sort_values("p_value")
 )
 
-# rounding
 coef_tbl_rounded = coef_tbl.round({"coef": 4, "p_value": 4})
 print(coef_tbl_rounded)
 ----
@@ -1074,64 +1044,60 @@ key                         0.1134  Positive   0.0777        False
 speechiness                -4.6218  Negative   0.1195        False
 ----
 
+Several variables, such as `principal_artist_followers`, `loudness`, `acousticness`, and `explicit`, show strong and statistically significant positive relationships with popularity. Other features, including `album_total_tracks`, `valence`, and `track_number`, are associated with lower popularity. Not all variables are statistically significant; for example, `key` and `speechiness` have p-values above 0.05, suggesting weaker evidence of association.
 
-**6c. Using the code below, predict the popularity of a new song with the following features using the trained model:**
+=== Step 3: Predict Popularity for a New Song
 
-Principal artist followers: 5,000,000
+Finally, we use the trained regression model to predict the popularity of a new song based on its known characteristics. This demonstrates how the model can be applied to real-world scenarios.
 
-Duration: 210,000 ms (~3.5 minutes)
+The new song has the following features:
 
-Loudness: -6.0
-
-Album total tracks: 10
-
-Acousticness: 0.20
-
-Explicit: 0 (not explicit)
-
-Mode: 1 (major key)
-
-Valence: 0.40
-
-Track number: 3
-
-Key: 5 (F major)
-
-Speechiness: 0.05
+* Principal artist followers: 5,000,000  
+* Duration: 210,000 ms (approximately 3.5 minutes)  
+* Loudness: −6.0  
+* Album total tracks: 10  
+* Acousticness: 0.20  
+* Explicit: 0 (not explicit)  
+* Mode: 1 (major key)  
+* Valence: 0.40  
+* Track number: 3  
+* Key: 5 (F major)  
+* Speechiness: 0.05  
 
 [source,python]
 ----
 import pandas as pd
 import statsmodels.api as sm
 
-# Students will fill these in with the new song's known features
 new_song = pd.DataFrame([{
     "principal_artist_followers": 5_000_000,
-    "duration_ms": 210_000,      
-    "loudness": -6.0,            
+    "duration_ms": 210_000,
+    "loudness": -6.0,
     "album_total_tracks": 10,
     "acousticness": 0.20,
-    "explicit": 0,             
-    "mode": 1,                   
+    "explicit": 0,
+    "mode": 1,
     "valence": 0.40,
     "track_number": 3,
-    "key": 5,                   
+    "key": 5,
     "speechiness": 0.05
 }])
 
-# Ensure the model sees the same columns it was trained on
+# Align columns with the trained model
 new_song = new_song.reindex(columns=selected_cols)
 new_song = new_song.fillna(X_train[selected_cols].median(numeric_only=True))
+
 pred_pop = model.predict(sm.add_constant(new_song, has_constant="add"))[0]
 print(f"Predicted popularity: {pred_pop:.1f}")
 ----
 
 [source,python]
 ----
-Predicted popularity: 68.9 
+Predicted popularity: 68.9
 ----
 
-====
+Based on the fitted model, the predicted popularity score for this new song is approximately 69. This value reflects the combined influence of artist popularity, audio features, and track characteristics captured by the regression model.
+
 
 
 == References
