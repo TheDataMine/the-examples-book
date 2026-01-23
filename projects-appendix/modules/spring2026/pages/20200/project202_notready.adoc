@@ -1,0 +1,367 @@
+= TDM 30200: Project 2 - Web Scraping Introduction 2
+
+== Project Objectives
+
+This project builds on what you learned in Project 1 by introducing how to scrape live websites. You'll learn how to download HTML from the internet using the `requests` library, use browser developer tools to inspect web pages, and apply your lxml skills to real websites.
+
+.Learning Objectives
+****
+- Learn how to use the `requests` library to download web pages
+- Use browser developer tools (inspect element) to find HTML elements
+- Scrape real websites and extract data
+- Handle HTTP responses and status codes
+- Navigate pagination and extract data from multiple pages
+- Work with different content types and complex structures
+****
+
+== Questions
+
+=== Question 1 (2 points)
+
+Now that you know how to parse HTML with lxml, let's learn how to get HTML from live websites. Python's `requests` library makes this easy:
+
+[source,python]
+----
+import requests
+from lxml import html
+
+# Fetch a web page
+url = "https://example.com"
+response = requests.get(url)
+
+# Check if the request was successful
+print(f"Status code: {response.status_code}")
+print(f"Content length: {len(response.content)} bytes")
+
+# The HTML content is in response.text
+print("\nFirst 500 characters of HTML:")
+print(response.text[:500])
+----
+
+[NOTE]
+====
+The `requests.get()` function sends an HTTP GET request to the specified URL and returns a response object. The `status_code` tells us if the request was successful (200 means OK). Other common status codes include 404 (Not Found) and 500 (Server Error). The actual HTML content is stored in `response.text`.
+====
+
+Once we have the HTML, we can parse it just like we did with strings in Project 1:
+
+[source,python]
+----
+# Parse the HTML content
+tree = html.fromstring(response.text)
+
+# Extract the title
+title = tree.xpath('//title/text()')
+print(f"Page title: {title[0] if title else 'Not found'}")
+
+# Extract all paragraph text
+paragraphs = tree.xpath('//p/text()')
+print(f"\nParagraphs found: {len(paragraphs)}")
+for i, para in enumerate(paragraphs, 1):
+    print(f"{i}. {para}")
+
+# Extract the heading
+heading = tree.xpath('//h1/text()')
+print(f"\nHeading: {heading[0] if heading else 'Not found'}")
+----
+
+Now try it yourself! Fetch the HTML from `https://example.com` and extract:
+1. The page title
+2. All paragraph text
+3. The text content of the `<h1>` heading
+
+.Deliverables
+====
+1.1. Write code to fetch the HTML from https://example.com using `requests.get()`
+
+1.2. Check the status code to verify the request was successful
+
+1.3. Parse the HTML using `lxml.html.fromstring()`
+
+1.4. Extract and display the page title
+
+1.5. Extract and display all paragraph text and the `<h1>` heading text
+====
+
+=== Question 2 (2 points)
+
+One of the most important skills in web scraping is learning how to inspect web pages to find the HTML elements you want to extract. Modern browsers have built-in developer tools that make this easy.
+
+To open developer tools in most browsers:
+- Press `Ctrl + Shift + C` (Windows/Linux) or `Cmd + Option + C` (Mac)
+- Or right-click on a page element and select "Inspect" or "Inspect Element"
+
+This opens a panel showing the HTML structure. You can:
+1. Hover over elements in the HTML to highlight them on the page
+2. Click on elements to see their attributes and styles
+3. Right-click on an element and select "Copy" → "Copy XPath" or "Copy selector" to get the XPath/CSS selector
+
+Let's practice using inspect element. Visit https://quotes.toscrape.com/ in your browser and:
+
+1. Open developer tools (`Ctrl + Shift + C`)
+2. Click the "Inspect Element" button (or use the cursor icon in the developer tools)
+3. Hover over a quote on the page - you should see it highlighted
+4. Click on the quote - the HTML panel should jump to that element
+5. Right-click on the element in the HTML panel and try "Copy XPath" or "Copy selector"
+
+Now let's scrape https://quotes.toscrape.com/ using what we find with inspect element:
+
+[source,python]
+----
+import requests
+from lxml import html
+
+url = "https://quotes.toscrape.com/"
+response = requests.get(url)
+tree = html.fromstring(response.text)
+
+# Find all quote containers (divs with class="quote")
+# You can find this by inspecting the page!
+quote_containers = tree.xpath('//div[@class="quote"]')
+
+print(f"Found {len(quote_containers)} quote containers\n")
+
+# Extract data from each container
+for i, container in enumerate(quote_containers[:3], 1):  # First 3 quotes
+    # Extract quote text from within this container
+    quote_text = container.xpath('.//span[@class="text"]/text()')[0]
+    
+    # Extract author from within this container
+    author = container.xpath('.//small[@class="author"]/text()')[0]
+    
+    # Extract tags from within this container
+    tags = container.xpath('.//a[@class="tag"]/text()')
+    
+    print(f"Quote {i}:")
+    print(f"  Text: {quote_text}")
+    print(f"  Author: {author}")
+    print(f"  Tags: {', '.join(tags)}")
+    print()
+----
+
+[NOTE]
+====
+When you inspect the page, you'll see that each quote is in a `<div>` with `class="quote"`. Inside each div, there's a `<span>` with `class="text"` containing the quote, a `<small>` with `class="author"` containing the author, and `<a>` tags with `class="tag"` for the tags. Using inspect element helps you understand this structure!
+====
+
+Now, use inspect element to examine https://quotes.toscrape.com/ and write code to extract:
+1. Each quote's text, author, and tags together
+2. The "Next" link at the bottom of the page (if it exists) - extract its `href` attribute
+
+.Deliverables
+====
+2.1. Use browser developer tools (`Ctrl + Shift + C`) to inspect https://quotes.toscrape.com/
+
+2.2. Identify the HTML structure of quote containers using inspect element
+
+2.3. Write code to extract quote text, author, and tags for each quote
+
+2.4. Extract the "Next" link's href attribute (if it exists)
+
+2.5. Explain how you used inspect element to find the correct selectors
+====
+
+=== Question 3 (2 points)
+
+Let's practice scraping another real website. Visit https://theexamplesbook.com/ in your browser and use inspect element to explore its structure:
+
+[source,python]
+----
+import requests
+from lxml import html
+
+url = "https://theexamplesbook.com/"
+response = requests.get(url)
+
+# Always check the status code first
+if response.status_code == 200:
+    print("Successfully fetched the page!")
+    tree = html.fromstring(response.text)
+    
+    # Use inspect element to find what you want to extract
+    # For example, let's find all links on the page
+    links = tree.xpath('//a/@href')
+    print(f"\nFound {len(links)} links on the page")
+    
+    # Show first 10 links
+    for i, link in enumerate(links[:10], 1):
+        print(f"{i}. {link}")
+else:
+    print(f"Error: Status code {response.status_code}")
+----
+
+[NOTE]
+====
+Different websites have different structures. Always use inspect element to understand the HTML structure before writing your scraping code. The selectors that work on one website might not work on another!
+====
+
+Now, scrape https://theexamplesbook.com/:
+1. Use inspect element to explore the page structure
+2. Extract at least 3 different types of information (e.g., headings, links, text content)
+3. Display your results
+
+.Deliverables
+====
+3.1. Visit https://theexamplesbook.com/ and use inspect element to explore its structure
+
+3.2. Identify at least 3 different types of elements you want to extract
+
+3.3. Write code to fetch and parse the page
+
+3.4. Extract the information you identified
+
+3.5. Display the results in a readable format
+====
+
+=== Question 4 (2 points)
+
+Many websites split content across multiple pages using pagination. To scrape all the data, we need to follow links from page to page. Let's learn how to handle pagination:
+
+[source,python]
+----
+import requests
+from lxml import html
+import time
+from urllib.parse import urljoin
+
+base_url = "https://quotes.toscrape.com"
+current_url = base_url
+all_quotes = []
+page_num = 1
+
+while True:
+    print(f"Scraping page {page_num}...")
+    response = requests.get(current_url)
+    tree = html.fromstring(response.text)
+    
+    # Extract quotes from current page
+    quote_containers = tree.xpath('//div[@class="quote"]')
+    for container in quote_containers:
+        text = container.xpath('.//span[@class="text"]/text()')[0]
+        author = container.xpath('.//small[@class="author"]/text()')[0]
+        tags = container.xpath('.//a[@class="tag"]/text()')
+        all_quotes.append({"text": text, "author": author, "tags": tags})
+    
+    # Check for "Next" button using inspect element to find the selector
+    next_button = tree.xpath('//li[@class="next"]/a/@href')
+    
+    if next_button:
+        # Construct full URL (handling relative URLs)
+        next_url = next_button[0]
+        # Use urljoin to properly combine URLs
+        current_url = urljoin(base_url, next_url)
+        page_num += 1
+        time.sleep(1)  # Be polite - wait between requests
+    else:
+        print("No more pages!")
+        break
+
+print(f"\nTotal quotes scraped: {len(all_quotes)}")
+print(f"\nFirst 3 quotes:")
+for i, quote in enumerate(all_quotes[:3], 1):
+    print(f"{i}. {quote['text']} - {quote['author']} - Tags: {', '.join(quote['tags'])}")
+----
+
+[NOTE]
+====
+When following pagination links, always check if the link is relative (starts with `/`) or absolute (starts with `http`). The `urljoin()` function from `urllib.parse` properly combines base URLs with relative paths. Also, it's good practice to add small delays (`time.sleep()`) between requests to avoid overwhelming the server.
+====
+
+Now, scrape all quotes from https://quotes.toscrape.com/ by following pagination links:
+1. Extract quote text, author, and tags from each page
+2. Follow the "Next" link to get to the next page
+3. Continue until there are no more pages
+4. Store all data in a list of dictionaries
+
+.Deliverables
+====
+4.1. Write code to scrape all pages from https://quotes.toscrape.com/
+
+4.2. Handle pagination by following "Next" links (use inspect element to find the selector)
+
+4.3. Extract quote text, author, and tags from each page
+
+4.4. Store all data in a structured format (list of dictionaries)
+
+4.5. Print the total number of quotes scraped and display a few examples
+====
+
+=== Question 5 (2 points)
+
+Let's practice extracting more complex data. Sometimes we need to extract attributes, handle nested structures, and work with different types of content:
+
+[source,python]
+----
+import requests
+from lxml import html
+from urllib.parse import urljoin
+
+url = "https://quotes.toscrape.com/"
+response = requests.get(url)
+tree = html.fromstring(response.text)
+
+# Extract author profile links
+author_link_elements = tree.xpath('//a[contains(@href, "/author/")]')
+author_dict = {}
+
+for elem in author_link_elements:
+    author_name = elem.text
+    author_href = elem.get('href')
+    # Convert relative URL to absolute
+    full_url = urljoin(url, author_href)
+    author_dict[author_name] = full_url
+
+print("Author name to profile URL mapping:")
+for name, profile_url in list(author_dict.items())[:5]:
+    print(f"{name}: {profile_url}")
+
+# Extract tag links
+tag_elements = tree.xpath('//a[@class="tag"]')
+print(f"\nFound {len(tag_elements)} tag links")
+print("\nFirst 10 tags:")
+for i, tag_elem in enumerate(tag_elements[:10], 1):
+    tag_text = tag_elem.text
+    tag_href = tag_elem.get('href')
+    tag_url = urljoin(url, tag_href)
+    print(f"{i}. {tag_text} -> {tag_url}")
+----
+
+[NOTE]
+====
+When extracting links, remember to convert relative URLs (like `/author/Steve-Jobs`) to absolute URLs (like `https://quotes.toscrape.com/author/Steve-Jobs`) using `urljoin()`. This is important if you want to visit those links later.
+====
+
+Now, scrape https://quotes.toscrape.com/ and:
+1. Extract all author profile links (links that go to `/author/...`)
+2. Extract the text and href of each tag link
+3. Create a dictionary mapping each author name to their profile URL
+4. Create a list of all unique tags found on the page
+
+.Deliverables
+====
+5.1. Extract all author profile links from the page
+
+5.2. Extract tag names and their corresponding links
+
+5.3. Create a dictionary mapping author names to their profile URLs (use absolute URLs)
+
+5.4. Create a list of all unique tags
+
+5.5. Display the results in a clear format
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_webscraping_project2.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
