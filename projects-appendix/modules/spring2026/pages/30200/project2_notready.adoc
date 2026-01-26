@@ -1,0 +1,480 @@
+:page-mathjax: true
+
+= TDM 30200: Project 2 - Convolutional Neural Network
+
+== Project Objectives
+
+.Learning Objectives
+****
+- Understand the structure of neural networks
+- Understand and implement CNN
+****
+
+== Dataset
+
+- /anvil/projects/tdm/data/mnist/mnist_train.csv
+- /anvil/projects/tdm/data/mnist/mnist_test.csv
+
+
+This project will use the MNIST dataset: mnist_train.csv, mnist_test.csv
+(https://www.kaggle.com/datasets/oddrationale/mnist-in-csv)
+
+https://the-examples-book.com/projects/data-sets/MNISTinCSV[MNIST] (Modified National Institute of Standards and Technology) dataset consists of 60,000 training images and 10,000 testing images; they are grayscale images of handwritten digits 0-9. Each are 28x28 pixel, totalling 784 pixels each with a value between 0-255. This dataset is very well known and widely used in machine learning and classification tasks, specifically image recognition. 
+
+[[ai-note]]
+[IMPORTANT]
+====
+If AI is used in any cases, such as for debugging, research, etc., we now require that you submit a link to the entire chat history. For example, if you used ChatGPT, there is an “Share” option in the conversation sidebar. Click on “Create Link” and please add the shareable link as a part of your citation.
+
+The project template in the Examples Book now has a “Link to AI Chat History” section; please have this included in all your projects. If you did not use any AI tools, you may write “None”.
+
+We allow using AI for learning purposes; however, all submitted materials (code, comments, and explanations) must all be your own work and in your own words. No content or ideas should be directly applied or copy pasted to your projects. Please refer to https://the-examples-book.com/projects/spring2026/syllabus#guidance-on-generative-ai. Failing to follow these guidelines is considered as academic dishonesty.
+====
+
+== Questions
+
+Neural Networks are a subset of Machine Learning that is made up of node layers (or artificial neurons: the idea is that it makes decisions by weighing options like the human brain), and input, hidden, and output layers. 
+In this project, we are going to focus on Convolutional Neural Networks (CNNs).
+
+Generally, the structure of a neural network consists of parts below. 
+
+• Input Layer
+
+This is the first layer of a neural network receiving raw input data. In CNN it is usually images or sequence of images. The features of the input will be represented through each neurons. 
+
+• Hidden Layer
+
+Most learning occurs in this layer. Depending on the task, the number and size varies. 
+
+Individual linear regression model is applied to each neurons, then passed through an activation function. 
+We can mathematically express this as below. 
+
+$z = \sum(w_{i}x_{i}) + b$,
+
+$a = f(z)$,
+
+where $w_i$ denotes the weights, $x_i$ represents the input features, $b$ is the bias term, $f(\cdot)$ is the activation function, $a$ is the output of the neuron, and $n$ is the number of input features. Note that the output from the first activation function is used as the input to next neurons. 
+
+There are different types of activation functions. Some well known ones include ReLU, Sigmoid, etc. (Remember some of them from https://the-examples-book.com/projects/spring2026/40200/project1#question-1-2-points[last week's project])
+. Also, the derivative calculated with the activation function is required during back propagation. 
+
+$\frac{\partial L}{\partial w} = \frac{\partial L}{\partial y} \cdot \frac{\partial y}{\partial z} \cdot \frac{\partial z}{\partial w}$.
+
+In words, this equation describes how a small change in the weight $w$ affects the loss $L$. It is obtained by chaining three terms together: how the loss changes with respect to the output $y$, how the output $y$ changes with respect to the activation input $z$, and how the weighted sum $z$ changes with respect to the weight $w$. Loss function simply just measures how much the predicted output for an input is different from the correct value (ground truth).
+
+In back propagation, we want to calculate the loss function with respect to neural network's parameters.
+
+The overall steps include back propagation looks like below:
+
+1. Forward Pass then calculate Loss Function +
+- In CNN, we have convolution, pooling, flattening, fully connected +
+2. Backpropagation +
+3. Gradient Descent (Updates the weight. Goal is to minimize the loss function)
+
+
+• Output Layer
+
+This layer focuses on generating the final prediction or result based on the learning of the features during training. 
+
+There are multiple types of neural networks. Some of the main types include
+
+- Multi Layer Perceptron (MLP - we discussed this one last week in https://the-examples-book.com/projects/spring2026/40200/project1[Project 1]), +
+- Convolutional Neural Networks (CNN), +
+- Recurrent Neural Networks (RNN).
+
+CNNs build on the NN structure but are used primarily in analyzing grid like matrix datasets: images and videos or other visual datasets. 
+
+=== Question 1 (2 points)
+
+Let's start by loading in the MNIST dataset. 
+
+[source,python]
+----
+import pandas as pd
+
+data = pd.read_csv('/anvil/projects/tdm/data/mnist/mnist_train.csv')
+----
+
+The output of `head()` should look like:
+
+[source,python]
+----
+(60000, 785)
+   label  1x1  1x2  1x3  1x4  1x5  1x6  1x7  1x8  1x9  ...  28x19  28x20  \
+0      5    0    0    0    0    0    0    0    0    0  ...      0      0   
+1      0    0    0    0    0    0    0    0    0    0  ...      0      0   
+2      4    0    0    0    0    0    0    0    0    0  ...      0      0   
+3      1    0    0    0    0    0    0    0    0    0  ...      0      0   
+4      9    0    0    0    0    0    0    0    0    0  ...      0      0   
+
+   28x21  28x22  28x23  28x24  28x25  28x26  28x27  28x28  
+0      0      0      0      0      0      0      0      0  
+1      0      0      0      0      0      0      0      0  
+2      0      0      0      0      0      0      0      0  
+3      0      0      0      0      0      0      0      0  
+4      0      0      0      0      0      0      0      0  
+
+[5 rows x 785 columns]
+----
+
+- 60000 rows represeting 60000 digit images, and 785 columns where we have one label column for digit 0-9 and 784 pixel value columns (individual images are 28x28 pixel grayscale image)
+- The pixel values are shown with the following formatting: (row)x(column). We can see from the head output that they are listed 1x1, 1x2, ..., 28x28 -> 28x28 pixel grid
+- Pixel values range from 0 (black) to 255 (white)
+
+
+.Deliverables
+====
+1a. Load the MNIST dataset and print the shape and head of the dataset. Write a few sentences on your observation and initial thoughts about the dataset. +
+1b. Explain in your own words how images and pixels are represented in this dataset. 
+====
+
+=== Question 2 (2 points)
+
+We will start by creating a class to load the MNSIT data from the csv file. 
+
+[source,python]
+----
+from torchvision import transforms
+from torch.utils.data import DataLoader, Dataset
+import numpy as np
+----
+
+`torchvision` is a library used for computer vision tasks and provides different models, transformation functions, datasets, etc. 
+
+`torch.utils.data` is a pytorch module that allows more efficient data handling for training and evaluation. 
+
+[source,python]
+----
+class MNISTDataset(Dataset):
+    def __init__(self, csv_file, transform=None):
+        self.data = pd.read_csv(csv_file)
+        self.transform = transform
+        
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        # First column of a row idx is the label
+        label = self.data.iloc[idx, 0]
+        # Get all remainder of the row (columns - pixels) and returns 1D array through .values
+        # 8bit unsigned integers allow visual display of grayscale images. It has 0-255 for the 256 different intensity levels
+        pixels = self.data.iloc[idx, 1:].values.astype(np.uint8)
+        # Convert into 2D array (28x28)
+        image = pixels.reshape(28, 28)
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image, label
+----
+
+
+[source,python]
+----
+transform = transforms.Compose([transforms.ToTensor(),   # converts image to tensor [0,1]
+                                 transforms.Normalize((0.5,), (0.5,))])  # normalize to [-1,1]
+
+train_dataset = MNISTDataset('mnist_train.csv', transform=transform)
+load_train = DataLoader(train_dataset, batch_size=64, shuffle=True)
+
+ # test_dataset
+'''YOUR CODE HERE'''
+
+# load_test
+'''YOUR CODE HERE'''
+
+# Print training and test dataset size
+'''YOUR CODE HERE'''
+----
+
+`transforms.ToTensor()` takes in an image or a Numpy array and converts it into PyTorch tensors. The data now ranges from [0,255] to [0.0, 1.0].
+
+`transforms.Normalize((0.5,), (0.5,))` (first argument = mean, second argument = standard deviation) uses (input - 0.5 / 0.5) and rescales to [-1,1].
+
+`DataLoader()` provided by PyTorch is used for loading and processing data efficiently when training models. It works with another object called `Dataset`, allowing different features such as batching and shuffling be available. 
+
+Now, we will create a bar plot to visualize the distribution of the digits (0-9) in the training dataset. 
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+
+labels = []
+# Iterate through each sample in train_dataset
+# Obtain the label (digits 0-9) and add to the list
+for image, label in train_dataset:
+    labels.append(label)
+
+# Create Pandas Series then count unique value occurences and sort in digit order
+'''YOUR CODE HERE'''
+
+# Create plot (can do it in Pandas)
+'''YOUR CODE HERE'''
+----
+
+We can convert the list into a Pandas series using `pd.Series()`. It will also be helpful to use `value_counts()` to count the occurences of unique values, and `sort_index()` to sort based on the indices (for digits 0-9).
+The x axis should be digits 0 through 9 and the y axis should be the number of examples per digit.
+
+Lastly, we will create another visualization to view some sample images. 
+
+[source,python]
+----
+fig, axes = plt.subplots(1, 5, figsize=(10, 5))
+
+for i in range(5):
+  image, label = train_dataset[i]
+  pic = image.squeeze().numpy()
+  axes[i].imshow(pic, cmap='gray')
+  axes[i].set_title(f"Label: {label}")
+  axes[i].axis('off')
+plt.show()
+----
+`fig, axes = plt.subplots(1, 5, figsize=(10, 5))`: Creates 5 plots in one row.
+We then get the five sample images, where image is the pytorch tensor representing the digit, and label is the true digit (0-9). 
+`train_dataset[i]` will return one sample. We then convert the tensor into numpy, and use matplotlib to show the visualization. 
+
+.Deliverables
+====
+2a. Output of all running code. +
+2b. Complete for test_dataset, load_test, and printing the size of test and train dataset. +
+2c. Complete code for plotting digit distribution. Make sure to include output. What does this graph tell us? +
+2d. Code and the output of visualization of five sample images of MNIST dataset. +
+2e. Make sure to document all of your code in your own words.
+====
+
+=== Question 3 (2 points)
+
+Convolutional Neural Networks have three main types of layers, where Convolutional layer is the first, followed by the Pooling Layer and the Fully Connected Layer. 
+
+• Convolutional Layer
+
+Most of the computation occurs at this stage. An activation function is applied to the output of the convolution operation.
+
+Kernels (also called filters) are small matrices that slide across the image. Convolution is the process of applying these kernels to detect specific features within the image. Convolution is defined with:
+
+
+$S(i,j) = (I * K)(i,j) = \sum_{m=0}^{M-1} \sum_{n=0}^{N-1} K(m,n)\, I(i-m, j-n)$
+
+where $I$ is the image and $K$ is the kernel. $m$ and $n$ specifies the position (coordinates inside the kernel), and $K(m,n)$ represents the respective weight at row $m$, column $n$. 
+
+As another example, in images (2D grid) we compare pixel values around edges and adjacent elements. Mathematically, we can express 2D convolution as:
+
+$S(i,j) = \text{feature map at} (i,j) = (I * K)(i,j) = \sum_{m=0}^{M-1} \sum_{n=0}^{N-1} I(i+m, j+n) \, K(m,n)$
+
+High value in a feature map suggests existence of a pattern in an input region. Convolutional layer incorporates multiple filters to detect different features. Identification of more complex features occurs as we go deeper into the network. 
+
+You can see that there is a slight difference in the representation. This is because the first formula uses convolution, while second one is technically a cross correlation. While we just perform multiplication through aligned entries with the filter placed over an area and shifting it throughout, in cross correlation, we flip the filter by 180 degrees before performing element wise multiplication/summation in convolution. Flipping can be thought of as reversing both rows and columns. 
+
+However, symmetric kernels produce the same result for both methods. Even if this is not the case, the overall result regardless of the method, is not significantly impacted as the training process allows the learning of the kernel weights, so CNN adapts to it either way. 
+
+After convolution, an activation function (like ReLU) is applied to identify complex patterns linear models do not have the capabilities of doing. 
+
+Below imports are needed to build our CNN model. 
+
+[source,python]
+----
+import torch.nn as nn
+import torch.nn.functional as F
+----
+
+We will be using `torch.nn` to create our convolutional layers. It is used for classes for neural network components. It has pre built layers and different functions needed for convolution, loss, activation, etc. (https://docs.pytorch.org/docs/stable/nn.html)
+`nn.Conv2d` implements 2D convolutional layer.
+`torch.nn.functional` has functions that work only with input data and perform direct operations without working with parameter that gets learned. 
+
+See below starter code. self.conv1 is given to you: 
+
+`self.conv1 = nn.Conv2d(1,8,kernel_size=3, stride=1, padding=1)` means output convolution layer with 8 output feature maps after taking in 1-channel input. 
+`kernel_size` is for defining the size of the filter. Larger the kernel size, more spatial feature we can keep, however the output dimension will be smaller. 
+Stride defines how much the kernel move across the input. Here, saying `stride=1` means we are moving the kernel one pixel per movement. 
+`padding=1` adds one layer of zeros to the boundary of the input. 
+
+The fully connected layer part should reflect the fact that after the second convolutional layer and pooling, the image size becomes (16,7,7) where 16 is the number of channels coming from conv2, and 7x7 is the spatial size. We will use `nn.Linear()` for this part. The second argument to nn.Linear will be the number of classes in the outcome (corresponds to the number of digits we have).
+
+We also have the forward function which implements the forward pass. We use ReLU as the activation function and max pooling.
+
+- Pooling
+
+Also known as **downsampling**, this operation reduces the spatial size of feature maps. 2D filter is applied over channels of feature map and obtains the most important features. This operation also leads to a more efficient model as the amount of computation and the number of parameters are reduced. 
+
+Two main types of pooling are:
+
+1. Max Pooling: Output array contains the maximum value pixel. +
+2. Average Pooling : average value is calculated in the region as the filter is moved across the input. 
+
+
+- Fully Connected Layer
+
+All neurons here are connected to all other neurons in all previous layers. The previously learned features in the layers are used to perform final classification at this layer. 
+
+$z_{j} = \sum_{i} (w_{ij}x_{i}) + b_{j}$.
+
+Above describes the way inputs are given to each neuron at this layer. All previous neurons have individual weights with bias. Note that $w_{ij}$ would represent the weight of neuron $i$ at a previous layer, going to neuron $j$. $x_{i}$ is the input. 
+
+$a_{j} = f(z_{j})$.
+
+Above denotes the non linear output obtained by passing weighted sum through an activation function. 
+
+[source,python]
+----
+class cnn(nn.Module):
+  def __init__(self):
+    super().__init__()
+
+    # 1st convolutional layer
+    self.conv1 = nn.Conv2d(1,8,kernel_size=3, stride=1, padding=1)
+
+    # 2nd convolutional layer
+    '''YOUR CODE HERE'''
+
+    # fully connected layer
+    '''YOUR CODE HERE'''
+  
+  def forward(self, x):
+    # 1st convolutional layer with ReLU and max pooling
+    x = F.relu(self.conv1(x))
+    x = F.max_pool2d(x,2,2)
+
+    # 2nd convolutional layer
+    '''YOUR CODE HERE'''
+
+    # flatten
+    x = x.reshape(x.shape[0], -1)
+
+    # fully connected layer
+    x = self.fc1(x)
+    return x
+----
+
+.Deliverables
+====
+3a. Complete above for defining our model. Make sure to document all of your code. +
+3b. Outputs of all running code. +
+3c. Explain in your own words the difference between convolution and cross correlation and why CNN works either way. +
+3d. Explain in your own words what max pooling is and how it works, and the same for average pooling. What is the differene between the two? Is there a benefit in using one over the other? +
+3e. Explain in your own words the difference between convolutional layer and fully connected layer. 
+====
+
+=== Question 4 (2 points)
+
+Now continue with other setups:
+
+[source,python]
+----
+import torch
+import torch.optim as optim
+
+device = torch.device("cpu")
+model = cnn().to(device)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+----
+
+`nn.CrossEntropyLoss()`:
+
+Cross Entropy Loss is a common loss function used in classification ML tasks. It measures how closely the model predicted to the real value. 
+
+We recommend you to read more about it. Some example sources: +
+https://docs.pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html, +
+https://www.geeksforgeeks.org/machine-learning/what-is-cross-entropy-loss-function/
+
+`optim.Adam(model.parameters(), lr=0.001)`:
+
+Adam (Adaptive Moment Estimation) is an optimization algorithm that uses Momentum and RMSprop (Root Mean Square Propagation). Momentum makes gradient descent faster through convergence by taking past gradients into consdieration. RMSprop computes the moving average of past squared gradient and prevent the learning rate from decreasing more than it needs to. 
+Our example is not very complicated but there are some very complex models that have heavily varying gradients leading to either explosive or vanishing gradients, and this method tries to counteract that through adaptive learning rate (changes over time). 
+
+[source,python]
+----
+from tqdm import tqdm
+
+epochs = 5
+
+for epoch in range(epochs):
+    model.train()
+    running_loss = 0.0
+    
+    # adding progress bar
+    for images, labels in tqdm(load_train, desc=f'Epoch {epoch+1}/{epochs}'):
+        images, labels = images.to(device), labels.to(device)
+    
+        # Forward pass
+        output = model(images)
+        loss = criterion(output, labels)
+
+        # Backward pass
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item()
+    
+    epoch_loss = running_loss / len(load_train)
+    print(f"Epoch [{epoch+1}/{epochs}], Loss: {epoch_loss:.4f}")
+----
+
+[NOTE]
+====
+`tqdm` is a library allowing us to add progress bars. It is not necessary but you can have it too for the visual representation fo progress/iterations/time.
+====
+
+.Deliverables
+====
+4a. Code and the output of running code. +
+4b. What is the purpose of running multiple epochs? What would occur if we ran for too many epochs or too few epochs? +
+4c. Write a few sentences explaining the steps and difference between the forward pass and backward pass. +
+4d. What does `loss.backward()` and `optimizer.step()` do? 
+====
+
+=== Question 5 (2 points)
+
+[source,python]
+----
+def calculate_accuracy(model, data_loader, device):
+    # Set to evaluation mode
+    model.eval()
+
+    # Initialize counters
+    correct = 0
+    total = 0
+    
+    with torch.no_grad():
+        # Iterate through all batches
+        for images, labels in data_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+            outputs = model(images)
+            # torch.max will return (max, max index). We are getting the predicted index. 
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+    
+    # Get percent accuracy
+    return 100*correct/total
+
+calculate_accuracy(model, load_test, device)
+----
+
+.Deliverables
+====
+5a. Code and the output of running code. +
+5b. Use average pooling and output the accuracy for this version. 
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project2.ipynb
+====
+
+[WARNING]
+====
+It is necessary to document your work, with comments about each solution.  All of your work needs to be your own work, with citations to any source that you used.  Please make sure that your work is your own work, and that any outside sources (people, internet pages, generative AI, etc.) are cited properly in the project template.
+
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not.
+
+**Please** take the time to double check your work. See xref:ROOT:submissions.adoc[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
