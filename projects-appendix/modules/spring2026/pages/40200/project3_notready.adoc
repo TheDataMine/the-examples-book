@@ -1,0 +1,963 @@
+= TDM 40200: Project 3 - Containers & RESTful APIs
+
+== Project Objectives
+
+We are going to cover the basics of RESTful API's and Apptainer, a Docker like product. This will build a simple baseline project that is easily exapandable into almost any project you would work on.
+
+.Learning Objectives
+****
+- Understand what is Apptainer and how does it work
+- Understand what a RESTful API is and does
+- Connect different services together
+****
+
+== Dataset
+- None for this project
+
+== Useful Things
+
+A lot of this project is done within the terminal and we will just have some ways to verify your work in the Notebook.
+
+Similar to other projects that are not purely in a notebook, you will need to create a clean working directory for this project. 
+
+Note that you will need to base the file paths provided to you in the handout based on your filesystem.
+
+[IMPORTANT]
+====
+Do **NOT** try to run all these things in the Notebook because they likely will not work. 
+
+The handout should explicitly say where you need write something and when you need to run something in your notebook.
+====
+
+
+== Questions
+
+=== Question 1 (2 points)
+
+==== Containers - What are they?
+
+If you have every worked on some production code then you probably ran that code in some sort of container - likely Docker. Docker is commonly used in industry.
+
+But due to the current status of Anvil, we cannot run Docker very easily, so we are using Apptainer instead. It similar in principle to Docker but has some key differences that make it more fitted for running on HPC (High Performance Computing) environments because of those implemenation differences.
+
+Right, but what actually is a container and what do they do?
+
+Containers at their core provide a common working environment for your code - no matter where it is. The age old excuse of "well it works on my computer" is effectively nullified when you consider using containers. Whats even more convenient is that as long as the device can run the container software (which most devices can) then your software can run there. No problem. Much fewer compatibility issues!
+
+That sounds nice but if you have heard of virtual machines you may ask why we would we need containers? Well, there a few good reasons. 
+
+It really depends on your application, but most of the time running entire virtual machine, either virtualized or emulated, is _much much_ heavier on your system than just creating a container, especially if you are deploying multiple containers or hosting your product on less beefy devices. Virtual machines are also generally less compatible than container software.
+
+The https://www.bmc.com/blogs/containers-vs-virtual-machines/[image below] provides a visualization on the differences. Containers will create a basic filesystem for your program to use while running but it will not bother running an entirely new OS layer for every container deployed.
+
+image::containers-vs-virtual-machines.jpg[conatiner vs virtual machine diagram, 600,450]
+
+Since the containers can be run on one shared operating system, use the same lightweight container engine to manage containers, it saves a lot of resources and also simplifies things like communication between containers since the engine typically can help handle that routing.
+
+So how do you make a container?
+
+You need something called an _image_. You typically start by using a base preset of whatever kind of software you need. For example, if you want to run a Python service, then you can create a Python based image, if you want to create a JavaScript app then you can create a Node based image. If you want to create a Postgres container, you can create a Postgres based image etc. Different container services provide access to these base images slightly different but the idea is the same - there is some central registry that stores different versions of prebuilt, ready to use images for many types of softwares you can pull down.
+
+Once you have the starting image, you can also create your own custom images and push them to these registries that people can pull down from too. The process is shown visually below:
+
+image::docker-registry.jpeg[docker registry graph, 600, 450]
+
+[NOTE]
+====
+Even though the https://www.geeksforgeeks.org/devops/what-is-docker-registry/[graphic] says "Dockerfile", the concept is the same even for Apptainer. Apptainer even lets you bootstrap images from the Docker registry which is very convenient!
+====
+
+Some of this may seem a little abstract, but once we get into creating our own images in the next question, some of the potential confusion should cleared up.
+
+Feel free to read more about containers and registries from the two links provided and please answer the questions in the deliverable.
+
+.Deliverables
+====
+- 2-3 sentences explaining what a container is
+- 2-3 setnences explaining images and registry
+====
+
+
+=== Question 2 (2 points)
+
+==== Creating a Apptainer Service
+
+Now that we have a general idea of what a container is, let us define one. 
+
+But first lets make a simple script that we want to run inside our container. Outside of the Notebook (in terminal or file explorer), create a script called `hello.py` that will just print out hello world every few seconds:
+
+[source,python]
+----
+# /hello.py
+from datetime import datetime
+from time import sleep
+
+def main():
+
+  while True:
+    print(f"{datetime.now().time()} - Hello world!")
+    sleep(3)
+  print("End of function!")
+
+
+if __name__ == "__main__":
+  main()
+----
+
+[NOTE]
+====
+As always please make sure to create a clean working directory for this project.
+
+i.e "project13/hello.py"
+====
+
+For simplicity we are going to manually create a `requirements.txt` to avoid issues with the `seminar` kernel environment. Create this in the same spot as your `hello.py` (we dont actually need pandas here, we just need something as placeholder):
+
+[source,txt]
+----
+# project13/requirements.txt 
+pandas==2.3.2
+----
+
+Now we can create a file called `Apptainer.def` - `.def` is the specific file type used to define your image for Apptainer. This is a brief overview of some of the main sections of a Apptainer definition file:
+
+[source,def]
+----
+# project13/Apptainer.def
+Bootstrap: # registry location you are bootstrapping from
+From: # the image you want to pull from the registry
+
+%files
+  # this is where you copy over the relevant files from your local workspace to your container workspace
+
+%post
+  # this is where you run the necessary bash commands to create the environment you want for your program to run in
+  # i.e. customizing base file structure, updating dependencies to ensure a stable environment, installing python requirements into the environment 
+
+
+%environment
+  # this is where you can define environment variables you may need
+
+%runscript
+  # this is where you run the script that for your program
+----
+
+[NOTE]
+====
+Note that Apptainer has a set order of executing the sections during build time:
+
+bootstrap → files → post → environment → runscript
+
+So the order in which you write your sections does not matter - it simply is a matter of personal preference. Some people may write `%post` _prior_ to `%files` since that is closer to the Dockerfile structure.
+====
+
+Lets go through this section by section.
+
+===== Defining Base Image
+
+We mentioned in the last problem that we can just use the Docker registry even though we are using Apptainer. We can set the location we are pulling from to be the default Docker registry by specifying the `Bootstrap` parameter. We also want to grab a Python image from that registry so we can run our program:
+
+[source,def]
+----
+# project13/Apptainer.def
+Bootstrap: docker
+From: python:3.11-slim
+----
+
+We specified the location to be `docker` and then our base image to be `python:3.11-alpine`.
+
+Alpine just means it is a lighter weight version of the Python 3.11 installation. A lot of the time you may not need the full installation of Python for your application so we can save resources by using this version. 
+
+===== File Mapping - `%files`
+
+Like just mentioned, this runs prior to `%post`. This is where we map/move the files from our local workspace to inside the container. For a small example like this we dont need much something as simple as:
+
+
+[source,def]
+----
+    . /app
+----
+
+will do. This takes all files in the current directory and copies them into a folder called `/app` in the containers filesystem (it will automatically create the directory `/app` for us)
+
+===== Setting Up Environment - `%post`
+
+Now we have our basic Linux environment with Python installed and our necessary app files moved over, its generally good practice to update your Linux and ensure dependencies for your Python installation are up to date.
+
+At the most basic level we can just run:
+
+[source,def]
+----
+    # update and install build dependencies
+    apt-get update && apt-get install -y gcc libc-dev && rm -rf /var/lib/apt/lists/*
+----
+
+Some Python libraries like `numpy`, `pandas`, `psycopg2`, `cryptography` etc all have some native code written in C, so we need to make sure C compilers (gcc & libc-dev) are installed in our environment so the packages can properly compile when we install them into our environment.
+
+We then remove the files in `/var/lib/apt/lists/*` because these are files created by the commands `apt-get update` && `apt-get install` which are only needed during the installation of the packages. Once the necessary dependencies are installed, we can remove them to reduce bloat and have a slimmer final image.
+
+Now that our Linux is updated and we have the base dependencies we need installed. We then install our requirements into our environment which we can do like so:
+
+[source,def]
+----
+    # install python dependencies
+    pip install --no-cache-dir -r ./app/requirements.txt
+----
+
+Note that since we are in a separated workspace, installing globaly is okay, in fact it is generally done this way. There is not much need to worry about creating a virtual environment when you are working in a container since it is an entirely clean and isolated environment.
+
+===== Defining Environment Variables - `%environment`
+
+If you recall from last fall in TDM 301/401 Project 2 we had to do some workaround with the PATH environment variables, here is another application of where we will specify environment varibales like PATH to make sure we use the correct Python and such.
+
+[source,def]
+----
+    export PATH=/home/$USER/.local/bin:$PATH 
+    export HOME=/home/$USER
+    export APP_DIR=/app
+----
+
+We prepend our `PATH` with `/home/$USER/.local/bin` so when running commands, our shell will know to look in `./local/bin` for the Python environment that we have installed our requirements into.
+
+We specify `HOME` in case some other tools rely on the variable environment variable `HOME` - if we didn't have it set then the tools may break since they are trying to point to an invalid place.
+
+This part is optional, but we choose to add `APP_DIR` here hich just gives us the option to use that as a shortcut to specify certain paths. For some more complex projects, it may be convienent to create these environment variables. One reason is that in case you refactor general strcuture, then you dont necessarily need to go trhough a bunch of different paths and fix them, you can just fix the environment variables.
+
+
+
+===== Running The Script - `%runscript`
+The final section is generally very simple. For our case all we need to tell it to execute the main script. Add this into the `%runscript` secion:
+
+[source,def]
+----
+    exec python /app/hello.py
+----
+
+We could also use our environment variable `APP_DIR` and do this: 
+
+[source,def]
+----
+    exec python APP_DIR/hello.py
+----
+
+===== Building the Container
+
+Now we can build the container and run our program. Run this in the command line:
+
+[source,bash]
+----
+apptainer build myapp.sif Apptainer.def
+----
+
+This may take a minute and sometimes it says it will take an hour or more, but the time fluctuates a lot. It typically only took \~30 seconds to build.
+
+Now we have a `.sif` file which is pure compiled program that now can be moved anywhere and run anywhere!
+
+Lets run it with:
+
+[source,bash]
+----
+apptainer run myapp.sif > output.log 2>&1
+----
+
+For the sake of grading, please run this version below - it will pipe the output into a log file we can view in our Notebook:
+[source,bash]
+----
+apptainer run myapp.sif > output.log 2>&1
+----
+
+[NOTE]
+====
+The `2>&1` is just a tag thats log everything, including errors into the file. 
+
+Normally you would use a file logger instead of this. (We will cover logging more next semester if you stick around :D)
+====
+
+
+.Deliverables
+====
+- In your Notebook, please run `ls project/containers`
+- In your Notebook, please run `cat project/containers/output.log`
+====
+
+
+=== Question 3 (2 points)
+
+==== What is a RESTful API? (is it sleepy?)
+
+First what is an API? It is an _Application Programming Interface_. It is a contract that defines how two programs can talk to each other.
+
+For example, if you check the weather app on your phone, its not going out and scraping the data itself. It is pinging a clean predefined API _endpoint_ requesting information. The API then just passes the information back to the requester. It is essentially a messenger between systems where one app makes a request, the API decides what is allowed and what to do and then responds appropriately. 
+
+APIs gives you stricter control of what each application can know about the other. When working with live users, you definitely do not want them to be able to access the database itself because it opens the doors for many more security vulnerabilties.
+
+Now what is REST? It stands for _Representational State Transfer_ which is a set of standard design principles used for building APIs. Adhering to the standards allows for increased interoperability, increased consistency and increased ease of use.
+
+A RESTful API will typically expose endpoints that map to the _CRUD_ operations:
+
+- [.underline]**C**rud    → add new data
+- [.underline]**R**etrive → retrieve existing data
+- [.underline]**U**pdate  → modify data
+- [.underline]**D**elete  → remove data
+
+These _CRUD_ operations typically map to HTTP methods:
+
+[cols="1,1,1,1",options="header"]
+|===
+| HTTP Verb	| Meaning                               | Example                                  | CRUD Mapping
+| GET       | Fetch data (read only)                | GET /items/1 → returns item 1            | Retrieve
+| POST      | Create a new resource                 | POST /items with body { "value": "abc" } | Create
+| PUT       | Replace an existing resource entirely | PUT /items/1 with new body               | Update
+| PATCH     | Modify part of an existing resource	| PATCH /items/1 with { "value": "xyz" }   | Partial Update
+| DELETE    | Remove a resource	                    | DELETE /items/1                          | Delete
+|===
+
+==== Hands on
+Please create a new directory and file `/api/main.py`. This directory will house our API related files.
+
+We will import `FastAPI`  which is a very popular libary that lets you create API routes in Python. We will get more into it in the next problem.
+
+[source,python]
+----
+# api/main.py
+from fastapi import FastAPI, HTTPException
+from datetime import datetime
+----
+
+We can then create a `FastAPI` object to create our demo API on. The title is completely optional but should be relevant to whatever you are doing.
+Next, we are now going to add the most basic route we can just to test and establish the connection.
+
+[source,python]
+----
+# api/main.py
+
+app = FastAPI(title="Student Demo API")
+
+@app.get("/")
+def read_welcome():
+    return {"message": f"{[datetime.now().time()]} Welcome to a simple demo!"}
+----
+
+This creates a _GET_ route which we just talked about above. This is the simplest version you can make which just returns some information that doesn't require parameterization - things like a static text retrieval or a single point of information you want to define a specific route for.
+
+[NOTE]
+====
+Recall what REST means and its function. Note that GET, POST, DELETE etc exist as part of this convention. For example, you _can_ perform delete operations from within a GET route; however, that breaks the intention of creating a standard set of operations each route type handles. 
+====
+
+Now that we have a simple route, we will also need to update our image definition to serve up this API instead of our test script we had last time. Create a copy of `Apptainer.def` in the `api` directory with the following modification:
+
+
+[source,python]
+----
+# api/Apptainer.def
+
+...
+
+# old:
+%runscript
+    exec python $APP_DIR/main.py
+
+# new:
+%runscript
+    exec uvicorn main:app --host 0.0.0.0 --port 8000 --reload --app-dir /app
+----
+
+In a terminal session within the `/api` directory, please build and run the modified image. 
+[source,bash]
+----
+apptainer build api.sif Apptainer.def
+apptainer run api.sif
+----
+
+We should now be hosting our API and be able to hit our endpoint at "http://127.0.0.1:8000". 
+
+[NOTE]
+====
+You might wonder why we use "127.0.0.1" instead of "0.0.0.0". Here's the difference:
+
+- **0.0.0.0** inside the container means "listen on all network interfaces" - this allows the container to accept connections from outside
+- **127.0.0.1** is the localhost address that your host machine uses to connect to the container
+
+Apptainer automatically maps the container's port 8000 to your host machine's port 8000, making it accessible at `http://127.0.0.1:8000` from your local machine.
+====
+
+Now, in your notebook we are going to make an HTTP request to the API we just served. The nice thing about APIs served on HTTP and following standard REST principles is that you can make requests to that API from any language as long as it can hit an HTTP endpoint. You can host your server in Python using FastAPI, have a Postgres database, and have a frontend written in TypeScript - they can all communicate through HTTP requests.
+
+Now we will make a request to the endpoint and we will be able to get the information from it.
+
+[source,python]
+----
+import requests
+
+for _ in range(5):
+    response = requests.get("127.0.0.1:8000/")
+    print(response.json())
+----
+
+Answer the questions below and show the output from the provided code in your _**Notebook**_.
+
+
+.Deliverables
+====
+- For the following scenarios explain what HTTP method and endpoint structure you would use:
+  - A librarian wants to add a new book to the catalog
+  - A student wants to check if a book is available
+  - A librarian needs to remove a book that was lost
+- Find a real API (like GitHub, Twitter, or any public API) and identify one endpoint that uses each HTTP method (GET, POST, PUT, DELETE). Explain what one of the endpoints do and why that HTTP method makes sense for that operation.
+- Output from making the API call
+====
+
+=== Question 4 (2 points)
+
+==== More FastAPI
+
+We briefly touched on FastAPI but lets get more into it and expand on our API now we have a baseline.
+setting up a fast api & putting it in the container
+
+Since setting up a whole database for our API to ping is a little out of scope and not the primary objective here, we will just define a local temporary dummy dictionary to mimic writing to a database.
+
+[source,python]
+----
+# our in-memory "database"
+items = {}
+----
+
+[NOTE]
+====
+This in-memory dictionary acts as our temporary "database" for this demo. In a real application, this would be replaced with an actual database like PostgreSQL, MySQL, or MongoDB. The dictionary will store our items with their IDs as keys and values as the stored data. Since it's in-memory, all data will be lost when the container stops, but it's perfect for demonstrating how the API endpoints work.
+====
+
+===== Routes Explained
+
+Each route below represents one of the main CRUD operations. They all take one parameter `item_id: int` and use that to perform that operation in our (local) database. Each one of the routes below also has some basic error handling which is standard practice to ensure API safety.
+
+
+[source,python]
+----
+# api/main.py
+@app.get("/items/{item_id}")
+def read_item(item_id: int):
+    if item_id not in items:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"id": item_id, "value": items[item_id]}
+----
+*GET → Retrieve*  
+This fetches an item by its ID. If the ID doesn’t exist, it returns a 404 error.
+
+
+[source,python]
+----
+# api/main.py
+@app.post("/items/{item_id}")
+def create_item(item_id: int, value: str):
+    if item_id in items:
+        raise HTTPException(status_code=400, detail="Item already exists")
+    items[item_id] = value
+    return {"message": "Item created", "id": item_id, "value": value}
+----
+*POST → Create*  
+This creates a new item. If the item already exists, it returns a 400 error.
+
+
+[source,python]
+----
+# api/main.py
+@app.put("/items/{item_id}")
+def update_item(item_id: int, value: str):
+    if item_id not in items:
+        raise HTTPException(status_code=404, detail="Item not found")
+    items[item_id] = value
+    return {"message": "Item updated", "id": item_id, "value": value}
+----
+*PUT → Update*  
+This updates an existing item. If the item doesn’t exist, it returns a 404 error.
+
+
+[source,python]
+----
+# api/main.py
+@app.delete("/items/{item_id}")
+def delete_item(item_id: int):
+    if item_id not in items:
+        raise HTTPException(status_code=404, detail="Item not found")
+    del items[item_id]
+    return {"message": "Item deleted", "id": item_id}
+----
+*DELETE → Remove*  
+This deletes an existing item. If the item doesn’t exist, it returns a 404 error.
+
+
+Now that we have all our CRUD routes defined, let's rebuild and run our container with the updated API:
+
+[source,bash]
+----
+apptainer build api.sif Apptainer.def
+apptainer run api.sif
+----
+
+Just like last problem, the API will start and be available at `http://127.0.0.1:8000`. You can also test if the API is responding by making a simple request. Please run this in your notebook:
+
+[source,bash]
+----
+!curl http://127.0.0.1:8000/
+----
+
+This will show you that port 8000 is being used by your containerized API and that it's responding to requests.
+
+Now let's test our API by making a series of requests to demonstrate all the CRUD operations. We'll go through each operation step by step in your **notebook**:
+
+[source,python]
+----
+import requests
+
+# Base URL for our API
+base_url = "http://127.0.0.1:8000"
+----
+
+===== 1. CREATE - Adding Items to Our Database
+
+First, let's add some items to our database using POST requests. This demonstrates the **Create** operation in CRUD:
+
+[source,python]
+----
+# Create three items with different IDs and values
+response1 = requests.post(f"{base_url}/items/1", params={"value": "Hello World"})
+print(f"Created item 1: {response1.json()}")
+
+response2 = requests.post(f"{base_url}/items/2", params={"value": "FastAPI Demo"})
+print(f"Created item 2: {response2.json()}")
+
+response3 = requests.post(f"{base_url}/items/3", params={"value": "Container API"})
+print(f"Created item 3: {response3.json()}")
+----
+
+===== 2. READ - Retrieving Items from Our Database
+
+Now let's retrieve the items we just created using GET requests. This demonstrates the **Read** operation:
+
+[source,python]
+----
+# Read each item we created
+for item_id in [1, 2, 3]:
+    response = requests.get(f"{base_url}/items/{item_id}")
+    print(f"Retrieved item {item_id}: {response.json()}")
+----
+
+Notice we use template strings to dynamically specify the ID of the item we are trying to read from the database.
+
+===== 3. UPDATE - Modifying an Existing Item
+
+Let's update one of our items using a PUT request. This demonstrates the **Update** operation:
+
+[source,python]
+----
+# Update item 2 with a new value
+response = requests.put(f"{base_url}/items/2", params={"value": "Updated FastAPI Demo"})
+print(f"Updated item 2: {response.json()}")
+----
+
+===== 4. READ - Verifying Our Update Worked
+
+Let's verify that our update actually worked by reading the item again:
+
+[source,python]
+----
+# Read item 2 to confirm the update
+response = requests.get(f"{base_url}/items/2")
+print(f"Item 2 after update: {response.json()}")
+----
+
+===== 5. DELETE - Removing an Item
+
+Now let's delete one of our items using a DELETE request. This demonstrates the **Delete** operation:
+
+[source,python]
+----
+# Delete item 3
+response = requests.delete(f"{base_url}/items/3")
+print(f"Deleted item 3: {response.json()}")
+----
+
+===== 6. Error Handling - Trying to Read a Deleted Item
+
+Let's see what happens when we try to read an item that no longer exists:
+
+[source,python]
+----
+# Try to read the deleted item (should get 404 error)
+response = requests.get(f"{base_url}/items/3")
+print(f"Status Code: {response.status_code}")
+print(f"Response: {response.json()}")
+----
+
+We should get a 404 status code with a "Item not found" message. This demonstrates how our API handles errors gracefully by returning appropriate HTTP status codes and error messages.
+
+A good API will have good error handling specifying the issues that can occur and providing fallback for any unexpected situations. 
+
+Notice the same thing will happen if we try to delete an item that doesn't exist.
+
+Please attempt this in your notebook so we can see the output.
+
+===== 7. Your Turn - Try Creating Your Own Item
+
+Now it's your turn! Try creating a new item with ID 4 and any value you want. Fill in the code below:
+
+[source,python]
+----
+# TODO: Create item 4 with your own value (hint: post request)
+response = requests.____(f"", params=)
+----
+
+We just did a series of requests to the API and we can see the output from each request. Just for fun, lets add a route that will dump all the items in our database:
+
+[source,python]
+----
+# api/main.py
+@app.get("/items/dump")
+def dump_items():
+    if not items:
+        raise HTTPException(status_code=404, detail="No items found")
+    return {"items": items}
+----
+
+Please make a request to the `/items/dump` endpoint and show the output in your notebook.
+
+This will show you the final state of your in-memory database after all the operations we performed.
+
+[NOTE]
+====
+You typically do not want to dump the entire database to the API since that can be a security vulnerability. However, for the sake of this project, we are going to do it.
+====
+
+.Deliverables
+====
+-  Output showing port 8000 is running and the API is serving
+-  Output from the requests sent to the API (Succesfully write, read, update, delete)
+-  Output from the error handling (Failed read, Failed delete)
+-  Output from your own POST to the endpoint
+-  Output from the `/items/dump` endpoint
+====
+
+
+=== Question 5 (2 points)
+
+==== Creating a Second Container
+
+Typically you would not be using Apptainer in a multi container setup since its meant to be a single application running not a multi service tool but we are going to ignore that for the sake of this project. Since the port for the API is already exposed, we are going to do a very similar thing but except have two containers running - one being the API we made last problem and one acting as some user/application pinging the API for some information.
+
+===== Setting Up Multi-Container Communication
+
+In a real-world scenario, you might have:
+- A backend API (like we just built)
+- A frontend application that consumes the API
+- An ETL pipeline that writes data to a database
+- A monitoring service that checks API health
+
+For this demo, we'll create a "client" container that simulates a frontend application making requests to our API.
+
+===== Creating the Client Container
+
+First, let's create a client script that will make randomized requests to our API:
+
+[source,python]
+----
+# client/main.py
+import requests
+import random
+import time
+from datetime import datetime
+
+# Set random seed for reproducible results
+random.seed(42)
+
+def make_random_requests():
+    base_url = "http://127.0.0.1:8000"
+
+    # List of possible operations - simple way to add bias to creating & reading
+    operations = ["create", "read", "read", "update", "delete", "create"]
+
+    # Random values for our items
+    values = ["Random Data", "Test Item", "Demo Value", "Sample Text", "API Test"]
+
+    print(f"Starting client requests at {datetime.now()}")
+
+    for i in range(10):  # Make 10 random requests
+        operation = random.choice(operations)
+        item_id = random.randint(1, 15)
+        value = random.choice(values)
+
+        try:
+            if operation == "create":
+                response = requests.post(f"{base_url}/items/{item_id}", params={"value": value})
+                print(f"CREATE item {item_id}: {response.status_code} - {response.json()}")
+
+            elif operation == "read":
+                response = requests.get(f"{base_url}/items/{item_id}")
+                print(f"READ item {item_id}: {response.status_code} - {response.json()}")
+
+            elif operation == "update":
+                response = requests.put(f"{base_url}/items/{item_id}", params={"value": f"Updated {value}"})
+                print(f"UPDATE item {item_id}: {response.status_code} - {response.json()}")
+
+            elif operation == "delete":
+                response = requests.delete(f"{base_url}/items/{item_id}")
+                print(f"DELETE item {item_id}: {response.status_code} - {response.json()}")
+
+        except Exception as e:
+            print(f"Error with {operation} on item {item_id}: {e}")
+
+        # Small delay between requests to be respectful of the server
+        time.sleep(1)
+
+    print(f"Finished client requests at {datetime.now()}")
+
+if __name__ == "__main__":
+    make_random_requests()
+----
+
+
+Now let's create a requirements file for our client:
+
+[source,txt]
+----
+# client/requirements.txt
+requests==2.31.0
+----
+
+===== Creating the Client Container Definition
+
+Create a new file called `client/Apptainer.def`:
+
+[source,def]
+----
+# client/Apptainer.def
+Bootstrap: docker
+From: python:3.11-slim
+
+%files
+    main.py /app/main.py
+    requirements.txt /app/requirements.txt
+
+%post
+    # Update and install dependencies
+    apt-get update && apt-get install -y gcc libc-dev && rm -rf /var/lib/apt/lists/*
+    
+    # Install Python dependencies
+    pip install --no-cache-dir -r /app/requirements.txt
+
+%environment
+    export PATH=/home/$USER/.local/bin:$PATH 
+    export HOME=/home/$USER
+    export APP_DIR=/app
+
+%runscript
+    exec python /app/main.py
+----
+
+===== Running Both Containers
+
+Now we need to run both containers. Since Apptainer doesn't have built-in networking like Docker, we'll need to run them in separate terminal sessions.
+
+**Terminal 1 - Start the API container:**
+[source,bash]
+----
+apptainer run api.sif > api.log 2>&1 &
+----
+
+**Terminal 2 - Start the client container:**
+[source,bash]
+----
+apptainer build client.sif client/Apptainer.def
+apptainer run client.sif > client.log 2>&1
+----
+
+[NOTE]
+====
+You can run these commands without the `> client.log 2>&1` so you can see the output live in the terminal.
+
+Alternatively, you can also run this script in your notebook so you can see the ouput live!
+====
+
+===== Checking the Results
+
+Let's check what happened by looking at the logs:
+
+[source,bash]
+----
+cat api/api.log
+
+cat client/client.log
+----
+
+You should see the client making various requests to the API, and the API responding with appropriate status codes and messages.
+
+===== Understanding Multi-Container Communication
+
+This setup demonstrates how different containers can communicate through HTTP requests, even though Apptainer isn't designed for this use case. In a real Docker environment, you would use:
+
+- **Docker Compose** to orchestrate multiple containers
+- **Docker networks** for secure container-to-container communication
+- **Service discovery** to automatically find other containers
+- **Load balancers** to distribute requests across multiple API instances
+
+[NOTE]
+====
+If you are in TDM 301 and want to know a little more about the differences between Docker and Apptainer then there is some more information in Question 6 of TDM 401. Obviously you do not need to do it but if you want to learn a little more feel free. 
+====
+
+.Deliverables
+====
+- Output from `cat api.log` showing API requests being received
+- Output from `cat client.log` showing the randomized requests made
+- Brief explanation (1-2 sentences) of how the containers communicated
+====
+
+
+=== Question 6 (2 points)
+
+==== Docker vs Apptainer & Trick for faster development
+
+We mentioned the differences earlier in design philosophy between Docker, an industry standard for multi service applications, and Apptainer, a good choice for HPC environments. Docker is meant to easily be used as multi microservice tool that provides interconnection between the containers natively and has many features that allow it to work better in that regard including the very convenient use of cached layers when building again. It also easily converts into other industry tools such as Kubernetes (K8) making it even more versatile for development and production environments.
+
+You may have noticed earlier that even when you make a small change you have to recompile the whole project. Now if we were using Docker then we could avoid this since they have a more intelligent way of building the images. They build it in layers. So, if you only modify one "layer" then Docker will just reuse the cached layers that didnt change, cutting down on build time.
+
+Apptainer is meant to be run on HPCs and is meant to run as a singular standalone executable file. Not meant to be as flexible as Docker but is well suited for the environment it runs in and the tasks it generally is used for.
+
+When you are developing an app in Apptainer for an HPC then you definitely do not want to have to wait for ever for the image to rebuild entirely each time.
+
+===== The workaround...
+
+Lets take a look at our image. What main parts are there? There seem to be two main classifications: slow changing parts, and fast changing parts. The slow changing parts are things like Linux/Python dependencies or the base Python image version whereas the faster changing parts would be your codebase. So what we can do is split these into two different definitions.
+
+We will build the base environment *without* the code inside of it. This means we will just have a plain container. We will then *bind* the code to the container so it can access it. Note that is purely for development and if you are creating an application for production you do want to include the code in the image. This is just for faster development processes.
+
+===== Creating a Base Environment Image
+
+Let's create a base environment definition that only includes the dependencies, not our code:
+
+[source,def]
+----
+# BaseApptainer.def
+Bootstrap: docker
+From: python:3.11-slim
+
+%post
+    # Update and install dependencies
+    apt-get update && apt-get install -y gcc libc-dev python3-dev && rm -rf /var/lib/apt/lists/*
+    
+    # Install Python dependencies (but no code yet)
+    pip install --no-cache-dir fastapi uvicorn requests
+    
+    # Ensure Python is properly linked
+    ln -sf /usr/local/bin/python3 /usr/local/bin/python
+
+%environment
+    export PATH=/home/$USER/.local/bin:$PATH 
+    export HOME=/home/$USER
+    export APP_DIR=/app
+
+%runscript
+    # This allows you to run custom commands when binding code
+    exec /bin/bash "$@"
+----
+
+Build this base environment:
+
+[source,bash]
+----
+apptainer build base_env.sif BaseApptainer.def
+----
+
+===== Binding Your Code for Development
+
+Now, instead of rebuilding the entire container every time you change your code, you can bind your local code directory to the container:
+
+[source,bash]
+----
+# Bind your current directory to /app in the container
+apptainer run --bind .:/app base_env.sif
+----
+
+This command:
+- Uses the pre-built `base_env.sif` container
+- Binds your current directory (`.`) to `/app` inside the container
+- Allows you to modify your code locally and see changes immediately
+
+===== Testing the Binding Method
+
+Let's test this with our API. First, make sure your API code is in the current directory, then run:
+
+[source,bash]
+----
+# Run the API with bound code
+apptainer run --bind .:/app base_env.sif python -m uvicorn main:app --host 0.0.0.0 --port 8000 --app-dir /app
+----
+
+Now you can:
+
+1. Modify your `main.py` file locally
+2. The changes are immediately available in the container
+3. No need to rebuild the entire image!
+
+[NOTE]
+====
+**Troubleshooting**: If you get Python execution errors, try these alternatives:
+
+1. **Use python3 explicitly:**
+   ```bash
+   apptainer run --bind .:/app base_env.sif python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --app-dir /app
+   ```
+
+2. **Run the script directly:**
+   ```bash
+   apptainer run --bind .:/app base_env.sif python3 /app/main.py
+   ```
+
+3. **Check Python installation:**
+   ```bash
+   apptainer run --bind .:/app base_env.sif python3 --version
+   ```
+
+If none of these work, you may need to rebuild the base environment with the updated definition.
+====
+
+===== Advantages of This Approach
+
+- **Faster Development**: No waiting for image rebuilds
+- **Immediate Changes**: Code changes are reflected instantly
+- **Resource Efficient**: Base environment is built once
+- **Flexible**: Easy to switch between different code versions
+
+[NOTE]
+====
+You typically bind things like `log` directories or `file` directories if your application requires hard files locally. You do not want to bake things that change alot and are not necessarily integral to the core functionality into the image.
+
+You also do *not* want to bake environment secrets into your image because that can open up vulnerabilties if used by/exposed to external users. 
+
+**Important**: This binding method is for development only. For production, you should always include your code in the image to ensure consistency and security.
+====
+
+.Deliverables
+====
+- Output from building the base environment (`apptainer build base_env.sif BaseApptainer.def`)
+- Output from running the API with bound code (showing it works with the binding method)
+- Brief explanation (1-2 sentences) of why this method is faster for development
+====
+
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project1.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
