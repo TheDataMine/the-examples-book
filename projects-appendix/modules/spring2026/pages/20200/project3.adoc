@@ -263,33 +263,72 @@ Some websites check the "User-Agent" header to identify what type of browser or 
 
 [source,python]
 ----
-# Common User-Agent strings (these identify your "browser")
-user_agents = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-]
+# Common User-Agent strings - each of these are web browsers
+user_agents = ['Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+               'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+               'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36']
+----
 
+User agent strings contain information such as browser name, version, and operating system, in a text line which website use to get information on the client making the request. 
+
+We recommend you to read more about it online if you're interested (some sites, such as https://51degrees.com/blog/understanding-user-agent-string, have some good summary to gain more understanding)
+
+First, we create a function to send HTTP request. It takes in two parameters: `url` specifying the page to scrape, and an optional `user_agent` . If we don't specify, the default is used
+
+[source,python]
+----
 def scrape_with_headers(url, user_agent=None):
     """Scrape with custom headers."""
-    headers = {
-        'User-Agent': user_agent or user_agents[0],
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate',
-        'Connection': 'keep-alive',
-    }
+    headers = {'User-Agent': user_agent or user_agents[0],
+               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+               'Accept-Language': 'en-US,en;q=0.5',
+               'Accept-Encoding': 'gzip, deflate',
+               'Connection': 'keep-alive',}
     
     response = requests.get(url, headers=headers)
     return response
 ----
 
+- `User-Agent': user_agent or user_agents[0]`: We use the given user_agent if passed in, otherwise use first entry in user_agent. 
+- `'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'`: This line informs the server what content type is acceptable. Here we have HTML, XHTML, XML, and any other types (`*/*` part denotes anything else and any subtype). 
+
+Also note that the quality value is included, as seen in `q=0.9,*/*;q=0.8'`, where the higher number denotes higher preference (priority). The range is 0.0 to 1.0. So, for example in our code `*/*` has a quality value of 0.8, it has lower priorty compared to things like text/html (1.0), application/xhtml+xml (1.0), and application/xml (0.9).
+
+- `'Accept-Language': 'en-US,en;q=0.5'`: To provide language preferences.
+
+Similarly as above, q denotes the quality value, specifically secondary preference. 
+In our code, we accept US english as primary preference, and other English types with lower priority. 
+
+For further information: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Accept-Language
+
+- `'Accept-Encoding': 'gzip, deflate'`: To identify if content compression is supported by client. In that case, the specific method is used to decompress data. 
+
+'gzip' and 'deflate' are compression formats (popular options). We can accept either type of responses. 
+
+No compression can be applied by specifying 'identity'. A general matching can be done using a 'wildcard (*)', which accepts any encoding even if it was not given. 
+
+You can read more about other types and what they are here: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Accept-Language
+
+- `'Connection':' 'keep-alive'`: This is used to maintain TCP connection after the request. Additionally, it can help to improve performance as multiple requests can be processed through the same connection, without us opening a new connection everytime. 
+
+By default, HTTP/1.0 closes the connection after a request. 
+
+For further information: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Keep-Alive
+
+Below is an example of scraping with custom headers
+
 [source,python]
 ----
-# Example: Scraping with custom headers
+# Page to scrape
 url = "https://quotes.toscrape.com/"
+
+# Call our function
 response = scrape_with_headers(url)
+
+# HTML text conversion into tree structure
 tree = html.fromstring(response.text)
+
+# Get quote text from the page
 quotes = tree.xpath('//span[@class="text"]/text()')
 print(f"Scraped {len(quotes)} quotes with custom headers")
 ----
@@ -321,6 +360,20 @@ url2 = "https://quotes.toscrape.com/page/2/"
 response2 = session.get(url2)
 print(f"Second request cookies: {session.cookies}")
 ----
+
+- `requests.Session()`: Session object in requests library can be created using this. This lets us maintain parameters such as cookies and headers across multiple HTTP requests. 
+
+A session can remember cookies, share headers, and reuse connections. Cookies and headers would not be remembered between requests in each `requests.get()` without this.
+
+Documentation: https://requests.readthedocs.io/en/latest/user/advanced/
+
+- `session.headers.update()`: session.headers has the HTTP headers for all requests. .update() part allows us to add or make changes to default headers. 
+
+User-Agent is the header name, and we specified the value of `'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'`, assigning a browser user agent to the session. It gets applied to all request made by session.
+
+- `response1 = session.get(url1)`: `session.get()` returns the value of requested session variable. 
+
+In our code, we first send the HTTP GET request to url1's URL. Then, through the session object, it gets headers, cookies, and maintains the connection settings. Response object (response variable) containing HTML content, HTTP status code, and cookies (session.cookies)
 
 Now, create a scraper that: +
 1. Uses custom User-Agent headers, +
@@ -602,6 +655,7 @@ You _must_ double check your `.ipynb` after submitting it in gradescope. A _very
 
 You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
 ====
+
 
 
 
