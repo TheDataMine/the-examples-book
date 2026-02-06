@@ -29,20 +29,51 @@ We allow using AI for learning purposes; however, all submitted materials (code,
 
 === Question 1 (2 points)
 
-Let's start by learning about rate limiting with simple delays:
+Let's start by learning about rate limiting with simple delays. First, these are the imports used. 
 
 [source,python]
 ----
 import requests
 from lxml import html
 import time
+----
 
+[NOTE]
+====
+- `requests`: Allows us to send HTTP requests to web servers
+
+- `from lxml import html`: This imports the package for HTML parsing, allowing us to manipulate and create XML and HTML documents. We can also extract various information such as texts, links, attributes, etc.
+
+(You can read more about it here: https://lxml.de/ (official) and https://lxml.de/lxmlhtml.html (html specific); get more information through the Menu, such as specific documentations)
+
+- `import time`: This is a part of Python's standard utility module. It provides many time related functions and tools. 
+
+More information here: https://docs.python.org/3/library/time.html
+====
+
+We start with a function that retrieves a website. It takes in `url`, which is the website to be scraped, and `delay`, which the number of seconds to wait after the initial request. We will get more into that soon. 
+
+
+[source,python]
+----
 def scrape_with_delay(url, delay=1):
     """Scrape a URL with a delay between requests."""
     response = requests.get(url)
     time.sleep(delay)  # Wait before next request
     return response
+----
 
+As we can see by the comment, `requests.get(url)` sends the HTTP GET request (trying to get data of a source, such as a website here), and eventually server sends us the response back, contianing information such as status code, metadata, and HTML content. These information gets put into a Response object by Python, and for us, in 'response' as we defined. 
+
+[NOTE]
+====
+The `time.sleep()` function pauses execution for the specified number of seconds. A delay of 1-2 seconds between requests is usually reasonable for most websites. Adjust based on the website's load and your needs.
+====
+
+Below, we create a list to store the page URLs to scrape. 
+
+[source,python]
+----
 # Example: Scraping multiple pages with delays
 base_url = "https://quotes.toscrape.com"
 pages_to_scrape = [
@@ -50,13 +81,27 @@ pages_to_scrape = [
     f"{base_url}/page/2/",
     f"{base_url}/page/3/"
 ]
+----
 
+After this, the different URLs will look like: 
+- https://quotes.toscrape.com/page/1/, https://quotes.toscrape.com/page/2/, and https://quotes.toscrape.com/page/3/
+
+Now we move onto the main data collection loop. 
+
+[source,python]
+----
+# List to store all quotes from all pages
 all_quotes = []
+
+# Loop over each page in the list
 for page_url in pages_to_scrape:
     print(f"Scraping {page_url}...")
-    response = scrape_with_delay(page_url, delay=2)  # 2 second delay
+
+    # HTTP request to page_url
+    response = scrape_with_delay(page_url, delay=2)
     tree = html.fromstring(response.text)
-    
+
+    # Extract quotes
     quotes = tree.xpath('//span[@class="text"]/text()')
     all_quotes.extend(quotes)
     
@@ -65,10 +110,21 @@ for page_url in pages_to_scrape:
 print(f"\nTotal quotes collected: {len(all_quotes)}")
 ----
 
-[NOTE]
-====
-The `time.sleep()` function pauses execution for the specified number of seconds. A delay of 1-2 seconds between requests is usually reasonable for most websites. Adjust based on the website's load and your needs.
-====
+- One website is processed per iteration in the for loop.
+
+- Use the function we built earlier to send the HTTP request to page_url. The number of seconds to wait in between is specified by us in 'delay=' (here 2 seconds). 
+
+- `html.fromstring` comes from the `lxml` library. It takes in raw HTML and returns an Element object (here, 'tree'). This means that the parsing process not only reads the raw string, but also processes information such as tags, attributes, etc, and convert the HTML string into a tree structure. 
+
+- `.xpath`: This function also comes from the `lxml` library, and it is used to search and locate XML/HTML elements. It is a query language to address specific parts of the document. 
+
+It is a natural to ask what this expression represents: '//span[@class="text"]/text()'. Let's take a closer look. 
+
+- //: Search any part of the document
+- span: Focus on <span> elements
+- [@class="text"]: Only get the parts where the class attribute is exactly "text"
+- /text(): Get the text inside each element we found
+
 
 Now, implement a scraper that: +
 1. Scrapes multiple pages from https://quotes.toscrape.com/ +
@@ -91,11 +147,15 @@ When a server is overloaded or you're making requests too quickly, you might rec
 
 [source,python]
 ----
-import requests
-from lxml import html
-import time
 import random
+----
 
+As the name might suggest, the above import statement generates random numbers. 
+
+We now create a function that incorporates automatic retries in requesting a webpage. 
+
+[source,python]
+----
 def scrape_with_exponential_backoff(url, max_retries=5, initial_delay=1):
     """
     Scrape a URL with exponential backoff retry logic.
@@ -112,8 +172,13 @@ def scrape_with_exponential_backoff(url, max_retries=5, initial_delay=1):
             
             # Check for rate limiting errors
             if response.status_code == 429:
+                # Use the exponential backoff delay formula (see docstring)
                 wait_time = initial_delay * (2 ** attempt)
+
+                # Just for us to see what is going on:
                 print(f"Rate limited! Waiting {wait_time} seconds before retry {attempt + 1}...")
+
+                # Give some wait time, based on our calculated delay time
                 time.sleep(wait_time)
                 continue
             
@@ -124,7 +189,6 @@ def scrape_with_exponential_backoff(url, max_retries=5, initial_delay=1):
                 time.sleep(wait_time)
                 continue
             
-            # Success!
             response.raise_for_status()  # Raises exception for 4xx/5xx errors
             return response
             
@@ -134,16 +198,36 @@ def scrape_with_exponential_backoff(url, max_retries=5, initial_delay=1):
                 raise Exception(f"Failed after {max_retries} attempts: {e}")
             
             wait_time = initial_delay * (2 ** attempt)
-            # Add some randomness to avoid thundering herd problem
-            jitter = random.uniform(0, 0.1 * wait_time)
-            total_wait = wait_time + jitter
+
+            # Add some randomness - this generates random number between a and b, allowing us to add extra delay time
+            extra_delay = random.uniform(0, 0.1 * wait_time)
+            # The resulting number is added to sleept time, to prevent numerous retries simultaneously
+            total_wait = wait_time + extra_delay
             
             print(f"Error: {e}")
             print(f"Waiting {total_wait:.2f} seconds before retry {attempt + 1}...")
             time.sleep(total_wait)
-    
     raise Exception("Max retries exceeded")
+----
 
+- `response = requests.get(url, timeout=10)`: Retrieve the page's data, and the `timeout=10` parameter makes the program raise an error instead of waiting, if it takes longer than 10 seconds to receive a response. 
+
+HTTP Status Codes are used here. For instace, `response.status_code == 429` checks to see if there are too many requests. 
+
+[NOTE]
+====
+These sites have some good lists of the different codes and details on each:
+
+- https://docs.python.org/3/library/http.html
+- https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
+====
+
+You might also notice the try/except used here; in Python, we use them to handle errors effectively. `try` block executes some code, also testing for errors, and `except` block is for handling the error. 
+
+`except requests.exceptions.RequestException as e`: Our code uses this to catch all request library related errors, such as connection and timeouts. 'e' is just a variable we assign this exception instance to, that holds the specific error message and related details. 
+
+[source,python]
+----
 # Example usage
 url = "https://quotes.toscrape.com/page/1/"
 response = scrape_with_exponential_backoff(url)
@@ -154,7 +238,7 @@ print(f"Successfully scraped {len(quotes)} quotes")
 
 [NOTE]
 ====
-Exponential backoff means the wait time doubles with each retry: 1s, 2s, 4s, 8s, etc. This gives the server time to recover. Adding "jitter" (randomness) prevents multiple clients from retrying at exactly the same time (the "thundering herd" problem).
+Exponential backoff means the wait time doubles with each retry: 1s, 2s, 4s, 8s, etc. This gives the server time to recover. Adding "jitter" (randomness; our 'extra_delay') prevents multiple clients from retrying at exactly the same time (the "thundering herd" problem).
 ====
 
 Now, implement a scraper with exponential backoff that: +
@@ -179,9 +263,6 @@ Some websites check the "User-Agent" header to identify what type of browser or 
 
 [source,python]
 ----
-import requests
-from lxml import html
-
 # Common User-Agent strings (these identify your "browser")
 user_agents = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -201,7 +282,10 @@ def scrape_with_headers(url, user_agent=None):
     
     response = requests.get(url, headers=headers)
     return response
+----
 
+[source,python]
+----
 # Example: Scraping with custom headers
 url = "https://quotes.toscrape.com/"
 response = scrape_with_headers(url)
@@ -219,9 +303,6 @@ Some websites also use cookies for session management. We can handle cookies usi
 
 [source,python]
 ----
-import requests
-from lxml import html
-
 # Create a session to maintain cookies across requests
 session = requests.Session()
 
@@ -262,10 +343,12 @@ The `robots.txt` file is a standard that websites use to tell scrapers which par
 
 [source,python]
 ----
-import requests
 from urllib.robotparser import RobotFileParser
 from urllib.parse import urljoin, urlparse
+----
 
+[source,python]
+----
 def check_robots_txt(base_url, user_agent='*'):
     """Check robots.txt for a given URL."""
     robots_url = urljoin(base_url, '/robots.txt')
@@ -285,7 +368,7 @@ def check_robots_txt(base_url, user_agent='*'):
             print(f"robots.txt found at: {robots_url}")
             print(f"Can fetch {base_url}? {can_fetch}")
             
-            # Show crawl delay if specified
+            # Check if the site specified a delay, and if so we show it
             crawl_delay = rp.crawl_delay(user_agent)
             if crawl_delay:
                 print(f"Crawl delay specified: {crawl_delay} seconds")
@@ -293,11 +376,16 @@ def check_robots_txt(base_url, user_agent='*'):
             return rp, can_fetch
         else:
             print(f"robots.txt not found or inaccessible (status: {response.status_code})")
-            return None, True  # If no robots.txt, assume allowed
+            return None, True  # If no robots.txt, generally we assume scraping is allowed
     except Exception as e:
         print(f"Error checking robots.txt: {e}")
-        return None, True  # If error, assume allowed (but be cautious)
 
+        # Returns True as robots.txt could not be checked, and proceed with scraping. But,            we take into consideration that it was only assumed. 
+        return None, True
+----
+
+[source,python]
+----
 # Example: Check robots.txt
 base_url = "https://quotes.toscrape.com"
 rp, allowed = check_robots_txt(base_url)
@@ -336,18 +424,15 @@ Test with: +
 
 === Question 5 (2 points)
 
-Let's combine all these techniques into a robust, production-ready scraper. We'll also add logging to track what's happening:
+Let's combine all these techniques into a robust, production ready scraper. We'll also add logging to track what's happening:
 
 [source,python]
 ----
-import requests
-from lxml import html
-import time
-import random
 import logging
-from urllib.robotparser import RobotFileParser
-from urllib.parse import urljoin
+----
 
+[source,python]
+----
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -356,7 +441,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class RobustScraper:
-    """A robust web scraper with rate limiting, error handling, and robots.txt checking."""
+    """Web scraper with rate limiting, error handling, and robots.txt checking."""
     
     def __init__(self, base_url, user_agent=None, default_delay=1):
         self.base_url = base_url
@@ -409,7 +494,7 @@ class RobustScraper:
         
         for attempt in range(max_retries):
             try:
-                # Respect crawl delay
+                # Wait between requests
                 delay = self.get_crawl_delay()
                 time.sleep(delay)
                 
@@ -466,7 +551,10 @@ class RobustScraper:
         
         logger.info(f"Scraped {len(quotes)} quotes from {url}")
         return quotes
+----
 
+[source,python]
+----
 # Example usage
 scraper = RobustScraper("https://quotes.toscrape.com/")
 quotes = scraper.scrape_quotes("https://quotes.toscrape.com/page/1/")
@@ -514,6 +602,7 @@ You _must_ double check your `.ipynb` after submitting it in gradescope. A _very
 
 You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
 ====
+
 
 
 
