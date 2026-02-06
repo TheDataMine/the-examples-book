@@ -391,14 +391,59 @@ Now, create a scraper that: +
 ====
 
 === Question 4 (2 points)
+In this question, we explore some rules that should be followed before scraping websites, and how to incorporate them into our code. More specifically, we need to follow the instructions given in a file called `robots.txt` in websites. So in Question 4, we aim to create a function that checks the `robots.txt` rules and adheres to them by only accessing the allowed paths. 
 
-The `robots.txt` file is a standard that websites use to tell scrapers which parts of the site they can and cannot access. It's important to check and respect `robots.txt`:
+We have two new imports: 
+
+_First Import:_
 
 [source,python]
 ----
 from urllib.robotparser import RobotFileParser
+----
+
+RobotFileParser class becomes available to us with this import statement. This is what provides us with the Python's built in `robots.txt` file, a standard that websites use to tell scrapers which parts of the site they can and cannot access.
+
+`robots.txt` is an implementation of the Robots Exclusion Protocol, which defines set of rules for web crawlers and web robots on what sections of a website they may or may not visit. The text file is located at the root of a website.
+
+Couple notes on this: If this file can not be found, the assumption is that there is no restriction on accessing the whole website. As well, if there are multiple subdomains in a website, they need to have their individual 'robots.txt' file. 
+
+_Second Import:_
+
+[source,python]
+----
 from urllib.parse import urljoin, urlparse
 ----
+
+`urllib.parse` is a Python module that provides us with various functions that can work with and manipulate URLs. For instance,
+
+1) Break up URLs which initially is one string, into different componenets such as addressing scheme, network location, path, etc
+
+This is where `urlparse` comes in. `urlparse` breaks a single string down into six components, and returns `ParseResult(scheme, netloc, path, params, query, fragment)`. As you might be able to tell from its parameters, this gives us the ability to easily access specific parts of the URL. 
+
+Here is a simple example. If we had: `base_url = "https://parts.toscrape.com/page/1/"`, then `parsed_url = urlparse(base_url)` gives us:
+
+scheme = "https", netloc = "parts.toscrape.com", and path = "/page/1/". params, query, and framgent are "". 
+
+The last three are empty because the URL simply does not contain them. If they exist, you will see 'query' after '?' and 'fragment' after '#'. Some other parameters include '=', which is for key-value pair (key=value), or '&' to separate multiple parameters. 
+
+2) Convert relative URL into absolute URL. `urljoin` is used here. 
+
+`urljoin` takes in two arguments, 'base' and 'url', where if given the relative URL, the function combines it with the 'base' URL to create the absolute version. 
+
+[NOTE]
+====
+Official documentations can be very helpful:
+
+`RobotFileParser`: https://docs.python.org/3/library/urllib.robotparser.html#urllib.robotparser.RobotFileParser
+
+`urllib.parse`: https://docs.python.org/3/library/urllib.parse.html. 
+====
+
+Now, let's get started on creating a function that checks a website's 'robots.txt' rules. 
+
+It takes in two parameters, 'base_url' is the website to scrape, and 'user_agent='*'' is to specify which crawler to check rules for. Similarly as our other cases where * was used, here it means rules that apply for all bots. 
+
 
 [source,python]
 ----
@@ -407,16 +452,25 @@ def check_robots_txt(base_url, user_agent='*'):
     robots_url = urljoin(base_url, '/robots.txt')
     
     try:
+        # Send HTTP GET request to '/robots.txt'
+        # Because we have 'timeout=5', exception occurs if we do not get a response back in 5 seconds
         response = requests.get(robots_url, timeout=5)
+
+        # 200 denotes successful request to server
         if response.status_code == 200:
             rp = RobotFileParser()
             rp.set_url(robots_url)
             rp.read()
             
             # Check if we can access a specific path
+
+            # Break URL down
             parsed_url = urlparse(base_url)
+
+            # Extract the path part. If there is no path, the default is '/'
             path = parsed_url.path or '/'
-            
+
+            # Check permission
             can_fetch = rp.can_fetch(user_agent, base_url)
             print(f"robots.txt found at: {robots_url}")
             print(f"Can fetch {base_url}? {can_fetch}")
@@ -425,8 +479,11 @@ def check_robots_txt(base_url, user_agent='*'):
             crawl_delay = rp.crawl_delay(user_agent)
             if crawl_delay:
                 print(f"Crawl delay specified: {crawl_delay} seconds")
-            
+
+            # Return parsed rules and permission result
             return rp, can_fetch
+
+        # Missing robots.txt case:
         else:
             print(f"robots.txt not found or inaccessible (status: {response.status_code})")
             return None, True  # If no robots.txt, generally we assume scraping is allowed
@@ -437,12 +494,34 @@ def check_robots_txt(base_url, user_agent='*'):
         return None, True
 ----
 
+Please see below for more explanation!
+
+- `rp = RobotFileParser()`: We initialize a RobotFileParser class instance. Once initialized, the object can download 'robots.txt' and parse content. 
+
+As initially mentioned, this is how crawlers know when they can or can not access. This is done through the 'Disallow' and 'Allow' directives. 'robots.txt' generally has the structure of:
+
+User-agent: * +
+Disallow: +
+Allow:
+ 
+'Disallow' is an instruction to not access a path or a directory. There usually is a path that specifies the location. For example, if we had 'Disallow: /admin/', it corresponds to not allowing crawlers to visit 'https://example.com/admin/'. Having an empty 'Disallow' is a permission to access everything; 'Allow' can be used to allow specific path access, although the empty 'Disallow' is a broader permission. 
+
+- `rp.set_url(robots_url)`: Natural step following creating an instance. This defines the robots.txt file URL. 
+
+- `.rp.read()`: This gets the robots.txt file, so it can be used by the parser. 
+
+- `.can_fetch()`: To determine if the access privilege exists. It returns 'True' if permission is granted, otherwise 'False'.
+
+
 [source,python]
 ----
 # Example: Check robots.txt
 base_url = "https://quotes.toscrape.com"
+
+# Call the function
 rp, allowed = check_robots_txt(base_url)
 
+# allowed == True
 if allowed:
     print("\nProceeding with scraping...")
     # Your scraping code here
@@ -452,7 +531,7 @@ else:
 
 [NOTE]
 ====
-Always check `robots.txt` before scraping. It's located at `https://example.com/robots.txt`. The file specifies which user agents can access which paths, and may include crawl delays. Respecting `robots.txt` is both ethical and helps avoid getting blocked.
+Always check `robots.txt` before scraping. It's located at `https://example.com/robots.txt`. Taking `robots.txt` into consideration is a part of being ethical, while avoiding getting blocked.
 ====
 
 Now, create a function that: +
@@ -655,6 +734,7 @@ You _must_ double check your `.ipynb` after submitting it in gradescope. A _very
 
 You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
 ====
+
 
 
 
