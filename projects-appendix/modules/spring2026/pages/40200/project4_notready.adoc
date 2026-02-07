@@ -7,7 +7,7 @@ We are going to cover the basics of Machine Learning (Developer) Operations (MLO
 .Learning Objectives
 ****
 - Understand the concept of MLOps and its **importance**.
-- Be comfortable refactoring repository structure to create clean pipelines.
+- Be comfortable refactoring repository structure to create clean pipelines
 ****
 
 == Dataset
@@ -87,7 +87,7 @@ git clone https://github.com/TheDataMine/intro-mlops-1.git
 ls intro-mlops-1
 ----
 
-You'll see its kinda messy. Its not awful, but its only manageable since our project is small right now. Organzing our repo now will make development _way_ easier later on.
+You'll see it's kinda messy. It's not awful, but it's only manageable since our project is small right now. Organizing our repo now will make development _way_ easier later on.
 
 Reminder to make sure you are in a *__clean directory__*. The only thing that should be in this directory is your Jupyter notebook and the newly cloned repository.
 
@@ -120,7 +120,7 @@ def print_directory_tree(root_dir, max_depth=3):
 
   for root, dirs, files in os.walk(root_dir):
     # Skip hidden directories like .git
-    dirs[:] = [d for d in dirs if not d.startswith(".")]
+    dirs[:] = [d for d in dirs if not d.startswith(".") and d != ("__pycache__")]
     files = [f for f in files if not f.startswith(".")]
 
     level = root.replace(root_dir, "").count(os.sep)
@@ -171,11 +171,11 @@ Some of you may have noticed, but this model is overly complex for the dataset w
 
 Now, based on what we discussed, organize the repo into a cleaner structure - add a logs, notebooks, plots, data and src directory. 
 
-Once you’ve made the directories and move the relevant files, run the function again to display the file structure.
+Once you've made the directories and move the relevant files, run the function again to display the file structure.
 
 [IMPORTANT]
 ====
-There are a few exceptions for Python files that do not going into `src/` -- `main.py` being one of them, leave that in the root directory. There is another that we will run into later in the project, `app.py`, that should also remain in the root and not go into `src/`. 
+There are a few exceptions for Python files that do not go into `src/` -- `main.py` being one of them, leave that in the root directory. There is another that we will run into later in the project, `app.py`, that should also remain in the root and not go into `src/`. 
 ====
 
 [IMPORTANT]
@@ -186,10 +186,9 @@ Since we just created a bunch of new directories, you will also need to update t
 
 .Deliverables
 ====
-- Output of **unorganized** `print_directory_tree()`
-- Output showing the model runs (from `!python intro-mlops-1/main.py`)
-
-- Output of **organized** `print_directory_tree()`
+- Output of **unorganized** `print_directory_tree()` +
+- Output showing the model runs (from `!python intro-mlops-1/main.py`) +
+- Output of **organized** `print_directory_tree()` +
 // - Write 1-3 sentences explaining the structure and the logic for it
 ====
 
@@ -197,21 +196,20 @@ Since we just created a bunch of new directories, you will also need to update t
 ==== Cleaning Up
 Now that we organized the file structure, lets take a look at the code itself.
 
-Everything is all thrown together into the main script. While the functionality is simple, the file is still pretty long. Do we really need to see all those little details--like how we handle preproccessing or how gradients are zeroed out, loss is calculated, and backprop is done--in the main driver function?  Not really. We want to see the _high level_ flow in the main function. So, we can abstract those details away into their own functions and files.
+Everything is all thrown together into the main script. While the functionality is simple, the file is still pretty long. Do we really need to see all those little details--like how we handle preprocessing or how gradients are zeroed out, loss is calculated, and backprop is done--in the main driver function?  Not really. We want to see the _high level_ flow in the main function. So, we can abstract those details away into their own functions and files.
 
-Create a few new files under the `src/` directory:
-
- - `data_loader.py` 
- - `metrics.py` 
- - `neural_net.py`  (will reference in Question 3)
- - `trainer.py`
- - `visualization.py`
+Create a few new files under the `src/` directory: +
+ - `data_loader.py` +
+ - `metrics.py` +
+ - `neural_net.py`  (will reference in Question 3) +
+ - `trainer.py` +
+ - `visualization.py` +
 
 These files will contain the core logic for the ML pipeline. Below are some function signatures and their return values. Copy and paste them into their respective files.
 
 [source,python]
 ----
-# data_loader.py
+# src/data_loader.py
 
 torch.manual_seed(42)
 np.random.seed(42)
@@ -220,6 +218,10 @@ def load_and_preprocess_data(data_path):
     """Load and preprocess the dataset"""
     return X, y, label_encoder
 
+def split_data(X, y, train_ratio=0.8):
+    """Split data into train and test sets"""
+    return X_train, X_test, y_train, y_test
+
 def create_data_loaders(X_train, y_train, batch_size=32):
     """Create PyTorch data loaders"""
     return train_loader
@@ -227,49 +229,49 @@ def create_data_loaders(X_train, y_train, batch_size=32):
 
 [source,python]
 ----
-# metrics.py
-def calculate_accuracy(predicted, y_test_tensor):
+# src/metrics.py
+def calculate_accuracy(predicted, y_test):
     """Calculate accuracy"""
     return accuracy
 
 ----
 [source,python]
 ----
-# trainer.py
+# src/trainer.py
 torch.manual_seed(42)
 
 def train_one_epoch(model, train_loader, optimizer, criterion):
-  """Helper function to complete one training epoch and return average train loss"""
+    """Helper function to complete one training epoch and return average train loss"""
 
-  return avg_train_loss
+    return avg_train_loss
 
-def evaluate_model(model, criterion, X_test_tensor, y_test_tensor):
-  """Helper function to evaluate the model after each training epoch"""
+def evaluate_model(model, criterion, X_test, y_test):
+    """Helper function to evaluate the model after each training epoch"""
 
-  return accuracy, test_loss
+    return accuracy, test_loss
 
 
-def train_model(model, train_loader, X_test_tensor, y_test_tensor, criterion, optimizer, epochs=50):
-  """Higher level training driver function, returns metric arrays"""
+def train_model(model, train_loader, X_test, y_test, criterion, optimizer, epochs=50):
+    """Higher level training driver function, returns metric arrays"""
 
-  return train_losses, test_losses, accuracies
+    return train_losses, test_losses, accuracies
 
 ----
 [source,python]
 ----
-# visualization.py
-def plot_training_loss(train_losses, test_losses, plot_directory):
-    """Plot training and test losses"""
+# src/visualization.py
+def plot_training_loss(train_losses, test_losses, save_path):
+    """Plot training and test losses (save_path is the full path for the output image file)"""
 
-def plot_accuracy(accuracies, plot_directory):
-    """Plot accuracy over time"""
+def plot_accuracy(accuracies, save_path):
+    """Plot accuracy over time (save_path is the full path for the output image file)"""
 ----
 
 It might seem odd to split our logic out so much since we are working with such a small example, but this modularity scales very nicely and is more maintainable when the project size grows. We will populate these functions with the logic in the next question.
 
 ==== One More Thing: Making It Work
 
-Since we’ve split the code into different files, we can’t just call the functions like they’re in the same script anymore. But don’t worry—this is where Python modules come in.
+Since we've split the code into different files, we can't just call the functions like they're in the same script anymore. But don't worry--this is where Python modules come in.
 
 You just need to add a blank `+__init__.py+` file inside every folder that contains Python code (in this case, in the `src/` directory). This tells Python to treat the folder as a module, which lets you import functions like this:
 
@@ -305,7 +307,7 @@ Use the table below to decide where to move each part of your code:
 | Suggested Functions
 
 | `data_loader.py`
-| `load_and_preprocess_data()`, `create_data_loaders()`
+| `load_and_preprocess_data()`, `split_data()`, `create_data_loaders()`
 
 | `neural_net.py`
 | `SimpleNN()` class
@@ -319,20 +321,20 @@ Use the table below to decide where to move each part of your code:
 | `visualization.py`
 | `plot_training_loss()`, `plot_accuracy()`
 |===
-Let’s walk through an example:
+Let's walk through an example:
 
 If you currently define your model class like this in `main.py`:
 
 [source,python]
 ----
 class SimpleNN(nn.Module):
-  def __init__(self, input_size, num_classes):
-    super(SimpleNN, self).__init__()
-    ...
+    def __init__(self, input_size, num_classes):
+        super(SimpleNN, self).__init__()
+        ...
 
-  def forward(self, x):
-    ...
-    return x
+    def forward(self, x):
+        ...
+        return x
 ----
 You should move this _entire class_ (along with necessary imports like `import torch` and `import torch.nn as nn`) into `src/neural_net.py`.
 
@@ -341,28 +343,35 @@ You should move this _entire class_ (along with necessary imports like `import t
 It does not necessarily harm your program to have unused imports in files; however, it is common practice to prune unused imports to reduce clutter. 
 ====
 
-Now in `main.py` you can simply import it and create an instance of your nerual network like so:
+Now in `main.py` you can simply import it and create an instance of your neural network like so:
 
 [source,python]
 ----
 from src.neural_net import SimpleNN
 
 model = SimpleNN(input_size, num_classes)
-# still need to have the opimiziers and criterion defined here
+# still need to have the optimizers and criterion defined here
+----
+
+Another quick example: if you are in the `src/trainer.py` file and want to import the `calculate_accuracy` function from the `src/metrics.py` file, you can do so like this (`.filename` means that the file is in the same directory as the current file):
+[source,python]
+----
+from .metrics import calculate_accuracy
+
+accuracy = calculate_accuracy(predicted, y_test_tensor)
 ----
 
 Do the same for your other logic:
-
-- Move all data reading and preprocessing steps to `data_loader.py`.
-- Move training loops, and evaluation logic to `trainer.py`.
-- Move accuracy type logic to `metrics.py`.
-- Move all plots to `visualization.py`.
+- Move all data reading and preprocessing steps to `src/data_loader.py`. +
+- Move training loops, and evaluation logic to `src/trainer.py`. +
+- Move accuracy type logic to `src/metrics.py`. +
+- Move all plots to `src/visualization.py`. +
 
 After you modularize everything, your `main.py` should become a shorter, cleaner "driver script" following this sort of format:
 
 [source,python]
 ----
-from src.data_loader import load_and_preprocess_data, create_data_loaders
+from src.data_loader import load_and_preprocess_data, split_data, create_data_loaders
 from src.neural_net import SimpleNN
 from src.trainer import train_model
 from src.visualization import plot_training_loss, plot_accuracy
@@ -370,11 +379,11 @@ from src.visualization import plot_training_loss, plot_accuracy
 def main():
     # load_and_preprocess_data(data_path)
 
-    # test_train_split()
+    # split_data(X, y, train_ratio=0.8)
 
-    # create_data_loaders()
+    # create_data_loaders(X_train, y_train, batch_size=32)
 
-    # instantiate model
+    # instantiate model - SimpleNN(input_size, num_classes)
 
     # train_model(model, ..., 50)
 
@@ -385,7 +394,6 @@ def main():
 if __name__ == "__main__":
     main()
 ----
-// was kinda hoping there was a HINT one instead of NOTE for this
 [NOTE]
 ====
 Hint: Read the comments if you get stuck on how to separate the logic for `trainer.py`. They should give you a good idea how you can modularize the training loop. 
@@ -400,16 +408,16 @@ As mentioned earlier, we dont actually care about performance or what model we a
 
 .Deliverables
 ====
-- Modularize the `main.py` file into the individual python files under `src/`
-- Output from running `!python intro-mlops-1/main.py`
-- Output from running `!cat intro-mlops-1/src/trainer.py`
+- Modularize the `main.py` file into the individual python files under `src/` +
+- Output from running `!python intro-mlops-1/main.py` +
+- Output from running `!cat intro-mlops-1/src/trainer.py` +
 ====
 
 === Question 4 (2 points)
 ==== Saving the model
 Now that your training pipeline is modular and working, let's save the results.
 
-Since we’re using PyTorch, the convention is to save model weights using a `.pth` or `.pt` file. Also, we need to save the `LabelEncoder` object so it can be used during inference.
+Since we're using PyTorch, the convention is to save model weights using a `.pth` or `.pt` file. Also, we need to save the `LabelEncoder` object so it can be used during inference.
 
 Create a `models/` directory at the root of your project and use the code below at the end of `main.py`.
 
@@ -430,7 +438,7 @@ print("Label encoder saved to models/label_encoder.pkl")
 
 [NOTE]
 ====
-While `.pkl` or `.joblib` are common for scikit-learn models, `.pth` or `.pt` is the standard for PyTorch models.
+While `.pkl` or `.joblib` are common for scikit-learn models, `.pth` or `.pt` is the standard for PyTorch models weights.
 ====
 
 Rerun the pipeline after adding this logic to ensure the files are saved correctly.
@@ -445,17 +453,17 @@ Please also print the file directory structure again to display the new changes.
 
 .Deliverables
 ====
-- Save the model and label encoder into the `models/` directory
-- Run `print_directory_tree()` again to show the new structure
+- Save the model and label encoder into the `models/` directory +
+- Run `print_directory_tree()` again to show the new structure +
 ====
 
 
 === Question 5 (2 points)
 
 ==== Serving Predictions with FastAPI
-We saved the model, but how can we actually *use* it? In real-world systems, we don’t run code in a notebook to make predictions. Instead, we serve models using APIs.
+We saved the model, but how can we actually *use* it? In real-world systems, we don't run code in a notebook to make predictions. Instead, we serve models using APIs.
 
-So we are going to set that up for our model. https://fastapi.tiangolo.com/#example[**FastAPI**] is one of the most commonly used API libraries in Python because its fast and very simple.  Please create a Python file called `app.py` in the same level as `main.py` and copy the code below to create a `FastAPI()` object and load in your models:
+So we are going to set that up for our model. https://fastapi.tiangolo.com/#example[**FastAPI**] is one of the most commonly used API libraries in Python because it's fast and very simple.  Please create a Python file called `app.py` in the same level as `main.py` and copy the code below to create a `FastAPI()` object and load in your models:
 
 [source,python]
 ----
@@ -483,7 +491,7 @@ with open("models/label_encoder.pkl", "rb") as f:
 You must recreate the model architecture before loading the weights — PyTorch only saves the parameters, not the model structure itself. 
 ====
 
-Now we want to create a new `.post()` method with a route called `"/predict"` to can handle prediction requests. The function should intake some data as a parameter. Normally, we would do some sort of datatype validation for safety, often using the library https://docs.pydantic.dev/latest/#pydantic-examples[**Pydantic**], but we will skip that for this project. Also, the name of the function doesn't actually matter, but its good practice to make it similar to the route name.
+Now we want to create a new `.post()` method with a route called `"/predict"` that can handle prediction requests. The function should intake some data as a parameter. Normally, we would do some sort of datatype validation for safety, often using the library https://docs.pydantic.dev/latest/#pydantic-examples[**Pydantic**], but we will skip that for this project. Also, the name of the function doesn't actually matter, but its good practice to make it similar to the route name.
 
 The logic for this route is similar to one evaluation loop like how we have in `src/trainer.py`. Use this code for your new predict route:
 
@@ -491,43 +499,35 @@ The logic for this route is similar to one evaluation loop like how we have in `
 ----
 @app.post("/predict")
 def predict(data: list[float]):
-  features = torch.FloatTensor(data).unsqueeze(0)
+    features = torch.FloatTensor(data).unsqueeze(0)
 
-  with torch.no_grad():
-    outputs = model(features)
-    _, predicted_idx = torch.max(outputs, 1)
-    predicted_label = label_encoder.inverse_transform(predicted_idx.numpy())[0] # decodes the encoded label
+    with torch.no_grad():
+      outputs = model(features)
+      _, predicted_idx = torch.max(outputs, 1)
+      predicted_label = label_encoder.inverse_transform(predicted_idx.numpy())[0] # decodes the encoded label
     
-  return {"prediction": predicted_label}
+    return {"prediction": predicted_label}
 ----
 
-To finish setting up our basic API, we just need to add this line to the bottom of `app.py`:
-
-[source,python]
-----
-import uvicorn
-uvicorn.run(app, host='0.0.0.0', port=4040)
-----
-
-Then, from `intro-mlops-1/` in a **terminal** window, run:
+Our basic API is now set up! To serve it, go to the `/intro-mlops-1/` directory and in a **terminal** window, run:
 
 [source,shell]
 ----
-python app.py
+python -m uvicorn app:app --host 0.0.0.0 --port 8000
 ----
 
 [NOTE]
 ====
-In the case that the port is being use and therefore you cannot start the server, try a different port (like 4041, 4042...) 
+In the case that the port is being used and therefore you cannot start the server, try a different port (like 8001, 8002...) 
 ====
 
-This opens the server up locally so that we can send a request to it from our notebook (or another terminal session etc). Now, lets make a post request to our new endpoint with some data. Run this in your **notebook**:
+This opens the server up locally so that we can send a request to it from our notebook (or another terminal session). Now, lets make a post request to our new endpoint with some data. Run this in your **notebook**:
 
 [source,python]
 ----
 import requests
 
-url = "http://0.0.0.0:4040/predict"
+url = "http://0.0.0.0:8000/predict"
 data = [5.1, 3.5, 1.4, 0.2]
 
 response = requests.post(url, json=data)
@@ -536,10 +536,10 @@ prediction = response.json()
 print(prediction)
 ----
 
-If it all worked we should see that it predicted 'virginica' as the class! 
+If it all worked we should see that it predicted 'versicolor' as the class! 
 [source,json]
 ----
-{"prediction": "virginica"}
+{"prediction": "versicolor"}
 ----
 
 
@@ -575,7 +575,7 @@ Lets create a Python file under `src/` called `config.py` to centralize our hard
 
 The first thing we should do is move all the file paths we have in our `main.py` into `src/config.py`. We also want to make sure these file paths will operate the same no matter where this project is located on your machine.
 
-To do this, let’s start by setting the root path of the project, and build all file paths relative to that:
+To do this, let's start by setting the root path of the project, and build all file paths relative to that:
 
 [source,python]
 ----
@@ -586,8 +586,8 @@ ROOT_PATH = Path(__file__).parent.parent
 
 # File paths
 DATA_PATH = ROOT_PATH / 'data'
-MODEL_SAVE_PATH = ...
-PLOT_SAVE_PATH = ...
+MODEL_PATH = ...
+PLOT_PATH = ...
 LOGS_PATH = ...
 ----
 
@@ -600,7 +600,7 @@ We use `Path(+__file__+)` to get the absolute path to `config.py` file. But sinc
 
 [NOTE]
 ====
-We are storing directory paths, not individual file paths. This lets us flexbily access files like `DATA_PATH / 'data.csv'` or `MODELS_DIR / 'best_model.pth'` without hardcoding the full file paths. 
+We are storing directory paths, not individual file paths. This lets us flexibly access files like `DATA_PATH / 'data.csv'` or `MODEL_PATH / 'best_model.pth'` without hardcoding the full file paths. 
 ====
 
 ==== Abstracting Model Configurations
@@ -614,37 +614,44 @@ Next we can move some of the model parameters that we set to be in `config.py`. 
 TRAIN_SPLIT = 0.8
 BATCH_SIZE = 32
 LEARNING_RATE = 0.001
-EPOCHS = 20
+EPOCHS = 50
+INPUT_SIZE = 4
 NUM_CLASSES = 3
 ----
 
-==== Abstracting FastAPI Configurations
-Lastly, lets take a look at `app.py`. We currently have our `host` and `port` values hardcoded:
+[NOTE]
+====
+Typically the model parameters that we have listed here would be associated with some model architecture or specific starting values, not just generally listed in your config file. It is common to see these in a YAML file or a JSON file because of this. But this gets the idea across.
+====
 
-[source,python]
-----
-# app.py
-uvicorn.run(app, host='0.0.0.0', port=4040)
-----
-But we do not want to do that, so lets add those variables to the `config.py` and update the imports.
+// ==== Abstracting FastAPI Configurations
+// changed how running the server is done, so commented out for now
+// Lastly, lets take a look at `app.py`. We currently have our `host` and `port` values hardcoded:
 
-[source,python]
-----
-# src/config.py
+// [source,python]
+// ----
+// # app.py
+// uvicorn.run(app, host='0.0.0.0', port=4040)
+// ----
+// But we do not want to do that, so lets add those variables to the `config.py` and update the imports.
 
-# Server parameters
-HOST_URL = "0.0.0.0"
-PORT = 4040
-----
+// [source,python]
+// ----
+// # src/config.py
+
+// # Server parameters
+// HOST_URL = "0.0.0.0"
+// PORT = 4040
+// ----
 
 ==== Updating our imports
-Similar to how we import the functions like we did in Question 3, we can the same thing for our config variables:
+Similar to how we import the functions like we did in Question 3, we can do the same thing for our config variables:
 
 [source,python]
 ----
-from src.config import DATA_PATH, MODELS_DIR, EPOCHS, HOST_URL, PORT ...
+from src.config import DATA_PATH, MODEL_PATH, EPOCHS, ...
 
-# or (less preferred but fine)
+# or (less preferred since not as explicit but also fine)
 
 from src.config import * 
 ----
@@ -658,24 +665,28 @@ Now we can use the variables like normal:
 
 [source,python]
 ----
+# main.py
+from src.config import DATA_PATH, MODEL_PATH
 X, y, label_encoder = load_and_preprocess_data(DATA_PATH / 'data.csv')
 
 # or
 
-torch.save(model.state_dict(), MODELS_DIR / "best_model.pth")
+torch.save(model.state_dict(), MODEL_PATH / "best_model.pth")
 ----
 
-And in `app.py`:
+And in `app.py` we can go through and update the imports to use the config variables:
 
 [source,python]
 ----
 # app.py
-from src.config import HOST_URL, PORT
+from src.config import INPUT_SIZE, NUM_CLASSES, MODEL_PATH
 
-uvicorn.run(app, host=HOST_URL, port=PORT)
+model = SimpleNN(INPUT_SIZE, NUM_CLASSES) # recreating the model architecture!
+model.load_state_dict(torch.load(MODEL_PATH / "best_model.pth"))
+... # look for other hardcoded values and replace them with config variables
 ----
 
-This makes it so we only have one source that is referenced, so if we refactor our file structure or need to change the url that we are hosting our server on, they are all in one file making it super easy to modify without missing hidden references in our codebase.
+This makes it so we only have one source that is referenced, so if we refactor our file structure or need to change the file paths, model parameters, or url that we are hosting our server on, they are all in one file making it super easy to modify without missing hidden references in our codebase.
 
 In your **notebook**, please run the following commands to show your updated configuration setup:
 
@@ -688,13 +699,15 @@ In your **notebook**, please run the following commands to show your updated con
 
 ==== The End!
 
-We just covered some basics of MLOps! This introduction glossed over some parts for simplicity sake, but there is still alot we can do and not enough space in this project. So in future projects, we may cover more libraries and ideas that allow us to make our pipelines even cleaner, such as MLFlow, PyTorch Lightning, and Pydantic!
+We just covered some basics of MLOps! This introduction glossed over some parts for simplicity sake, but there is still a lot we can do and not enough space in this project. Next project, we will cover more libraries and ideas that allow us to make our pipelines even cleaner, such as PyTorch Lightning, and Pydantic!
 
 .Deliverables
 ====
 - Output of `!cat intro-mlops-1/src/config.py`
 - Output of `!cat intro-mlops-1/main.py`
 - Output of `!cat intro-mlops-1/app.py`
+- Run `!python intro-mlops-1/main.py` to ensure your modular pipeline is working
+- Make a post request to the server like in Question 5 to ensure it is working
 ====
 
 == Submitting your Work
