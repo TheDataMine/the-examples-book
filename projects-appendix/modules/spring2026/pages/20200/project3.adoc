@@ -556,120 +556,269 @@ Test with: +
 
 === Question 5 (2 points)
 
-Let's combine all these techniques into a robust, production ready scraper. We'll also add logging to track what's happening:
+So far we have talked about a few key aspects of web scraping to create a more robust scraper. These include: +
+- rate limiting +
+- error handling +
+- crawl delays +
+- user agent headers +
+- robots.txt checking +
+
+We can now combine all these aspects into a single scraper class!
+
+[NOTE]
+====
+Normally, when you get to this point we would move the creation of the class to a python file instead of keeping it in the notebook, but we need to keep it in the notebook for the sake of the assignment. 
+
+So please keep in mind that all of this code that we will go through in this problem, is going to eventually be in one cell contained within the same class.
+====
+
+We will start by also adding logging to track what's happening. First, import the logging module:
 
 [source,python]
 ----
 import logging
-----
-
-[source,python]
-----
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+----
 
+This creates a `logger` object that we can use to cleanly log information regarding our scraper's activity instead of using print statements and feeding to `stdout`. We set `level = logging.INFO` to set the level of information we want in our output. There are six levels in order of increasing severity: +
+- NOTSET=0 +
+- DEBUG=10 +
+- INFO=20 +
+- WARN=30 +
+- ERROR=40 +
+- CRITICAL=50 +
+
+By setting it to INFO, we will only see messages at the INFO level and above (we wont see any DEBUG messages, for example). Sometimes you may want a more sensitive logger, such as DEBUG, which will log all messages or you may only want to see errors, in which case you would set it to ERROR.
+
+We can then specify the format of the log messages. Here, we have `%(asctime)s - %(levelname)s - %(message)s`, which means: +
+- %(asctime)s: The timestamp of the log message +
+- %(levelname)s: The level of the log message +
+- %(message)s: The message of the log message +
+
+This is a pretty standard format, but you can customize it to your liking. 
+
+We can then specify the name of the logger. Here, we have `+__name__+`, which is the name of the module. This is useful if we want to log messages from different modules. If you wanted to make other loggers with different names, you would simply change `+__name__+` to the name of the logger you want (i.e. 'api_logger') and can load that logger in different parts of your code.
+
+You can read more about logging here on the https://docs.python.org/3/library/logging.html[official documentation] or  https://www.logicmonitor.com/blog/python-logging-levels-explained#h-contents[here with some good explanations for logging].
+
+Lets get started on making our scraper class! We will start by defining the class and its constructor:
+
+[source,python]
+----
 class RobustScraper:
     """Web scraper with rate limiting, error handling, and robots.txt checking."""
-    
+
     def __init__(self, base_url, user_agent=None, default_delay=1):
+        """Initialize the scraper."""
         self.base_url = base_url
         self.session = requests.Session()
         self.default_delay = default_delay
         self.robots_parser = None
-        
+
         # Set headers
         headers = {
             'User-Agent': user_agent or 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         }
         self.session.headers.update(headers)
-        
-        # Check robots.txt
-        self._check_robots_txt()
-    
+----
+
+Here we are going to take in the following parameters: +
+- `base_url`: The base URL of the website to scrape. +
+- `user_agent`: The user agent to use for the scraper. If not provided, we will use a default user agent. +
+- `default_delay`: The default delay between requests. +
+
+We also initialize the session object and the robots parser which will be used to check the robots.txt file.
+
+We then set the headers for the session allowing the user to pass in an agent or use a default user agent accepting HTML, XHTML, and XML content. 
+
+Now that we have the headers set and the session object initialized, we are just about ready to start scraping. But, we also need to check the robots.txt file like we did last question to make sure we are not violating any rules set by the website before scraping.
+
+We will do this by creating a private method called `_check_robots_txt`.
+
+[NOTE]
+====
+Technically Python doesn't have private methods in the same way other languages like Java do, but in Python we prefix the methods with an underscore to indicate that a method is not meant to be called by outside code - it is only for internal use.
+====
+
+The logic we will use here is similar to what we did last question. We will get the robots.txt file, parse it, and save it to our class's robots_parser object if one exists. If not, we will log a warning and assume no rules are set.
+
+[source,python]
+----
+class RobustScraper:
+    ...
+
     def _check_robots_txt(self):
         """Check and parse robots.txt."""
-        robots_url = urljoin(self.base_url, '/robots.txt')
+        robots_url = urljoin(self.base_url, '/robots.txt') # join base url with robots.txt
         try:
-            response = self.session.get(robots_url, timeout=5)
-            if response.status_code == 200:
+            response = self.session.get(robots_url, timeout=5) # fetch the file
+            if response.status_code == 200: # if it exists, parse the robots.txt file
                 self.robots_parser = RobotFileParser()
                 self.robots_parser.set_url(robots_url)
                 self.robots_parser.read()
                 logger.info(f"Loaded robots.txt from {robots_url}")
-        except Exception as e:
+        except Exception as e: # if it does not exist, log a warning, assume no rules are set
             logger.warning(f"Could not load robots.txt: {e}")
-    
-    def can_fetch(self, url):
+----
+
+Now we can add this method to our constructor:
+
+[source,python]
+----
+    def __init__(self, base_url, user_agent=None, default_delay=1):
+        """Initialize the scraper."""
+        ...
+
+        self.session.headers.update(headers)
+
+        self._check_robots_txt() # check robots.txt
+----
+
+Note that this does not check for permissions yet, we will add that when we start scraping.
+
+[NOTE]
+====
+When creating a class like this, we tend to compartmentalize our code into methods with descriptive names and a clear purpose. This way, if someone wants to glance through the code, they can easily understand _logic_ and _purpose_ without having to read through the entire class and each line. This makes our code more readable and easier to maintain.
+====
+
+Now we will add the core functionality of our scraper. We will start by adding the `fetch` method which will be used to fetch a URL using the aspects we covered earlier like exponential backoff and error handling (this method will only be used to fetch the content of the page, not to parse the data; that will be done in another method we will create later).
+
+[source,python]
+----
+class RobustScraper:
+    ...
+    def fetch(self, url, max_retries=3, initial_delay=1):
+        """Fetch a URL with exponential backoff and error handling."""
+        ...
+----
+
+First things first, we need to check if the URL is allowed to be scraped according to the robots.txt file. We will do this by creating a private method called `_can_fetch` which will return True if the URL is allowed to be scraped, otherwise False.
+
+Lets make a quick private method called `_can_fetch` to check if the URL is allowed to be scraped:
+
+[source,python]
+----
+class RobustScraper:
+    ...
+    def _can_fetch(self, url):
         """Check if URL can be fetched according to robots.txt."""
         if self.robots_parser:
             return self.robots_parser.can_fetch(self.session.headers['User-Agent'], url)
         return True
-    
-    def get_crawl_delay(self):
+
+    def fetch(self, url, max_retries=3, initial_delay=1):
+        """Fetch a URL with exponential backoff and error handling."""
+        if not self.can_fetch(url):
+            logger.warning(f"robots.txt disallows: {url}")
+            return None
+----
+
+Nice! Now if the URL is allowed to be scraped, we can proceed to fetch the URL.
+
+Recall that even though we are allowed to scrape the URL, we still need to respect the _crawl delay_ specified in the robots.txt file. We will do this by creating a private method called `_get_crawl_delay` which will return the crawl delay if it exists, otherwise the default delay.
+
+[source,python]
+----
+class RobustScraper:
+    ...
+    def _get_crawl_delay(self):
         """Get crawl delay from robots.txt."""
         if self.robots_parser:
             delay = self.robots_parser.crawl_delay(self.session.headers['User-Agent'])
             if delay:
                 return delay
         return self.default_delay
-    
-    def fetch(self, url, max_retries=3, backoff_base=1):
+
+    def fetch(self, url, max_retries=3, initial_delay=1):
         """Fetch a URL with exponential backoff and error handling."""
-        if not self.can_fetch(url):
+        if not self._can_fetch(url):
             logger.warning(f"robots.txt disallows: {url}")
             return None
-        
+        ...
         for attempt in range(max_retries):
             try:
                 # Wait between requests
-                delay = self.get_crawl_delay()
+                delay = self._get_crawl_delay()
+                time.sleep(delay)
+                
+                response = self.session.get(url, timeout=10)
+                ...
+----
+
+Now all thats left for us to do here is to handle the rate limiting and server errors! Please use the logic from the previous question to handle the rate limiting and server errors but this time use our logger object to log the messages (`log.info` for success, `log.warning` for warnings, and `log.error` for errors).
+
+[source,python]
+----
+class RobustScraper:
+    ...
+    def fetch(self, url, max_retries=3, initial_delay=1):
+        for attempt in range(max_retries):
+            try:
+                # Wait between requests
+                delay = self._get_crawl_delay()
                 time.sleep(delay)
                 
                 response = self.session.get(url, timeout=10)
                 
-                # Handle rate limiting
+                # Handle rate limiting - warning
                 if response.status_code == 429:
-                    wait_time = backoff_base * (2 ** attempt)
-                    logger.warning(f"Rate limited. Waiting {wait_time}s...")
-                    time.sleep(wait_time)
-                    continue
-                
-                # Handle server errors
+                    ...
+                # Handle server errors - warning
                 if response.status_code >= 500:
-                    wait_time = backoff_base * (2 ** attempt)
-                    logger.warning(f"Server error {response.status_code}. Waiting {wait_time}s...")
-                    time.sleep(wait_time)
-                    continue
+                    ...
                 
                 response.raise_for_status()
                 logger.info(f"Successfully fetched {url}")
                 return response
                 
-            except requests.exceptions.RequestException as e:
-                if attempt == max_retries - 1:
-                    logger.error(f"Failed to fetch {url} after {max_retries} attempts: {e}")
-                    return None
-                
-                wait_time = backoff_base * (2 ** attempt) + random.uniform(0, 0.1)
-                logger.warning(f"Error fetching {url}: {e}. Retrying in {wait_time:.2f}s...")
-                time.sleep(wait_time)
+            except requests.exceptions.RequestException as e: 
+                if attempt == max_retries - 1: # error
+                    ...
+                ... # retry - warning
         
         return None
-    
+----
+
+We now have functionality for fetching the URL with respect to the websites rules and handle errors gracefully, now lets create a method to parse the data we just fetched. 
+
+This will be the main _driver_ method called `scrape_quotes` that will be used to control the flow of our scraper and will be the entry point for the user to scrape the data they want.
+
+[NOTE]
+====
+If you wanted to, you could make `fetch` a private method and only expose the `scrape_quotes` method to the user, but there may be a case where you just want to fetch the data and not parse it; so we will just keep it as a public method.
+====
+
+Lets create the `scrape_quotes` method which will parse the data we just fetched:
+
+[source,python]
+----
+class RobustScraper:
+    ...
+
     def scrape_quotes(self, url):
         """Scrape quotes from a page."""
         response = self.fetch(url)
         if not response:
             return []
-        
-        tree = html.fromstring(response.text)
-        quotes = []
-        
+        ...
+----
+
+Now we can finally parse the data we just fetched.
+
+[source,python]
+----
+class RobustScraper:
+    
+    def scrape_quotes(self, url):
+        """Scrape quotes from a page."""
+        ...
+
         quote_containers = tree.xpath('//div[@class="quote"]')
         for container in quote_containers:
             text = container.xpath('.//span[@class="text"]/text()')
@@ -685,9 +834,10 @@ class RobustScraper:
         return quotes
 ----
 
+Our class should be finished now, lets test it out!
+
 [source,python]
 ----
-# Example usage
 scraper = RobustScraper("https://quotes.toscrape.com/")
 quotes = scraper.scrape_quotes("https://quotes.toscrape.com/page/1/")
 print(f"\nScraped {len(quotes)} quotes:")
@@ -734,6 +884,7 @@ You _must_ double check your `.ipynb` after submitting it in gradescope. A _very
 
 You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
 ====
+
 
 
 
