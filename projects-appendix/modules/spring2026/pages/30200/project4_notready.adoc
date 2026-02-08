@@ -1,0 +1,580 @@
+= TDM 30200: Project 4 - Introduction to MLOps
+
+== Project Objectives
+
+We are going to cover the basics of Machine Learning (Developer) Operations (MLOps) - what they are and how we can implement them to make our projects easily extensible.
+
+.Learning Objectives
+****
+- Understand the concept of MLOps and its **importance**.
+- Be comfortable refactoring repository structure to create clean pipelines
+****
+
+== Dataset
+- Iris data set from cloned repo.
+
+[[ai-note]]
+[IMPORTANT]
+====
+If AI is used in any cases, such as for debugging, research, etc., we now require that you submit a link to the entire chat history. For example, if you used ChatGPT, there is an “Share” option in the conversation sidebar. Click on “Create Link” and please add the shareable link as a part of your citation.
+
+The project template in the Examples Book now has a “Link to AI Chat History” section; please have this included in all your projects. If you did not use any AI tools, you may write “None”.
+
+We allow using AI for learning purposes; however, all submitted materials (code, comments, and explanations) must all be your own work and in your own words. No content or ideas should be directly applied or copy pasted to your projects. Please refer to https://the-examples-book.com/projects/spring2026/syllabus#guidance-on-generative-ai. Failing to follow these guidelines is considered as academic dishonesty.
+====
+
+== Useful Things
+
+[NOTE]
+====
+This project is a little different since the key points do not reside within the jupyter notebook, and are not necessarily writing the code base, but are more about the actual file structure and reasoning behind _why_ it is setup like this. Because of this, a lot of your Jupyter notebook will be printing your directory structure and using line magic to verify your modifications. 
+====
+
+[IMPORTANT]
+====
+If you have not already, please make a new empty directory for this project since your answers are based on your directory structure -- we only want to see the notebook and the files we will create for this project. 
+====
+
+== Questions
+
+=== Question 1 ( 2 points)
+
+==== Motivation
+
+This question has a bit of reading, but it's mostly here to explain _why_ MLOps matters. If you're already familiar with the basic ML pipeline, you can skim the first couple paragraphs--but it might still help to read it fully.
+
+You have probably had some experience building a machine learning model—whether in this class or another one. Usually, the process looks something like this:
+
+====
+You pick a dataset, do some exploratory data analysis, and start figuring out which features might be useful. Then comes cleaning, filtering, and transforming the data. Only after that can you start training—choosing a model, setting up the training loop, and monitoring its progress. Once the model performs well enough, you validate it and start making predictions.
+====
+
+This process is common across almost all ML projects. A lot of people just throw everything into a single notebook or script. But as projects get bigger or more complex, this starts to get messy. That's why we want to **streamline the pipeline** and make it **project agnostic** meaning you can reuse the same basic setup no matter what the specific task is. You want a structure that lets you "plug and play" with minimal changes.
+
+This relies on the setup of your project, not just the data or the model you pick, but the  file structure, functions, and overall code layout. Modularizing things makes your work faster, easier to debug and much easier to scale to larger projects and repeat.
+
+There are common conventions for how to organize an ML project repo, but there's no single "correct" way to do it. What we'll walk through here is a basic example that's clean and modular, so you're not constantly refactoring stuff later or repeating the same setup for every new project.
+
+
+==== Problem
+A well-organized repo usually starts with a clean root directory that contains:
+
+  - some useful subdirectories like `logs/`, `notebooks/`, `data/`, `plots/`, and `src/`
+  - a main script (commonly called `main.py`) that drives the pipeline
+
+Most of those folders are pretty self-explanatory, and we'll touch on them in more detail throughout the project, primarily the `src/` directory which is usually where all your core project code lives (e.g., data loading, training functions, model definitions, etc.). We'll add to it as we go.
+
+[NOTE]
+====
+These are just common conventions. You don't have to follow them exactly. Use names that make sense to you -- as long as they're realistic and organized. For this project though, stick with the names we use. 
+====
+
+Open a *__terminal session__*, and run the following commands below to create a clean directory and clone the repo, and take a look at its layout. 
+
+[source,bash]
+----
+cd ~
+mkdir project-04
+cd project-04
+git clone https://github.com/TheDataMine/intro-mlops-1.git
+ls intro-mlops-1
+----
+
+You will see it is a little bit messy. It is not awful, but it is only manageable since our project is small right now. Organizing our repo now will make development _way_ easier later on.
+
+Reminder to make sure you are in a *__clean directory__*. The only thing that should be in this directory is your Jupyter notebook and the newly cloned repository.
+
+The current file structure should look _something_ like this:
+[listing]
+----
+project-04/
+├── firstname_lastname_project04.ipynb
+├── intro-mlops-1/
+│   ├── main.py
+│   ├── results.log
+│   ├── ...
+│   └── debug.log
+
+----
+
+In your **notebook**, run this function to show the current state of the repo:
+
+[source,python]
+----
+import os
+
+def print_directory_tree(root_dir, max_depth=3):
+  root_dir = os.path.abspath(os.path.expanduser(root_dir))
+
+  if not os.path.exists(root_dir):
+    print(f"Path does not exist: {root_dir}")
+    return
+
+  for root, dirs, files in os.walk(root_dir):
+    # Skip hidden directories like .git
+    dirs[:] = [d for d in dirs if not d.startswith(".") and d != ("__pycache__")]
+    files = [f for f in files if not f.startswith(".")]
+
+    level = root.replace(root_dir, "").count(os.sep)
+    if level >= max_depth:
+      continue
+
+    indent = " " * 4 * level
+    print(f"{indent}{os.path.basename(root)}/")
+
+    subindent = " " * 4 * (level + 1)
+    for f in files:
+      print(f"{subindent}{f}")
+
+root_path = "~/project-04/intro-mlops-1/" # adjust as needed
+print_directory_tree(root_path, max_depth=3)
+----
+
+Before we organize the directory lets check the output of `main.py`. Open a new cell in your **notebook** and run 
+
+[source,python]
+----
+!python intro-mlops-1/main.py
+----
+
+You should see it split the data and train the model with output like:
+
+[source,markdown]
+----
+Loading dataset...
+Dataset shape: (150, 5)
+Preprocessing data...
+Training set size: 120
+Test set size: 30
+Starting training...
+Epoch [10/50], Train Loss: 0.7137, Test Loss: 0.6310
+Epoch [20/50], Train Loss: 0.3657, Test Loss: 0.2785
+Epoch [30/50], Train Loss: 0.2640, Test Loss: 0.1606
+Epoch [40/50], Train Loss: 0.1900, Test Loss: 0.1034
+Epoch [50/50], Train Loss: 0.1588, Test Loss: 0.0696
+Training completed!
+Final Test Accuracy:  1.0
+All done!
+----
+[NOTE]
+====
+Iris data is one of the commonly used data sets in statistics literature to run classification examples. The data set includes three species of iris (Setosa, Versicolor, Virginica) with 50 samples from each and also four numerical variables: sepal length, sepal width, petal length, and petal width. Some of you may have noticed, but this model is overly complex for the dataset we are using it on in this project. But these are simple placeholders that we can expand on in further projects or you can on your own! 
+====
+
+Now, based on what we discussed, organize the repo into a cleaner structure - add a logs, notebooks, plots, data and src directory. Once you've made the directories and move the relevant files, run the function again to display the file structure.
+
+[IMPORTANT]
+====
+There are a few exceptions for Python files that do not go into `src/` -- `main.py` being one of them, leave that in the root directory. There is another that we will run into later in the project, `app.py`, that should also remain in the root and not go into `src/`. 
+====
+
+[IMPORTANT]
+====
+Since we just created a bunch of new directories, you will also need to update the relative file paths in `main.py` like `data_path` etc. However, after you get `root_directory_path` set to the root of the project for the first time, do **not** change it since it is the base path we build on for each path object after that. 
+====
+
+.Deliverables
+====
+1.1 Output of **unorganized** `print_directory_tree()`. +
+1.2 Output showing the model runs (from `!python intro-mlops-1/main.py`). +
+1.3 Output of **organized** `print_directory_tree()`. +
+// - Write 1-3 sentences explaining the structure and the logic for it
+====
+
+=== Question 2 (2 points)
+==== Cleaning Up
+Now that we organized the file structure, lets take a look at the code itself.
+
+Everything is all thrown together into the main script. While the functionality is simple, the file is still pretty long. Do we really need to see all those little details, like how we handle preprocessing or how gradients are zeroed out, loss is calculated, and backprop is done, in the main driver function?  Not really. We want to see the _high level_ flow in the main function. So, we can abstract those details away into their own functions and files.
+
+Create a few new files under the `src/` directory: +
+ - `data_loader.py` +
+ - `metrics.py` +
+ - `neural_net.py`  (will reference in Question 3) +
+ - `trainer.py` +
+ - `visualization.py` +
+
+These files will contain the core logic for the ML pipeline. Below are some function signatures and their return values. Copy and paste them into their respective files.
+
+[source,python]
+----
+# src/data_loader.py
+
+torch.manual_seed(42)
+np.random.seed(42)
+
+def load_and_preprocess_data(data_path):
+    """Load and preprocess the dataset"""
+    return X, y, label_encoder
+
+def split_data(X, y, train_ratio=0.8):
+    """Split data into train and test sets"""
+    return X_train, X_test, y_train, y_test
+
+def create_data_loaders(X_train, y_train, batch_size=32):
+    """Create PyTorch data loaders"""
+    return train_loader
+----
+
+[source,python]
+----
+# src/metrics.py
+def calculate_accuracy(predicted, y_test):
+    """Calculate accuracy"""
+    return accuracy
+
+----
+[source,python]
+----
+# src/trainer.py
+torch.manual_seed(42)
+
+def train_one_epoch(model, train_loader, optimizer, criterion):
+    """Helper function to complete one training epoch and return average train loss"""
+
+    return avg_train_loss
+
+def evaluate_model(model, criterion, X_test, y_test):
+    """Helper function to evaluate the model after each training epoch"""
+
+    return accuracy, test_loss
+
+
+def train_model(model, train_loader, X_test, y_test, criterion, optimizer, epochs=50):
+    """Higher level training driver function, returns metric arrays"""
+
+    return train_losses, test_losses, accuracies
+
+----
+[source,python]
+----
+# src/visualization.py
+def plot_training_loss(train_losses, test_losses, save_path):
+    """Plot training and test losses (save_path is the full path for the output image file)"""
+
+def plot_accuracy(accuracies, save_path):
+    """Plot accuracy over time (save_path is the full path for the output image file)"""
+----
+
+It might seem odd to split our logic out so much since we are working with such a small example, but this modularity scales very nicely and is more maintainable when the project size grows. We will populate these functions with the logic in the next question.
+
+==== One More Thing: Making It Work
+
+Since we have split the code into different files, we cannot just call the functions like they are in the same script anymore. But do not worry, this is where Python modules come in.
+
+You just need to add a blank `+__init__.py+` file inside every folder that contains Python code (in this case, in the `src/` directory). This tells Python to treat the folder as a module, which lets you import functions like this:
+
+[source,python]
+----
+# main.py:
+from src.data_loader import split_data
+----
+
+[IMPORTANT]
+====
+Keep in mind that you do _need_ the file name to have **two underscores** on both sides for this work.
+====
+
+With these new changes, make sure to output the new directory structure.
+
+.Deliverables
+====
+2.1 Create the new Python files with the function skeletons. +
+2.2 Add `+__init__.py+` to directories that have Python code (`src/`). +
+2.3 Run `print_directory_tree()` again to show the new structure.
+====
+
+=== Question 3 (2 points)
+==== Migrating the Logic
+Now that we have the skeletons set up, lets move some of the logic from our `main.py` function over. Use the table below to decide where to move each part of your code:
+
+[cols="1,2",options="header"]
+|===
+| File
+| Suggested Functions
+
+| `data_loader.py`
+| `load_and_preprocess_data()`, `split_data()`, `create_data_loaders()`
+
+| `neural_net.py`
+| `SimpleNN()` class
+
+| `trainer.py`
+| `train_model()`, `train_one_epoch()`, `evaluate_model()`
+
+| `metrics.py`
+| `calculate_accuracy()`
+
+| `visualization.py`
+| `plot_training_loss()`, `plot_accuracy()`
+|===
+Let's walk through an example:
+
+If you currently define your model class like this in `main.py`:
+
+[source,python]
+----
+class SimpleNN(nn.Module):
+    def __init__(self, input_size, num_classes):
+        super(SimpleNN, self).__init__()
+        ...
+
+    def forward(self, x):
+        ...
+        return x
+----
+You should move this _entire class_ (along with necessary imports like `import torch` and `import torch.nn as nn`) into `src/neural_net.py`.
+
+[NOTE]
+====
+It does not necessarily harm your program to have unused imports in files; however, it is common practice to prune unused imports to reduce clutter. 
+====
+
+Now in `main.py` you can simply import it and create an instance of your neural network like so:
+
+[source,python]
+----
+from src.neural_net import SimpleNN
+
+model = SimpleNN(input_size, num_classes)
+# still need to have the optimizers and criterion defined here
+----
+
+Another quick example: if you are in the `src/trainer.py` file and want to import the `calculate_accuracy` function from the `src/metrics.py` file, you can do so like this (`.filename` means that the file is in the same directory as the current file):
+[source,python]
+----
+from .metrics import calculate_accuracy
+
+accuracy = calculate_accuracy(predicted, y_test_tensor)
+----
+
+Do the same for your other logic:
+
+- Move all data reading and preprocessing steps to `src/data_loader.py`, +
+- Move training loops, and evaluation logic to `src/trainer.py`, +
+- Move accuracy type logic to `src/metrics.py`, +
+- Move all plots to `src/visualization.py`. +
+
+After you modularize everything, your `main.py` should become a shorter, cleaner "driver script" following this sort of format:
+
+[source,python]
+----
+from src.data_loader import load_and_preprocess_data, split_data, create_data_loaders
+from src.neural_net import SimpleNN
+from src.trainer import train_model
+from src.visualization import plot_training_loss, plot_accuracy
+
+def main():
+    # load_and_preprocess_data(data_path)
+
+    # split_data(X, y, train_ratio=0.8)
+
+    # create_data_loaders(X_train, y_train, batch_size=32)
+
+    # instantiate model - SimpleNN(input_size, num_classes)
+
+    # train_model(model, ..., 50)
+
+    # plot metrics
+
+    # saving results (as before)
+
+if __name__ == "__main__":
+    main()
+----
+[NOTE]
+====
+Hint: Read the comments if you get stuck on how to separate the logic for `trainer.py`. They should give you a good idea how you can modularize the training loop. 
+====
+
+Run `!python intro-mlops-1/main.py` to ensure your modular pipeline is working -- the output should be the same as before. If you are getting variable performance on your model, ensure you have the seed set in all relevant places. Please also run `!cat intro-mlops-1/src/trainer.py` to display your changes.
+
+[NOTE]
+====
+As mentioned earlier, we do not actually care about performance or what model we are using for this project, we just want to make sure modifying the pipeline does not change the core functionality. 
+====
+
+.Deliverables
+====
+3.1 Modularize the `main.py` file into the individual python files under `src/`. +
+3.2 Output from running `!python intro-mlops-1/main.py`. +
+3.3 Output from running `!cat intro-mlops-1/src/trainer.py`. +
+====
+
+=== Question 4 (2 points)
+==== Saving the model
+Now that your training pipeline is modular and working, let's save the results. Since we are using PyTorch, the convention is to save model weights using a `.pth` or `.pt` file. Also, we need to save the `LabelEncoder` object so it can be used during inference.
+
+Create a `models/` directory at the root of your project and use the code below at the end of `main.py`.
+
+[source,python]
+----
+models_dir = root_directory_path / "models"
+
+# Save model weights
+torch.save(model.state_dict(), models_dir / "best_model.pth")
+print("Model saved to models/best_model.pth")
+
+# Save the label encoder
+import pickle
+with open(models_dir / "label_encoder.pkl", "wb") as f:
+  pickle.dump(label_encoder, f)
+print("Label encoder saved to models/label_encoder.pkl")
+----
+
+[NOTE]
+====
+While `.pkl` or `.joblib` are common for scikit-learn models, `.pth` or `.pt` is the standard for PyTorch models weights.
+====
+
+Rerun the pipeline after adding this logic to ensure the files are saved correctly.
+
+[source,ipython]
+----
+!python intro-mlops-1/main.py
+----
+
+Please also print the file directory structure again to display the new changes.
+
+.Deliverables
+====
+4.1 Save the model and label encoder into the `models/` directory. +
+4.2 Run `print_directory_tree()` again to show the new structure. 
+====
+
+=== Question 5 (2 points)
+
+==== Serving Predictions with FastAPI
+We saved the model, but how can we actually *use* it? In real-world systems, we do not run code in a notebook to make predictions. Instead, we serve models using APIs.
+
+So we are going to set that up for our model. https://fastapi.tiangolo.com/#example.[FastAPI] is one of the most commonly used API libraries in Python because it's fast and very simple. Please create a Python file called `app.py` in the same level as `main.py` and copy the code below to create a `FastAPI()` object and load in your models:
+
+[source,python]
+----
+from fastapi import FastAPI
+import torch
+import pickle
+
+from src.neural_net import SimpleNN
+
+app = FastAPI()
+
+# loading the model up
+input_size = 4 # Iris dataset has 4 features
+num_classes = 3
+model = SimpleNN(input_size, num_classes) # recreating the model architecture!
+model.load_state_dict(torch.load("models/best_model.pth"))
+model.eval()
+
+with open("models/label_encoder.pkl", "rb") as f:
+    label_encoder = pickle.load(f)
+----
+
+[IMPORTANT]
+====
+You must recreate the model architecture before loading the weights — PyTorch only saves the parameters, not the model structure itself. 
+====
+
+Now we want to create a new `.post()` method with a route called `"/predict"` that can handle prediction requests. The function should intake some data as a parameter. Normally, we would do some sort of datatype validation for safety, often using the library https://docs.pydantic.dev/latest/#pydantic-examples[**Pydantic**], but we will skip that for this project. Also, the name of the function does not actually matter, but it is good practice to make it similar to the route name.
+
+The logic for this route is similar to one evaluation loop like how we have in `src/trainer.py`. Use this code for your new predict route:
+
+[source,python]
+----
+@app.post("/predict")
+def predict(data: list[float]):
+    features = torch.FloatTensor(data).unsqueeze(0)
+
+    with torch.no_grad():
+      outputs = model(features)
+      _, predicted_idx = torch.max(outputs, 1)
+      predicted_label = label_encoder.inverse_transform(predicted_idx.numpy())[0] # decodes the encoded label
+    
+    return {"prediction": predicted_label}
+----
+
+Our basic API is now set up! To serve it, go to the `/intro-mlops-1/` directory and in a **terminal** window, run:
+
+[source,shell]
+----
+python -m uvicorn app:app --host 0.0.0.0 --port 8000
+----
+
+[NOTE]
+====
+In the case that the port is being used and therefore you cannot start the server, try a different port (like 8001, 8002...) 
+====
+
+This opens the server up locally so that we can send a request to it from our notebook (or another terminal session). Now, lets make a post request to our new endpoint with some data. Run this in your **notebook**:
+
+[source,python]
+----
+import requests
+
+url = "http://0.0.0.0:8000/predict"
+data = [5.1, 3.5, 1.4, 0.2]
+
+response = requests.post(url, json=data)
+prediction = response.json()
+
+print(prediction)
+----
+
+If it all worked we should see that it predicted 'versicolor' as the class! 
+[source,json]
+----
+{"prediction": "versicolor"}
+----
+
+.Deliverables
+====
+5.1 Show the output from sending the request to the server. +
+5.2 Display the file structure one more time using `print_directory_tree()`.
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project4.ipynb
+====
+
+[WARNING]
+====
+It is necessary to document your work, with comments about each solution.  All of your work needs to be your own work, with citations to any source that you used.  Please make sure that your work is your own work, and that any outside sources (people, internet pages, generative AI, etc.) are cited properly in the project template.
+
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not.
+
+**Please** take the time to double check your work. See xref:ROOT:submissions.adoc[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
+
+
+////
+
+[NOTE]
+====
+Creates a Note Block
+====
+
+[IMPORTANT]
+====
+Creates an Important Block
+====
+
+[source,python]
+----
+# creates a python code block
+print("Hello, world!")
+----
+
+[cols="1,1,1",options="header"]
+|===
+| Column 1 | Column 2 | Column 3
+| Creates 3 columns | 1,1,1 means that | each column will be the same width
+| if the values were 1,1,2 | the last column width would | be twice as wide as the first two
+|===
+////
