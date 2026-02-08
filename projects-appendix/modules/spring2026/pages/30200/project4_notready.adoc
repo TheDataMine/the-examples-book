@@ -2,7 +2,9 @@
 
 == Project Objectives
 
-We are going to cover the basics of Machine Learning (Developer) Operations (MLOps) - what they are and how we can implement them to make our projects easily extensible.
+We are going to cover the basics of Machine Learning (Developer) Operations (MLOps) - what they are and how we can implement them to make our projects easily extensible. 
+
+Different than previous projects, this project has six questions instead of five.
 
 .Learning Objectives
 ****
@@ -530,6 +532,165 @@ If it all worked we should see that it predicted 'versicolor' as the class!
 ====
 5.1 Show the output from sending the request to the server. +
 5.2 Display the file structure one more time using `print_directory_tree()`.
+====
+
+=== Question 6 (2 points)
+==== What is a configuration file?
+
+Now that our pipeline is functional and our API works, the last step is to clean up how we manage constants and paths by introducing a _global configuration file_. This is a standard practice in MLOps to make your codebase more flexible and maintainable.
+ 
+There are a few different ways to do this:
+
+ - JSON
+ - YAML
+ - .py module (which we will use for simplicity)
+
+What goes into this file?
+
+Anything that can change between environments or that may be used in multiple places in your project. This also helps you create code that is easily reusable for other projects. Some of the common things you may store in your config file are:
+
+ - File paths (like `data/`, `models/`, etc.)
+ - Hyperparameters (like `EPOCHS`, `LEARNING_RATE` etc)
+ - Host/port settings for API's
+ - Loaded environment variables (we are skipping for now, but this is a best practice you will often use in production settings for secrets like API keys or DB URIs - https://www.geeksforgeeks.org/python/how-to-create-and-use-env-files-in-python/[quick tutorial showing how to create and use .env files in Python documentation] if interested).
+
+Lets create a Python file under `src/` called `config.py` to centralize our hardcoded paths and configuration variables.
+
+==== Abstracting project paths
+
+The first thing we should do is move all the file paths we have in our `main.py` into `src/config.py`. We also want to make sure these file paths will operate the same no matter where this project is located on your machine. To do this, let's start by setting the root path of the project, and build all file paths relative to that:
+
+[source,python]
+----
+# src/config.py
+from pathlib import Path
+
+ROOT_PATH = Path(__file__).parent.parent
+
+# File paths
+DATA_PATH = ROOT_PATH / 'data'
+MODEL_PATH = ...
+PLOT_PATH = ...
+LOGS_PATH = ...
+----
+
+[NOTE]
+====
+Constants are conventionally written in all capitals. 
+====
+
+We use `Path(+__file__+)` to get the absolute path to `config.py` file. But since `config.py` is located in `intro-mlops-1/src/`, we need to go up two layers to reach the root of our project, hence `.parent.parent` (from `config.py` -> `src/` -> `intro-mlops-1`).
+
+[NOTE]
+====
+We are storing directory paths, not individual file paths. This lets us flexibly access files like `DATA_PATH / 'data.csv'` or `MODEL_PATH / 'best_model.pth'` without hardcoding the full file paths. 
+====
+
+==== Abstracting Model Configurations
+Next, we can move some of the model parameters that we set to be in `config.py`. Make the following variables:
+
+[source,python]
+----
+# src/config.py
+
+# Model parameters
+TRAIN_SPLIT = 0.8
+BATCH_SIZE = 32
+LEARNING_RATE = 0.001
+EPOCHS = 50
+INPUT_SIZE = 4
+NUM_CLASSES = 3
+----
+
+[NOTE]
+====
+Typically the model parameters that we have listed here would be associated with some model architecture or specific starting values, not just generally listed in your config file. It is common to see these in a YAML file or a JSON file because of this. But this gets the idea across.
+====
+
+// ==== Abstracting FastAPI Configurations
+// changed how running the server is done, so commented out for now
+// Lastly, lets take a look at `app.py`. We currently have our `host` and `port` values hardcoded:
+
+// [source,python]
+// ----
+// # app.py
+// uvicorn.run(app, host='0.0.0.0', port=4040)
+// ----
+// But we do not want to do that, so lets add those variables to the `config.py` and update the imports.
+
+// [source,python]
+// ----
+// # src/config.py
+
+// # Server parameters
+// HOST_URL = "0.0.0.0"
+// PORT = 4040
+// ----
+
+==== Updating our imports
+Similar to how we import the functions like we did in Question 3, we can do the same thing for our config variables:
+
+[source,python]
+----
+from src.config import DATA_PATH, MODEL_PATH, EPOCHS, ...
+
+# or (less preferred since not as explicit but also fine)
+
+from src.config import * 
+----
+
+[NOTE]
+====
+Some Python https://www.freecodecamp.org/news/what-is-linting-and-how-can-it-save-you-time/[linters] and https://www.freecodecamp.org/news/what-is-the-language-server-protocol-easier-code-editing-across-languages[LSPs (Language Server Protocols)] may get upset if you use `from src.config import *` instead of explicitly importing each variable. But, functionality wise, they both should do the same thing.
+====
+
+Now we can use the variables like normal:
+
+[source,python]
+----
+# main.py
+from src.config import DATA_PATH, MODEL_PATH
+X, y, label_encoder = load_and_preprocess_data(DATA_PATH / 'data.csv')
+
+# or
+
+torch.save(model.state_dict(), MODEL_PATH / "best_model.pth")
+----
+
+And in `app.py` we can go through and update the imports to use the config variables:
+
+[source,python]
+----
+# app.py
+from src.config import INPUT_SIZE, NUM_CLASSES, MODEL_PATH
+
+model = SimpleNN(INPUT_SIZE, NUM_CLASSES) # recreating the model architecture!
+model.load_state_dict(torch.load(MODEL_PATH / "best_model.pth"))
+... # look for other hardcoded values and replace them with config variables
+----
+
+This makes it so we only have one source that is referenced, so if we refactor our file structure or need to change the file paths, model parameters, or url that we are hosting our server on, they are all in one file making it super easy to modify without missing hidden references in our codebase.
+
+In your **notebook**, please run the following commands to show your updated configuration setup:
+
+[source,python]
+----
+!cat intro-mlops-1/src/config.py
+!cat intro-mlops-1/main.py
+!cat intro-mlops-1/app.py
+----
+
+==== The End!
+
+We just covered some basics of MLOps! This introduction glossed over some parts for simplicity sake, but there is still a lot we can do and not enough space in this project. Next project, we will cover more libraries and ideas that allow us to make our pipelines even cleaner, such as PyTorch Lightning, and Pydantic!
+
+.Deliverables
+====
+6.1 Output of `!cat intro-mlops-1/src/config.py`. +
+6.2 Output of `!cat intro-mlops-1/main.py`. +
+6.3 Output of `!cat intro-mlops-1/app.py`. +
+6.4 Run `!python intro-mlops-1/main.py` to ensure your modular pipeline is working. +
+6.5 Make a post request to the server like in Question 5 to ensure it is working.
 ====
 
 == Submitting your Work
