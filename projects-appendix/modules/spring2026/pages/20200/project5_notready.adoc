@@ -1,0 +1,617 @@
+:stem: latexmath
+
+= TDM 20200: Project 5 - Introduction to PyTorch & Tensors
+
+== Project Objectives
+
+.Learning Objectives
+
+****
+- Understand what PyTorch tensors are and how we can use them
+- Numerical Operations using PyTorch/tensors
+- Relate to known concepts, such as NumPy
+- Broadcasting
+- Matrix Multiplication
+- Understand the advantages of PyTorch and its tensors
+****
+
+== Dataset
+
+Dataset at:/anvil/projects/tdm/data/mnist/mnist_train.csv'
+
+MNIST (Modified National Institute of Standards and Technology) - This is a very well known dataset, generally used for machine learning and classification tasks, specifically image recognition. It contains 60,000 training and 10,000 testing grayscale images of handwritten digits 0-9. Each are 28x28 pixel, totalling 784 pixels each with a value between 0-255. 
+
+== Questions
+
+=== Question 1 (2 points)
+
+PyTorch is a very popular machine learning framework, as many of you might already have heard of. It supports training and inference in neural networks. Understanding how PyTorch does this and how it can be used requires us to understand Tensors, which is the core data structure in PyTorch. Without tensors, storing of inputs and parameters, or the fast computations would not be possible. So for now, we will focus on understanding what tensors are, operations we can do with them, and relating it to other tools and concepts we already know. 
+
+We can think of tensors (
+https://docs.pytorch.org/docs/stable/tensors.html[PyTorch's Tensor Documentation]) as multidimensional arrays (NumPy's ndarrays). 
+
+
+These are the necessary imports: 
+
+[source,python]
+----
+import torch
+import pandas as pd
+import numpy as np
+----
+
+We are already very familiar with pandas. `import torch` loads the PyTorch library into our program, and this is where we Tensors are provided from. In this project, we will mostly work with those alongside torch's mathematical operations, but later once we get deeper into machine learning, `torch` allows us to perform tasks such as automatic differentiation, or obtain libraries to build and train neural networks. 
+
+
+Let's first load in our dataset. 
+
+[source,python]
+----
+data = pd.read_csv('/anvil/projects/tdm/data/mnist/mnist_train.csv')
+----
+
+Print the head and shape of the dataset. What does this tell us?
+
+In the MNIST dataset, the first column has the digit labels (0-9), and all other columns after that has the pixel values. Each row is where we get the 784 pixel values from. Use `.iloc()` to select only the first column for 'labels', and all all rows and columns starting from the second column for 'pixels'. You can use `to_numpy()` to convert into a 2D NumPy array.
+
+[source,python]
+----
+labels = '''YOUR CODE HERE'''
+pixels = '''YOUR CODE HERE'''
+
+# Labels Shape
+'''YOUR CODE HERE'''
+# Pixels Shape
+'''YOUR CODE HERE'''
+----
+
+You should see below shapes:
+
+----
+Labels Shape: (60000,)
+Pixels Shape: (60000, 784)
+----
+
+Let's check the data types as well. 
+
+[source,python]
+----
+print(type(data))
+print(type(pixels))
+----
+
+Running above should output `<class 'pandas.core.frame.DataFrame'>` and `<class 'numpy.ndarray'>`. As expected, it tells us that 'data' is a Pandas Data Frame, and 'pixels' is a NumPy array (afterall, we did the conversion). PyTorch does not work directly on DataFrames and it can conver NumPy arrays into tensors. This is exactly what we are going to do now. 
+
+[NOTE]
+====
+Another way to check is by using `print(isinstance(pixels, torch.Tensor))`. This `isinstance(object, type)` returns 'True' if the object is the type we specified. In our case above, it will return 'False'.
+====
+
+We can easily do the conversion like this:
+
+[source,python]
+----
+X = torch.from_numpy(pixels).float()
+y = torch.from_numpy(labels).long()
+----
+
+- `torch.from_numpy()` converts NumPy arrays into PyTorch tensors. 
+
+- `.float()` converts our pixel values into float32 for math operations.
+
+- `.long()` converts our labels into int64, which is not as relevant here, but this would be required if we were to do tasks such as classification.
+
+Understanding tensor's basic attributes is necessary before using it further. They describe charactersitics of tensor objects, such as shape, datatypes, and other relevant information such as what device they are stored.   
+
+[.underline]#Shape#
+
+Similarly as before, we use `.shape`; this returns the same thing as if we were to use `tensor.size`. They both return `torch.Size` object which shows us each dimension's length of the tensor. In `tensor.size`, you can specify the dimensions as well.
+
+[.underline]#Data Type of Elements#
+`.dtype` attribute represents the data type of `torch.Tensor`. 
+
+[.underline]#Number of Dimensions#
+`.ndim` attribute is an alias for `dim()`, and they both return the number of dimensions.
+
+[source,python]
+----
+# X shape
+'''YOUR CODE HERE'''
+# Y Shape
+'''YOUR CODE HERE'''
+# Number of dimensions for X
+'''YOUR CODE HERE'''
+# Number of dimensions for Y
+'''YOUR CODE HERE'''
+# X data type
+'''YOUR CODE HERE'''
+# Y data type
+'''YOUR CODE HERE'''
+----
+
+Below is what you can expect to see. 
+
+----
+X shape: torch.Size([60000, 784])
+y shape: torch.Size([60000])
+Number of dimensions: 2
+Number of dimensions: 1
+X dtype: torch.float32
+y dtype: torch.int64
+----
+
+- Shape of X Output: 60000 represents the number of training examples in the dataset. 784 represents the number of features per image (28 x 28).
+
+- Shape of Y Output: There is no additional dimension like we got for the shape of X. This is just for the one label per image has. 
+
+- We can expect from the first two results, the the number of dimensions for X and Y will be 2 and 1 respectively. X is a 2D tensor representing (sample, features), and Y is a 1D tensor of class labels. 
+
+- Similarly, it is natural to see float and integer for X and Y's data types. Each integer value for Y represents 0-9. (Also, if you have some knowledge regarding neural networks, you may know that they operate for floating points, and we do not use integers for processes like back propagation.)
+
+
+[.underline]#Device#
+
+Although not directly relevant to the work you will do in this project, know that all tensors have a `.device` attribute as well. It indicates where in memory tensors are located and where operations will occur. Most commonly, they will be "cpu" (system RAM) or "cuda" (GPU). 
+
+We mention this, because having the ability to move tensors to a CUDA device allows great acceleration of operations such as matrix multiplications and convolutions, since GPU has a lot more cores optimal for parallel processing. This is one of key advantages that can be obtained through PyTorch. 
+
+We can indicate using `torch.device`. For example,
+
+[source,python]
+----
+torch.device("cpu")
+----
+
+[source,python]
+----
+# This denotes the first GPU. We can also just say "cuda".
+torch.device("cuda:0")
+----
+
+A common usage includes selecting a GPU if it is available, otherwise use the CPU. 
+
+[source,python]
+----
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+----
+
+We can move tensors or models to a device through `.device`.
+
+[source,python]
+----
+tensor = tensor.to(device)
+model = model.to(device)
+----
+
+We also ensure that all tensors in an operation done are on the same device. PyTorch gives us convenient ways to move tensors or models to difference devices. We can explicitly manage the device. 
+
+[NOTE]
+====
+`.requires_grad` is another one of the main attributes of PyTorch tensor. It is a boolean attribute, where if 'True', all operations done on the tensor is tracked and its gradients are computed to be included in the back propagation process. The default is 'False'. 
+
+Similar to the device attribute, although this is not used in our projects yet, we note that this is relevant to automatic differentiation which is one of the most distinct features in PyTorch. 
+====
+
+[source,python]
+----
+X_new = X.reshape(-1, 1, 28, 28)
+
+# Shape of X_new
+''' YOUR CODE HERE '''
+----
+
+We are changing the shape of the tensor through `X.reshape(-1, 1, 28, 28)`. The returned tensor of `.reshape(input, shape)` has the same data and number of elements as the input. 
+- '-1': PyTorch can automatically find the total element number. Here we get 60000. 
+- '1': The second argument is for the number of channels. Since MNSIT is grayscale, channel=1.
+- '28, 28': The last two represents the image dimensions. '28, 28' represents height and width of the image. 
+
+If we were to work with other models, such as convolutional neural networks, this would be the expected input structure. 
+
+Let's take a look at a sample image!
+
+[source,python]
+----
+img1 = X_new[0].squeeze()
+
+# Convert to NumPy array, and use matplotlib to see the image
+
+plt.imshow(img1.numpy())
+
+# Set its digit as the title
+plt.title(f"Label: {y[0].item()}")
+plt.show()
+----
+
+- `X_new[0].squeeze()`: Select the first image with `[0]` and make sure the size is (28, 28) with `squeeze()` (this removes size 1 dimension). We will sue `plt.imshow` to visualize, and it expects 2D data. 
+
+.Deliverables
+====
+*For all subproblems, and all other questions throughout the project, make sure you document code in your own words.* 
+
+- 1a. Output of head and shape of the dataset. Explain what meaning the output has, as well your initial observations. 
+- 1b. Code for 'labels' and 'pixels', and their shape outputs.
+- 1c. Code and output of X,Y's shape, dimension, and data type. Explain in your own words what each of them means. 
+- 1d. Code and output of 'X_new'.
+- 1e. Visualization of the first image (or, feel free to output any of your choice!)
+====
+
+=== Question 2 (2 points) 
+
+*Element Wise Operations*
+
+Element wise operations is done on tensors with same dimensions. As the name suggests, the operations as element by element:
+
+[stem]
+++++
+z_{i,j} = x_{i,j} (*) y_{i,j}
+++++
+
+Where z is the resulting element at the same indices as x and y. (*) is the operation. 
+
+Also, although we are showing examples through using a dataset, we can create our own tensors from scratch too!
+
+[source,python]
+----
+x = torch.tensor([[1., 2., 3.], [4., 5., 6.]])
+y = torch.tensor([[7., 8., 9.], [10., 11., 12.]])
+
+print("Tensor x:\n", x)
+print("Tensor y:\n", y)
+----
+
+- The `[[1., 2., 3.], [4., 5., 6.]]` syntax you see here is just nested list in Python. PyTorch takes the list and convert it into a 2D tensor, so [1., 2., 3.] is the first row and [4., 5., 6.] is the second row. In general, the outer list has all rows, and individual inner lists represents one row. Here we have three elements in each list, meaning we have three columns. 
+
+- `.` after each numbers represent floating point numbers. 
+
+Output:
+----
+Tensor x:
+ tensor([[1., 2., 3.],
+        [4., 5., 6.]])
+Tensor y:
+ tensor([[ 7.,  8.,  9.],
+        [10., 11., 12.]])
+----
+
+Common operations include:
+
+1) Addition (`torch.add()`) and Subtraction (`torch.sub()`)
+
+Here is an example. 
+
+[source,python]
+----
+print("Scalar Addition:\n", x + 10)
+----
+
+Output:
+----
+Scalar Addition:
+ tensor([[11., 12., 13.],
+        [14., 15., 16.]])
+----
+
+
+
+2) Multiplication (`torch.mul()`) and Division (`torch.div()`)
+
+print("Scalar Multiplication:\n", x * 2)
+
+Output:
+----
+Scalar Multiplication:
+ tensor([[ 2.,  4.,  6.],
+        [ 8., 10., 12.]])
+----
+
+3) Comparisons and Logical operation
+
+We can use standard python operators for element wise comparisons amongst tensors. For example, `>` (greater than), `>=` (greater than or equal to), `<` (less than), `==` (equal).
+
+Here is an example. 
+
+[source,python]
+----
+print("x > 3:\n", x > 3)
+print("x == y:\n", x == y)
+----
+
+Output:
+----
+x > 3:
+ tensor([[False, False, False],
+        [ True,  True,  True]])
+x == y:
+ tensor([[False, False, False],
+        [False, False, False]])
+----
+
+The first example has the condition 'x>3'; thus, it checks every element in x to see if the value is greater than 3. The first three results are 'False', since 1,2,3 are not greater than 3, and the last three results are 'True', since 4,5,6 are greater than 3. The result is a Boolean tensor, where either 'True' or 'False' is stored in each position. 
+
+The second example compares each element at the same position for matching values: 1 == 7 is false, 2 == 9 is false, ..., 6 == 12 is false. Since no values are equal, we obtain all 'False' results. 
+
+Below functions return a tensor of boolean values after computing element wise logical operations between 'input' and 'other' tensors. 
+
+- Logical AND : `torch.logical_and(input, other)`
+- Logical OR : `torch.logical_or(input, other)`
+
+Example: 
+
+[source,python]
+----
+case1 = x > 2
+case2 = y > 25
+
+print("Logical AND:\n", torch.logical_and(case1, case2))
+print("Logical OR:\n", torch.logical_or(case1, case2))
+----
+
+First, given `case1 = x > 2`, every value in x is compared to '2'. Since 1,2 are less than 2, they are 'False'. On the other hand, 3~6 are greater than 2, so they are 'True'. 
+
+Similarly, given `case2 = y > 25`, all values in y are compared against 25. It will be all 'False', as no values are greater than 25. 
+
+You can print them to check yourself as well. 
+[source,python]
+----
+# Case 1
+tensor([[False, False,  True],
+        [ True,  True,  True]])
+
+# Case 2
+tensor([[False, False, False],
+        [False, False, False]])
+----
+
+Now, `torch.logical_and(case1, case2)` performs AND operations between each of these True/False values. Notice all values in case2 is 'False', hence the result will be all 'False'.
+
+[NOTE]
+====
+- AND is only 'True' if both operands are 'True'. Anything else (such as 1 AND 0) are 'False'. 
+
+- OR is only 'True' if at least one of the operand is 'True'. For example, True OR False = True. This also means OR only returns 'False' if both are 'False'. 
+====
+
+Similarly for 'torch.logical_or(case1, case2)', the computation becomes 'False OR False', 'False OR False', ..., 'True OR False', and 'True OR False'. 
+
+Output of the print statements:
+----
+Logical AND:
+ tensor([[False, False, False],
+        [False, False, False]])
+Logical OR:
+ tensor([[False, False,  True],
+        [ True,  True,  True]])
+----
+
+.Deliverables
+====
+- 2a. Output of running all code, including examples. For given code, please add your own documentation. 
+- 2b. Provide your own example for subtraction, division, comparison and logical operations. Make sure your outputs are present. Please explain how each of them works. 
+====
+
+=== Question 3 (2 points) 
+
+*Broadcasting*
+
+But what if our tensors do not have the same shape? Broadcasting is the technique that allows us to still perform element wise operations between tensors with different shapes. An intuitive way to think about this is matching the smaller tensor to the size of the larger tensor; we are not copying over data but extending it (advantageous for memory). 
+
+We will explore this concept through an example where we claculate the average brightness of each image. 
+
+[source,python]
+----
+mean = X.mean(dim=1)
+sd = X.std(dim=1, unbiased=False)
+----
+
+We can calculate across the horizontal axis by setting 'dim=1'.
+
+Please calculate the same using NumPy as well. You should see both outputs like:
+
+[source,python]
+----
+Mean: tensor([35.1084, 39.6620, 24.7997,  ..., 28.2296, 26.0561, 26.6837])
+Standard Deviation: tensor([79.6488, 83.8872, 65.5798,  ..., 71.4994, 66.4149, 67.5673])
+
+Mean (numpy): [35.10841837 39.6619898  24.7997449  ... 28.22959184 26.05612245
+ 26.68367347]
+Standard Deviation (numpy): [79.64882893 83.88715868 65.57974932 ... 71.49936379 66.41491344
+ 67.56730914]
+----
+
+Note that we set 'unbiased=False' when calculating the standard deviation using PyTorch. This is because sometimes we add in Bessel's Correction (dividing by N-1 instead of N); however, here we will just use N which is also NumPy's default setting.
+
+Calculating these actually had broadcasting implicitly! We can go step by step,by manually calculating mean and standard deviation, and explicitly see it. 
+
+
+[NOTE]
+====
+It might be useful to have these formulas in mind:
+
+[stem]
+++++
+$\text{mean } = \mu = \frac{1}{n}\sum x_{i}$
+++++
+
+[stem]
+++++
+\text{variance } = \sigma^{2} = \frac{1}{n} \sum (x_{i} - \mu)^{2}
+++++
+
+[stem]
+++++
+\text{standard deviation } = \sigma = \sqrt{\sigma^{2}}
+++++
+
+[stem]
+++++
+\text{standardized } = X_{norm} = \frac{X-\mu}{\sigma + \epsilon}
+++++
+[stem]
+++++
+\epsilon \text{ is just a tiny value used to make sure division by zero is prevented. Feel free to just use } 10^{-12}.
+++++
+====
+
+[source,python]
+----
+mean_ver2 = X.sum(dim=1, keepdim=True) / X.shape[1]
+var = ((X - mean_ver2)**2).sum(dim=1, keepdim=True) / X.shape[1]
+sd_ver2 = '''YOUR CODE HERE'''
+norm = '''YOUR CODE HERE'''
+----
+
+Please write code to calculate 'sd_ver2' and 'norm' yourself, and print the shapes for all four of them! Then, you should see:
+
+
+----
+X shape torch.Size([60000, 784])
+mean_ver2 Shape torch.Size([60000, 1])
+sd_ver2 Shape: torch.Size([60000, 1])
+norm Shape: torch.Size([60000, 784])
+----
+
+There are two rules PyTorch follows in order to broadcast. 
+
+1) Comparing dimensions right to left, the dimensions must either be equal or one of them must be 1 (if one of them is missing, the '1' is added)
+
+2) If one of the dimension is 1, that is the one that gets expanded. 
+
+If sizes of both tensors do not match and there is no '1' dimension, then they can not be braodcasted, and you will encounter a `RunTimeError`. 
+
+
+[source,python]
+----
+X_centered = X - mean_ver2
+X_norm = '''YOUR CODE HERE'''
+----
+
+The first broadcast occurs when 'X_centered' is calculated. Take a look at the shape of 'X' and 'mean_ver2' from earlier. It was [60000, 784] and [60000, 1]. 
+Print the shape of X_centered; it should be [60000, 784]. 
+
+PyTorch automatically expanded 'mean_ver2' from [60000, 1] to [60000, 784] to be able to subtract each row element wise. 
+
+Broadcasting worked because comparing 784 and 1, 1 is allowed to be expanded to 784, and comparing 60000 and 60000, they are the same size, so again this meets the broadcasting requirements. 
+
+Two more broadcasts occurs when 'X_norm' is calculated. Please write code to calculate this manually by following the formula, and print the shape of X_norm. 
+
+Printing the shape should give you: `X_norm shape: torch.Size([60000, 784])`. Please explain how and why broadcasting was applied here; please include consideration of the shape of 'sd_ver2', as well as both scalar addition and division that takes place that contributes to broadcastings.
+
+[NOTE]
+====
+There are many resources online to learn more about broadcasting! For example: https://docs.pytorch.org/docs/stable/notes/broadcasting.html[PyTorch Documentation], https://numpy.org/doc/stable/user/basics.broadcasting.html[NumPy Documentation], and https://www.geeksforgeeks.org/deep-learning/understanding-broadcasting-in-pytorch/[another good resource for understanding]
+====
+
+.Deliverables
+====
+- 3a. Outputs of running all code
+- 3b. Creating tensor + element wise operation example + numpy version?
+- 3c. Mean and Standard Deviation calculation using NumPy
+- 3d. Code for calculating 'X_norm' and the outputs of finding the shape of 'X_centered' and 'X_norm'
+- 3e. Explain broadcasting in your own words, and give another example. Make sure your explanation includes why we have this method or is useful for and when we can use it. 
+- 3f. Explanation for the second broadcasting in 'X_norm'.
+====
+
+=== Question 4 (2 points)
+
+*Matrix Multiplication* 
+
+The main difference between NumPy and PyTorch, especially in performing matrix multiplication is that PyTorch tensors can use GPUs to accelerate computation if it is available (we do not have that option here, so we will continue with CPU). The GPU acceleration is provdied through parallelized hardware, where numerous cores lead to parallel computation. NumPy performs CPU based operations, which is efficient for the datasets we so far have been using, alongside the general numerical computations, but is not as optimal for further deep learning tasks. 
+
+Let's take a look at some basic operation options. There are a few different ways to perform matrix multiplication. 
+
+- `torch.mm()` (https://docs.pytorch.org/docs/stable/generated/torch.mm.html[torch.mm documentation]): This is for matrix multiplication between nxm and mxp tensor. This does not support broadcasting.
+
+- `torch.matmul()` (https://docs.pytorch.org/docs/stable/generated/torch.matmul.html[torch.matmul documentation]): We can compute matrix multiplication for 1D and 2D matrices, and matrices with different dimensions as well. This broadcasts when necessary. As well, `@` is equivalent. 
+
+- `torch.bmm()` (https://docs.pytorch.org/docs/stable/generated/torch.bmm.html[torch.bmm documentation]): This is designed for calculation between matrices of tensors higher than 2D (requires 3D). Note that we can do the same thing with `torch.matmul()`, and in some cases we might prefer `torch.matmul()` over this function. 
+
+Below is a simple example. 
+
+[source,python]
+----
+a = torch.tensor([[1., 2.],[3., 4.]])
+b = torch.tensor([[5., 6.],[7., 8.]])
+mult = a @ b
+print(mult)
+----
+
+----
+tensor([[19., 22.],
+        [43., 50.]])
+----
+
+Each resulting element is a weighted sum of the row and column elements. This is very important when it comes to linear transformations. 
+
+.Deliverables
+====
+- 4a. Code for your own additional example of matrix multiplication and explanation of how it works. 
+====
+
+=== Question 5 (2 points)
+
+We can try above in an example using our dataset. Suppose we want to map 784 inputs into 10 outputs, one per digit. 
+
+[NOTE]
+====
+`torch.rand()` returns a tensor with random numbers from a normal distribution. 
+====
+
+[source,python]
+----
+r = torch.randn(784, 10)
+# Matrix multiplication between X and r
+output = '''YOUR CODE HERE'''
+print("output Shape:", '''YOUR CODE HERE''')
+----
+
+This represents 784 input features and 10 output, with random weights. We can perform matrix multiplication here, because the 784 dimension between the two matches. 
+
+[stem]
+++++
+(m, n) @ (n, p) = (m, p) \\
+\rightarrow \\
+(60000, 784) @ (784, 10) = (60000, 10)
+++++
+
+Basically, each pixel is multiplied by a weight and the weighted pixels are summed. If you think about this by only looking at one image, 
+
+[stem]
+++++
+x_{i} @ r\\
+\rightarrow \\
+(1, 784) @ (784, 10) = (1, 10)
+++++
+
+Which gives us: [number for 0, number for 1, ..., number for 9]. We get 10 computed numbers for one image, each corresponding to a digit (0-9). 
+
+This was a simple case of linear transformation, but the underlying concept is relevant to neural networks, because they also compute:
+
+[stem]
+++++
+z = Wx + b
+++++
+
+Where W is the weight matrix, x is the input vector, and b is the bias vector. Each neuron in a layer computes weighted sum as well, and although we did not see it here, PyTorch allows computation for all images simultaneously through matrix multiplication, which is significantly more efficient especially if GPU was available. 
+
+
+.Deliverables
+====
+- 5a. Code for 'output' and shape of output. 
+- 4b. How can PyTorch be useful in doing more complex tasks or more complex matrix multiplication? In what settings is this advantageous? Feel free to do your own research and include more information. 
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project#.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
