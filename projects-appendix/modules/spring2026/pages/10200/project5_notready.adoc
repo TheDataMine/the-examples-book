@@ -1,0 +1,294 @@
+= TDM 10200: Project 5 - Introduction to Polars
+
+== Project Objectives
+Motivation: Polars is a relatively new library that is quickly gaining interest in the data science community. This library is written in Rust, and is optimized for speed. We've used Pandas on large datasets before, but with some difficulty. Polars is able to address some of these performance and memory limitations!
+
+Context: We will load in data using both Pandas and Polars, and will learn about their differences, as well as some interesting techniques in Polars. 
+
+Scope: Python, Polars, sort, subsets, select
+
+.Learning Objectives
+****
+- Learn about Polars
+- Understand the difference between Pandas and Polars
+- Practice new skills across multiple datasets
+****
+
+== Dataset
+- /anvil/projects/tdm/data/flights/subset/1987.csv (used in an example)
+- /anvil/projects/tdm/data/lahman/data/AllstarFull.csv
+- /anvil/projects/tdm/data/flights/subset/2005.csv
+
+### All Star 
+The Lahman Baseball Database contains statistics about many aspects of major league baseball. These records go back as far as 1871! The All Star dataset is a part of this baseball database, containing information on the players who have been a part of the All Star games. The annual MLB All-Star Game features the best players from the American League and the National League. Ninety-five All Star games have been played since the first one, which took place in 1933. 
+
+This dataset contains 8 columns with just under 6,000 rows of All Star player records. When you first read in the dataset, the columns will not have proper names. BUT these columns represent (in order of appearance in the dataset):
+
+- `playerID`: player ID code
+- `yearID`: year
+- `gameNum`: game number (for the cases where there are more than one game played)
+- `gameID`: game ID code
+- `teamID`: team name three-letter abbreviation
+- `LgID`: league (AL for American League, NL for National League)
+- `GP`: game played (0 if the player did not appear in a game)
+- `startingPos`: if the player started, this shows what position he played
+
+### Flights
+The flights dataset is huge, with files from 1987 to 2023, each with respective subset datasets just to make the data reasonable to work with. The flights data provides numerous opportunities for data exploration with 7,140,596 rows from 2005 subset alone. These subsets contain information about when each flight took place, as well as different factors like how long they took, specifics like flight numbers, and more. There are, of course, empty or messy values, but there is so much data that this does not make too much of an impact for what we will be doing. 
+
+Please note: The columns that contain Time data present this in military time shorthand.
+
+There are 29 columns and millions of rows of data. Some of these columns include:
+
+- `CRSDepTime`: scheduled departure time
+- `ArrTime`: actual flight arrival time
+- `CRSArrTime`: scheduled flight arrival time
+- `CRSElapsedTime`: scheduled duration of a flight (in minutes)
+- `ArrDelay`: difference between scheduled and actual arrival time
+- `DepDelay`: difference between scheduled and actual departure time
+- `Origin`: abbreviation values for origin airport
+- Other delays (Carrier, Weather, NAS, Security, LateAircraft): various other delay columns. These represent delays that are less commonly impacting on a flight.
+
+== Questions
+
+image:pandas-polars1.jpg[width=48%]
+image:pandas-polars2.jpg[width=48%]
+
+[IMPORTANT]
+====
+You _should_ only need to use 2 cores for this project. 
+====
+
+=== Question 1 (2 points)
+++++
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_rnou603c&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_nbacosxw%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 400px;height: 285px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Project05_Question1"></iframe>
+++++
+
+One reason that Polars is commonly chosen over Pandas is for when working with big datasets. In questions 3-5, we will be using the *2005 Flights* dataset, which contains about 7 million rows of data. This is too big for Pandas to read in on 2 cores. So, to test the speed which Pandas and Polars read in datasets, we will be using the *1987 Flights*, and the *All Star* datasets. 
+
+[NOTE]
+====
+Polars will complain when you try to read in the 1987 flights dataset. Put `null_values=["NA"]` following the file path to help work through NA values.
+====
+
+[source,Python]
+----
+import pandas as pd
+import polars as pl
+import time
+
+# read in the dataset using pandas
+start = time.time()
+pandas_df = pd.read_csv([your_file_path])
+end = time.time()
+print(f"Pandas read_csv took {end - start} seconds")
+
+# read in the dataset using polars
+start = time.time()
+polars_df = pl.read_csv([your_file_path])
+end = time.time()
+print(f"Polars read_csv took {end - start} seconds")
+----
+
+It should not take long for either library to read in each dataset. Polars *should* be the faster of the two methods. BUT sometimes it is the case that the speeds are so close that Pandas will be shown as faster. This can happen with smaller datasets, like the All Star data, which has just a few thousand row entries.
+
+[NOTE]
+====
+The All Star baseball data does not have actual names for the columns. When you are reading in this dataset, use 
+
+[source,Python]
+----
+# for pandas
+
+pandas_df = pd.read_csv('/anvil/projects/tdm/data/lahman/data/AllstarFull.csv', header=None)
+pandas_df.columns = ['playerID', 'yearID', 'gameNum', 'gameID', 'teamID', 'lgID', 'GP', 'startingPos']
+----
+
+OR 
+
+[source,Python]
+----
+# for polars
+
+polars_df = pl.read_csv('/anvil/projects/tdm/data/lahman/data/AllstarFull.csv', has_header=False)
+polars_df.columns = ['playerID', 'yearID', 'gameNum', 'gameID', 'teamID', 'lgID', 'GP', 'startingPos']
+----
+====
+
+In both the Pandas and the Polars versions of the All Star dataset, look at the `.head()`.
+
+.Deliverables
+====
+1.1 How long did it take to read in the Death Records dataset in Pandas vs Polars? +
+1.2 How long did it take to read in the All Star dataset in Pandas vs Polars? +
+1.3 What are some differences you noticed when comparing the data read in using Pandas vs using Polars?
+====
+
+=== Question 2 (2 points)
+[IMPORTANT]
+====
+`pandas_df` and `polars_df` should each contain the All Star baseball dataset. 
+====
+
+In Pandas, it is fairly simple to look at a subset of columns in a dataset. 
+
+[source,Python]
+----
+# pandas - select columns to look at
+pandas_df[['playerID', 'teamID']]
+----
+
+Try using the `.select()` function in Polars to do this same task on `polars_df`.
+
+Filter `pandas_df` and `polars_df`, each, for only the entries where `teamID` is `"PHI"`. 
+
+In Pandas, this can be completed with a bit of ease. Often times, the rules on how data manipulations are written can be "loose". The exact guidelines for the task are known, but are not necessarily written in the code. Polars avoids having this sort of ambiuity. In Polars, you would state that you are filtering, that it is a column you are filtering by, what column it is you are filtering by, and what value you are looking for. 
+
+That can be a bit confusing. Here is an example to compare the methods: 
+
+[source,Python]
+----
+# find the PHI teamID entries in pandas_df
+philly_players_pandas = pandas_df[pandas_df['teamID'] == "PHI"]
+
+# filter polars_df by the teamID column to find the PHI entries
+philly_players_polars = polars_df.filter(pl.col("teamID") == "PHI")
+----
+
+Both lines essentially have the same task, but are not interchangeable across the libraries.
+
+.Deliverables
+====
+2.1 Show the selected columns (`playerID` and `teamID`) using the `.select()` function +
+2.2 Display the head of each of `philly_players_pandas` and `philly_players_polars` +
+2.3 Sort `philly_players_pandas` and `philly_players_polars` by the `yearID` to show the players from the 2023 game. 
+====
+
+=== Question 3 (2 points)
+[IMPORTANT]
+====
+The remainder of this project's questions will be working in Polars. 
+====
+
+Read in the 2005 Flights dataset as `myDF`. Notice:
+
+[NOTE]
+====
+This only requires 2 cores. Pandas hates when we try to do this, but Polars should do it with no issue. 
+====
+
+Filter `myDF` to find the `Origin` entries that are listed as `"IND"`. Save this as `indy_flights`. 
+
+Within `indy_flights`, select only the columns which start their names with `CRS`. What? How do you do that? 
+
+When you've got your `.select()` command, you should put a `pl.col()` expression within it, as we have been doing with `.filter()`. 
+
+Within the `pl.col()` expression, you will need `^CRS.*$`. Which looks a bit like some random characters put together. But they each are very important:
+
+- `^`: start of the string
+- `CRS`: column name must begin with the characters C, R, S
+- `.*`: any characters of any length 
+- `$`: end of the string
+
+Together, this means: 
+
+[HINT]
+====
+Take any column whose name starts with "CRS", and then has anything (or nothing) following it. 
+====
+
+.Deliverables
+====
+3.1 What are some patterns are you noticing in what functions/expressions/commands differ between Polars and Pandas? +
+3.2 Create `indy_flights` from the flights starting at IND +
+3.3 Select and display the columns of `indy_flights` whose names start with CRS
+====
+
+=== Question 4 (2 points)
+Select and display the columns that have the word 'Delay' in them. 
+
+Running `indy_flights.select(pl.col("^Delay.*$"))` does not work. But this is a good thing, because it is not the right thing to do. This command is looking for column names that **start** with 'Delay'. 
+
+Run a command that searches for any column names that contain the word 'Delay', with anything (or nothing) before or after the word. 
+
+You actually have a lot of freedom when looking for a certain set of columns to select. Within *one* `pl.col("")` expression, try finding any columns that start with 'Arr' or 'Dep'. 
+
+[source,Python]
+----
+# select the column names that begin with 'Arr' or 'Dep'
+indy_flights.select(pl.col("^(Arr|Dep).*$"))
+----
+
+Find the column names that start with 'Arr' or 'Dep', and that end with 'Delay'. 
+
+.Deliverables
+====
+4.1 How many columns have the word 'Delay' in them? +
+4.2 Display the heads of the columns whose names begin with 'Arr' or 'Dep' +
+4.3 Display **just** the `ArrDelay` and `DepDelay` columns without directly calling them by name
+====
+
+=== Question 5 (2 points)
+Polars makes it very clear when a column contains string values. Each row entry is put into quotes. So it is shown that the `ArrTime` column is formatted as strings, even though the values are numbers to represent time. 
+
+[source,Python]
+----
+# convert the ArrTime column to be numeric
+
+# Int64 is used here, but there are varying value types to 
+# assign numeric values to
+myDF = myDF.with_columns(
+    pl.col("ArrTime").cast(pl.Int64, strict=False)
+)
+----
+
+`ArrTime` is now numeric, and `CRSArrTime` already was. Take these two columns and create a new column `AbsDiffArrTime`. `AbsDiffArrTime` will represent the absolute difference between the expected vs actual arrival times of the flights. 
+
+The documentation for the https://docs.pola.rs/api/python/dev/reference/expressions/api/polars.Expr.abs.html[Polars expression .abs()] shows an example of finding the absolute values of some column entries:
+
+[source,Python]
+----
+# find the absolute value of the entries of A
+df.select(pl.col("A").abs())
+----
+
+Our goal is to do similar to this, but to find the absolute difference:
+
+[source,Python]
+----
+# find the absolute difference between the values of A and B
+df.with_columns((pl.col("A") - pl.col("B")).abs().alias("AbsDiffCol"))
+----
+
+[NOTE]
+====
+It is very important to note that the values in `AbsDiffArrTime` will essentially be the same as those in `ArrDelay`. `ArrDelay` shows the actual delay of these flights, while `AbsDiffArrTime` will calculate the estimated delay time.
+====
+
+[NOTE]
+====
+While `AbsDiffArrTime` is very similar to `ArrDelay`, it is entirely possible that some of the values will not match. Additionally, `ArrDelay` will use positive/negative values to tell if the flight is late or negatively late (meaning early). `AbsDiffArrTime` takes the absolute value, and will only show how much the actual arrival time will stray from the estimate. 
+====
+
+.Deliverables
+====
+5.1 Convert `ArrTime` to contain numeric type values +
+5.2 Create the column `AbsDiffArrTime` +
+5.3 Display the first 5 rows of your final `myDF`
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project5.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
