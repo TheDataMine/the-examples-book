@@ -414,7 +414,7 @@ The new file structure should resemble this:
 
 [listing]
 ----
-intro-mlops-2/
+intro_mlops_2/
 ├── __init__.py # ADD THIS
 ├── notebooks/ # move your notebook here
 │   └── your_notebook.ipynb
@@ -752,7 +752,7 @@ Callbacks are definitely worth learning because they are one of the most common 
 - **more reproducible** -> automatically save the best model +
 - **more scalable** -> easy to add more behaviors later without rewriting your model code +
 
-===== EarlyStopping Callback
+==== EarlyStopping Callback
 The first callback we will create is `EarlyStopping`. This prevents your model from overfitting by automatically stopping training when the validation loss stops improving. Without this, you might train for all 50 epochs even if the model stopped getting better at epoch 30 - wasting compute time and potentially making the model worse.
 
 [source,python]
@@ -774,7 +774,7 @@ early_stopping = EarlyStopping(
 
 The `patience` parameter means "wait 10 epochs without improvement before stopping". So if validation loss stops improving at epoch 20, training will continue until epoch 30 to make sure it is really stuck, then stop automatically.
 
-===== ModelCheckpoint Callback
+==== ModelCheckpoint Callback
 The second callback is `ModelCheckpoint`, which automatically saves your best model during training. This is crucial because you want to keep the model from the epoch that performed best on validation data, not necessarily the final epoch.
 
 [source,python]
@@ -939,7 +939,7 @@ If your environment allows it, you can run `mlflow ui` in a terminal to open a l
 
 We will put all of that logic in a file called `see_runs.py` in your `src/` folder. The file loads the runs, prints the table, plots val_loss and val_accuracy, and prints the best run. From your notebook you just call one function; you do not run any of the plotting or MLflow code in the notebook. Below is the full code that goes in the file, then we break it down into parts.
 
-===== Part 1: Loading runs into a DataFrame
+==== Part 1: Loading runs into a DataFrame
 
 We first need to load the saved runs so we can start to use them which we can do by converting them to a Pandas DataFrame. We are going to create a function called `load_mlflow_runs` that uses the MLflow client to find the experiment by name, search its runs (newest first), and pull out the params and metrics we care about into a list of dicts. Turning that into a pandas DataFrame makes it easy to print, plot, or filter later.
 
@@ -982,7 +982,7 @@ def load_mlflow_runs(experiment_name: str, max_runs: int = 20) -> pd.DataFrame:
     return pd.DataFrame(rows)
 ----
 
-===== Part 2: Displaying the table
+==== Part 2: Displaying the table
 
 Next we want to create a function called `see_runs` that will load the runs and print the table, plot `val_loss` and `val_accuracy`, and print the best run. We set the tracking URI so MLflow knows where to find your `mlruns/` directory (e.g. at the project root), then calls `load_mlflow_runs("WineQualityClassifier")` to get that DataFrame. 
 
@@ -1010,7 +1010,7 @@ def see_runs(experiment_name: str = "WineQualityClassifier", project_root=None, 
 if __name__ == "__main__":
     see_runs()
 ----
-===== Part 3: Plotting val_loss and val_accuracy
+==== Part 3: Plotting val_loss and val_accuracy
 
 The next block creates two bar charts side by side: one for final validation loss and one for final validation accuracy. Each run is a bar, so you can compare runs at a glance. `plt.show()` displays the figure (in a script or when you call `see_runs()` from a notebook, the plot window will appear).
 
@@ -1042,7 +1042,7 @@ if __name__ == "__main__":
     see_runs()
 ----
 
-===== Part 4: Finding the best run
+==== Part 4: Finding the best run
 
 We filter the DataFrame to the row with the minimum `val_loss`—that is the run that achieved the best validation loss. We print that run's ID and its `val_loss` and `val_accuracy` so you know which run to use when loading a model for deployment (e.g. in your FastAPI app).
 
@@ -1067,7 +1067,7 @@ if __name__ == "__main__":
     see_runs()
 ----
 
-===== Calling the file from the notebook
+==== Calling the file from the notebook
 
 From your notebook you only need to import and call `see_runs()`. It will print the table, show the plots, and print the best run.
 
@@ -1102,7 +1102,7 @@ Note that since we are using all the same parameters for each run and we are set
 
 Last project we created a basic API using FastAPI to serve a prediction -- but we skipped a critical step which is setting up input schema validation. This is essential for **any** API whether it is public or internal. It ensures you will not be sending malformed data into your model which can cause the model to fail outright, but the real danger are silent errors. Silent errors in this case would be when the API does not throw an error, the model returns a prediction, but the prediction is entirely incorrect. This is much worse because it can be hard to detect and someone could take action based on the wrong prediction. Rigorous validation helps defend against these risks.
 
-===== Pydantic and Request/Response Schemas
+==== Pydantic and Request/Response Schemas
 
 Pydantic uses Python classes that _inherit_ from `BaseModel` (an example can be found from their https://docs.pydantic.dev/latest/#pydantic-examples[Pydantic examples page]):
 
@@ -1150,7 +1150,7 @@ class WineQualityResponse(BaseModel):
 Depending on the number of features, making the Pydantic model may be tedious. For more advanced setups, you can dynamically create models, load input schemas from YAML or JSON config files, or create generic validators for tabular data! You can also use custom validators in your classes to implement checks beyond simple name and type checks.
 ====
 
-===== Loading the Model from MLflow and Wiring the Endpoint
+==== Loading the Model from MLflow and Wiring the Endpoint
 
 Now we need to load the model we logged in Question 5 and use it in our API. We load from MLflow so we do not have to hardcode a run ID. Load the label encoder as before (e.g. from `models/label_encoder.pkl`).
 
@@ -1194,7 +1194,7 @@ async def predict(input_data: WineQualityRequest):
         logits = model(features)
     pred_idx = logits.argmax(dim=1).item()
     predicted_label = label_encoder.inverse_transform([pred_idx])[0]
-    return {"quality": predicted_label}
+    return {"quality": ["Bad", "Mid", "Good"][pred_idx]
 ----
 
 By specifying that the input type to your `FastAPI` endpoint is a Pydantic class, `FastAPI` will automatically validate the incoming data when you attempt to access it. If it is not of the correct format it will return an error specifying what was malformed. If it is correct you should receive back the response in the `WineQualityResponse` format.
@@ -1208,10 +1208,36 @@ We are going to send two requests to our newly fortified endpoint to check that 
 # Invalid: sending an array instead of a JSON object with the expected keys
 data = [5.1, 3.5, 1.4, 0.2]
 ----
-
 [source,python]
 ----
 # Valid: JSON object with all feature fields (fill in your actual feature names and values)
+data_good = {
+    'fixed_acidity': 6.2,
+    'volatile_acidity': 0.28,
+    'citric_acid': 0.27,
+    'residual_sugar': 10.3,
+    'chlorides': 0.03,
+    'free_sulfur_dioxide': 26.0,
+    'total_sulfur_dioxide': 108.0,
+    'density': 0.99388,
+    'pH': 3.2,
+    'sulphates': 0.36,
+    'alcohol': 10.7,
+    'quality': 6
+}
+----
+Now please make your own combination and send it in! If you want you can sample a row from the dataset and convert it to a dict like so:
+
+[source,python]
+----
+df.sample(n=1).drop(['type'], axis=1).to_dict(orient="records")[0]
+----
+
+This way you can compare by hand what your model predicted and what the dataset shows!
+
+[source,python]
+----
+# i.e.:
 data = {
     "alcohol": 10.2,
     # ... rest of your feature keys and values
