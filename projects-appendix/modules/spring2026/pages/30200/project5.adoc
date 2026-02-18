@@ -27,10 +27,10 @@ We allow using AI for learning purposes; however, all submitted materials (code,
 
 == Important Things
 
-[IMPORTANT]
-====
-If you did not complete the previous project and do not want to start from scratch (_not recommended_), the starting point for this project will be available on Thursday Feb 12th in the https://github.com/TheDataMine/intro-mlops-1[intro_mlops_1 GitHub repo] under the 'mlops2_starting_point' folder.
-====
+//[IMPORTANT]
+//====
+//If you did not complete the previous project and do not want to start from scratch (_not recommended_), the starting point for this project will be available on Thursday Feb 19th in the https://github.com/TheDataMine/intro-mlops-1[intro_mlops_1 GitHub repo] under the 'mlops2_starting_point' folder.
+//====
 
 == Questions
 
@@ -41,7 +41,25 @@ Last project we made it a point to organize our methods into their own files lik
 
 We are going to introduce PyTorch Lighting which can help with this. It does not necessarily abstract all your code but it helps organize your model instantiation, training loops, hyperparameters and more in a very intuitive object oriented way. 
 
-First things first, we will focus on creating a `LightningModule` for our current PyTorch model - with this we can define some standard operations and more easily scale our operation.
+First, lets get our directory structure in order. Please create a new directory called `intro_mlops_2/` at the root of your project with all the files we had from last project in it. Then move your notebook into the `intro_mlops_2/notebooks/` directory. We are then going to add a `+__init__.py+` file to the `intro_mlops_2/` directory to make it a package. This way we can keep all our files organized and separate from the previous project and import them properly:
+
+[listing]
+----
+intro_mlops_2/
+├── __init__.py # ADD THIS
+├── notebooks/ # move your notebook here
+│   └── your_notebook.ipynb
+├── src/
+│   ├── __init__.py
+│   └── ...
+└── ...
+----
+[IMPORTANT]
+====
+To ensure the imports work properly, you need to run the commands in the terminal from just outside of the `intro_mlops_2` directory so it is treated as a package. It will not properly work if you are within the directory itself.
+====
+
+Now, we will focus on creating a `LightningModule` for our current PyTorch model - with this we can define some standard operations and more easily scale our operation.
 
 Please create a new file called `lightning.py` in the `src/` directory.
 
@@ -133,7 +151,7 @@ The `self.hparams` is a special attribute that is used to store the hyperparamet
 
 By defining these methods in the `LightningModule` class, they are automatically called when the model is trained and validated.
 
-If you noticed from https://the-examples-book.com/projects/spring2026/30200/project4[last project], we did not define a validation step, only a training and test step, but here we can easily add one by defining a `validation_step` method. This will also be automatically run during training time. 
+If you noticed from https://the-examples-book.com/projects/spring2026/40200/project4[last project], we did not define a validation step, only a training and test step, but here we can easily add one by defining a `validation_step` method. This will also be automatically run during training time. 
 
 Note that validation is used to fine tune hyperparameters and assess current performance but is not actually trained on.  
 
@@ -163,7 +181,7 @@ Now that we have defined our custom model using `LightningModule`, we can import
 ----
 # main.py
 
-from src.lightning import WineQualityClassifier
+from intro_mlops_2.src.lightning import WineQualityClassifier
 import pytorch_lightning as pl
 
 ...
@@ -180,7 +198,7 @@ Note that in the current state, our pipeline in `main.py` will not work properly
 .Deliverables
 ====
 1.1 Two-three sentences explaining the general flow and benefits of this setup. +
-1.2 Run `!cat {your_path_to_project}/src/lightning.py`. +
+1.2 Run `!cat {your_path_to_project}/intro_mlops_2/src/lightning.py`. +
 ====
 
 === Question 2 (2 points)
@@ -258,7 +276,7 @@ class WineQualityDataModule(pl.LightningDataModule):
         ...
 ----
 
-However we first need to quickly talk about the data we are using. This dataset consists of 11 features and 1 target label column `quality`. In your _**notebook**_ please load the data and print the first few rows to see what it looks like.
+However we first need to quickly talk about the data we are using. This dataset consists of 11 features and 1 target label column `quality`. In your _**notebook**_, under the `intro_mlops_2/notebooks/` directory, please load the data and print the first few rows to see what it looks like.
 
 [source,python]
 ----
@@ -372,8 +390,8 @@ If you remember last project we decided to create those helper functions like `t
 [source,python]
 ----
 # main.py
-from .src.lightning import WineQualityClassifier # add the . to the import to make it a relative import
-from .src.data_loader import WineQualityDataModule # add the . to the import to make it a relative import
+from intro_mlops_2.src.lightning import WineQualityClassifier
+from intro_mlops_2.src.data_loader import WineQualityDataModule
 
 ...
 
@@ -399,44 +417,40 @@ It abstracts all those annoying little details and makes use of your simple `tra
 
 .Deliverables
 ====
-2.1 Run `!cat {path}/data_loader.py | head -n 45`. +
-2.2 Run `!cat {path}/main.py`. +
-2.3 Run the pipline: `!python intro-mlops-1/main.py`. +
+2.1 Run `!cat {path}/intro_mlops_2/src/data_loader.py | head -n 45`. +
+2.2 Run `!cat {path}/intro_mlops_2/main.py`. +
+2.3 Run the pipline (in the notebook under the `intro_mlops_2/notebooks/` directory): `!cd ../../; python -m intro_mlops_2.main`. +
 ====
 
 === Question 3 (2 points)
 ==== Validate Model Config Files
 Nice! Now we have a pretty sick streamlined training setup. But, we have all those model and training parameters we are specifying when instantiating our classifiers and datamodules, we can use a different approach to manage them. We put everything into the `config.py` last time - path variables, model parameters, etc. We are going to move those model parameters into a YAML file called `model.yaml`. YAML files are similar to JSON in the sense they allow us to create a more readable and structured format for our configurations. We will also do a quick intro to a commonly used library called Pydantic which helps us validate schemas - this is to just make sure we are not attempting to load malformed data into our model.
 
-Since we are creating more and more configuration type files, why do not we first create a new directory called `config/` at the root level (at the same level as `src`, `notebooks` etc.). Move `config.py` into it and then create a `model.yaml` file in that directory.
+Since we are creating more and more configuration type files, why do not we first create a new directory called `configs/` at the root level (at the same level as `src`, `notebooks` etc.). Move `config.py` into it and then create a `model.yaml` file in that directory.
 
 The new file structure should resemble this:
 
 [listing]
 ----
-intro-mlops-2/
-├── __init__.py # ADD THIS
-├── notebooks/ # move your notebook here
-│   └── your_notebook.ipynb
-├── config/
+intro_mlops_2/
+├── __init__.py 
+├── notebooks/
+│   └── firstname_lastname_project5.ipynb
+├── configs/
 │   ├── model.yaml
-│   ├── validation.py
-│   └── __init__.py # ADD THIS
+│   ├── __init__.py
+│   └── ...
 ├── src/
 │   ├── __init__.py
 │   └── ...
 └── ...
 ----
-[IMPORTANT]
-====
-Please add the +__init__.py+ files to the config directory to make it a package, this way we can import the config validation module in our notebook.
-====
 
 This is the same information we had in our `config.py` (changed the `EPOCHS` variable to 5 for faster training), but in YAML format - it is very similar to JSON if you are familiar and is very often used for specifying configs.
 
 [source,yaml]
 ----
-# config/model.yaml
+# configs/model.yaml
 
 training:
   train_split: 0.8
@@ -462,13 +476,13 @@ with open(path, "r") as f:
 
 But note that this does not check the formatting of our YAML. What if there is some malformed configuration or a malicious configuration? We can enforce some safety using a library called Pydantic.
 
-So in a new file called `validation.py` under our `config` directory, we are going to use Pydantic to define _schemas_ for how our data should look. Pydantic does this by using Python classes with specified attributes and datatypes (more examples in their https://docs.pydantic.dev/latest/#pydantic-examples[docs]).
+So in a new file called `validation.py` under our `configs` directory, we are going to use Pydantic to define _schemas_ for how our data should look. Pydantic does this by using Python classes with specified attributes and datatypes (more examples in their https://docs.pydantic.dev/latest/#pydantic-examples[docs]).
 
 Here is an example of how we can define a schema for our training and model configurations:
 
 [source,python]
 ----
-# config/validation.py
+# configs/validation.py
 import yaml
 from pydantic import BaseModel
 
@@ -505,7 +519,7 @@ Here is a quick (not mandatory) example of how we can do this:
 
 [source,yaml]
 ----
-# config/experiments.yaml
+# configs/experiments.yaml
 experiments:
   baseline:
     training: {train_split: 0.8, batch_size: 32, learning_rate: 0.001, epochs: 50}
@@ -519,7 +533,7 @@ And then we need to modify our Pydantic schemas to handle the new experiments co
 
 [source,python]
 ----
-# config/validation.py
+# configs/validation.py
 from typing import Dict # used for the experiments configuration
 
 ...
@@ -534,9 +548,9 @@ class FullConfig(BaseModel):
 Finally, after its loaded, we can access the experiments like so:
 [source,python]
 ----
-from config.validation import load_config
+from intro_mlops_2.configs.validation import load_config
 
-config = load_config("config/experiments.yaml")
+config = load_config("configs/experiments.yaml")
 baseline_config = config.experiments["baseline"] # can just pass this to the datamodule or classifier
 fast_run_config = config.experiments["fast_run"]
 print(baseline_config)
@@ -551,9 +565,9 @@ This is very nicely abstracted so now wherever we need to get our model paramete
 
 [source,python]
 ----
-from config.validation import load_config
+from intro_mlops_2.configs.validation import load_config
 
-config = load_config("config/model.yaml")
+config = load_config("configs/model.yaml")
 print(config)
 ----
 
@@ -646,11 +660,6 @@ print("training: ", config.training)
 print("model: ", config.model)
 ----
 
-[IMPORTANT]
-====
-Please add another +__init__.py+ file to your intro_mlops_2 directory to make it a package, this way we can import the config validation module in our notebook.
-====
-
 .Deliverables
 ====
 3.1 Run `print_directory_tree` to show the new changes. +
@@ -669,10 +678,10 @@ Alot of the work is now performed in the classes themselves and in the `from_con
 # main.py
 import pytorch_lightning as pl
 
-from src.config import *
-from src.data_loader import WineQualityDataModule
-from src.lightning import WineQualityClassifier
-from src.neural_net import SimpleNN
+from intro_mlops_2.configs.config import *
+from intro_mlops_2.src.data_loader import WineQualityDataModule
+from intro_mlops_2.src.lightning import WineQualityClassifier
+from intro_mlops_2.src.neural_net import SimpleNN
 
 # Create model and datamodule from config
 model = WineQualityClassifier.from_config_path(SimpleNN, CONFIG_PATH / "model.yaml")
@@ -704,10 +713,10 @@ Now we should be able to run our new pipeline! Quick check, our `main.py` should
 # main.py
 ... # the other imports
 
-from .configs.config import *
-from .src.data_loader import WineQualityDataModule
-from .src.lightning import WineQualityClassifier
-from .src.neural_net import SimpleNN
+from intro_mlops_2.configs.config import *
+from intro_mlops_2.src.data_loader import WineQualityDataModule
+from intro_mlops_2.src.lightning import WineQualityClassifier
+from intro_mlops_2.src.neural_net import SimpleNN
 
 ... # the seeds being set, model initialization and datamodule initialization
 
@@ -752,7 +761,7 @@ Callbacks are definitely worth learning because they are one of the most common 
 - **more reproducible** -> automatically save the best model +
 - **more scalable** -> easy to add more behaviors later without rewriting your model code +
 
-===== EarlyStopping Callback
+==== EarlyStopping Callback
 The first callback we will create is `EarlyStopping`. This prevents your model from overfitting by automatically stopping training when the validation loss stops improving. Without this, you might train for all 50 epochs even if the model stopped getting better at epoch 30 - wasting compute time and potentially making the model worse.
 
 [source,python]
@@ -774,7 +783,7 @@ early_stopping = EarlyStopping(
 
 The `patience` parameter means "wait 10 epochs without improvement before stopping". So if validation loss stops improving at epoch 20, training will continue until epoch 30 to make sure it is really stuck, then stop automatically.
 
-===== ModelCheckpoint Callback
+==== ModelCheckpoint Callback
 The second callback is `ModelCheckpoint`, which automatically saves your best model during training. This is crucial because you want to keep the model from the epoch that performed best on validation data, not necessarily the final epoch.
 
 [source,python]
@@ -939,7 +948,7 @@ If your environment allows it, you can run `mlflow ui` in a terminal to open a l
 
 We will put all of that logic in a file called `see_runs.py` in your `src/` folder. The file loads the runs, prints the table, plots val_loss and val_accuracy, and prints the best run. From your notebook you just call one function; you do not run any of the plotting or MLflow code in the notebook. Below is the full code that goes in the file, then we break it down into parts.
 
-===== Part 1: Loading runs into a DataFrame
+==== Part 1: Loading runs into a DataFrame
 
 We first need to load the saved runs so we can start to use them which we can do by converting them to a Pandas DataFrame. We are going to create a function called `load_mlflow_runs` that uses the MLflow client to find the experiment by name, search its runs (newest first), and pull out the params and metrics we care about into a list of dicts. Turning that into a pandas DataFrame makes it easy to print, plot, or filter later.
 
@@ -982,7 +991,7 @@ def load_mlflow_runs(experiment_name: str, max_runs: int = 20) -> pd.DataFrame:
     return pd.DataFrame(rows)
 ----
 
-===== Part 2: Displaying the table
+==== Part 2: Displaying the table
 
 Next we want to create a function called `see_runs` that will load the runs and print the table, plot `val_loss` and `val_accuracy`, and print the best run. We set the tracking URI so MLflow knows where to find your `mlruns/` directory (e.g. at the project root), then calls `load_mlflow_runs("WineQualityClassifier")` to get that DataFrame. 
 
@@ -1010,7 +1019,7 @@ def see_runs(experiment_name: str = "WineQualityClassifier", project_root=None, 
 if __name__ == "__main__":
     see_runs()
 ----
-===== Part 3: Plotting val_loss and val_accuracy
+==== Part 3: Plotting val_loss and val_accuracy
 
 The next block creates two bar charts side by side: one for final validation loss and one for final validation accuracy. Each run is a bar, so you can compare runs at a glance. `plt.show()` displays the figure (in a script or when you call `see_runs()` from a notebook, the plot window will appear).
 
@@ -1042,7 +1051,7 @@ if __name__ == "__main__":
     see_runs()
 ----
 
-===== Part 4: Finding the best run
+==== Part 4: Finding the best run
 
 We filter the DataFrame to the row with the minimum `val_loss`—that is the run that achieved the best validation loss. We print that run's ID and its `val_loss` and `val_accuracy` so you know which run to use when loading a model for deployment (e.g. in your FastAPI app).
 
@@ -1067,7 +1076,7 @@ if __name__ == "__main__":
     see_runs()
 ----
 
-===== Calling the file from the notebook
+==== Calling the file from the notebook
 
 From your notebook you only need to import and call `see_runs()`. It will print the table, show the plots, and print the best run.
 
