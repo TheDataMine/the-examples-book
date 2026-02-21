@@ -9,15 +9,14 @@ In this project, you'll explore some fundamentals of signal processing by workin
 - Understand what signals are and analyze signals in both time and frequency domains
 - Intro to fundamental techniques: FFT, filtering, windowing, and feature extraction
 - Gain intuition for how different signal processing operations affect audio
+- **Attention:** This project may require additional readings beyond the assigned materials.
 ****
 
 == Dataset
 
 - /anvil/projects/tdm/data/ravdess
 
-- **RAVDESS (Ryerson Audio-Visual Database of Emotional Speech and Song)**: A validated database of emotional speech and song
-
-Refer to this https://the-examples-book.com/projects/data-sets/RAVDESS[link] for more info
+- **RAVDESS (Ryerson Audio-Visual Database of Emotional Speech and Song)**: A validated database of emotional speech and song. Please refer to the https://the-examples-book.com/projects/data-sets/ravdess[ravdess page in the example book] for more info.
 
 [[ai-note]]
 [IMPORTANT]
@@ -86,7 +85,7 @@ def load_audio_sample(data_path, emotion_code):
 ----
 [NOTE]
 ====
-Slight modifications of the function above can be used to load in and separate the *all* files by whatever classes you want.
+Slight modifications of the function above can be used to load in and separate *all* files by whatever classes you want.
 ====
 
 Now let's load in the audio samples we want to analyze:
@@ -107,13 +106,13 @@ for emotion_code in emotions_to_analyze:
         print(f"  Sample rate: {sr} Hz\n")
 ----
 
-The number of samples we see for each file differs becase each audio file is a slightly different length and each "sample" corresponds to a specific point in time.
+The number of samples we see for each file differs because each audio file is a slightly different length and each "sample" corresponds to a specific point in time.
 
 But notice the sample rate - the average number of samples taken per second - is a uniform 48000 Hz across the audio files. Depending on the source of the audio, not all audio files may necessarily have the same sample rate. If you run into that you may want to consider resampling your audio files to a standard sample rate.
 
 [NOTE]
 ====
-The second answer on https://stackoverflow.com/questions/30619740/downsampling-wav-audio-file[this post] has a good explanation and graphics for downsampling (decimating).
+The second answer on https://stackoverflow.com/questions/30619740/downsampling-wav-audio-file[Downsampling wav audio file post in stack overflow] has a good explanation and graphics for down sampling (decimating).
 
 But you can just use `librosa` to do it like so: `y, sr = librosa.load(filename)` and then `y_8k = librosa.resample(y,sr,8000)`
 ====
@@ -151,9 +150,9 @@ Notice there are some similarities in the waveform between certain emotions. Why
 
 .Deliverables
 ====
-- Sample waveform sample rate output
-- Time domain plots
-- 2-3 sentences: What patterns do you notice in the waveforms? Which emotions seem most similar/different in the time domain and why?
+1.1 Sample waveform sample rate output. +
+1.2 Time domain plots. +
+1.3 Two-three sentences: What patterns do you notice in the waveforms? Which emotions seem most similar/different in the time domain and why?
 ====
 
 === Question 2 (2 points)
@@ -162,20 +161,22 @@ In the last question we examined the signals in the time domain, but some inform
 
 Converting to the frequency domain lets you do a lot of cool things:
 
-- Can filter and perform noise reduction on the signal
-- Can remove frequencies imperceptible to the human ear to aid in compression
-- Simplifies math on the signal (convolutions in time domain are now simple multiplication) more https://dspguide.com/ch9/3.htm[here]
+- Can filter and perform noise reduction on the signal,
+- Can remove frequencies imperceptible to the human ear to aid in compression,
+- Simplifies math on the signal (convolutions in time domain are now simple multiplication, please refer the https://dspguide.com/ch9/3.htm[Chapter 9: Applications of the DFT] in 'The Scientist and Engineer's Guide to Digital Signal Processing' book of Steven W. Smith.
 
 The last point is arguably one of the most important aspects, but how do we actually convert to the frequency domain? 
 
-We can perform a Fourier Transform on the signal to convert it to the frequency domain:
+We can perform a Fourier Transform on the signal to convert it to the frequency domain.
+
+image::Fourier_transform.gif[Fourier transform, 300, 250, loading=lazy, title="Fourier transform (By Lucas V. Barbosa - Own work, Public Domain, https://commons.wikimedia.org/w/index.php?curid=24830373 accessed at 02/20/2026)"]
 
 [source, python]
 ----
 fft_vals = rfft(y)
 ----
 
-The Fast Fourier Transform (FFT) (via `rfft`) converts a time-domain signal (`y`) into its frequency-domain representation, decomposing it into sinusoidal components -  a linear combination of sine and cosine waves that form the signal.
+https://en.wikipedia.org/wiki/Fast_Fourier_transform[The Fast Fourier Transform] (FFT) (via `rfft`) converts a time-domain signal (`y`) into its frequency-domain representation, decomposing it into sinusoidal components -  a linear combination of sine and cosine waves that form the signal.
 
 From the complex FFT output, the magnitude (amplitude) tells us how much of each frequency is present, and the frequency bins (via `rfftfreq`) tell us which frequencies they are.
 
@@ -232,25 +233,25 @@ We also calculate the dominant frequency of each emotion. This can be a useful m
 
 .Deliverables
 ====
-- Frequency domain plots with dominant frequencies for each emotion
-- 2-4 sentences: Compare the dominant frequencies and overall spectral shapes. Which emotions have the most similar frequency distributions and why might that be? Make sure to note the magnitude scale of each emotions graph.
+2.1 Frequency domain plots with dominant frequencies for each emotion. +
+2.2 Two-four sentences: Compare the dominant frequencies and overall spectral shapes. Which emotions have the most similar frequency distributions and why might that be? Make sure to note the magnitude scale of each emotions graph.
 ====
 
 === Question 3 (2 points)
 
 ==== The Power of Windowing and Spectrograms
 
-So far, we've looked at signals in the time domain and frequency domain separately. But what if we want to see how the frequency content changes over time? This is where **spectrograms** come in.
+So far, we have looked at signals in the time domain and frequency domain separately. But what if we want to see how the frequency content changes over time? This is where **spectrograms** come in.
 
 ==== Problem
 
 A spectrogram is a 2D visualization that shows frequency content over time. It's created by:
 
-1. **Windowing**: Breaking the signal into small overlapping segments
-2. **FFT (Fast Fourier Transform)**: Computing the frequency content of each segment
-3. **Visualization**: Plotting frequency vs time with color intensity representing magnitude
+1. **Windowing**: Breaking the signal into small overlapping segments,
+2. **FFT (Fast Fourier Transform)**: Computing the frequency content of each segment,
+3. **Visualization**: Plotting frequency vs time with color intensity representing magnitude.
 
-===== 3 A
+===== 3.A.
 
 Windows are used in the FFT to calculate the transformation to the frequency domain. To create the windows, we define two parameters: `window_size` (how wide each window is) and `hop_size` (how many timesteps are skipped between windows). This can be used to create overlapping windows that help capture continuous features.
 
@@ -290,7 +291,7 @@ print(f"Number of windows: {len(windows)}")
 print(f"Window overlap: {((window_size - hop_size) / window_size) * 100:.1f}%")
 ----
 
-Since our `hop_size` is half of our `window_size` we have a 50% overlap, allowing us to see continuous features between windows. Modifying the window size and hop size will change the amount of overlap, the number of segments and the overall resolution of the spectrogram.
+Since our `hop_size` is half of our `window_size`, we have a 50% overlap, allowing us to see continuous features between windows. Modifying the window size and hop size will change the amount of overlap, the number of segments and the overall resolution of the spectrogram.
 
 To actually see the windows, let's plot out the signal and highlight a few windows:
 
@@ -327,17 +328,15 @@ for i in [2, 3]:  # Highlight windows 150 and 151
              ax1.get_ylim()[1]*0.5, f'Window {i+148}', ha='center', 
              bbox=dict(boxstyle='round', facecolor='red', alpha=0.7))
 
-
 plt.tight_layout()
 plt.show()
 ----
 
-The first graph shows us the windows as they are defined within the original signal. Notice how each window captures a different part of the signal. In the second graph we see the 50% overlap we talked about earlier which ensures we don't miss important features that might occur at window boundaries.
+The first graph shows us the windows as they are defined within the original signal. Notice how each window captures a different part of the signal. In the second graph, we see the 50% overlap we talked about earlier which ensures we don't miss important features that might occur at window boundaries.
 
+===== 3.B.
 
-===== 3 B
-
-We have created the actual window segments so now we can apply a window 'operation' to a segment of the signal to look at how applying a window to the signal affects the frequency analysis. There are a bunch of different windows you can choose from but we will look at the Hann window. The Hann window is essentially like putting a smooth fade-in/fade-out on each segment, so the edges don't create artificial noise in our frequency analysis. We can apply the Hann window to one of our segments like so:
+We have created the actual window segments so now we can apply a window 'operation' to a segment of the signal to look at how applying a window to the signal affects the frequency analysis. There are a bunch of different windows you can choose from but we will look at the Hann window. The Hann window is essentially like putting a smooth fade-in/fade-out on each segment, so the edges do not create artificial noise in our frequency analysis. We can apply the Hann window to one of our segments like so:
 
 [source,python]
 ----
@@ -354,10 +353,10 @@ frequency = rfftfreq(len(segment), 1/sr)
 
 [NOTE]
 ====
-We apply the window **prior** to calculating the FFT
+We apply the window **prior** to calculating the FFT.
 ====
 
-Lets take a look at the original segment compared to the Hann window segement:
+Lets take a look at the original segment compared to the Hann window segment:
 
 [source,python]
 ----
@@ -388,20 +387,17 @@ We are seeing a lot of the data in this window around ~10k Hz indicating this in
 ====
 Speech intelligibility is loosely broken down into the following frequency ranges:
 
-- **Base (0-300 Hz)**: Fundamental frequency (pitch) - helps identify speaker
-- **Middle (300-3400 Hz)**: Core intelligibility - vowels and most consonants
-- **Top (3400-8000 Hz)**: Fine details - sibilants (s, sh, f) and subtle cues
-- **Above ~8kHz**: Mostly noise, artifacts, or very subtle features
+- **Base (0-300 Hz)**: Fundamental frequency (pitch) - helps identify speaker,
+- **Middle (300-3400 Hz)**: Core intelligibility - vowels and most consonants,
+- **Top (3400-8000 Hz)**: Fine details - sibilants (s, sh, f) and subtle cues,
+- **Above ~8kHz**: Mostly noise, artifacts, or very subtle features.
 
 Telephone systems use 300-3400 Hz because that's the "sweet spot" - you lose some detail but keep most intelligibility.
 ====
 
+===== 3. C.
 
-
-
-===== 3 C
-
-We just tried out the Hann window but like we said there are different types of windows with different effects on the frequency response which you may want to use depending on the application. 
+We just tried out the Hann window, but like we said, there are different types of windows with different effects on the frequency response which you may want to use depending on the application. 
 
 However, instead of creating the windows, applying the window, and then calculating the FFT ourselves, we can let `librosa` handle this for us in one step using `librosa.stft` which defaults to applying the Hann window:
 
@@ -437,15 +433,15 @@ plt.colorbar(img, ax=axes, format='%+2.0f dB')
 plt.show()
 ----
 
-The colorbar on the right shows levels of decibels which correspond to the intensity of a frequency at a given point in time. This creates a nice way for us to analyze which frequencies are apparent at a given time.
+The color bar on the right shows levels of decibels which correspond to the intensity of a frequency at a given point in time. This creates a nice way for us to analyze which frequencies are apparent at a given time.
 
 .Deliverables
 ====
-- Windowing demonstration plots
-- Window comparison plots
-- Spectrogram comparison plots
-- 1-2 sentences: How does the Hann window improve the frequency analysis compared to no window?
-- 2-3 sentences: What temporal patterns do you see in the spectrograms? Which emotions show the most dynamic frequency changes over time?
+3.1 Windowing demonstration plots. +
+3.2 Window comparison plots. +
+3.3 Spectrogram comparison plots. +
+3.4 One-two sentences: How does the Hann window improve the frequency analysis compared to no window? +
+3.5 Two-three sentences: What temporal patterns do you see in the spectrograms? Which emotions show the most dynamic frequency changes over time?
 ====
 
 === Question 4 (2 points)
@@ -458,9 +454,9 @@ Now that we understand how to analyze signals, let's learn how to modify them us
 
 Filters can be categorized by their frequency response:
 
-- **Low-pass**: Passes low frequencies, blocks high frequencies
-- **High-pass**: Passes high frequencies, blocks low frequencies  
-- **Band-pass**: Passes frequencies within a specific range
+- **Low-pass**: Passes low frequencies, blocks high frequencies,
+- **High-pass**: Passes high frequencies, blocks low frequencies,  
+- **Band-pass**: Passes frequencies within a specific range.
 
 Let's start by just reloading the happy sample again:
 
@@ -475,9 +471,9 @@ To create the different filter types we can use the https://pythonguides.com/pyt
 
 There are a few key parameters that we are going to set in the Butterworth filter:
 
-- **order**: the order of the filter - 4 empirically seems to be a good balance between removing noise and not losing to much of the signal
-- **cutoff**: the frequency cutoff - depends on the filter we are applying
-- **btype**: the type of filter - low, high, or band
+- **order**: the order of the filter - 4 empirically seems to be a good balance between removing noise and not losing to much of the signal,
+- **cutoff**: the frequency cutoff - depends on the filter we are applying,
+- **btype**: the type of filter - low, high, or band.
 
 The low pass filter blocks all frequencies *above* a certain threshold which we set to 3000 Hz to preserve the strongest speech energy. This typically captures vowels, but you will lose the higher frequency details like the softer consonants.
 
@@ -515,7 +511,7 @@ y_bandpass = signal.filtfilt(bandpass_b, bandpass_a, y)
 
 [NOTE]
 ====
-`filtfilt` is a 'zero-phase' method which means it applies the filters in both directions, forward and back. This avoids issues with *phase distortion* compared to using `lfilter` which only applies the filter forward, but there are cases for both methods. https://www.mathworks.com/help/signal/ug/compensate-for-delay-and-distortion-introduced-by-filters.html[Here] is a nice illustration (in matlab, but same principles apply) showing *phase distortion* and how either function affects the processed signal.
+`filtfilt` is a 'zero-phase' method which means it applies the filters in both directions, forward and back. This avoids issues with *phase distortion* compared to using `lfilter` which only applies the filter forward, but there are cases for both methods. https://www.mathworks.com/help/signal/ug/compensate-for-delay-and-distortion-introduced-by-filters.html[MATLAB documentation showing "Compensate for Delay and Distortion Introduced by Filters"] is a nice illustration (even it is in MATLAB, same principles apply here) showing *phase distortion* and how either function affects the processed signal.
 ====
 
 Now we can graph these 3 filters and compare the signal against the original:
@@ -589,11 +585,11 @@ Similarly, what do you notice between the different filters compared to the orig
 
 .Deliverables
 ====
-- Filtered signal plots (time domain)
-- Spectrogram comparison plots
-- 2-3 sentences: Compare how each filter affects the signal. Which frequencies are most affected by each filter type?
-- 1-2 sentences: Which filter would be most effective at removing background noise? Why?
-- 1-2 sentences: Which filter preserves the most speech intelligibility? Why?
+4.1 Filtered signal plots (time domain). +
+4.2 Spectrogram comparison plots. +
+4.3 Two-three sentences: Compare how each filter affects the signal. Which frequencies are most affected by each filter type? +
+4.4 One-two sentences: Which filter would be most effective at removing background noise? Why? +
+4.5 One-two sentences: Which filter preserves the most speech intelligibility? Why?
 ====
 
 === Question 5 (2 points)
@@ -604,11 +600,11 @@ Now that we understand some fundamentals, let's extract meaningful features from
 
 ==== Problem
 
-We'll extract several types of features that capture different aspects of the audio signal:
+We will extract several types of features that capture different aspects of the audio signal:
 
-- **Statistical features**: Basic properties like mean, standard deviation, RMS
-- **Spectral features**: Energy distribution across frequencies
-- **MFCCs**: Mel-frequency cepstral coefficients, powerful features for audio analysis
+- **Statistical features**: Basic properties like mean, standard deviation, RMS,
+- **Spectral features**: Energy distribution across frequencies,
+- **MFCCs**: Mel-frequency cepstral coefficients, powerful features for audio analysis.
 
 Let's start with statistical features:
 
@@ -627,7 +623,7 @@ features['rms'] = np.sqrt(np.mean(y**2))
 features['zero_crossing_rate'] = np.median(librosa.feature.zero_crossing_rate(y))
 ----
 
-We talked about it earlier but RMS helps to measure the loudness and overall energy of a signal. Zero Crossing Rate (ZCR) is defined as the number of times the signal changes sign (crosses zero) per frame. So a higher ZCR means more high-frequency/noisy/fricative content whereas a lower ZCR means more voiced/tonal content. This would typically be used as an auxillary feature versus a main feature.
+We talked about it earlier but RMS helps to measure the loudness and overall energy of a signal. **Zero Crossing Rate (ZCR)** is defined as the number of times the signal changes sign (crosses zero) per frame. So a higher ZCR means more high-frequency/noisy/fricative content whereas a lower ZCR means more voiced/tonal content. This would typically be used as an auxiliary feature versus a main feature.
 
 The `librosa` implementation of ZCR returns the ZCR per frame so we can either plot it over time to compare the dynamics between the emotions or we can also aggregate it to get a single value for each emotion like we did here.
 
@@ -648,7 +644,7 @@ Spectral centroid is the “center of mass” of the spectrum which is the weigh
 
 Spectral rolloff is the frequency below which some percent of the energy is contained (we used 85% here). So a higher rolloff means more high-frequency energy whereas a lower rolloff means more low-frequency energy. It can give a quick summary of how fast the energy decays with frequency and can be paired with the centroid to give a more robust spectral shape description.
 
-Next we are going to extract one of the more powerful features for audio classification:
+Next, we are going to extract one of the more powerful features for audio classification:
 
 [source,python]
 ----
@@ -659,7 +655,7 @@ features['mfcc_3'] = np.mean(mfccs[2])
 features['mfcc_4'] = np.mean(mfccs[3])
 ----
 
-Mel-frequency cepstral coefficients (MFCCs) are a very common and powerful primary feature used in audio applications. These capture the spectral characteristics in a very compact representation. https://towardsdatascience.com/audio-deep-learning-made-simple-part-2-why-mel-spectrograms-perform-better-aad889a93505/[This link] has a some good explanations and good graphics to help explain more about MFCCs and I highly recommend taking a look at it.
+Mel-frequency cepstral coefficients (MFCCs) are a very common and powerful primary feature used in audio applications. These capture the spectral characteristics in a very compact representation. https://towardsdatascience.com/audio-deep-learning-made-simple-part-2-why-mel-spectrograms-perform-better-aad889a93505/[The blog post in Towards Data Science] has a some good explanations and good graphics to help explain more about MFCCs. We highly recommend taking a look at it.
 
 Now let's extract these features for each emotion. Fill in the for loop to populate the features for each emotion sample.
 
@@ -700,10 +696,10 @@ Based on this table, do any of the features immediately jump out at you as not u
 
 .Deliverables
 ====
-- Feature comparison table
-- 1-2 sentences: Which emotion has the highest RMS value? What does this tell us about the emotional expression?
-- 1-2 sentences: Which emotion has the highest spectral centroid? What does this indicate about the speech characteristics?
-- 1-2 sentences: How does the zero crossing rate differ between emotions? What does this measure and why might it vary?
+5.1 Feature comparison table. +
+5.2 One-two sentences: Which emotion has the highest RMS value? What does this tell us about the emotional expression? +
+5.3 One-two sentences: Which emotion has the highest spectral centroid? What does this indicate about the speech characteristics? +
+5.4 One-two sentences: How does the zero crossing rate differ between emotions? What does this measure and why might it vary?
 ====
 
 === Question 6 (2 points)
@@ -753,11 +749,11 @@ Note that just because an individual feature looks similar across these four emo
 
 .Deliverables
 ====
-- Graphs of `rms`, `spectral_centroid`, `spectral_rolloff`, `zero_crossing_rate`
-- Graphs of `mfcc_1`, `mfcc_2`, `mfcc_3`, `mfcc_4`
-- 1-2 sentences: Which features show the most variation between emotions? What does this suggest about their usefulness for emotion classification?
-- 1-2 sentences: Which features show the least variation? Why might this be the case?
-- 1-2 sentences: Based on these features, which pair of emotions would be easiest to distinguish? Which would be hardest? Why?
+6.1 Graphs of `rms`, `spectral_centroid`, `spectral_rolloff`, `zero_crossing_rate`
+6.2 Graphs of `mfcc_1`, `mfcc_2`, `mfcc_3`, `mfcc_4`
+6.3 One-two sentences: Which features show the most variation between emotions? What does this suggest about their usefulness for emotion classification?
+6.4 One-two sentences: Which features show the least variation? Why might this be the case?
+6.5 One-two sentences: Based on these features, which pair of emotions would be easiest to distinguish? Which would be hardest? Why?
 ====
 
 == Submitting your Work
@@ -781,7 +777,6 @@ You **will not** receive full credit if your `.ipynb` file does not contain all 
 ====
 
 
-
 ////
 
 == Recap!
@@ -795,7 +790,6 @@ In this project, we covered some fundamental signal processing concepts:
 - **Feature Extraction**: Extracting meaningful numerical features from audio signals
 
 A lot of these are implemented in easy to use functions in libraries like `librosa` but without a fundamental understanding of signals it is hard to use these libraries properly. Hopefully this project provided a useful intro to some of these topics you can continue to explore!
-
 
 [NOTE]
 ====
@@ -820,3 +814,5 @@ print("Hello, world!")
 | if the values were 1,1,2 | the last column width would | be twice as wide as the first two
 |===
 ////
+
+
