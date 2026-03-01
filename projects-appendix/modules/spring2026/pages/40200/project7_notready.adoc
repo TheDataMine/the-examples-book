@@ -159,7 +159,7 @@ $X_{k} = \sum_{m=0}^{n-1} x_{m}e^{-\frac{i2\pi km}{n}}, \ k \in [0,n-1]$
 
 The values $X_{k}$ are complex valued. FFT has the conjugate symmetric property, and the negative frequency components are mirror images of the positive frequencies. 
 
-For real signals, it is unnecessary to compute the negative frequencies, and using `np.fft.rfft()` computes 0 to Nyquist frequency ($f_{s}/2$, and for a sample size of $N$ it outputs the size of $N//2 + 1$), allowing more efficient computations.
+For real signals, it is unnecessary to compute the negative frequencies, and using `np.fft.rfft()` computes 0 to Nyquist frequency ($f_{s}/2$, and for a sample size of $N$ it outputs the size of $N/2 + 1$), allowing more efficient computations.
 ====
 
 **2.** `np.abs()`: We can use this to calculate the magnitude and see how strong each frequency components are. 
@@ -218,9 +218,9 @@ frequency_spectrum(y, sr)
 Audio(y, rate=sr)
 ----
 
-`freq = 440`: Measured in cycles per second. 440Hz corresponds to the musical note A4 (often used as reference pitch for tuning instruments).
+`freq = 440`: measured in cycles per second. 440Hz corresponds to the musical note A4 (often used as reference pitch for tuning instruments).
 
-`duration = 0.1`: How long the signal lasts. Setting it to 0.1 means the tone will play for 0.1 seconds. Also, if we have sr=44100, then the number of samples = (duration)(sampling rate) = (0.1)(44100)
+`duration = 0.1`: how long the signal lasts. Setting it to 0.1 means the tone will play for 0.1 seconds. Also, if we have $sr=44100$, then the number of $samples = (duration)(sampling rate) = (0.1)(44100)$.
 
 Remember importing `from IPython.display import Audio` earlier. This is used in Python environments and allows us to directly integrate audio playback features into our notebook. 
 
@@ -301,19 +301,18 @@ image::q2_output2.png[Output,400,300]
 ====
 Combined signal can be represented as:
 
-
 $y(t) = A_{1}sin(2\pi f_{1}t + \phi_{1}) + A_{2}sin(2\pi f_{2}t + \phi_{2})$
 
-A_1 is the amplitude of 440Hz (f_1) and A_2 is the amplitude of 880Hz (f_2). 
+$A_1$ is the amplitude of the 440 Hz component ($f_1$), and $A_2$ is the amplitude of the 880 Hz component ($f_2$). 
 
-$F\{y_{1} + y_{2}\} = F\{y_{1}\} = F\{y_{2}\}$
+$F\{y_{1} + y_{2}\} = F\{y_{1}\} + F\{y_{2}\}$
 
-Linearity of Fourier transform implies that we get individual frequnecy component contribution to the spectrum; each sine wave gives us the peak at its frequnecy in the frequency plot, and here in terms of magnitude, they will add together and will not interfere.
+Linearity of the Fourier transform implies that each individual frequency component contributes separately to the spectrum. Each sine wave produces a peak at its corresponding frequency in the frequency plot. In terms of magnitude, these contributions add together and do not interfere with one another.
 
-The new shape given by the time domain also makes sense then, because the 440Hz wave has a longer cycle (lower frequency), and 880Hz has a shorter cycle (higher frequency), which is reflected in the faster wiggles you'll see inside the bigger overall shape of the time domain graph. 
+The new shape given by the time domain also makes sense then, because the 440Hz wave has a longer cycle (lower frequency), and 880Hz has a shorter cycle (higher frequency), which is reflected in the faster wiggles you will see inside the bigger overall shape of the time domain graph. 
 ====
 
-Lastly, for this question, recall from the first signal processing project the RAVDESS dataset. We will explore application of above concept on this dataset. 
+Lastly, for this question, recall from the https://the-examples-book.com/projects/spring2026/40200/project6[first signal processing project] the RAVDESS dataset. We will explore application of above concept on this dataset. 
 
 First load the audio samples as we did in the first project, then pick a sample and output some information about the file like below. 
 
@@ -411,21 +410,16 @@ for n in N_val:
 y_norm = y / np.max(np.abs(y))
 ----
 
-If the frequency domain data has complex conjugate symmetry, we get real valued time signal back when taking the Inverse FFT (IFFT). 
+If the frequency domain data has complex conjugate symmetry, we get real valued time signal back when taking the Inverse FFT (IFFT). So,
 
-So,
+$Y[k] = Y^{*}[-k]$,
 
-$Y[k] = Y^{*}[-k]$
+where complex conjugates are the frequency bin at index $k$ (positive) and frequnecy bin at index $-k$. 
 
-Where complex conjugates are the frequency bin at index k (positive) and frequnecy bin at index -k. 
+`fft()` returns an array with both positive and negative frequencies, where index 0 contains the zero frequency component (DC component), and indices 1 through $N/2$ stores positive frequencies while the latter half stores negative frequencies. 
 
-`fft()` returns an array with both positive and negative frequencies, where index 0 contains the zero frequency component (DC component), and indices 1 through N/2 stores positive frequencies while the latter half stores negative frequencies. 
+When we only keep `Y[idx_keep]` part, we are also only taking one side of the symmetry, and to keep the real signal, we need to also set the corresponding negative bins. `(-idx_keep) % num_samples` is what wraps the negative indices into correct array position. The normalized reconstructions are stored in `recons[n]`. Let's plot:
 
-When we only keep `Y[idx_keep]` part, we are also only taking one side of the symmetry, and to keep the real signal, we need to also set the corresponding negative bins. `(-idx_keep) % num_samples` is what wraps the negative indices into correct array position.
-
-The normalized reconstructions are stored in `recons[n]`
-
-Plotting:
 [source,python]
 ----
 # Move a bit into the audio
@@ -444,17 +438,20 @@ plt.show()
 
 `np.arange(2000)/sr` creates an array of 2000 elements, and dividing by sr converts into seconds. Each element is a representation of time in seconds corresponding to each sample. 
 
-`recons[n][start:end]` is the reconstructed audio signal. start:end sets the portion we want to visualize. 
+`recons[n][start:end]` is the reconstructed audio signal. `start:end` sets the portion we want to visualize. 
 
 You should also write the code to output and listen to the audio for each reconstructions. 
 
 .Deliverables
 ====
-- 2a. Code to plot time-domain, frequency-domain, and play the sound using Audio(). Explain your observations of both Time Domain and Frequency plots. What are some differences?
-- 2b. Provide code and outputs using a different frequency value, and a different duration value. Explain how the plots change and why. 
-- 2c. Code and output of (file name, duration, number of samples, and sample rate) loading in an audio sample from the RAVDESS dataset.
-- 2d. Code and output computing FFT, finding strongest frequency components, reconstructing signals, and plotting all examples. You must include comments and explanation of all code, in your own words. 
-- 2e. Code and output of the actual audio for all reconstructions using `Audio()`. Explain how fft() and ifft() are used, and how the resulting audio changes. 
+
+**Although the number of deliverables here seems high, a very large portion of it is simply a repetition of what we did in practice within the problem itself.**
+
+2a. Code to plot time-domain, frequency-domain, and play the sound using Audio(). Explain your observations of both Time Domain and Frequency plots. What are some differences? +
+2b. Provide code and outputs using a different frequency value, and a different duration value. Explain how and why the plots change. +
+2c. Code and output of (file name, duration, number of samples, and sample rate) loading in an audio sample from the RAVDESS dataset. +
+2d. Code and output computing FFT, finding strongest frequency components, reconstructing signals, and plotting all examples. You must include comments and explanation of all code, in your own words. + 
+2e. Code and output of the actual audio for all reconstructions using `Audio()`. Explain how `fft()` and `ifft()` are used, and how the resulting audio changes. 
 ====
 
 === Question 3 (2 points)
