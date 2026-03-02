@@ -17,7 +17,7 @@ This project introduces steganography (hiding information in plain sight) and st
 
 The project will use various images for encoding and decoding messages. You can use the provided sample image or any image of your choice (recommended: PNG format, at least 256x256 pixels for best results).
 
-Sample image path: `/anvil/projects/tdm/data/icecream/hd/images/0_hd.png`
+Sample image path: `/anvil/projects/tdm/data/dino/dino.jpg`
 
 == Questions
 
@@ -38,7 +38,7 @@ This is a subtle change, but it is enough to hide a message while staying hidden
 
 ==== Step 1: Converting Messages to Binary
 
-Before we can hide a message, we need to convert it to binary since images are just composed of a bunch of pixels, which are in turn composed of bits. Each character of our message can be decomposed into 8 bits. We will also need a special "delimiter" to mark where the message ends so we do not accidentally decode a message that is not intended for us.
+Since images are just composed of a bunch of pixels, which are in turn composed of bits, we first need to convert our message to to binary before we can hide it in the image. Each character of our message can be decomposed into 8 bits. We will also need a special "delimiter" to mark where the message ends in the image so we do not accidentally decode a message that is not intended for us.
 
 Let's start by converting our message to binary and adding our delimiter:
 
@@ -62,7 +62,7 @@ print(f"Last 32 bits: {message_binary[-32:]}")
 
 Looks like binary to us! Also note the delimiter we added to the end of our message. 
 
-But what if our message is too long? We would not be able to fit it into the image since our upper bound is the dimensions of the image. So, let's load up an image and check to make sure it can fit with our approach:
+But what if our message is too long? We would not be able to fit it into the image since our upper bound of how long a message can be is the dimensions of the image. So, let's load up an image and check to make sure it can fit with our approach:
 
 [source,python]
 ----
@@ -71,7 +71,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 # Load an image
-image_path = '/anvil/projects/tdm/data/icecream/hd/images/0_hd.png'
+image_path = '/anvil/projects/tdm/data/dino/dino.jpg'
 img = Image.open(image_path).convert('RGB')
 img_array = np.array(img)
 
@@ -91,9 +91,16 @@ print(f"Can fit message? {len(message_binary) <= gray_img.size}")
 We are using grayscale for our images here for simplicity sake. Using RGB for images is more realistic and actually provides 3 times the capacity of the image since we can encode 3 bits per pixel (RGB are each one channel) instead of 1, however for the teaching purposes, we are sticking with only modifying a single channel.
 ====
 
-Looks good! This means we should be able to fit our message into the image.
+Looks good! This means we should be able to fit our message into the image which we can quickly visualize like so:
 
-Also note that unlike our message, our image is composed of pixels, which are composed of bits. So we need to convert our image to a 1D array of bits so we can modify the LSBs of each pixel.
+[source,python]
+----
+plt.imshow(gray_img, cmap='gray')
+plt.axis('off')
+plt.show()
+----
+
+Also note that unlike our message, our image is a _2D array composed of pixels_. So we will need to _flatten_ our image to a _1D array of pixels_ so we can modify the LSBs of each pixel sequentially.
 
 ==== Step 2: Understanding How to Modify LSBs
 
@@ -174,22 +181,29 @@ Please print the original and stego-image arrays side-by-side for the first 10 p
 
 [source,python]
 ----
-print(f"Original image: {gray_img[0][:10]}")
+print(f"Original image:    {gray_img[0][:10]}")
 print(f"Stego-image short: {stego_image_short[0][:10]}")
+----
+
+You can also check that only the LSBs changed by using the bitwise XOR operator `^` to compare the original and stego-image arrays and then applying the bitwise AND operator `&` with 1 to get the LSBs. For exmaple, the second pixel in the original image is 204, but it becomes 205 in the stego-image which this line of code verifies:
+
+[source,python]
+----
+print(f"Only LSBs changed: {((gray_img ^ stego_image_short) & 1)[0][:10]}")
 ----
 
 .Deliverables
 ====
 * 1a. Run the binary conversion code and explain in 2-3 sentences: +
-(1) what the binary representation shows, +
-(2) why we need a delimiter, + 
-(3) what the size check tells us.
+** (1) what the binary representation shows, +
+** (2) why we need a delimiter, + 
+** (3) what the size check tells us.
 * 1b. Run the LSB modification example and explain in 1-2 sentences how the bitwise operations (`& 0xFE` and `|`) work together to modify the LSB.
 * 1c. Complete the `encode_lsb()` function by filling in the loop that modifies LSBs. Include a comment explaining what your code does.
 * 1d. Test your function:
 ** Load the sample image and encode a message (at least 15 characters)
 ** Print the original and stego-image arrays side-by-side for the first 10 pixels
-** Verify that only the LSBs changed (you can check: `(original ^ stego) & 1` should show only 0s and 1s)
+** Verify that only the LSBs changed (you can check: `((gray_img ^ stego_image_short) & 1)[0][:10]` should show only 0s and 1s)
 ====
 
 === Question 2: LSB Decoding & Visual Analysis (2 points)
@@ -257,7 +271,7 @@ def decode_lsb(stego_image_array):
     return message
 ----
 
-Once you filled out the function, please test it out with the `short_message` to see if you get back the correct result! 
+Once you filled out the function, please test it out with the image we encoded our `short_message` into last question to see if you get back the correct result! 
 
 [IMPORTANT]
 ====
@@ -266,9 +280,9 @@ You may have some remaining characters at the end that are not part of your orig
 
 ==== Step 2: Visual Comparison
 
-Now let's compare the original and stego-images both visually and quantitatively! We can visualize this by plotting the images side-by-side, using matplotlib as we normally do in Python.
+So far we haven't actually seen what the stego-image looks like. So now let's compare the original and stego-image visually but also quantitatively! We can visualize this by plotting the images side-by-side, using matplotlib as we normally do in Python.
 
-But first, let's also use a slightly more complicated message:
+But first, let's also use a slightly more complicated message to encode and decode since our previous message was too short to really see the difference:
 
 [source,python]
 ----
@@ -287,7 +301,7 @@ print(f"Message fits?    {len(long_message) * 8 <= gray_img.size}")
 
 Please use this message with your encode and decode functions and show the decoded message output. Note that since this message is so long we will need to truncate it when using the basic LSB approach (try the first 20,000 characters).
 
-Let's now plot the original and stego-images side-by-side to see the difference:
+Let's now plot the original, the short stego-image, and the long stego-image side-by-side to see if we can visuallydetect any difference:
 
 [source,python]
 ----
@@ -307,7 +321,7 @@ plt.tight_layout()
 plt.show()
 ----
 
-We should not see much if any difference between the original and stego-image which is what we want! We can also use some simple metrics to quantify the difference between the two images which may help us understand how well our steganography technique is working.
+We should not see much if any difference between the original and stego-image but that is exactly what we want! We can also use some simple metrics to quantify the difference between the two images which may help us understand how well our steganography technique is working.
 
 MSE (Mean Squared Error) and PSNR (Peak Signal-to-Noise Ratio) are common metrics used to evaluate the quality of steganographic images. MSE quantifies the average error between corresponding pixels, while PSNR gives a sense of the overall visual quality—higher PSNR means the images appear more alike. PSNR expresses the ratio of the maximum possible pixel value to the square root of the MSE which allows us to get a sense of the perceptual quality of the images since it uses the same units (pixel values).
 
@@ -329,7 +343,9 @@ print(f"PSNR: {psnr:.2f} dB")
 PSNR uses log10 here to express this ratio on a decibel scale, making it easier to interpret large value differences.
 ====
 
-We should see a very small MSE (typically 0.0001 to 0.01 depending on message length) and a high PSNR (typically 40-60 dB). This means the images are nearly identical visually, which is exactly what we want and is the basic goal of steganography! The small MSE reflects that we only changed the LSBs of some pixels (each change is at most 1 in pixel value), so the average squared difference is very small.
+We should see a very small MSE (typically 0.0001 to 0.01 depending on message length) and a higher PSNR (typically 40-60 dB). This means the images are nearly visually identical to the original natural images, which is exactly what we want and is the basic goal of steganography! The small MSE reflects that we only changed the LSBs of some pixels (each change is at most 1 in pixel value), so the average squared difference is very small.
+
+Notice that even though we can not visually detect a difference between the original and stego-image, the PSNR is higher for the long stego-image which is expected since we are encoding way more information into the image. However, more complex methods should allow us to encode more information into the image while still maintaining a lower MSE and higher PSNR.
 
 .Deliverables
 ====
@@ -343,75 +359,55 @@ We should see a very small MSE (typically 0.0001 to 0.01 depending on message le
 
 === Question 3: Advanced LSB Techniques (2 points)
 
-==== Multi-Bit Plane Encoding
+==== n-LSB Encoding
 
-So far we have used only 1 bit per pixel. We can use more bits to store more data, but the more bits we modify the larger the changes visually will be. Let's explore this trade-off.
+So far we have used only 1 bit per pixel to keep our changes as subtle as possible. Consider that even though we can use more bits in every pixel to store more data, the more bits we modify the larger the changes visually. A very similar approach to the one we just used is to use the last `n` bits of each pixel to store our message. This is known as `n-LSB` encoding and is a very simple and effective way to encode more information into the image while still maintaining a relatively high PSNR.
 
-**Key Concept**: Instead of modifying just the LSB, we can modify the 2 least significant bits (or even 3). This doubles (or triples) our capacity but may be more detectable.
-
-==== Step 1: Multi-Bit Encoding
-
-This is almost the exact same approach as before, but we are now modifying more than just the most LSB, we will be modifying the last `num_bits` bits of each pixel which we can refer to as n-LSB where `n` is the number of bits you are choosing to modify. So please modify the function we created in the previous question to encode take in a parameter `num_bits` and modify the LSBs accordingly.
-
-
-
+However its not a very elegant solution and is still relatively easy to detect which we can see in the following images:
 [source,python]
 ----
-def encode_lsb_multi_bit(image_array, message, num_bits=2):
-    """
-    Encode message using multiple LSBs.
-    
-    Parameters:
-    - image_array: numpy array of grayscale image
-    - message: string message to encode
-    - num_bits: number of LSBs to use (1, 2, or 3)
-    
-    Returns:
-    - stego_image: numpy array with hidden message
-    """
-    # convert to binary, add delim
-    # check if message fits - make sure to base it of num_bits
-    # flatten image into 1D array
-    ...
+orig_color = Image.open("dinos.jpg").convert("RGB")
+orig_gray = Image.open("dinos.jpg").convert("L")
 
-    # Encode: each pixel stores 'num_bits' bits
-    bit_idx = 0
-    for i in range(len(flat_image)):
-        pixel = flat_image[i]
-        
-        # Step 1: Extract the bits we want to encode from the binary message
-        # bits_to_encode = message_binary[bit_idx:bit_idx+num_bits]
+stego_gray = Image.open("stego_lsb_5bits.png").convert("L")
+stego_rgb_2 = Image.open("stego_rgb_lsb_2bits.png").convert("RGB")
+stego_rgb_5 = Image.open("stego_rgb_lsb_5bits.png").convert("RGB")
 
-        # Step 2: pad with zeros if our message is not a multiple of num_bits
-        # if len(bits_to_encode) < num_bits:
-        #     bits_to_encode += '0' * (num_bits - len(bits_to_encode))
-        
-        # Step 3: Clear the last 'num_bits' bits
-        # For 2 bits: mask = 0xFC (11111100), for 3 bits: mask = 0xF8 (11111000)
-        # there are few ways to dynamically make it, do what makes the most sense to you
-        # mask = (0xFF >> num_bits) << num_bits  # Creates mask like 0xFC for 2 bits
-        
-        # Step 4: Set the bits
-        bits_value = int(bits_to_encode, 2)
-        flat_image[i] = (pixel & mask) | bits_value
-        
-        bit_idx += num_bits
-        if bit_idx >= len(message_binary):
-            break
-    
-    # reshape to 2D & return image
-    ...
+fig, axes = plt.subplots(2, 2, figsize=(12, 12))
+
+# Original Color
+axes[0, 0].imshow(orig_color)
+axes[0, 0].set_title("Original Image (Color)")
+axes[0, 0].axis("off")
+
+# Original Grayscale
+axes[0, 1].imshow(orig_gray, cmap="gray")
+axes[0, 1].set_title("Original Image (Grayscale)")
+axes[0, 1].axis("off")
+
+# Stego RGB (5 LSBs)
+axes[1, 0].imshow(stego_rgb_5)
+axes[1, 0].set_title("Stego Image (RGB, 5 LSBs/channel)")
+axes[1, 0].axis("off")
+
+# Stego Grayscale (5 LSBs)
+axes[1, 1].imshow(stego_gray, cmap="gray")
+axes[1, 1].set_title("Stego Image (Grayscale, 5 LSBs)")
+axes[1, 1].axis("off")
+
+plt.tight_layout()
+plt.show()
 ----
 
-Please also decode the message from the stego-image and verify it matches the original message and recalculate the MSE and PSNR values to see how it compares to the basic LSB encoding. Intuitively the MSE should be higher and the PSNR should be lower since we are now encoding more bits per pixel increasing the overall difference between the original and stego-image.
+Now using 5-LSB might be exagerating here but you can see that the visual difference is much more noticable - there are actual major areas that are noticably "off". But, even with smaller values of `n`, this method can still be very easily detected using statistical methods
 
-==== Step 2: Adaptive LSB Based on Variance
-
-As we saw with the MSE and PSNR values using n-LSB encoding, the difference is much more noticable. You may have even noticed something in the image itself if you used a large enough value for `n` with a long enough message. 
+==== Adaptive LSB Based on Variance
 
 Another way to approach encoding more information in an image is using some form of dynamic analysis to decide where you can reasonably encode more information. This stems from the fact that some images are "messier" by nature - think of a picture of Times Square at night versus a picture of a simple grass field and with a clear blue sky. The picture of Time Square has more going on all the different lights, advertisements, people, cars, etc compared to the simplistic block of green and block of blue.
 
-With this in mind, we can look at implementing adaptive encoding based on the pixels _regional variance_ to ensure we only modify pixels in a higher variance (or already otherwise noisy) area. This is a good way to ensure we are not modifying the image in a way that is easily detectable.
+In our image, areas like the fauna or some parts of the dinosaurs scales and shadows may have higher variance indicating they might be a better place to encode our message.
+
+With this in mind, we can look at implementing adaptive encoding based on the pixels _regional variance_ to ensure we only modify pixels in a higher variance (or already otherwise noisy) area.
 
 **Key Concept**: Calculate local variance for each pixel. High variance = textured area (good for hiding). Low variance = smooth area (bad for hiding).
 
@@ -427,13 +423,13 @@ kernel = np.ones((window_size, window_size)) / (window_size * window_size)
 local_mean = ndimage.convolve(img_float, kernel, mode='constant') 
 ----
 
-[NOTE]
-====
-This link has a good visual of what is going on if you want to check it out which may be easier to understand compared to a written explanation.
+Take a look at the following gif to see what convolution is and how it works. Different kernels have different effects on the input, for example the one in the gif is a _sharpening_ kernel which makes the image edges more pronounced.
 
+image::./convolution.gif[Convolution Example, source: https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fi.ibb.co%2FVvp6FRz%2Fnagesh-cnn-intro-5.gif&f=1&nofb=1&ipt=be0248fbd9d587c0e90154ab4dce2ae283d3176c51691d1d13edf4f21532e5bb]
 
-TODO: add the LINK
-====
+The kernel we are using is a _box_ kernel which is a simple average of the pixels in the area surrounding the pixel (commonly used for blurring images):
+
+image::./box_kernel.png[Box Kernel, source: https://nrsyed.com/2018/02/17/kernels-in-image-processing/]
 
 Now we can just calculate the variance (mean square diff of original image as a float and the local_mean). The final step is to convolve this map of squared differences again using the same kernel which gets us the regional variance for that pixel.
 
@@ -444,13 +440,47 @@ squared_diff = (img_float - local_mean) ** 2
 local_variance = ndimage.convolve(squared_diff, kernel, mode='constant')
 ----
 
-Please put these all together into a function we can use in the next function we are going to write.
+Please put these all together into a function that returns the `variance_map` and then lets graph the variance map to see where those higher variance areas are:
 
-The once you have the function we can use this "variance map" to do some cool things. First we want ensure that we can actually fit our message into the image like we have in the past. To accomplish this we can directly compare our variance map to a threshold (`map >= threshold`) which gives us a boolean map. We can then sum this to get the number of 'suitable' pixels we can modify. 
+[source,python]
+----
+variance_map = calculate_local_variance(gray_img, window_size=3)
+plt.imshow(variance_map, cmap='hot')
+plt.colorbar()
+plt.show()
+----
+
+The outlines of the dinosaurs and faunas are the brightest areas in the variance map indicating they are the areas with the highest variance which means we can reasonably encode more of our message in these areas.
+
+First we want ensure that we can actually fit our message into the image like we have in the past. To accomplish this we can directly compare our variance map to a threshold (`map >= threshold`) which gives us a boolean map. We can then sum this to get the number of 'suitable' pixels we can modify. 
+
+[source,python]
+----
+suitable_pixels = variance_map >= variance_threshold # threshold will be a parameter in the function
+----
+
+We can then use this to see how many characters we can fit into the image:
+[source,python]
+----
+available_bits = np.sum((variance_map >= 10).flatten()) - 16 # 10 is our threshold, 16 for the delimiter
+print(f"Available bits: {available_bits}")
+print(f"Characters we can fit: {available_bits // 8}")
+----
+
+Not only that but we can also visualize the suitable pixels to see where we can encode our message:
+[source,python]
+----
+plt.imshow(variance_map >= 10, cmap="gray")
+plt.title("High-Variance Regions (White = Encodable)")
+plt.axis("off")
+plt.show()
+----
+
+It looks like there are quite a few suitable pixels to encode our message in which means we should be able to fit a longer message into the image! 
 
 [NOTE]
 ====
-Remember to add your delimiter to the end of your message once before you check the length condition - we need to ensure we can encode our whole message and ensure the decoder knows when to stop.
+Remember to add your delimiter to the end of your message before you check the length condition.
 ====
 
 We can then use a pretty slick numpy function called `np.where()` to get a list of all the indices that we classified as suitable:
@@ -467,10 +497,9 @@ We can now iterate over and then modify the bit like we did before:
 for i, pixel_idx in enumerate(suitable_indices[:len(message_binary)]):
     bit = int(message_binary[i])
     flat_stego[pixel_idx] = (flat_stego[pixel_idx] & 0xFE) | bit
-
 ----
 
-Please fill out the rest of the implementation:
+Using the above, please fill out the rest of the implementation:
 [source,python]
 ----
 def encode_adaptive_lsb(image_array, message, variance_threshold=10):
@@ -507,22 +536,10 @@ def encode_adaptive_lsb(image_array, message, variance_threshold=10):
         bit = int(message_binary[i])
         flat_stego[pixel_idx] = (flat_stego[pixel_idx] & 0xFE) | bit
     
-    return flat_stego.reshape(image_array.shape), variance_map
+    return flat_stego.reshape(image_array.shape)
 ----
 
-Note this adaptive LSB implementation is currently only handling 1-LSB but you can definitely modify the logic to have more complex thresholds allowing you to encode 1, 2, or 3-LSB (or more) into your image. 
-
-Before we look at the before and after side by side, we can also visualize our variance map to see where in the image the information was encoded using this convenient function:
-
-[source,python]
-----
-variance_map = calculate_local_variance(gray_img)
-plt.imshow(variance_map, cmap='hot')
-plt.colorbar()
-plt.show()
-----
-
-Notice how there is not that many high variance areas in the image meaning that we won't have as many good pixels to encode our message in, drastically limiting the capacity of our message.
+Note this adaptive LSB implementation is currently only handling 1-LSB but you can definitely modify the logic to have more complex thresholds allowing you to encode 1, 2, or 3-LSB (or more) into your image giving it a much higher capacity.
 
 Now please also calculate the PSNR of the adaptive encoded image as well and compare to the basic LSB encoding.
 
@@ -531,10 +548,10 @@ We can also visualize the before and after side by side to see the difference:
 [source,python]
 ----
 fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-axes[0].imshow(original_image, cmap='gray')
+axes[0].imshow(gray_img, cmap='gray')
 axes[0].set_title('Original Image')
 
-axes[1].imshow(stego_image, cmap='gray')
+axes[1].imshow(adaptive_lsb_stego, cmap='gray')
 axes[1].set_title('Stego-Image')
 plt.tight_layout()
 plt.show()
@@ -567,17 +584,16 @@ In this approach we look to decompose the image into its frequency components, h
 - Can hide in less perceptually important frequencies
 - Harder to detect with simple statistical methods (which we will explore in the next question)
 
-We will explore two common frequency domain transformations: the Discrete Cosine Transform (DCT) and the Discrete Wavelet Transform (DWT) as means of hiding information in the frequency domain.
+We will explore a common frequency domain transformation: the Discrete Cosine Transform (DCT) as means of hiding information in the frequency domain.
 
 ==== Part A: Understanding DCT (Discrete Cosine Transform)
 
 **What is DCT?** DCT converts an image from spatial to frequency representation. It's the same transform used in JPEG compression!
 
-**Key Concept**: 
-
-- Low frequencies = smooth changes, important for visual quality
-- High frequencies = sharp edges/details, less important
-- Mid frequencies = good place to hide data (not too important, not too noisy)
+**Key Concept**: +
+- Low frequencies = smooth changes, important for visual quality +
+- High frequencies = sharp edges/details, less important +
+- Mid frequencies = good place to hide data (not too important, not too noisy) +
 
 DCT works on 8*8 blocks:
 
@@ -588,17 +604,21 @@ DCT works on 8*8 blocks:
 
 Looking at this example, we see the image is broken up into blocks and then each block is transformed into its frequency domain representation in the image on the right.
 
-image::/dct-whole-image.png[DCT Whole Image]
+image::./dct-whole-image.png[DCT Whole Image]
 
 This is a closer look at a single block transformed into its frequency domain representation:
 
-image::/dct-single-tile.png[DCT Single Tile]
+image::./dct-single-tile.png[DCT Single Tile]
 
 We then modify these coefficients to hide our message and then transform it back to the spatial domain to get the stego-image.
 
 If you want to test with your own image you can check out https://stackoverflow.com/questions/28385082/nice-way-to-visualize-dct-coefficients-as-an-image[this link] and visualize the DCT coefficients of your own image.
 
-Now lets actually go to encode a message into the image using the DCT coefficients:
+Now lets actually go to encode a message into the image using the DCT coefficients.
+
+Modify mid-frequency coefficient (position 3,4) by checking if the coefficient is large enough (> threshold, e.g., 5) and if yes, modify it to encode the bit: round the coefficient and set LSB like we did in the previous questions. If no, skip this block.
+
+Note: you can also modify other coefficients but we are just going to look at (3,4) here
 
 [source,python]
 ----
@@ -636,33 +656,22 @@ def encode_dct(image_array, message, block_size=8):
             
             # Apply 2D DCT (apply along rows, then columns) - this is the frequency domain transform
             dct_block = dct(dct(block, axis=0, norm='ortho'), axis=1, norm='ortho')
-            # Now you have a 8*8 matrix of frequency coefficients
-            
-            # Modify mid-frequency coefficient (position 3,4)
-            # TODO: Fill in this part!
-            # You need to:
-            # 1. Check if the coefficient at (3,4) is large enough (> threshold, e.g., 5)
-            # 2. If yes, modify it to encode the bit: round the coefficient and set LSB like we did in the previous questions
-            # 3. If no, skip this block
-
-            # Note: you can also modify other coefficients but we are just going to look at (3,4) here
+            # Now you have a 8*8 matrix of frequency coefficients   
             
             threshold = 5.0
             if abs(dct_block[3, 4]) > threshold:
                 # YOUR CODE HERE:
                 # Round the coefficient, modify its LSB, then update dct_block[3,4]
-                # Hint: coef_rounded = round(dct_block[3, 4])
-                #       coef_modified = (coef_rounded & 0xFE) | int(message_binary[bit_idx])
-                #       dct_block[3, 4] = coef_modified
                 pass
-            
-            # Apply inverse 2D DCT & assign transformed block back to the original image
-            idct_block = idct(idct(dct_block, axis=0, norm='ortho'), axis=1, norm='ortho')
-            stego_image[i:i+block_size, j:j+block_size] = idct_block
-            
-            bit_idx += 1
+                
+                bit_idx += 1
+                # Apply inverse 2D DCT & assign transformed block back to the original image
+                idct_block = idct(idct(dct_block, axis=0, norm='ortho'), axis=1, norm='ortho')
+                stego_image[i:i+block_size, j:j+block_size] = idct_block
+                
+                
     
-    return stego_image[:h, :w].astype(np.uint8)
+    return stego_image
 ----
 
 Now lets visualize the stego-image to see the difference:
@@ -670,16 +679,15 @@ Now lets visualize the stego-image to see the difference:
 [source,python]
 ----
 fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-axes[0].imshow(original_image, cmap='gray')
+axes[0].imshow(gray_img, cmap='gray')
 axes[0].set_title('Original Image')
-axes[1].imshow(stego_image, cmap='gray')
-axes[1].set_title('Stego-Image')
+axes[1].imshow(dct_stego_image, cmap='gray')
+axes[1].set_title('DCT Stego-Image')
 plt.tight_layout()
 plt.show()
 ----
 
-As you can see, the stego-image is not as visually distinguishable from the original image.
-
+As you can see, the stego-image is not as visually distinguishable from the original image which means we have successfully hidden our message in the image.
 
 ==== Part B: Decoding the DCT Message
 
@@ -739,16 +747,11 @@ def check_delimiter(message_binary_str, delimiter):
     return False, None
 ----
 
-Once again, test with your own message for correctness and then run your function on this image:
+Now lets test the decoding function with the stego-image we encoded our message into:
 
-// TODO: I SHOULD MAKE AN IMAGE FOR THEM TO DECODE SO WE CAN SEE IF THEY ACC DID IT RIGHT
 [source,python]
 ----
-stego_image_path = '/anvil/projects/tdm/data/icecream/hd/images/0_hd_dct_stego.png'
-stego_image = Image.open(stego_image_path).convert('RGB')
-stego_image_array = np.array(stego_image)
-
-decoded_message = decode_dct(stego_image_array)
+decoded_message = decode_dct(dct_stego_image)
 print(f"Decoded message: {decoded_message}")
 ----
 
@@ -763,6 +766,7 @@ print(f"Decoded message: {decoded_message}")
 ** Test with your own message for correctness and then run your function on the provided image
 ** Ensure that the decoded message is correct
 ====
+
 
 === Question 5: Detection Methods - Histogram Analysis (2 points)
 
@@ -918,10 +922,9 @@ Even with limitations, histogram analysis is important because:
 
 .Deliverables
 ====
-- **Histogram analysis**:
-  * Use `compare_histograms()` to compare original and stego-images
-  * Report the statistical differences (mean, variance, skewness, kurtosis)
-  * In 2-3 sentences, explain: (1) what differences you observe, (2) why LSB steganography might cause these differences, (3) what limitations histogram analysis has
+* Use `compare_histograms()` to compare original and stego-images
+* Report the statistical differences (mean, variance, skewness, kurtosis)
+* In 2-3 sentences, explain: (1) what differences you observe, (2) why LSB steganography might cause these differences, (3) what limitations histogram analysis has
 ====
 
 
