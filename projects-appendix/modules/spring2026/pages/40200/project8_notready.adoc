@@ -1,0 +1,533 @@
+= TDM 32100: Project ## - Metropolis Algorithm
+
+== Project Objectives
+
+This project introduces you to the Frequentist method and Bayesian inference, specifically the Metropolis Algorithm, a type of Markov Chain Monte Carlo (MCMC) method. You’ll first learn to construct a linear regression model in R using the iris data set and then apply the Metropolis Algorithm to infer the model’s parameters based on the data.
+
+.Learning Objectives
+****
+- The correlation between two variables
+- Parameter estimation with regression model
+- Probability distributions, particularly normal and uniform distributions
+- Metropolis Algorithm to visualize all possible values the parameter could take
+****
+
+
+== Dataset
+- '/anvil/projects/tdm/data/iris/Iris.csv'
+
+== Introduction
+"The goal is to turn data into information, and information into insight."
+
+Carly Fiorina
+
+We will work with the iris dataset, a well-known built dataset in R. This dataset contains measurements of sepals and petals (length and width) for iris flowers across three species. To access the iris dataset in R, you can use the provided code below. This code doesn’t call a new function; instead, it simply calls the iris dataset, which is already included in R.
+
+[NOTE]
+====
+Since the primary objective here is to comprehend the Metropolis Algorithm, we have opted for a straightforward and pre-built dataset. 
+====
+
+[IMPORTANT]
+====
+Creates an Important Block
+====
+
+[source,R]
+----
+data("iris") 
+----
+Let’s recall the initial actions we take when handling the data. We use the `head(iris)` command to view the first six entries in the dataset. If you’re interested in learning more about the iris data, type `?iris` in R. Additionally, try `summary(iris)` and `str(iris)` to get key statistics and the structure of each variable (column).
+
+
+We use *Ising model* of Ising (1925) to concretize Metropolis algorithm. Please find the image below from http://www2.stat.duke.edu/~rcs46/modern_bayes17/lecturesModernBayes17/lecture-6/06-metropolis.pdf showing N molecules (hard discs) bouncing in a box. They are called hard discs since the molecules cannot overlap.
+
+image::Hard_Discs.png[width=500, height=450, title="Example of N molecules (hard discs) bouncing around in a box"]
+
+https://www2.stat.duke.edu/~rcs46/modern_bayes17/lecturesModernBayes17/lecture-6/06-metropolis.pdf[Image Source]: Module 6: Introduction to Metropolis, Rebecca C. Steorts, accessed June 10, 2025.
+
+The Ising model is a simple mathematical model that helps us understand the magnetic properties of a material. In this model, the material is represented as a grid composed of small squares, with each square containing an atom. Each atom has a property called a “spin,” which can be either “up” (+1) or “down” (−1). The spins of the atoms can change over time and depend on the temperature. Spin arrangements with lower energy, meaning they are more balanced and stable, are more likely to occur. In the beginning, spins are random, and the system is not in balance. Then, what happens? After a while, they tend to be organized into patterns that reduce the system's energy based on the temperature. 
+
+To analyze these systems, all possible spin arrangements were collected, including those with high energy. In nature, systems usually prefer states with the lowest energy, so many of the high-energy arrangements did not represent the material's actual state. This resulted in noisy and unreliable data. Including all energy levels complicated the analysis (This is how such a study was done before the Metropolis Algorithm).
+
+The Metropolis Algorithm helps by choosing mostly low-energy, more likely, and balanced spin arrangements to sample in the model. At each step, it suggests a new spin arrangement and decides whether to accept it based on its energy. This way, the system primarily resides in realistic, low-energy states. As a result, meaningful and physically possible examples are gathered, making the analysis easier by ignoring unnecessary and misleading arrangements.
+
+Metropolis Algorithm is actually a type of Markov Chain Monte Carlo (MCMC) method. Although MCMC encompasses many algorithms, the Metropolis Algorithm is a classic and straightforward one that works exceptionally well for physical systems, such as the Ising model, thereby making computations easier and more effective.
+
+== Questions
+
+=== Question 1 (2 points)
+image::Iris.png[]
+
+https://www.datacamp.com/tutorial/machine-learning-in-r[Image Source]: Machine Learning in R for beginners
+
+It’s biologically reasonable to say flowers with wider petals tend to have longer petals. Since they show two measures of the flower. Let us investigate whether there exists a correlation between “Petal.Length” and “Petal.Width” in iris data. If such a relationship does exist, what is its nature? Can you check it through a plot?
+
+[NOTE]
+====
+Correlation describes the statistical relationship between two variables, where a change in one variable is associated with a change in the other. A positive correlation indicates that both variables increase or decrease together, whereas a negative correlation signifies that as one variable increases, the other decreases. It's essential to note that correlation does not imply causation; the fact that two variables are associated does not necessarily mean that one causes the other. 
+====
+Let’s construct a basic linear regression model where we aim to understand the relationship between changes in Petal.Width and Petal.Length. How accurately do you believe this regression model captures the relationship?
+[source,R]
+----
+model <- lm(Petal.Width ~ Petal.Length, data=iris)
+summary(model)
+----
+What is the mathematical expression obtained from the model output that shows the relationship between petal width and petal length?
+Notice that the parameter estimations for intercept and slope are single values (points estimates) that best fit the observed data under model assumptions. So, the model says something like “the parameter is 2,” but it doesn’t show that the true value could be a bit higher or lower. We can calculate ranges to show how confident we are, but the model itself doesn’t give a full picture of all possible values the parameter could take. This is the step why we need the Bayesian approach!!!
+
+.Deliverables
+====
+- Is there a correlation between “Petal.Length” and “Petal.Width”? If such a relationship exists, what is its nature? Can you visualize it through a plot?
+- What information does the model’s summary output provide about the parameter estimation?
+- How accurately do the regression model captures the relationship between “Petal.Length” and “Petal.Width”?
+- What is the mathematical expression obtained from the model output that shows the relationship between petal width and petal length?
+====
+
+=== Question 2 (2 points)
+As a first step in Metropolis Algorithm, we need to derive the loglikelihood function for the model that we want to fit. The likelihood is the probability of observing the data given the model’s parameters.
+
+*Step 1:* Derive the likelihood function from the model.
+
+For the given model, $y = \beta_0 + \beta_1 * x + error$, where the error terms are assumed to have normal distribution. This is the required assumption to build linear regression model. The normal distribution means that most values are close to the average, and very small or very large values are rare. For instance, in a classroom, the majority of students' heights are around the average, with the number of those who differ from the average decreasing as you go to both long and short extremes. This pattern of data is what we call a normal distribution.
+
+In our model, the error has an average of zero, meaning most predicted values are close to the real observed values, and the differences between them usually follow this normal pattern. What we want to do is take the parameters ($\beta_1$, $\beta_0$, $\sigma$) and calculate how likely it is to get the actual observed data under this model. To do this, we first calculate the difference between the model’s predicted values and the real observed values. Then, we measure how probable it is for these differences to occur according to the normal distribution. Finally, this gives us a number that tells us how well the model explains the data — in other words, how likely the data is under the model.
+
+[NOTE]
+====
+What is distribution? 
+
+You know probability is the chance of something will happen. When you flip a coin, there’s an equal chance of it landing on heads or tails (Each has a 50% chance of occurring, and the probabilities always add up to 1).
+
+A distribution is a way to describe all the possible outcomes of something and their likelihood of occurrence. It’s like a recipe that tells us what to expect. For instance, if you roll a fair six-sided die, the possible outcomes are 1, 2, 3, 4, 5, and 6. Each of these outcomes has an equal chance of occurring, with a probability of 1/6. Distributions provide more than just individual probabilities; they offer a comprehensive view of all possible outcomes and their corresponding probabilities. They serve as a detailed map of uncertainty for a specific situation. Consider distributions to be the mathematical way of expressing, “This occurs frequently, that occurs occasionally, and this other thing happens infrequently” - but with specific numbers assigned to each outcome. These distributions help us to predict the future, make decisions an understand the patterns.
+====
+Why we choose normal distribution? 
+
+Because of the assumption that the difference between actual and predicted values have follow normal distribution with mean 0 and standard deviation (sd).
+We use a function called `dnorm` to calculate the probability of such differences in R. What is `dnorm`?
+
+The shape of the normal distribution is a curve. Consider the curve that illustrates the frequency of different values. Values that are close to the center are more frequent, while those that are further away are less frequent. The function `dnorm` assists in determining the probability or frequency of a particular value on the curve.
+
+image::normal_dist.png[width=600, height=450, title="Normal Distribution Curve"]
+
+There are other common distribution shapes, and one of them is the flat, which represents uniform distributions. These distributions show that all outcomes have an equally likely chance of occurring with outcome values spread across a defined range (for example, when rolling a fair dice). For example, rolling a fair six-sided die is an example of a uniform distribution because each number from 1 to 6 has an equal probability of 1/6, meaning all outcomes are equally likely.
+
+image::Uniform_Dist.png[width=600, height=450, title="Uniform Distribution"]
+
+R has so many built-in functions, `dnorm` is one of them. R employs a naming convention for its statistical functions associated with probability, utilizing prefixes like “d”, “p”, “q”, “r”. For instance, if you want to generate random variables that are distributed very similarly to a 🔔 bell-shaped curve in R, you can use the `rnorm` function. On the other hand, if you want to generate random variables with a flat-shaped distribution, you can use the `runif` function. To get more information about those functions, you can use `?rnorm`, `?runif`, `?dunif`, and etc.
+
+Now we will write a function, called likelihood function, that tells us how likely our data is, based on some choices we make in the model. But when we calculate this directly, computers can have trouble with very small numbers. 
+
+To fix this, we use the logarithm (log) of this function instead, which makes the calculations easier and more reliable when the algorithm runs.
+[source,R]
+----
+likelihood <- function(beta1, beta0, sigma) {
+
+  y_pred <- beta1*x + beta0
+  ll <- sum(dnorm(y, mean = y_pred, sd = sigma, log = TRUE))
+  return(ll)
+}
+----
+This allows us to put in the data (y), covariate values (x), and values of beta1, beta0 and sigma as arguments and the function will return the log likelihood.
+
+.Deliverables
+====
+- Write the R code to generate 10.000 random variables/numbers from standard normal distribution (mean =0, sd=1) and print the first 10 values?
+- Give an example to uniform distribution.
+- Generate 100 outcomes from rolling a fair six-sided die.
+- Why should we use the loglikelihood function instead of the likelihood function?
+====
+
+=== Question 3 (2 points)
+*Step 2:* Define the prior distributions for parameters.
+
+Next step in Metropolis Algorithm is defining a prior distribution for each of the parameters (beta1, beta0, sigma). 
+
+At first, we make a guess based on what we know about the slope parameter showing the relationship between Pedal$Width and Pedal$Length. Since we know that there is a positive relationship between Pedal$Width and Pedal$Length, we have to choose a distribution which generates positive values.  Let’s choose a uniform distribution for beta0 and sigma, and a normal distribution for the beta1 parameter. These choices are “informative” because we have some knowledge about the parameters from the linear model. Alternatively, if you have any background information about the length and width of the sepals and petals of iris flowers, you can incorporate this knowledge into your prior distributions. In the absence of prior knowledge, selecting a prior distribution will be “uninformative”, but you should be careful about the choosing the distribution with large spread or variance.
+[source,R]
+----
+prior <- function(beta1, beta0, sigma) {
+  pp <- sum(dunif(beta1, min = 0, max = 30, log = TRUE),
+            dnorm(beta0, mean = 0, sd = 5, log = TRUE),
+            dunif(sigma, min = 0, max = 30, log = TRUE))
+  return(pp)
+}
+----
+The function above calculates the sum of the log-prior probabilities for the parameters based on their defined prior distributions. The default output of the `dunif` and `dnorm` functions is the probability density values, not in logarithmic scale. Since we work in logarithmic scale, we set `log=TRUE`. Notice that if you run the default code or set `log=FALSE`, the probabilities will be multiplied instead of being summed.
+[source,R]
+----
+prior <- function(beta1, beta0, sigma) {
+  pp <- (dunif(beta1, min = 0, max = 30)*
+            dnorm(beta0, mean = 0, sd = 5)*
+            dunif(sigma, min = 0, max = 30))
+  return(pp)
+}
+----
+1. You can choose other distributions but be careful about sigma parameter since sigma is square root of the variance and variance parameter is always positive.
+2.	Can you choose another prior distribution for beta0?
+
+*Step 3:* The posterior distribution
+
+We currently have initial beliefs (prior) about the parameters. Then, we have additional information from the likelihood of the data given the parameters. Now, you combine the prior knowledge you had with this new information to make a more accurate estimate of the parameters. This is called posterior distribution.
+
+`posterior` `~` `likelihood` `x` `prior`
+
+You may notice that we used `~` instead of `=` since the posterior distribution is proportional to the product of the likelihood and prior distribution, but not exactly equal. Because there is a normalizing constant ensures that all possible values for the parameter values sum (or integrate) to 1- This depends on whether the random variable is discrete or continuous. We started with a prior belief, for example beta1 has unif (0, 30). And we have new information coming from the likelihood telling us how probable the data is for each possible beta1 value. The posterior combines these two, but a probability distribution must integrate to 1. The normalizing constant is the value you divide by to ensure that the total probability of all possible beta1 values equals 1. This constant is often complicated to calculate.
+Mathematically, we express this as:
+
+\[
+\text{Posterior} = \frac{\text{Likelihood} \times \text{Prior}}{\text{Normalizing Constant}}
+\]
+
+[source,R]
+----
+# Posterior distribution
+posterior <- function(beta1, beta0, sigma) {
+   return(likelihood(beta1, beta0, sigma) + prior(beta1, beta0, sigma))
+ }
+----
+.Deliverables
+====
+- Is it possible to choose a distribution that allows sigma parameter to take both negative and positive values? 
+- What is the difference between prior and posterior distribution?
+- Assume that the parameter beta0 can take values between some `minimum` and `maximum` that you decide. Choose those values and write a uniform prior for beta0 using `dunif`.
+====
+
+=== Question 4 (2 points)
+*Monte Carlo Method — A Very Simple Explanation:*
+
+Let’s recall that we have a system, like a group of atoms or molecules, as exemplified by the Ising Model presented at the beginning of this project. This system can exist in many different “states”, and each state has a different energy. We want to calculate the average energy of the system or some other property.
+
+Here’s how it was done before Metropolis Algorithm:
+
+*1.	Generate Random States:* We randomly pick many possible states of the system. For example, we give atoms or molecules different positions.
+
+*2.	Calculate the Energy:* For each state, we calculate its energy.
+
+*3.	Identify Important States:* Not all states are equally important! Low-energy states are more likely, while high-energy states are less likely.
+
+*4.	Assign Weights:* We assign a weight to each state based on its energy. This weight is calculated using the Boltzmann function.
+
+*5.	Compute the Average:* Finally, we use these weights to calculate the average value of the property we are interested in.
+
+*But This Was Very Difficult and Inefficient:*
+
+Why? Because we were selecting states randomly. Most of the time, high-energy states (which have low probabilities) were being selected. These states have very small weights but exist in large numbers. As a result, the computation became unnecessarily complicated and inefficient.
+
+*Metropolis Algorithm — What Changed?*
+
+Instead of selecting random states and weighting them, let’s directly select states based on their energy-dependent probabilities!
+
+In other words:
+
+•	Hardly ever select states with very high energy.
+
+•	Select low-energy states much more frequently.
+
+This way, all selected states have equal weight, and there’s no need to assign weights anymore.
+
+image::single.iteration.png[width=500, height=450, title="Example of a Single Iteration of the Algorithm"]
+
+https://www2.stat.duke.edu/~rcs46/modern_bayes17/lecturesModernBayes17/lecture-6/06-metropolis.pdf[Image Source]: Module 6: Introduction to Metropolis, Rebecca C. Steorts, accessed June 10, 2025.
+
+
+Now, for our example, we want to generate a sample for each parameter (beta1, beta0, and sigma). Initially, we considered all possible parameter values regardless of how realistic or meaningful they were.
+This meant that many of the parameter values we sampled were either highly unlikely or didn’t contribute much to our understanding. However, the Metropolis Algorithm aims to sample from the target distribution, which is often the posterior distribution, representing the most probable values of the parameter given the data. At each step, the algorithm uses a proposal distribution (normal in our example) to suggest a new value for each parameter. If the proposal distribution is not symmetric, the algorithm is called Metropolis-Hasting algorithm, instead of Metropolis Algorithm. It then decides to accept or reject these values based on its likelihood or energy level. This process allows us to prioritize probable parameter values and avoid spending computational resources on unlikely or irrelevant ones.
+
+As a result, compared to the earlier approach, the Metropolis Algorithm simplifies the sampling process, improves efficiency, and helps us gather more meaningful data about the parameter distribution.
+
+[source,R]
+----
+#Metropolis-Hasting Algorithm
+startvalues <- c(1, 1, 1) #Initialize parameter
+iterations <- 100000
+chain = matrix(0, nrow = iterations + 1, ncol = 3)
+colnames(chain) = c("beta1", "beta0", "sigma")
+
+chain[1, ] = startvalues
+for (i in 1:iterations) {
+  # draw from a normal proposal funct.based on the current position
+  proposal <- rnorm(3, mean = c(chain[i, 1], chain[i, 2], chain[i, 3]), sd = c(0.1,0.1,0.1))
+  acceptance = exp(posterior(proposal[1], proposal[2], proposal[3])- #new parameters values
+                     posterior(chain[i, 1], chain[i, 2], chain[i, 3])) #current parameters values
+
+  if (runif(1) < acceptance) {
+    chain[i+1, ] <- proposal # make the move
+  }else{
+    chain[i+1, ] = chain[i, ] # stay where you are
+  }
+  
+}
+----
+[source,R]
+----
+Error in if (runif(1) < acceptance) { : 
+  missing value where TRUE/FALSE needed
+In addition: Warning message:
+In dnorm(y, mean = y_pred, sd = sigma, log = TRUE) : NaNs produced
+----
+
+We get `NaN` because our proposal distribution for the sigma parameter is normal. Recall that we must have `sigma > 0`. But if we propose from a normal distribution then it’ll sometimes propose negative values, leading to the error we are seeing. Changing the proposal distribution for that parameter should help.
+
+[source,R]
+----
+#Metropolis-Hasting Algorithm with new proposal for sigma.
+startvalues <- c(1, 1, 1)
+iterations <- 100000
+chain = matrix(0, nrow = iterations + 1, ncol = 3)
+colnames(chain) = c("beta1", "beta0", "sigma")
+chain[1, ] = startvalues
+for (i in 1:iterations) {
+  # Normal proposals for beta parameters (unconstrained)
+  beta1_proposal <- rnorm(1, mean = chain[i, 1], sd = 0.5)
+  beta0_proposal <- rnorm(1, mean = chain[i, 2], sd = 0.1)
+  # Uniform proposal for sigma parameter (constrained to be positive)
+  sd_proposal <- runif(1, min = 0.01, max = chain[i, 3] * 2)
+  proposal <- c(beta1_proposal, beta0_proposal, sd_proposal)
+  acceptance <- exp(posterior(proposal[1], proposal[2], proposal[3]) - 
+                      posterior(chain[i, 1], chain[i, 2], chain[i, 3]))
+  if (runif(1) < acceptance) {
+    chain[i+1, ] <- proposal
+  } else {
+    chain[i+1, ] <- chain[i, ]
+  }
+}
+----
+Let’s look at the Trace plot for each parameter to see how the value of the parameters changes over time, (during iterations). It is frequently utilized in MCMC to check if the sampling process is operating properly and if the algorithm has attained stability.
+
+[source,R]
+----
+par(mfrow = c(2, 2))
+plot(chain[, "beta1"], type = "l", main = "Beta1 Trace Plot")
+plot(chain[, "beta0"], type = "l", main = "Beta0 Trace Plot")
+plot(chain[, "sigma"], type = "l", main = "sd Trace Plot")
+----
+image::trace_plots.png[width=500, height=450, title="Trace Plots for All Parameters"]
+
+Do you think it is a representative sample, is there something wrong with the chain? Since we choose the proposal distribution too wide (by increasing the variance), the chain gets stuck at a single point for a while. If we choose the proposal distribution too narrow (by decreasing the variance), the chain will move slowly. Therefore, it is important to choose a *good proposal distribution*. 
+
+The following page, built by https://github.com/chi-feng[Chi Feng], is handy for understanding the Metropolis Algorithm visually. 
+Please spare five minutes to go over it, before you move to the next step: https://chi-feng.github.io/mcmc-demo/app.html?algorithm=RandomWalkMH&target=banana
+
+Let’ try again with new variance (standard deviation) values.
+
+[source,R]
+----
+#Metropolis-Hasting Algorithm with new sd values.
+startvalues <- c(1, 1, 1)
+iterations <- 100000
+chain = matrix(0, nrow = iterations + 1, ncol = 3)
+colnames(chain) = c("beta1", "beta0", "sigma")
+chain[1, ] = startvalues
+for (i in 1:iterations) {
+  # Normal proposals for beta parameters (unconstrained)
+  beta1_proposal <- rnorm(1, mean = chain[i, 1], sd = 0.02)
+  beta0_proposal <- rnorm(1, mean = chain[i, 2], sd = 0.03)
+  # Uniform proposal for SD parameter (constrained to be positive)
+  sd_proposal <- runif(1, min = 0.01, max = chain[i, 3] * 2)
+  proposal <- c(beta1_proposal, beta0_proposal, sd_proposal)
+  acceptance <- exp(posterior(proposal[1], proposal[2], proposal[3]) - 
+                      posterior(chain[i, 1], chain[i, 2], chain[i, 3]))
+  if (runif(1) < acceptance) {
+    chain[i+1, ] <- proposal
+  } else {
+    chain[i+1, ] <- chain[i, ]
+  }
+}
+----
+image::trace_plots1.png[width=500, height=450, title="Trace Plots After Updating Variance"]
+
+Do you notice that parameter values drop sharply from their starting point and then fluctuate around the estimated value? 
+
+This is known as the *burn-in period*, which tells that the algorithm is still in the process of warming up and exploring various regions within the parameter space.  These are early samples and are not representative of the target distribution. Therefore, they are generally discarded during the analysis. 
+
+The *burn-in period* is similar to the time it takes for a car engine to warm up on a chilly morning, involving an initial phase of unstable operation. However, after some time, the engine achieves a stable and smooth state. Similarly, in a trace plot, the burn-in period refers to the time before the parameter values stabilize within their true range.
+
+Let’s discard these first 5000 values and plot the trace plots again.
+
+[source,R]
+----
+burn_in = 5000
+chain <- chain[-(1:burn_in), ]
+----
+image::trace_plots2.png[width=500, height=450, title="Trace Plots After Burn-in Period"]
+
+.Deliverables
+====
+- What would happen if you chose the length of the iteration as `100`? Run the code by changing
+`iterations``<``-100`. What does it tell you?
+
+- Run the code by changing the initial values as `startvalues``<``-``c(30, 50, 40)`,`startvalues``<``-``c(3, 5, 4)` and plot the trace plots for each parameter and interpret the results.
+====
+
+=== Question 5 (2 points)
+Recall the point estimates of the parameters from the simple linear regression in the first question. How can we find estimates of these parameters from Metropolis Algorithm? With the help of the Metropolis Algorithm, we generate a sequence of samples, known as a chain, that represent the possible values of the parameters (not just one fixed value) based on the data and the model. 
+
+Metropolis Algorithm gave us many samples representing the full distribution of these parameters. These samples provide insight into parameters distribution. For example, to summarize the distribution of beta1 with a single point estimate, we can take the average (mean) of all these samples.
+
+[source,R]
+----
+DF_chain <- data.frame(chain)
+DF_chain[, "samples"] <- 1:nrow(DF_chain)
+mean(DF_chain$beta1)
+----
+What is difference between the estimates of the parameters (beta1, beta0 and sigma) obtained from the linear regression model and the Metropolis Algorithm?
+
+Let’s draw the histogram of the generated beta1 values obtained from the Metropolis Algorithm. 
+
+[source,R]
+----
+library(ggplot2)
+p1 <- ggplot(DF_chain, aes(x = beta1)) +
+  geom_histogram(binwidth = 0.002, fill = "gray",color = "black") +     
+  scale_x_continuous("Value") +
+  scale_y_continuous("Iterations") +
+  geom_vline(xintercept = mean(DF_chain$beta1), col = "red", size = 1) +
+  ggtitle("Beta1 Posterior Distribution (Metropolis Algorithm)")
+p1
+----
+image::Beta1_hist.png[width=500, height=450, title="Histogram of Beta1 Samples"]
+
+For those who want to learn more about the Metropolis Algorithm, the following books have downloadable PDF copies:
+
+- https://link.springer.com/book/10.1007/978-1-4757-4145-2[Monte Carlo Statistical Methods]
+- https://link.springer.com/book/10.1007/978-1-4419-1576-4[Introducing Monte Carlo Methods with R]
+
+.Deliverables
+====
+- Compare the estimates of the parameters (beta1, beta0 and sigma) obtained from the linear regression model and the Metropolis algorithm.
+- Draw the histogram of the generated beta0 and sigma values together with the point estimates obtained from the Metropolis algorithm. 
+- Using the posterior samples, what statistical summaries can you obtain? You may use functions like `median()` and `var()` in R to compute these summaries for each parameters.
+====
+
+=== Question 6 (2 points)
+If the proposal distribution we select is too *narrow*, the chain may repeatedly sample the same region, hindering its exploration of the entire space. Conversely, if the proposal distribution is too *wide*, many proposed samples will be rejected due to the chain’s tendency to jump to vastly different areas. Ideally, the acceptance rate should be around 50%. However, in high-dimensional or complex problems, an acceptance rate of approximately 23% is considered acceptable (http://www.stat.columbia.edu/~gelman/research/published/theory7.ps).
+
+Based on the information provided, we can determine the acceptance rate of our Metropolis chain to assess whether it falls within a reasonable range. We can incorporate an acceptance rate into the existing code. By maintaining the code’s structure, we can count the number of accepted steps and calculate the ratio at the end.
+
+[source,R]
+----
+# Metropolis Algorithm with acceptance rate calculation
+start_values <- c(1, 1, 1)  # initial values for beta1, beta0, sigma
+iterations <- 100000
+chain <- matrix(0, nrow = iterations + 1, ncol = 3)
+colnames(chain) <- c("beta1", "beta0", "sigma")
+chain[1, ] <- start_values
+
+accepted <- 0  # counter for accepted proposals
+
+for (i in 1:iterations) {
+  # Propose new values for beta parameters using normal distributions
+  beta1_proposal <- rnorm(1, mean = chain[i, 1], sd = 0.02)
+  beta0_proposal <- rnorm(1, mean = chain[i, 2], sd = 0.03)
+  
+  # Propose new value for sigma (standard deviation) using uniform distribution
+  sd_proposal <- runif(1, min = 0.01, max = chain[i, 3] * 2)
+  
+  proposal <- c(beta1_proposal, beta0_proposal, sd_proposal)
+  
+  # Calculate acceptance probability
+  acceptance <- exp(
+    posterior(proposal[1], proposal[2], proposal[3]) -
+    posterior(chain[i, 1], chain[i, 2], chain[i, 3])
+  )
+  
+  # Decide whether to accept the proposal
+  if (runif(1) < acceptance) {
+    chain[i + 1, ] <- proposal
+    accepted <- accepted + 1  # proposal accepted
+  } else {
+    chain[i + 1, ] <- chain[i, ]  # stay at current position
+  }
+}
+
+# Calculate the acceptance rate
+acceptance_rate <- accepted / iterations
+cat("Acceptance rate:", acceptance_rate, "\n")
+
+----
+Although the acceptance rate is low (2.5%), the trace plot appears promising. This suggests that even with a low acceptance rate, the parameters are mixing sufficiently. In high-dimensional problems or when parameters are on different scales, a low acceptance rate is normal, especially for constrained parameters like sigma. Our acceptance rate may primarily be due to the sigma updates. We could consider using a lognormal distribution instead of a uniform distribution.
+
+[source,R]
+----
+# Metropolis Algorithm with acceptance rate calculation
+startvalues <- c(1, 1, 1)
+iterations <- 100000
+chain <- matrix(0, nrow = iterations + 1, ncol = 3)
+colnames(chain) <- c("beta1", "beta0", "sigma")
+chain[1, ] <- startvalues
+
+accepted <- 0 
+
+for (i in 1:iterations) {
+  # Normal proposals for beta parameters
+beta1_proposal <- rnorm(1, mean = chain[i,1], sd = 0.02)
+beta0_proposal <- rnorm(1, mean = chain[i,2], sd = 0.03)
+
+  # Lognormal proposal for SD parameter (positive)
+sd_proposal <- rlnorm(1, meanlog = log(chain[i,3]), sdlog = 0.03)
+
+
+
+  proposal <- c(beta1_proposal, beta0_proposal, sd_proposal)
+  acceptance <- exp(posterior(proposal[1], proposal[2], proposal[3]) -
+                      posterior(chain[i, 1], chain[i, 2], chain[i, 3]))
+  
+  if (runif(1) < acceptance) {
+    chain[i + 1, ] <- proposal
+    accepted <- accepted + 1 
+  } else {
+    chain[i + 1, ] <- chain[i, ]
+  }
+}
+
+acceptance_rate <- accepted / iterations
+cat("Acceptance rate:", acceptance_rate, "\n")
+
+----
+
+.Deliverables
+====
+- Can you adjust the proposal distribution parameters to increase the acceptance rate?
+====
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project1.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
