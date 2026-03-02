@@ -113,7 +113,7 @@ Now that, we have our message in binary, we need to modify the LSBs of each pixe
 1. Extract the current LSB, +
 2. If it does not match our message bit, change it.
 
-There is a pretty cool trick we can use to modify the LSB of a pixel. If we take the pixel value and then _AND_ it with `0xFE` (which is `11111110` in binary), we clear the LSB. Then, we can _OR_ it with our message bit to set the LSB to the desired value: `(pixel_value & 0xFE) | message_bit`.
+There is a pretty cool trick we can use to modify the LSB of a pixel. If we take the pixel value and then _AND_ it with `0xFE` (which is `11111110` in binary), we clear the LSB. Then we can _OR_ it with our message bit to set the LSB to the desired value: `(pixel_value & 0xFE) | message_bit`.
 
 [source,python]
 ----
@@ -350,7 +350,7 @@ PSNR uses log10 here to express this ratio on a decibel scale, making it easier 
 
 We should see a very small MSE (typically 0.0001 to 0.01 depending on message length) and a higher PSNR (typically 40-60 dB). This means the images are nearly visually identical to the original natural images, which is exactly what we want and is the basic goal of steganography! The small MSE reflects that we only changed the LSBs of some pixels (each change is at most 1 in pixel value), so the average squared difference is very small.
 
-Notice that even though we cannot visually detect a difference between the original and stego-image, the PSNR is higher for the long stego-image which is expected since we are encoding way more information into the image. However, more complex methods should allow us to encode more information into the image while still maintaining a lower MSE and higher PSNR.
+Notice that even though we cannot visually detect a difference between the original and stego-image, the PSNR is lower for the long stego-image which is expected since we are encoding way more information into the image. However, more complex methods should allow us to encode more information into the image while still maintaining a lower MSE and higher PSNR.
 
 .Deliverables
 ====
@@ -403,7 +403,7 @@ plt.tight_layout()
 plt.show()
 ----
 
-Now using 5-LSB might be exaggerating here, but you can see that the visual difference is much more noticeable - there are actual major areas that are noticeably "off". But, even with smaller values of `n`, this method can still be very easily detected using statistical methods
+Now using 5-LSB might be exaggerating here, but you can see that the visual difference is much more noticeable - there are actual major areas that are noticeably "off". But, even with smaller values of `n`, this method can still be very easily detected using statistical methods.
 
 ==== Adaptive LSB Based on Variance
 
@@ -420,7 +420,6 @@ The way we are going to approach this is to first create a variance map in a fun
 Take a look at the following gif to see what convolution is and how it works. Different kernels have different effects on the input, for example the one in the gif is a _sharpening_ kernel which makes the image edges more pronounced.
 
 image::/convolution.gif[Convolution Example, title = "Animated demonstration of convolution in image processing. A small matrix (kernel) slides across the image, performing element-wise multiplication and summation at each position.", source: https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fi.ibb.co%2FVvp6FRz%2Fnagesh-cnn-intro-5.gif&f=1&nofb=1&ipt=be0248fbd9d587c0e90154ab4dce2ae283d3176c51691d1d13edf4f21532e5bb]
-
 The kernel we are using is a _box_ kernel which is a simple average of the pixels in the area surrounding the pixel (commonly used for blurring images):
 
 [source,python]
@@ -753,21 +752,23 @@ DCT works on 8*8 blocks:
 
 Looking at this example, we can see the general idea of how the image is broken up into blocks and then each block is transformed into its frequency domain representation like shown in the image on the right.
 
-image::./dct-whole-image.png[DCT Whole Image]
+image::/dct-dinos.png[DCT Whole Image]
 
 This is a closer look at a single block transformed into its frequency domain representation:
 
-image::./dct-single-tile.png[DCT Single Tile]
+image::/dct-dinos-single.png[DCT Single Tile]
 
-We then modify these coefficients to hide our message and then transform it back to the spatial domain to get the stego-image.
+We then modify these coefficients to hide our message and then transform it back to the spatial domain to get the stego-image. In this example, there is a noticeable difference between the original and stego-image. But, note that this is showing the DCT blocks on a much larger scale than what we would be doing in practice, and, as a result, the differences are more noticeable.
 
-If you want to test with your own image you can check out https://stackoverflow.com/questions/28385082/nice-way-to-visualize-dct-coefficients-as-an-image[this link] and visualize the DCT coefficients of your own image.
+In reality, the image would be broken up into many more blocks (8x8 pixel chunks) as opposed to the entire image in an 8x8 grid.
+
+The code was adapted from https://stackoverflow.com/questions/28385082/nice-way-to-visualize-dct-coefficients-as-an-image[this link] and converted into Python3 to visualize the DCT coefficients of the image.
 
 ==== Encoding with DCT
 
 Now let's actually go to encode a message into the image using the DCT coefficients.
 
-The implementation below has most of the tedious parts filled out like converting the message to binary and padding the image to be multiples of the block size, etc. but we are going to focus on the part where we modify the coefficient.
+The implementation below has most of the tedious parts filled out like converting the message to binary and padding the image to be multiples of the block size, etc. but we are going to focus on the part where we modify the coefficient due to numerical precision issues when doing these transformations on such a large scale.
 
 One thing to note is that in DCT steganography, we don't use the same concept of delimiters for a few reasons primarily dealing with numerical precision issues when doing these transformations. Instead we state at the beginning of the message how long the message is in bits and then we encode the message bit by bit.
 
@@ -838,7 +839,7 @@ def encode_dct(image_array, message, block_size=8, threshold=1.5):
     raise ValueError("Message too long")
 ----
 
-We can now test the encoding function with a message, but we should note that the current implemenation has a very low capacity since we are only modifying one coefficient per block meaning we really only capacity for around 4-5k bits in this image. There are ways to improve this by modifying more coefficients per block using more advanced techniques like the zigzag scan which you can https://dsp.stackexchange.com/questions/17224/why-zig-zag-manner-scan-is-used-in-dct-for-image-compression[read more about in this discussions post].
+We can now test the encoding function with a message, but we should note that the current implementation has a very low capacity since we are only modifying one coefficient per block meaning we really only have capacity for around 4-5k bits in this image. There are ways to improve this by modifying more coefficients per block using more advanced techniques like the zigzag scan which you can https://dsp.stackexchange.com/questions/17224/why-zig-zag-manner-scan-is-used-in-dct-for-image-compression[read more about in this discussions post].
 
 [source,python]
 ----
