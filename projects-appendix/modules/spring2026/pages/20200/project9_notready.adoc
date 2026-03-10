@@ -1,0 +1,886 @@
+= TDM 20200: Project ## - RESTful APIs
+
+== Project Objectives
+
+We are going to cover the basics of RESTful APIs and how they work. This will build a simple baseline project that introduces you to making HTTP requests, creating your own API endpoints, and understanding how different services communicate with each other through APIs.
+
+.Learning Objectives
+****
+- Understand what a RESTful API is and how it works
+- Learn how to make HTTP requests to APIs using Python
+- Create your own API endpoints using FastAPI
+- Understand CRUD operations and how they map to HTTP methods
+- Build more complex APIs with request bodies, query parameters, and error handling
+****
+
+== Dataset
+- None for this project
+
+== Useful Things
+
+A lot of this project is done within the terminal and we will just have some ways to verify your work in the Notebook.
+
+Similar to other projects that are not purely in a notebook, you will need to create a clean working directory for this project. 
+
+Note that you will need to base the file paths provided to you in the handout based on your filesystem.
+
+[IMPORTANT]
+====
+Do **NOT** try to run all these things in the Notebook because they likely will not work. 
+
+The handout should explicitly say where you need write something and when you need to run something in your notebook.
+====
+
+
+== Questions
+
+=== Question 1 (2 points)
+
+==== APIs - What are they?
+
+If you have ever used a weather app on your phone, checked your email, or scrolled through social media, then you have interacted with APIs - even if you didn't realize it. APIs are everywhere in modern software development and are the backbone of how different applications communicate with each other.
+
+Right, but what actually is an API and what do they do?
+
+An API, or _Application Programming Interface_, is a contract that defines how two programs can talk to each other. Think of it like a menu at a restaurant - the menu tells you what dishes are available and how to order them, but you don't need to know how the kitchen prepares the food. Similarly, an API tells you what data or services are available and how to request them, but you don't need to know the internal details of how the server processes your request.
+
+For example, if you check the weather app on your phone, it's not going out and scraping the data itself. It is pinging a clean predefined API _endpoint_ requesting information. The API then just passes the information back to the requester. It is essentially a messenger between systems where one app makes a request, the API decides what is allowed and what to do and then responds appropriately.
+
+APIs allows communication between different systems and gives you stricter control of what each application can know about the other. For example, when working with live users, you definitely do not want them to be able to access the database itself because it opens the doors for many more security vulnerabilities. Instead, you create an API that acts as a controlled gateway - users can only access the data and operations that you explicitly allow through your API endpoints.
+
+When you hear about APIs, you will often hear about RESTful APIs. But what is REST? It stands for _Representational State Transfer_ which is a set of standard design principles used for building APIs. Adhering to the standards allows for increased interoperability, increased consistency and increased ease of use. When an API follows REST principles, we call it a RESTful API.
+
+A RESTful API will typically expose endpoints that map to the _CRUD_ operations:
+
+- [.underline]**C**reate -> add new data
+- [.underline]**R**etrieve -> retrieve existing data
+- [.underline]**U**pdate  -> modify data
+- [.underline]**D**elete  -> remove data
+
+These _CRUD_ operations typically map to HTTP methods:
+
+[cols="1,1,1,1",options="header"]
+|===
+| HTTP Verb	| Meaning                               | Example                                  | CRUD Mapping
+| GET       | Fetch data (read only)                | GET /items/1 → returns `item 1`            | Retrieve
+| POST      | Create a new resource                 | POST /items with body { "value": "abc" } | Create
+| PUT       | Replace an existing resource entirely | PUT /items/1 with new body               | Update
+| PATCH     | Modify part of an existing resource	| PATCH /items/1 with { "value": "xyz" }   | Partial Update
+| DELETE    | Remove a resource	                    | DELETE /items/1                          | Delete
+|===
+
+Some of this may seem a little abstract, but once we get into making requests and creating our own API endpoints in the next questions, some of the potential confusion should be cleared up.
+
+Feel free to explore some real-world APIs and please answer the questions in the deliverable.
+
+
+.Deliverables
+====
+* 2-3 sentences explaining what an API is
+* 2-3 sentences explaining what REST means and why RESTful APIs are useful
+* For the following scenarios explain what HTTP method and endpoint structure you would use:
+** A librarian wants to add a new book to the catalog
+** A student wants to check if a book is available
+** A librarian needs to remove a book that was lost
+* Find a real API (like GitHub, Twitter/X, or any public API) and identify one endpoint that uses each HTTP method (GET, POST, PUT, DELETE). Explain what one of the endpoints does and why that HTTP method makes sense for that operation.
+====
+
+
+=== Question 2 (2 points)
+
+==== Making HTTP Requests
+
+Now that we have a general idea of what APIs are, let us actually interact with one. We'll start by making simple HTTP requests to existing APIs using Python's `requests` library.
+
+The `requests` library is one of the most popular Python libraries for making HTTP requests. It provides a simple and intuitive way to interact with APIs without having to deal with the low-level details of HTTP.
+
+httpbin.org is a great service for testing HTTP requests which just  echoes back what you send to it, which makes it a nice tool for learning how APIs work.
+
+Let's break down what's happening in each example:
+
+===== Example 1: Simple GET Request
+
+The first example makes a simple GET request to `https://httpbin.org/get`. This endpoint simply returns information about the request you made - including headers, the URL, and other metadata. This is useful for understanding what information is sent with each request.
+
+[source,python]
+----
+import requests
+from datetime import datetime
+
+response = requests.get("https://httpbin.org/get")
+print(f"Status Code: {response.status_code}")
+print(f"Response: {response.json()}")
+----
+
+===== Example 2: GET Request with Parameters
+
+The second example shows how to pass parameters with a GET request. When you want to send data with a GET request, you typically pass it as _query parameters_ in the URL. The `requests` library makes this easy with the `params` argument, which automatically formats them correctly in the URL.
+
+[source,python]
+----
+params = {"name": "Alice", "age": 25}
+
+response = requests.get("https://httpbin.org/get", params=params)
+print(f"Status Code: {response.status_code}")
+print(f"Response: {response.json()}")
+----
+
+===== Example 3: POST Request
+
+The third example demonstrates a POST request. Unlike GET requests, POST requests can send data in the request _body_. We're using the `json` parameter which automatically:
+- Converts our Python dictionary to JSON format
+- Sets the appropriate `Content-Type` header
+- Sends it in the request body
+
+[source,python]
+----
+data = {"message": "Hello from Python!", "timestamp": str(datetime.now())}
+response = requests.post("https://httpbin.org/post", json=data)
+print(f"Status Code: {response.status_code}")
+print(f"Response: {response.json()}")
+----
+
+Notice each of the responses are a little different based on the parameters and the request method.
+
+===== Working with Real APIs
+
+Now let's try making requests to a real public API. One popular choice is the JSONPlaceholder API, which provides fake REST API endpoints for testing. This API simulates a more realistic API structure that you might encounter in real applications.
+
+[NOTE]
+====
+Note that JSONPlaceholder is a fake API - it doesn't actually store your data permanently. It will return success responses, but any data you "create" won't persist.
+====
+
+Lets try making some requests to the JSONPlaceholder API at the url `https://jsonplaceholder.typicode.com`.
+
+Based on the previous exmaples we looked at, please create four different requests to the JSONPlaceholder API:
+- Retrieve a specific post
+- Retrieve all posts (no parameters)
+- Create a new post (with a title, body, and user id)
+- Retrieve a specific user (user id 1)
+
+Please show the output of each request in your notebook.
+
+
+Answer the questions in the deliverable and show the output from the provided code in your _**Notebook**_.
+
+
+.Deliverables
+====
+- Output from all the httpbin.org requests (Example 1, 2, and 3)
+- Output from all the JSONPlaceholder API requests (retrieve post, retrieve all posts, create post, retrieve user)
+- Explain the difference between GET and POST requests in your own words (2-3 sentences)
+- What is the difference between passing data as `params` vs `json` in a requests call? When would you use each?
+====
+
+
+=== Question 3 (2 points)
+
+==== Creating Your First API with FastAPI
+
+We briefly touched on making requests to APIs, but now let's create our own API! We'll use FastAPI, which is a very popular library that lets you create API routes in Python quickly and easily.
+
+FastAPI is modern, fast, and provides automatic interactive API documentation. It's built on top of Starlette and Pydantic, which gives it excellent performance and data validation capabilities.
+
+===== Setting Up FastAPI
+
+Before we get started on the API itself, we should create a new directory for our API. We will then host the API in our session using the command line. So, first let's create a new clean working directory for our API called `my_api` and a file called `main.py` within it.
+
+The structure of the directory should look like this (notebook doesnt necessarily need to be in the directory):
+----
+my_api/
+├── main.py
+└── your_notebook.ipynb
+----
+
+The `main.py` file will contain the code for our API which we can see below:
+
+[source,python]
+----
+# my_api/main.py
+from fastapi import FastAPI
+from datetime import datetime
+
+app = FastAPI(title="Student Demo API")
+
+@app.get("/")
+def read_welcome():
+    return {"message": f"[{datetime.now().time()}] Welcome to a simple demo!"}
+----
+
+This creates a `FastAPI` object to create our demo API on. The title is completely optional but should be relevant to whatever you are doing.
+
+Next, we are now going to add the most basic route we can just to test and establish the connection. The `@app.get("/")` decorator creates a _GET_ route at the root path `/`. This is the simplest version you can make which just returns some information that doesn't necessarily require parameterization - things like a static text retrieval or a single point of information you want to define a specific route for. You can still pass parameters to this route if you want to do a complex fetching operation!
+
+[NOTE]
+====
+Recall what REST means and its function. Note that GET, POST, DELETE etc exist as part of this _convention_. For example, you _can_ perform delete operations from within a GET route; however, that breaks the intention of creating a standard set of operations each route type handles. Following REST conventions makes your API predictable and easier to use.
+====
+
+===== Running the API
+
+To run our FastAPI application, we need a server. FastAPI works with https://asgi.readthedocs.io/en/latest/introduction.html[ASGI servers], and the most common one is `uvicorn`. Let's create a `requirements.txt` file:
+
+[source,txt]
+----
+# my_api/requirements.txt
+fastapi==0.104.1
+uvicorn==0.24.0
+----
+
+Now, install the requirements and run the API. In your terminal, navigate to the `my_api` directory and run:
+
+[source,bash]
+----
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+----
+
+The `--reload` flag makes the server automatically restart when you change your code, which is very convenient during development.
+
+You should see now that the API is running and it tells you the URL to access it at. It should also log all the requests to the API and the responses. So if you want to test something, you can print things out from within your endpoints so whenever that endpoint is hit, your print statements should show up in the terminal.
+
+Another nice thing is that FastAPI also automatically creates interactive API documentation! Unfortunatley you cannot visit these URLs since they are within the Anvil session, but if you were to do it locally, you could visit:
+- `http://127.0.0.1:8000/docs` for Swagger UI (interactive documentation)
+- `http://127.0.0.1:8000/redoc` for ReDoc (alternative documentation style)
+
+===== Making Requests to Our API
+
+Now, in your notebook we are going to make an HTTP request to the API we just served. The nice thing about APIs served on HTTP and following standard REST principles is that you can make requests to that API from any language as long as it can hit an HTTP endpoint. You can host your server in Python using FastAPI, have a frontend written in TypeScript, some other backend service written in Rust, etc. and they can all communicate through HTTP requests.
+
+Now we will make a request to the endpoint and we will be able to get the information from it.
+
+[source,python]
+----
+import requests
+import time
+
+for _ in range(5):
+    response = requests.get("http://127.0.0.1:8000/")
+    print(response.json())
+    time.sleep(1)
+----
+
+[NOTE]
+====
+Make sure your API server is still running in a terminal! If you see connection errors, check that uvicorn is still running.
+====
+
+===== Adding More Routes
+
+Let's add a few more simple routes to our API to get more comfortable with FastAPI:
+
+[source,python]
+----
+# my_api/main.py
+from fastapi import FastAPI
+from datetime import datetime
+
+app = FastAPI(title="Student Demo API")
+
+@app.get("/")
+def read_welcome():
+    return {"message": f"[{datetime.now().time()}] Welcome to a simple demo!"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "timestamp": str(datetime.now())}
+
+@app.get("/info")
+def get_info():
+    return {
+        "api_name": "Student Demo API",
+        "version": "1.0.0",
+        "description": "A simple API for learning RESTful principles"
+    }
+----
+
+After adding these routes, the server should automatically reload (thanks to the `--reload` flag). 
+
+[IMPORTANT]
+====
+Whenever the server is reloaded, the in-memory 'database' is reset. So if you want to test the endpoints, you need to create new items after each reload.
+====
+
+Try making requests to these new endpoints in your notebook:
+
+[source,python]
+----
+base_url = "http://127.0.0.1:8000"
+
+# Health endpoint check
+response = requests.get(f"{base_url}/health")
+print("Health check:", response.json())
+
+# Info endpoint check
+response = requests.get(f"{base_url}/info")
+print("Info:", response.json())
+----
+
+Answer the questions below and show the output from the provided code in your _**Notebook**_.
+
+
+.Deliverables
+====
+- Output from making the API call to the root endpoint (5 requests)
+- Output from the health and info endpoints
+- Explain what the `@app.get("/")` decorator does in your own words (2-3 sentences)
+====
+
+=== Question 4 (2 points)
+
+==== Building a CRUD API
+
+We briefly touched on FastAPI but lets get more into it and expand on our API now we have a baseline. We're going to build a complete CRUD (Create, Read, Update, Delete) API that demonstrates all the main HTTP methods.
+
+Since setting up a whole database for our API to ping is a little out of scope and not the primary objective here, we will just define a local temporary dummy dictionary to mimic writing to a database.
+
+[source,python]
+----
+# our in-memory "database"
+items = {}
+----
+
+[NOTE]
+====
+In a real application, this would be replaced with an actual database like PostgreSQL, MySQL, or MongoDB. The dictionary will store our items with their IDs as keys and values as the stored data. Since it's in-memory, all data will be lost when the server stops, but it's good enough for demonstrating how the API endpoints work when working with a 'database'.
+====
+
+===== Routes Explained
+
+Each route below represents one of the main CRUD operations. They all take one parameter `item_id: int` and use that to perform that operation in our (local) database. Each one of the routes below also has some basic error handling which is standard practice to ensure API safety.
+
+Let's update our `main.py` file with all the CRUD operations:
+
+*GET -> Retrieve*  
+This fetches an item by its ID. If the ID doesn't exist, it returns a 404 error.
+
+[source,python]
+----
+# my_api/main.py
+...
+
+@app.get("/items/{item_id}")
+def read_item(item_id: int):
+    if item_id not in items:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"id": item_id, "value": items[item_id]}
+----
+
+*POST -> Create*  
+This creates a new item. If the item already exists, it returns a 400 error.
+
+[source,python]
+----
+# my_api/main.py
+
+...
+@app.post("/items/{item_id}")
+def create_item(item_id: int, value: str):
+    if item_id in items:
+        raise HTTPException(status_code=400, detail="Item already exists")
+    items[item_id] = value
+    return {"message": "Item created", "id": item_id, "value": value}
+----
+
+*PUT -> Update*  
+This updates an existing item. If the item doesn't exist, it returns a 404 error.
+[source,python]
+----
+# my_api/main.py
+
+...
+@app.put("/items/{item_id}")
+def update_item(item_id: int, value: str):
+    if item_id not in items:
+        raise HTTPException(status_code=404, detail="Item not found")
+    items[item_id] = value
+    return {"message": "Item updated", "id": item_id, "value": value}
+----
+
+*DELETE -> Remove*  
+This deletes an existing item. If the item doesn't exist, it returns a 404 error.
+
+[source,python]
+----
+# my_api/main.py
+...
+
+@app.delete("/items/{item_id}")
+def delete_item(item_id: int):
+    if item_id not in items:
+        raise HTTPException(status_code=404, detail="Item not found")
+    del items[item_id]
+    return {"message": "Item deleted", "id": item_id}
+----
+
+Notice how we use `HTTPException` to return relevant error codes. This is important for good API design so developers, clients, and other systems can know when something goes wrong and why.
+
+Now that we have all our CRUD routes defined, make sure your server is running (it should auto-reload if you have `--reload` enabled). The API will be available at `http://127.0.0.1:8000`. You can also test if the API is responding by making a simple request. Please run this in your notebook:
+
+[source,bash]
+----
+!curl http://127.0.0.1:8000/
+----
+
+This will show you that port 8000 is being used by your API and that it's responding to requests.
+
+Now let's test our API by making a series of requests to demonstrate all the CRUD operations. We'll go through each operation step by step in your **notebook**:
+
+[source,python]
+----
+import requests
+
+# Base URL for our API
+base_url = "http://127.0.0.1:8000"
+----
+
+===== 1. CREATE - Adding Items to Our Database
+
+First, let's add some items to our database using POST requests. This demonstrates the **Create** operation in CRUD:
+
+[source,python]
+----
+# Create three items with different IDs and values
+response1 = requests.post(f"{base_url}/items/1", params={"value": "Hello World"})
+print(f"Created item 1: {response1.json()}")
+
+response2 = requests.post(f"{base_url}/items/2", params={"value": "FastAPI Demo"})
+print(f"Created item 2: {response2.json()}")
+
+response3 = requests.post(f"{base_url}/items/3", params={"value": "Container API"})
+print(f"Created item 3: {response3.json()}")
+----
+
+===== 2. READ - Retrieving Items from Our Database
+
+Now let's retrieve the items we just created using GET requests. This demonstrates the **Read** operation:
+
+[source,python]
+----
+# Read each item we created
+for item_id in [1, 2, 3]:
+    response = requests.get(f"{base_url}/items/{item_id}")
+    print(f"Retrieved item {item_id}: {response.json()}")
+----
+
+Notice we use template strings to dynamically specify the ID of the item we are trying to read from the database.
+
+===== 3. UPDATE - Modifying an Existing Item
+
+Let's update one of our items using a PUT request. This demonstrates the **Update** operation:
+
+[source,python]
+----
+# Update item 2 with a new value
+response = requests.put(f"{base_url}/items/2", params={"value": "Updated FastAPI Demo"})
+print(f"Updated item 2: {response.json()}")
+----
+
+===== 4. READ - Verifying Our Update Worked
+
+Let's verify that our update actually worked by reading the item again:
+
+[source,python]
+----
+# Read item 2 to confirm the update
+response = requests.get(f"{base_url}/items/2")
+print(f"Item 2 after update: {response.json()}")
+----
+
+===== 5. DELETE - Removing an Item
+
+Now let's delete one of our items using a DELETE request. This demonstrates the **Delete** operation:
+
+[source,python]
+----
+# Delete item 3
+response = requests.delete(f"{base_url}/items/3")
+print(f"Deleted item 3: {response.json()}")
+----
+
+===== 6. Error Handling - Trying to Read a Deleted Item
+
+Let's see what happens when we try to read an item that no longer exists:
+
+[source,python]
+----
+# Try to read the deleted item (should get 404 error)
+response = requests.get(f"{base_url}/items/3")
+print(f"Status Code: {response.status_code}")
+print(f"Response: {response.json()}")
+----
+
+We should get a 404 status code with a "Item not found" message which is exactly what we want to see - our API handling errors gracefully 
+
+Notice the same thing will happen if we try to delete an item that doesn't exist.
+
+Please attempt this in your notebook so we can see the output.
+
+===== 7. Your Turn - Try Creating Your Own Item
+
+Now it's your turn! Try creating a new item with ID 4 and any value you want. Fill in the code below:
+
+[source,python]
+----
+# TODO: Create item 4 with your own value (hint: post request)
+response = requests.____(f"", params=)
+print(response.json())
+----
+
+Finally, just for fun, please define an endpoint called `/items-dump` and make a request to it and show the output in your notebook.
+
+This will show you the final state of your in-memory database after all the operations we performed. Keep in mind that whenever the server is reloaded, the in-memory 'database' is reset. So if you want to test the endpoints, you need to create new items after each reload.
+
+[NOTE]
+====
+You typically do not want to dump the entire database to the API since that can be a security vulnerability but we are going to do it here.
+====
+
+.Deliverables
+====
+- Output showing port 8000 is running and the API is serving
+- Output from the requests sent to the API (Successfully write, read, update, delete)
+- Output from the error handling (Failed read, Failed delete)
+- Output from your own POST to the endpoint
+- Output from the `/items-dump` endpoint showing all items
+====
+
+
+=== Question 5 (2 points)
+
+==== Advanced FastAPI Features
+
+Now that we have a working CRUD API, let's explore some more advanced FastAPI features that make it powerful and easy to use. We'll cover request bodies, query parameters, and response models.
+
+===== Request Bodies with Pydantic Models
+
+So far, we've been passing simple parameters like `value: str` directly in the function signature. But for more complex data, FastAPI works great with Pydantic models, which provide automatic data validation and serialization. 
+
+Real world applications also often are exposed to more risks where malicious users could send invalid data to the API which could cause the API to crash or behave in unexpected ways. Pydantic models help to mitigate this risk by automatically validating the data before it even reaches your function.
+
+Let's create a more sophisticated API that handles items with multiple fields enforcing an expected schema. First, let's add Pydantic to our requirements:
+
+[source,txt]
+----
+# my_api/requirements.txt
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.0
+----
+
+===== Setting Up Pydantic Models
+
+Now let's update our imports and create Pydantic models. Pydantic models are classes that define the structure and validation rules for our data. When someone sends data to our API, FastAPI will automatically validate it against these models.
+
+First, let's update the imports:
+
+[source,python]
+----
+# my_api/main.py
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from datetime import datetime
+from typing import Optional
+
+app = FastAPI(title="Student Demo API")
+----
+
+Now let's define our first Pydantic model. The `Item` model defines what a complete item should look like:
+
+[source,python]
+----
+# Pydantic model for request/response validation
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    quantity: int = 1
+----
+
+Notice that:
+
+- `name` is required (no default value)
+- `description` is optional (has a default of `None`)
+- `price` is required and must be a float
+- `quantity` has a default value of 1
+
+If someone tries to send invalid data (like a string for `price` or missing the required `name` field), FastAPI will automatically return a 422 error (Unprocessable Entity) with details about what's wrong.
+
+===== Creating Items with Request Bodies
+
+Now let's update our POST endpoint to use the Pydantic model. Instead of accepting `value: str` as a parameter, we'll accept an `Item` object in the request body:
+
+[source,python]
+----
+# our in-memory "database" - now stores Item objects
+items = {}
+
+@app.post("/items/{item_id}")
+def create_item(item_id: int, item: Item):
+    if item_id in items:
+        raise HTTPException(status_code=400, detail="Item already exists")
+    items[item_id] = item.dict()
+    return {"message": "Item created", "id": item_id, "item": items[item_id]}
+----
+
+The key difference here is that `item: Item` is a Pydantic model, not a simple string. FastAPI automatically:
+
+- Reads the JSON body from the request
+- Validates it against the `Item` model
+- Converts it to an `Item` object
+- Returns an error if validation fails
+
+We use `item.dict()` to convert the Pydantic model back to a dictionary for storage in our in-memory 'database'.
+
+===== Reading Items
+
+The GET endpoint remains similar, but now returns the more complex item structure:
+
+[source,python]
+----
+@app.get("/items/{item_id}")
+def read_item(item_id: int):
+    if item_id not in items:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"id": item_id, "item": items[item_id]}
+----
+
+===== Full Updates with PUT
+
+Before we only had the basic CRUD operations, but now let's add a PUT endpoint for full entry level updates. PUT takes in the id of the item to update and the new item data in the request body, and overwrites the entire item with the new data:
+
+[source,python]
+----
+@app.put("/items/{item_id}")
+def update_item(item_id: int, item: Item):
+    if item_id not in items:
+        raise HTTPException(status_code=404, detail="Item not found")
+    # overwriting the entire item with the new data
+    items[item_id] = item.dict()
+    return {"message": "Item updated", "id": item_id, "item": items[item_id]}
+----
+
+PUT requires all fields to be provided (since we're using the `Item` model), and it replaces the entire item. But what if we only want to update a few fields? For example, what if we only want to update the price and quantity of an item not its name nor description?
+
+===== Partial Updates with PATCH
+
+For partial updates, we need a different model where all fields are optional. Let's create an `ItemUpdate` model:
+
+[source,python]
+----
+class ItemUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    quantity: Optional[int] = None
+----
+It uses the `Optional` type to make all fields optional, which is less strict than our original `Item` model but still enforces the expected schema.
+
+Now let's create the PATCH endpoint, same thing except we use the `ItemUpdate` model instead of the `Item` model and some extra logic to only update the fields that are provided.
+
+[source,python]
+----
+@app.patch("/items/{item_id}")
+def partial_update_item(item_id: int, item: ItemUpdate):
+    if item_id not in items:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    existing_item = items[item_id]
+    # Only update fields that are provided
+    update_data = item.dict(exclude_unset=True)
+    existing_item.update(update_data)
+
+    items[item_id] = existing_item
+    
+    return {"message": "Item partially updated", "id": item_id, "item": items[item_id]}
+----
+
+The key here is `item.dict(exclude_unset=True)`, which only includes fields that were actually provided in the request. This allows us to update just the price, for example, without needing to send all the other fields.
+
+**PUT vs PATCH**: PUT replaces the entire item (all fields required), while PATCH only updates the fields you provide (all fields optional).
+
+===== Query Parameters for Pagination
+
+Finally, let's add query parameters to our list endpoint. Query parameters are passed in the URL after a `?` and are useful for filtering, pagination, and optional settings:
+
+[source,python]
+----
+@app.get("/items")
+def list_items(skip: int = 0, limit: int = 10):
+    """List all items with optional pagination"""
+    item_list = list(items.items())[skip:skip+limit]
+    return {
+        "total": len(items),
+        "skip": skip,
+        "limit": limit,
+        "items": {k: v for k, v in item_list}
+    }
+----
+
+The `skip` and `limit` parameters have default values, making them optional. You can call `/items` (uses defaults), `/items?skip=0&limit=5` (custom pagination), or `/items?limit=20` (only set limit).
+
+===== Summary of New Features
+
+Let's review what we've added:
+
+1. **Pydantic Models**: Automatic data validation - invalid data is rejected with clear error messages
+2. **Request Bodies**: Complex data structures sent in the JSON body instead of simple query parameters
+3. **PUT vs PATCH**: PUT for full updates (all fields), PATCH for partial updates (only specified fields)
+4. **Query Parameters**: Optional parameters in the URL for filtering and pagination
+
+===== Testing the Advanced API
+
+Now let's test our enhanced API. Make sure your server has reloaded, then in your notebook. We'll test each feature step by step.
+
+===== Testing: Creating Items with Request Bodies
+
+First, let's create items using request bodies. Notice we use `json=` instead of `params=` because we're sending data in the request body:
+
+[source,python]
+----
+# Create an item with a request body
+item_data = {
+    "name": "Laptop",
+    "description": "A high-performance laptop",
+    "price": 999.99,
+    "quantity": 5
+}
+
+response = requests.post(
+    f"{base_url}/items/1",
+    json=item_data  # Note: using json=, not params=
+)
+print("Created item 1:")
+print(json.dumps(response.json(), indent=2))
+----
+
+The `json=` parameter automatically:
+- Converts the dictionary to JSON
+- Sets the `Content-Type` header to `application/json`
+- Sends it in the request body
+
+Let's create another item:
+
+[source,python]
+----
+# Create another item
+item_data2 = {
+    "name": "Mouse",
+    "description": "Wireless mouse",
+    "price": 29.99,
+    "quantity": 10
+}
+
+response = requests.post(f"{base_url}/items/2", json=item_data2)
+print("Created item 2:")
+print(json.dumps(response.json(), indent=2))
+----
+
+===== Testing: Reading Items
+
+Now let's read one of the items we created:
+
+[source,python]
+----
+# Read an item
+response = requests.get(f"{base_url}/items/1")
+print("Retrieved item 1:")
+print(json.dumps(response.json(), indent=2))
+----
+
+===== Testing: Partial Updates with PATCH
+
+One of the powerful features we added is PATCH for partial updates. Notice we only send the fields we want to update:
+
+[source,python]
+----
+# Partial update using PATCH
+update_data = {
+    "price": 899.99,  # Only updating the price
+    "quantity": 3     # And the quantity
+}
+
+response = requests.patch(f"{base_url}/items/1", json=update_data)
+print("Partially updated item 1:")
+print(json.dumps(response.json(), indent=2))
+----
+
+We didn't need to send `name` or `description` - PATCH only updates the fields we provide!
+
+===== Testing: Query Parameters for Pagination
+
+Finally, let's test the query parameters. We can use them to paginate through items:
+
+[source,python]
+----
+# List items with pagination
+response = requests.get(f"{base_url}/items?skip=0&limit=5")
+print("Listed items (paginated):")
+print(json.dumps(response.json(), indent=2))
+----
+
+The `?skip=0&limit=5` in the URL are query parameters. You can also try different values like `?skip=1&limit=2` to see how pagination works.
+
+===== Error Handling with Invalid Data
+
+One of the great things about Pydantic models is automatic validation. Without Pydantic, if someone sent invalid data (like a string where a number is expected), your API might crash or behave unpredictably. With Pydantic, FastAPI automatically validates the data before it even reaches your function.
+
+Let's see what happens when we send invalid data:
+
+[source,python]
+----
+# Try to create an item with invalid data (price should be a number, not a string)
+invalid_item = {
+    "name": "Invalid Item",
+    "price": "not a number",  # This should cause an error
+    "quantity": 5
+}
+
+response = requests.post(f"{base_url}/items/99", json=invalid_item)
+print(f"Status Code: {response.status_code}")
+print(f"Error Response: {response.json()}")
+----
+
+FastAPI automatically validates the data and returns a detailed error message (status code 422) explaining exactly what's wrong. This is much better than your API crashing or accepting bad data!
+
+===== Your Turn - Create Your Own Item
+
+Now create your own item with at least 3 fields filled in. Then try a partial update on it:
+
+[source,python]
+----
+# TODO: Create your own item (item_id 10) with name, description, price, and quantity
+# TODO: Then do a partial update to change just the price
+
+# Your code here:
+----
+
+.Deliverables
+====
+- Output from creating items with request bodies
+- Output from reading and updating items
+- Output from the partial update (PATCH) operation
+- Output from listing items with pagination
+- Output from the error handling example (invalid data)
+- Output from your own item creation and partial update
+- Explain the difference between PUT and PATCH in your own words (2-3 sentences)
+- What are the advantages of using Pydantic models instead of simple function parameters?
+====
+
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project##.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
