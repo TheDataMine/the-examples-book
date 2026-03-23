@@ -83,6 +83,11 @@ The columns representing diseases, are coded in the NHANES dataset, seen at the 
 
 |===
 
+[NOTE]
+====
+You can see more information https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/doccontents.aspx[NHANES page], and related example https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/MCQ_J.htm[in this decumentation].
+====
+
 We can check that ourselves too. 
 
 [source,python]
@@ -299,9 +304,11 @@ This is where Cross Validation comes in.
 
 K-Fold Cross Validation divides the data into K equal-sized folds. In each round, training is done on K-1 folds and the remaining fold is used for validation. The K validation scores are averaged to get a single estimate of the model's performance. 
 
-We will continue to use Scikit-Learn. Scikit-Learn handles the entire cross validation process through `cross_val_score` function. 
+We will continue to use Scikit-Learn. Scikit-Learn handles the entire cross validation process through `cross_val_score` function (see https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_val_score.html#sklearn.model_selection.cross_val_score[cross_val_score documentation] for more details).  
 
 `KFold` class creates the indices to split the data into train and test sets. It splits the dataset into k partitions. 
+
+`KFold`class creates the indices to split the data into train and test sets. It splits the dataset into k partitions (see https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html#sklearn.model_selection.KFold[KFold documentation] for more details). 
 
 [source,python]
 ----
@@ -323,11 +330,17 @@ cv_scores = cross_val_score(model, X_scaled, y, cv=kf)
 '''YOUR CODE HERE'''
 ----
 
-- Setting `n_splits=10`: In the first round, 1st partition is the test set and remaining #2-10 are the train set. Similarly, in the second round, 2nd partition is the test set, and the 1st and #3-10 are the train set, and so on for all 10 rounds. 
+- In 'kf = KFold()', we set 'n_splits=10'. In the first round, 1st partition is the test set and remaining 2-10 are the train set. Similarly, in the second round, 2nd partition is the test set, and the 1st and 3-10 are the train set, and so on for all 10 rounds. 
 
-- We manually set `shuffle=True` as KFold does not shuffle by default. 
+We also manually set 'shuffle=True' as KFold does not shuffle by default. This allows us to randomize row ordering. If there is no shuffling, the assignment of rows to folds would depend on their original positions; this can be problematic for sorted or grouped datasets, for example by age or dates, as it would lead to unrepresentative folds. 
 
-- `cross_val_score()`: The model is trained 10 times and accuracy is evaluated for each fold. The function returns an array of scores for each cross validation runs. 
+- `cross_val_score(model, X_scaled, y, cv=kf)`: We pass in the model, feature matrix, target labels, and the cross validation splitting strategy. 
+
+KFold from before just splits the indices. Training and evaluation of the model can not be done without knowing how to split, so we pass in the `cv=kf` argument. 
+
+Note that separating these components also provides flexibility, since `cross_val_score()` can accept other types of splitting strategy. For example, we can pass in `StratifiedKFold` or `LeaveOneOut()` (these will be presented in upcoming questions) instead of `KFold`. 
+
+Here, the model is trained 10 times and accuracy is evaluated for each fold. The function returns an array of scores corresponding to each cross-validation run.
 
 .Deliverables
 ====
@@ -371,6 +384,9 @@ Just as an example, suppose we had a dataset with 5 observations. Then,
 
 `LeaveOneOut` from Scikit-Learn provides the indices for splitting data into training and testing sets. 
 
+
+`LeaveOneOut` from Scikit-Learn provides the indices for splitting data into training and testing sets (see https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.LeaveOneOut.html[LeaveOneOut documentation] for more details). 
+
 [source,python]
 ----
 from sklearn.model_selection import LeaveOneOut
@@ -381,9 +397,9 @@ from sklearn.model_selection import LeaveOneOut
 LOOCV can be viewed as a special case of K-Fold CV. We would get the same result if we were to run `KFold(n_splits=n)`. 
 ====
 
-Because the training set is almost the total dataset, we are able to obtain a low bias estimate; however, at this point you might realize this leads to high computational cost, especially inefficient for large data, since the model needs to be trained once for every observation in the dataset. 
+Because the training set (size n-1) is almost the entire dataset (size n), we are generally able to obtain a low bias estimate with this method; the model is exposed to nearly all the data in each round. However, this also leads to LOOCV having high variance with the validation set being just a single point, thus very sensitive to outliers and noise. 
 
-Try printing the number of rows in the dataset. 
+At this point you might also realize LOOCV can have a high computational cost and is especially inefficient for large data, since the model needs to be trained once for every observation in the dataset. 
 
 [source,python]
 ----
