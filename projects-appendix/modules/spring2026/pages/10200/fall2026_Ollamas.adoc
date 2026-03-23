@@ -1,0 +1,428 @@
+= TDM 10[]00: Project [] - Ollamas
+
+== Project Objectives
+
+Motivation:
+
+Context:
+
+Scope: 
+
+.Learning Objectives
+****
+****  
+
+== Dataset
+No dataset for this project!
+
+== Questions
+
+=== Question 1 (2 points) 
+A Large Language Model (LLM) is a type of artificial intelligence that is designed to understand, process, and generate text in a human-like fashion. These models are trained using self-supervised machine learning on vast amounts of data. A common reason this is done is to complete natural language processing tasks - such as language generation that you will find in AI chatbots. 
+
+Ollama is a tool that lets you run LLMs locally on your computer or a server without too many complex commands. Rather than calling an online API, Ollama downloads the chosen model and runs in directly in your environment. 
+
+Put simply, Ollama let's you :
+
+- download AI models
+- run them locally
+- ask them questions (from the command line)
+- customize and build models
+
+To begin working with Ollama, we first need to make a symbolic link to where the Ollama files are being stored on Anvil. 
+
+Currently, Ollama thinks that it is writing to the ~/.ollama location. BUT the data is actually stored in $SCRATCH/.ollama. So we need to create a symbolic link that tells Ollama to connect to and store in the scratch space. 
+
+In a new Terminal window on Anvil, run these lines to create an Ollama symbolic link - this only needs to be done *once* - to set up your environment: 
+
+[source,Bash]
+----
+# remove the existing .ollama directory (if any)
+rm -rf ~/.ollama; 
+
+# create a new .ollama in $SCRATCH
+mkdir -p $SCRATCH/.ollama; 
+
+# create a symbolic link to your personal directory
+ln -s $SCRATCH/.ollama ~
+----
+
+[NOTE]
+====
+Without the symbolic link, Ollama would download *large* models into your personal home directory. You would very quickly hit the storage limit, and the downloads would likely fail.
+
+With the symbolic link, large Ollama models live in scratch storage - which is meant to contain much more storage, and often temporary files.
+
+Very helpful information about symbolic links and Ollama in general on Anvil can be found in https://the-examples-book.com/tools/python/ollama_llms[this page on LLMs in The Examples Book]
+==== 
+
+To go and launch an Ollama server, we will be using a Terminal window rather than %%bash cell magic in your notebook. 
+
+[source,Bash]
+----
+# launch the ollama server!
+/anvil/projects/tdm/bin/ollama serve
+----
+
+This should output some text about the now running server! We will leave the server running in this tab, and will use a new window for further Terminal queries. 
+
+In your notebook (with the Terminal still running the '....ollama serve'!), run: 
+
+[source,Python]
+----
+%%bash
+/anvil/projects/tdm/bin/ollama ps
+----
+
+...to show the process status of the model(s). At this point, you shouldn't actually be running a model on the server yet, but this shows that the server is up and running without issue. 
+
+.Deliverables
+====
+1.1 Start the Ollama server and show the process status of the model +
+1.2 In 2-3 sentences, explain what Ollama is, and what its main functions are +
+1.3 In 1-2 sentences, explain why we need to use a symbolic link in this setup
+====
+
+=== Question 2 (2 points)
+We are going to be working with LLMs, using Ollama as the framework that will us to run, manage, and deploy these models. There are some pre-existing models for Ollama that can be found on the https://ollama.com/library[official Ollama site]. For this project, we will select Meta's llama3.2. This collection is optimized for speed and local usage.
+
+In a Terminal window (leaving the one running the server alone!) type:
+
+`/anvil/projects/tdm/bin/ollama pull llama3.2`
+
+This says to download the llama3.2 LLM to your ~/.ollama directory - but it is actually downloading to the $SCRATCH/.ollama location because of the symbolic link we created in the previous question! 
+
+To view information about anything you have downloaded (and to confirm that the download worked in the first place), you can use:
+
+[source,Python]
+----
+%%bash
+/anvil/projects/tdm/bin/ollama list
+----
+
+...in your notebook to display your current downloads.
+
+If we were to try to use llama3.2 directly, bad things would happen. The models that Ollama uses expect to use all CPU cores on the server, but we only have access to a certain number of CPU cores on a node. Ollama does not know this by default, so we have to tell it to use a smaller number of CPU cores (also referred to as 'threads') so the models do not take hours to run. 
+
+To simplify and shorten the process, create a small *new* model based on the llama3.2 model - but using just 2 CPU threads. 
+
+*In your notebook*:
+
+Create a file called mymodel. You create this file from just a few important lines:
+
+- `cat > file`: write text into a file
+- `~/mymodel`: the file name in the home directory
+- `'<< HERE'` and `'HERE'`: starts and ends the heredoc - this lets you write multiple lines into the file until the word HERE appears again
+
+Contents of the file
+
+- `FROM [model]`: use the base model Llama3.2
+- `PARAMETER num_thread [thread_count]`: run the model using 2 CPU threads
+
+Since we are creating a file that will define a model that uses 2 threads:
+
+[source,Python]
+----
+%%bash
+cat > ~/mymodel << HERE
+FROM llama3.2
+# using 2 threads!
+PARAMETER num_thread 2
+HERE
+----
+
+Run this in your notebook to display the contents of your mymodel text file:
+
+[source,Python]
+----
+%%bash
+cat ~/mymodel
+----
+
+.Deliverables
+====
+2.1 Download the llama3.2 model to your scratch directory +
+2.2 Create a model using a custom modelfile to specify the number of threads to use +
+2.3 Explain (2-3 sentences) the purpose of using the mymodel file +
+2.4 Add comments to your mymodel file
+====
+
+=== Question 3 (2 points)
+We created the configuration file mymodel which contains settings for how a new model should be built. Now, create a new model named llama3.2-2, and build this custom version of llama3.2 based on what is contained within your mymodel file. 
+
+[source,Bash]
+----
+# take the contents of mymodel, create a new model, call it 'llama3.2-2'
+/anvil/projects/tdm/bin/ollama create llama3.2-2 -f ~/mymodel
+----
+
+Run '/anvil/projects/tdm/bin/ollama run llama3.2-2'. Now you should be able to send the LLM a test prompt in the Terminal. Enter a message to begin working with the LLM. 
+
+Some starter ideas include:
+
+- "Why is the sky blue?"
+- "Tell me a joke about cats"
+- "What is 7 * 8?"
+- "What are the names of [singer's name] albums?"
+
+The response it gives you depends on the prompt you send it, and how you have configured the model. 
+
+The thread count is part of what determines the quality of the model's responses. 
+
+[NOTE]
+====
+To exit the currently active model, type '/bye' in the message prompt.
+====
+
+One way of testing model quality is to measure how long it is running to write a response. 
+
+Adjusting the cores will vary the speed, accuracy, and quality of your model and its responses. Currently, we are working with 2 threads. Make versions of llama3.2 that use 4 and 1 threads, respectively. 
+
+[source,Python]
+----
+%%bash
+cat > ~/mymodel << HERE
+FROM llama3.2
+# we used 2 threads before
+# now test with 1, then 4
+PARAMETER num_thread ___ 
+HERE
+
+# create the models from a mymodel file using 1 and 4 threads, respectively:
+# /anvil/projects/tdm/bin/ollama create llama3.2-[thread_count] -f ~/mymodel
+----
+
+Run this in your notebook to test how thread count (1, 2, and 4) changes the output you are recieving:
+
+[source,Python]
+----
+%%bash
+time /anvil/projects/tdm/bin/ollama run llama3.2-[thread count] "Explain why the sky appears blue during the day and red during sunrise and sunset. Write about 200 words."
+----  
+
+There is hopefully a very noticable time difference between running the model on 1 thread vs 2. This may be more subtle when comparing 2 cores to more (such as testing with 4 or 8 threads). The ideal number of threads tends to be around 1/2 as many cores as your server is running on - since we are using 4 cores, you should continue using 2 threads. 
+
+.Deliverables
+====
+3.1 Use '/anvil/projects/tdm/bin/ollama list' in your notebook to display the
+created models +
+3.2 Compare the outputs (written response, response time) of sending a prompt to the model using 1 thread, 2 threads, and 4 threads +
+3.3 Explain (1-2 sentences) the differences you noticed between the models and their responses
+====
+
+=== Question 4 (2 points)
+A plain-text configuration file - a modelfile - in Ollama can be used to define a new model. The contents of this file specifies:
+
+- `FROM`: the base model
+- `SYSTEM`: prompt for model behavior
+- `PARAMETER`: set model parameters 
+
+The base model will be llama3.2. We could re-defined that we want to use 2 threads by setting the PARAMETER, or we could just set the base model to llama3.2-2, as we have already worked with this model. 
+
+In the SYSTEM block, we can send the model a prompt on how to behave. This does not change the model's quality itself, just defines how this model we're creating should style its responses. 
+
+You can reuse this general setup:
+
+[source,Python]
+----
+%%bash
+cat > ~/mymodel << HERE
+FROM [your_model_name]
+SYSTEM """
+[your model behavior prompt] 
+"""
+HERE
+----
+
+A typical generative model's tone and behavior is usually rather neutral until it has training to shape its behavior. 
+
+Now fill out a modelfile with personality and style for the model to use when writing responses. 
+
+Some ideas for this:
+
+- Explain everything written in the language Pig Latin.
+- You are a very grouchy elderly man who does not like people who ask questions. Explain rudely and like you strongly wish for this to end
+- Explain everything to a five-year-old child. Use very simple words and short sentences. Use comparisons and examples children would understand.
+- You are a pirate explaining things to your crew. Use pirate slang and nautical metaphors.
+
+[NOTE]
+====
+So far, we've been defining the modelfiles under the name 'mymodel' each time. This is OK, as we are completing our model definitions and saving them each time before defining the next new model. However, you may find that you want to call your files distinct names if you have more than one model in the in-progress stage before running '/anvil/projects/tdm/bin/ollama create [model_version]-[my_model_name] -f ~/[modelfile_name]'
+====
+
+[IMPORTANT]
+====
+Between defining your model and then going to test it, do not forget to actually create it! 
+
+[source,Bash]
+----
+/anvil/projects/tdm/bin/ollama create [model_name] -f ~/mymodel
+----
+====
+
+Try defining, creating, and running a few models with different system behavior definitions. In the terminal, use:
+
+[source,Bash]
+----
+/anvil/projects/tdm/bin/ollama run llama3.2-[model_name]
+----
+
+...to run each model.
+
+.Deliverables
+====
+4.1 Use '/anvil/projects/tdm/bin/ollama list' in your notebook to list the current models +
+4.2 Try creating at least two models with new system behavior definitions +
+4.3 How (2-3 sentences) did your new models behave compared to the default?
+====
+
+=== Question 5 (2 points)
+Embeddings in LLMs are numerical vector representations of text, images, or audio generated by the model. A sentence of text - such as "The sky is blue" - will get converted into text that represents its meaning. These vectors allow computers to search and compare text based on meaning rather than written matches. 
+
+Mxbai-embed-large is a highly rated open-source embedding model made by Mixedbread AI. It was designed for high-performance Retrieval-Augmented Generation (RAG) - the process of improving LLM accuracy by using data from external sources when generating a response. 
+
+This model can be put in SCRATCH using '/anvil/projects/tdm/bin/ollama pull mxbai-embed-large'. 
+
+Take another modelfile and create a version of mxbai-embed-large that uses just 2 threads. 
+
+[source,Python]
+----
+%%bash
+cat > ~/mymodel << HERE
+FROM [model_name]
+PARAMETER num_thread [thread_count] 
+HERE
+----
+
+[NOTE]
+====
+Do not forget to use this mymodel to actually create a new model definition!
+
+[source,Bash]
+----
+/anvil/projects/tdm/bin/ollama create mxbai-embed-large-2 -f ~/mymodel
+----
+====
+
+In your notebook, run '! /anvil/projects/tdm/bin/ollama run mxbai-embed-large-2 "The sky is blue"' to test embedding a phrase. 
+
+This should output a long vector of numerical values that represent the phrase you entered. 
+
+Take the first ten values from the vectors of three phrases:
+
+[source,Python]
+----
+# phase: "The sky is blue"
+the_sky_is_blue = [-0.021142907,0.009792235,-0.00078518514,-0.041012164,-0.028142547,0.007936959,-0.0028563524,0.04603205,0.07597107,0.043744832]
+
+# phase: "The grass is green"
+the_grass_is_green = [-0.050176393,0.011092771,-0.005391531,0.011824846,-0.0063454183,0.052363742,0.033608414,0.010098344,0.04681839,0.04693919]
+
+# phrase: "I like cats"
+cats = [-0.015537318,0.03649514,0.026832601,-0.031201454,-0.021033717,-0.04197758,0.008024173,0.042692337,0.0215113,0.024097823]
+----
+
+We would assume that two of these vectors would be more similar to each other than with the third. However, 'the_sky_is_blue', 'the_grass_is_green', and 'cats' contain just ten out of many values in the numerical vectors of their original phrases. 
+
+Use:
+
+[source,Python]
+----
+import numpy as np
+
+similarity = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+print("Similarity score:", similarity)
+----
+
+....to compare the similarity between each pair of the three vectors. 
+
+.Deliverables
+====
+5.1 Use '/anvil/projects/tdm/bin/ollama list' in your notebook to show that mxbai-embed-large-2 was created +
+5.2 Compare the similarity between the first ten values of the vectors of each of "The sky is blue", "The grass is green", and "I like cats" +
+5.3 Explain (1-2 sentences) what you notice from comparing the similarity of these partial vectors
+====
+
+=== Question 6 (2 points)
+In Question 5, we made comparisons on the first ten numerical values to appear in the embedded vectors of some phrases. These vectors actually contain a lot more than ten values, and each is important for defining what has been embedded. 
+
+We *could* copy and paste the entire vector that outputs from running '! /anvil/projects/tdm/bin/ollama run mxbai-embed-large-2 "The sky is blue"', but this is not very nice to do; it is long and messy, and some values could easily get left out. 
+
+Instead, we will use `subprocess` to run the mxbai-embed-large-2 model on each phrase, then we'll save the vectors into a list that can easily be used for comparison.
+
+[source,Python]
+----
+import subprocess
+import numpy as np
+import ast
+
+# run the Ollama mxbai-embed-large-2 model on "The sky is blue"
+# capture the output as a string
+result = subprocess.run(
+    ['/anvil/projects/tdm/bin/ollama', 'run', 'mxbai-embed-large-2', "The sky is blue"],
+    capture_output=True,
+    text=True
+)
+
+# get the raw text
+embedding_text = result.stdout.strip()
+
+# convert the string representation of list into an actual Python list
+vector_list = ast.literal_eval(embedding_text)
+
+# convert list of vectors to NumPy array
+vector1 = np.array(vector_list)
+
+print("Vector shape:", vector1.shape)
+print("First 5 values:", vector1[:5])
+----
+
+[IMPORTANT]
+====
+Do this for each of the three phrases:
+
+- "The sky is blue"
+- "The grass is green"
+- "I like cats"
+====
+
+With the vectors of the phrases, you can now use cosine similarity to give a score from -1 to 1 on how similar each phrase is to the others. 
+
+[source,Python]
+----
+# calculate cosine similarity
+similarity = np.dot([first_vec], [second_vec]) / (np.linalg.norm([first_vec]) * np.linalg.norm([second_vec]))
+print("Similarity score:", similarity)
+----
+
+[NOTE]
+====
+Cosine similarity ranges from -1 to 1: 
+
+- 1: Identical vectors
+- 0: No similarity
+- -1: Opposite vectors
+====
+
+.Deliverables
+====
+6.1 Embed the phrases "The sky is blue", "The grass is green", and "I like cats" into numerical vectors +
+6.2 Use cosine similarity to compare the *entire* vector of each phrase against the others +
+6.3 Explain (1-2 sentences) what you notice from comparing the similarity of these vectors
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project[].ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
