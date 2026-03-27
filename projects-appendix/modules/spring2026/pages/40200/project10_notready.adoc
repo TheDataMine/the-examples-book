@@ -338,61 +338,81 @@ When $\lambda = 0$, the penalty term drops out entirely and the objective reduce
 $\sum_{i=1}^{n} (y_i - \hat{y}_i)^2$,  
 which is exactly the ordinary least squares criterion. In this case, Ridge regression yields the same coefficient estimates as OLS.
 
-As $\lambda$ increases, large coefficients become increasingly costly in the objective function. To keep the overall objective small, the model is forced to reduce the magnitude of the slope coefficients, shrinking them toward zero. This has the effect of stabilizing the model and making it less sensitive to noise in the training data, which helps reduce overfitting.
+As $\lambda$ increases, large coefficients become increasingly costly in the objective function. To keep the overall objective small, the model is forced to reduce the magnitude of the slope coefficients, shrinking them toward zero. This helps stabilize the model and making it less sensitive to noise in the training data, which helps reduce overfitting.
 
 In a multivariable Spotify popularity model, Ridge regression shrinks all feature coefficients toward zero, but not necessarily by the same amount. This occurs because the coefficients must balance two competing goals in the objective function: reducing the sum of squared residuals and keeping the penalty term small. Features that are strongly associated with popularity, such as danceability or energy, contribute substantially to reducing the SSR, so shrinking their coefficients too much would noticeably worsen the model fit. As a result, these coefficients tend to remain relatively larger, while weaker predictors, such as disc number or track number, can be shrunk much more with little impact on the SSR.
+
+Because Ridge regression applies a penalty directly to the size of the coefficients, the scale of the predictor variables becomes important. Features measured on larger numeric scales can lead to larger coefficients, which may be penalized more heavily than features on smaller scales. To ensure that the penalty is applied fairly across all predictors, it is common practice to standardize the features before fitting a Ridge regression model.
 
 
 .Deliverables
 ====
-**4a. Ridge regression is similar to ordinary least squares, but the coefficients are estimated by minimizing a function that includes a penalty on the size of the coefficients. Specifically, Ridge regression estimates the coefficients by minimizing:**
+
+**4a. Ridge regression includes a penalty on coefficient size, which can be affected by the scale of the features. In 1–2 sentences, explain why scaling is important. Use the code below to standardize the data.**
+
+[source,python]
+----
+from sklearn.preprocessing import StandardScaler
+import pandas as pd
+
+scaler = StandardScaler()
+
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+X_train = pd.DataFrame(X_train, columns=X.columns, index=y_train.index)
+X_test = pd.DataFrame(X_test, columns=X.columns, index=y_test.index)
+----
+
+
+**4b. Ridge regression is similar to ordinary least squares, but the coefficients are estimated by minimizing a function that includes a penalty on the size of the coefficients. Specifically, Ridge regression estimates the coefficients by minimizing:**
 
 $\sum_{i=1}^{n} (y_i - \hat{y}_i)^2 + \lambda \sum_{j=1}^{p} \beta_j^2$
 
 
 **In 1–2 sentences of your own words, describe what happens to the Ridge regression objective and the estimated coefficients when $\lambda = 0$. What equation does it remind you of?**
 
-**4b. Now focus on the penalty term in the objective function for Ridge:**
+**4c. Now focus on the penalty term in the objective function for Ridge:**
 
 $\lambda \sum_{j=1}^{p} \beta_j^2$
 
 
 **As $\lambda$ increases, the contribution of this penalty term to the objective function becomes larger.  In 1–2 sentences, explain how the slope coefficients would need to change in order to minimize the overall objective function as $\lambda$ gets bigger, and why this behavior could help reduce overfitting.**
 
-**4c. To better understand how Ridge regularization affects the estimated coefficient, we will focus on a single predictor variable. Use the code below to plot Spotify popularity vs. danceability and overlay the regression lines from Ordinary Least Squares (OLS) and Ridge regression with alpha = 25. In 1–2 sentences, describe how the Ridge regression line compares to the OLS line. What change do you observe in the slope, and how does this reflect the effect of regularization?**
+**4d. To better understand how Ridge regularization affects the estimated coefficient, we will focus on a single predictor variable. Use the code below to plot Spotify popularity vs. danceability and overlay the regression lines from Ordinary Least Squares (OLS) and Ridge regression with alpha = 25. In 1–2 sentences, describe how the Ridge regression line compares to the OLS line. What change do you observe in the slope, and how does this reflect the effect of regularization?**
 
 [source,python]
 ----
 import warnings
 from scipy.linalg import LinAlgWarning
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression, Ridge
 
 warnings.filterwarnings("ignore", category=LinAlgWarning)
 
-# Select a single predictor
-X_train_single = X_train[["danceability"]]
+X_train_single = X.loc[X_train.index, ["danceability"]]
 
-# Create grid for plotting regression lines (with feature name)
+# Create grid
+x_min = X_train_single["danceability"].min()
+x_max = X_train_single["danceability"].max()
+
 x_vals = pd.DataFrame(
-    np.linspace(
-        X_train_single.min().values[0],
-        X_train_single.max().values[0],
-        100),
+    np.linspace(x_min, x_max, 100),
     columns=["danceability"])
-
-# Fit OLS and Ridge
+# Fit models
 ols = LinearRegression()
 ols.fit(X_train_single, y_train)
 y_ols = ols.predict(x_vals)
-ridge = Ridge(alpha=25)
+
+ridge = Ridge(alpha=__) # For YOU to fill in
 ridge.fit(X_train_single, y_train)
 y_ridge = ridge.predict(x_vals)
 
-# Plot data and regression lines
+# Plot
 plt.scatter(X_train_single["danceability"], y_train, alpha=0.3, label="Training data")
-plt.plot(x_vals["danceability"], y_ols, label="OLS (alpha = 0)", linewidth=2)
+plt.plot(x_vals["danceability"], y_ols, label="OLS", linewidth=2)
 plt.plot(x_vals["danceability"], y_ridge, linestyle="--", label="Ridge (alpha = 25)", linewidth=2)
 
 plt.xlabel("______")
@@ -402,7 +422,7 @@ plt.legend()
 plt.show()
 ----
 
-**4d. So far, you examined how Ridge regression affects the slope of a single predictor. Now, consider a multivariable setting with all predictors included. Use the code below to fit both a standard multiple linear regression model and a multiple Ridge regression model using the same predictors and a fixed value of $\lambda$ (alpha). Use the code below to create a table that displays the coefficients from both models side by side. In 2–3 sentences, describe how the Ridge regression coefficients compare to the ordinary least squares coefficients and explain how this comparison illustrates the idea of coefficient shrinkage.**
+**4e. So far, you examined how Ridge regression affects the slope of a single predictor. Now, consider a multivariable setting with all predictors included. Use the code below to fit both a standard multiple linear regression model and a multiple Ridge regression model using the same predictors and a fixed value of $\lambda$ (alpha). Use the code below to create a table that displays the coefficients from both models side by side. In 2–3 sentences, describe how the Ridge regression coefficients compare to the ordinary least squares coefficients and explain how this comparison illustrates the idea of coefficient shrinkage.**
 
 [source,python]
 ----
@@ -426,8 +446,6 @@ coef_compare = pd.DataFrame({
 
 coef_compare
 ----
-
-
 ====
 
 === Question 5 - Lasso Regression (2 points)
@@ -494,7 +512,6 @@ coef_table
 
 ====
 
-
 === Question 6 - Cross-Validation (2 points)
 
 In the previous questions, you explored how regularization methods such as Ridge and Lasso control model complexity by shrinking coefficient estimates and, in the case of Lasso, performing variable selection. While these methods can help reduce overfitting, their effectiveness depends critically on the choice of the tuning parameter (for example, $\lambda$ or $\alpha$), which determines the strength of the penalty applied to the coefficients.
@@ -502,7 +519,6 @@ In the previous questions, you explored how regularization methods such as Ridge
 Rather than selecting this parameter arbitrarily, we typically rely on cross-validation to guide this choice. Cross-validation allows us to evaluate how a model performs on multiple subsets of the data, providing a more stable and reliable estimate of predictive performance than a single train–test split. By repeatedly training the model on different portions of the data and validating it on held-out folds, cross-validation helps balance the tradeoff between bias and variance.
 
 In this question, you will use k-fold cross-validation to assess the performance of Lasso regression across a range of $\alpha$ values. This process will help you identify a level of regularization that generalizes well to unseen data, rather than one that simply performs well on a single split of the dataset.
-
 
 .Deliverables
 ====
@@ -609,7 +625,7 @@ Once you have completed the questions, save your Jupyter notebook. You can then 
 
 .Items to submit
 ====
-- firstname_lastname_project1.ipynb
+- firstname_lastname_project10.ipynb
 ====
 
 [WARNING]
