@@ -1,4 +1,4 @@
-= TDM 20200: Project 10 - Containers with Apptainer - Part1
+= TDM 20200: Project 11 - Containers with Apptainer - Part2
 
 == Project Objectives
 
@@ -430,6 +430,315 @@ This means you can easily edit your code and take advantage of the sandboxed env
 ====
 
 **To be continued next week...**
+
+=== Question 4 (2 points)
+
+==== Run a batch-style analysis inside a container and validate from your notebook
+
+On many restricted HPC systems, long‑lived network services (like HTTP servers listening on ports) are either blocked or hard to reach from your Jupyter notebook. Instead, we will run a **batch analysis job entirely inside the container**, using bind mounts to pass inputs in and collect results out.
+
+Create a folder called `analysisdemo` in the same directory where you pulled `python_amd64.sif`:
+
+[source,text]
+----
+analysisdemo/
+├── config.json
+├── monte_carlo.py
+└── analyze.py
+----
+
+Use this starter `config.json` that describes a tiny “experiment” of simulated runs:
+
+[source,json]
+----
+{
+  "experiment_name": "container-hpc-demo",
+  "num_runs": 5,
+  "samples_per_run": 10000
+}
+----
+
+Now create `analyze.py` that:
+
+- reads `config.json`
+- runs a simple Monte Carlo estimate of π for each run using the `monte_carlo.py` module
+- writes summary results to both a log file and a JSON file
+
+[source,python]
+----
+# analysisdemo/analyze.py
+import json
+import logging
+import math
+import random
+from datetime import datetime, timezone
+from pathlib import Path
+
+from monte_carlo import estimate_pi
+
+BASE_DIR = Path(__file__).resolve().parent
+CONFIG_PATH = BASE_DIR / "config.json"
+RESULTS_PATH = BASE_DIR / "results.json"
+LOG_PATH = BASE_DIR / "analysis.log"
+
+logging.basicConfig(
+    level=logging.INFO,
+    filename=str(LOG_PATH),
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+logging.getLogger().addHandler(logging.StreamHandler())
+logger = logging.getLogger(__name__)
+
+def main():
+    if not CONFIG_PATH.exists():
+        raise FileNotFoundError(f"Missing {CONFIG_PATH} - is the folder bound correctly?")
+
+    with CONFIG_PATH.open() as f:
+        config = json.load(f)
+
+    experiment_name = config.get("experiment_name", "unnamed-experiment")
+    num_runs = int(config.get("num_runs", 3))
+    samples_per_run = int(config.get("samples_per_run", 1000))
+
+    logger.info("Starting experiment '%s'", experiment_name)
+    logger.info("Runs=%s, samples_per_run=%s", num_runs, samples_per_run)
+
+    results = {
+        "experiment_name": experiment_name,
+        "started_at": datetime.now(timezone.utc).isoformat() + "Z",
+        "num_runs": num_runs,
+        "samples_per_run": samples_per_run,
+        "runs": [],
+    }
+
+    for run_idx in range(num_runs):
+        est = estimate_pi(samples_per_run)
+        err = abs(math.pi - est)
+        logger.info("Run %s -> pi≈%.5f (abs error=%.5f)", run_idx, est, err)
+        results["runs"].append(
+            {
+                "run_index": run_idx,
+                "pi_estimate": est,
+                "abs_error": err,
+            }
+        )
+
+    results["finished_at"] = datetime.now(timezone.utc).isoformat() + "Z"
+
+    with RESULTS_PATH.open("w") as f:
+        json.dump(results, f, indent=2)
+
+    logger.info("Wrote results to %s", RESULTS_PATH.resolve())
+
+
+if __name__ == "__main__":
+    main()
+----
+
+Now, create `monte_carlo.py`:
+
+[source,python]
+----
+# analysisdemo/monte_carlo.py
+import random
+
+def estimate_pi(num_samples: int) -> float:
+    inside = 0
+    for _ in range(num_samples):
+        x = random.random()
+        y = random.random()
+        if x * x + y * y <= 1.0:
+            inside += 1
+    return 4.0 * inside / num_samples
+----
+
+This is a simple estimate of π using the Monte Carlo method where we:
+
+- Randomly sample points within a unit square [0,1] x [0,1].
+- Count how many fall inside a quarter circle of radius 1 (where x² + y² ≤ 1).
+- The ratio of points inside the circle to total points approximates π/4.
+- Multiply by 4 to estimate π. 
+
+Here is a visual representation of the Monte Carlo estimation of π:
+
+image::monte-carlo.png[Monte Carlo Estimation of pi, align=center]
+
+Clearly the more samples we have, the better the accuracy as is with most learning algorithms.
+
+Now we can run the analysis from your project root:
+
+[source,bash]
+----
+apptainer run --bind $(pwd)/analysisdemo:/app python_amd64.sif \
+  python /app/analyze.py
+----
+
+Because `/app` inside the container is bound to `analysisdemo` on the host, the `analysis.log` and `results.json` files created in the container will appear in your `analysisdemo` folder on the host.
+
+Now, in your notebook:
+
+[source,python]
+----
+from pathlib import Path
+import json
+
+project_dir = Path("...")  # TODO: replace with the path to your project folder
+analysis_dir = project_dir / "analysisdemo"
+
+print("Files in analysisdemo:", list(analysis_dir.iterdir()))
+
+with (analysis_dir / "results.json").open() as f:
+    results = json.load(f)
+
+print("Experiment name:", results["experiment_name"])
+print("Number of runs:", results["num_runs"])
+print("First run summary:", results["runs"][0])
+----
+
+Then modify `config.json` (e.g., increase `num_runs` or `samples_per_run`), re‑run the same Apptainer command, and inspect how the outputs change.
+
+.Deliverables
+====
+4.1 A printed summary of the parsed `results.json` (at minimum: experiment name, number of runs, and the first run's result). +
+4.2 A short explanation (2-3 sentences) of how the bind mount is being used to pass inputs in and get results out of the container. +
+4.3 One small custom change to `config.json` (for example, change `num_runs` or `samples_per_run`) and notebook output showing how that change affected the results.
+====
+
+=== Question 5 (2 points)
+
+==== Debug a broken container run on a restricted HPC system
+
+In real projects, containers often fail because of subtle **runtime configuration mistakes**: wrong bind mounts, missing files, or environment variables not being set. On restricted HPC systems where building custom images is limited, these issues typically show up when you use `apptainer run` with existing SIF images.
+
+In this question, we will intentionally misconfigure a small batch job that reads an input file and uses an environment variable. Your task is to **debug and fix the run configuration** without building any new images.
+
+Create a folder called `rundebug` next to your other project folders:
+
+[source,text]
+----
+rundebug/
+├── data/
+│   └── numbers.txt
+└── job.py
+----
+
+Create `numbers.txt` with a few integers, one per line:
+
+[source,text]
+----
+1
+2
+3
+4
+5
+----
+
+Now create `job.py`:
+
+[source,python]
+----
+# rundebug/job.py
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+DATA_PATH = BASE_DIR / "data" / "numbers.txt"
+MODE = os.environ.get("RUN_MODE", "UNKNOWN")
+
+def read_numbers(path: Path) -> list[int]:
+    if not path.exists():
+        raise FileNotFoundError(f"Expected data file at {path}, but it was not found.")
+    values: list[int] = []
+    with path.open() as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            values.append(int(line))
+    return values
+
+
+def main():
+    print(f"RUN_MODE={MODE}")
+    if MODE not in {"SUM", "PRODUCT"}:
+        raise ValueError(
+            "RUN_MODE must be set to either 'SUM' or 'PRODUCT' "
+            "(set it via an environment variable when running the container)."
+        )
+
+    nums = read_numbers(DATA_PATH)
+
+    if MODE == "SUM":
+        result = sum(nums)
+    else:  # PRODUCT
+        result = 1
+        for n in nums:
+            result *= n
+
+    print(f"Read {len(nums)} numbers from {DATA_PATH}")
+    print(f"RUN_MODE={MODE}, result={result}")
+
+
+if __name__ == "__main__":
+    main()
+----
+
+We will start with a **broken** Apptainer command (do not fix it yet):
+
+[source,bash]
+----
+apptainer run python_amd64.sif python /data/job.py >> job_error.log 2>&1
+----
+
+Run this command from the directory that contains `rundebug/`. The failure will be logged to `job_error.log` which you can open and use to answer the questions below and then fix the command step by step.
+
+===== Part A - Fix the bind mount
+
+The script expects to find the data and code at `/data` **inside** the container, but right now we are not binding anything. Update the command so that:
+
+- the host folder `rundebug` is visible as `/data` inside the container
+- `job.py` is run from `/data` inside the container
+
+Hint: you will need `--bind` and to adjust the path you give to `python`.
+
+===== Part B - Fix the environment variable
+
+Once the bind mount is correct, the script will complain about `RUN_MODE`. Fix this by:
+
+- running once with `RUN_MODE=SUM`
+- running again with `RUN_MODE=PRODUCT`
+
+You can set environment variables for Apptainer using either a shell prefix (`RUN_MODE=... apptainer run ...`) or `--env RUN_MODE=...`. Use whichever style you prefer.
+
+===== Part C - Verify from your notebook
+
+Finally, from your notebook:
+
+[source,python]
+----
+from pathlib import Path
+
+project_dir = Path("...")  # TODO: replace with the path to your project folder
+rundebug_dir = project_dir / "rundebug"
+
+print("numbers.txt contents:")
+print((rundebug_dir / "data" / "numbers.txt").read_text())
+----
+
+Then, in a separate cell, briefly summarize what changes you made to the Apptainer command and why they fixed the errors.
+
+.Deliverables
+====
+* 5.1 Output from the `job_error.log` file containing:
+** Original command failure
+** Output after fixing the bind mount
+** Output after fixing the environment variable
+** Output from both SUM and PRODUCT runs
+* 5.2 A short explanation (3-5 sentences) describing:
+** why the original command failed,
+** how the bind mount fixed the file path problem,
+** and how setting `RUN_MODE` fixed the logic error.
+====
 
 == Submitting your Work
 
