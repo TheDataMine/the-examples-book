@@ -1,15 +1,15 @@
-= TDM 20200: Project 10 - Containers with Apptainer - Part1
+= TDM 20200: Project 10 - Containers with Apptainer - Part 1
 
 == Project Objectives
 
-We are going to cover the basics of containers and Apptainer in more depth. This project focuses on building, running, inspecting, and debugging containers in a restricted development environment.
+We will cover the basics of containers and Apptainer in more depth. This project focuses on building, running, inspecting, and debugging containers in a restricted development environment.
 
-This project consists of two parts. The first part will be covered this week (Project 10), and the second part next week (Project 11). It is crucial that you complete Part 2 as well; otherwise, your containerization process will remain unfinished.
+This project consists of two parts. The first part will be covered this week (Project 10), and the second part next week (Project 11). It is crucial that you complete Part 2; otherwise, your containerization process will remain incomplete.
 
 .Learning Objectives
 ****
 - Understand what containers are and how they differ from virtual machines
-- Build and run Apptainer images from definition files
+- Build and run Apptainer images using definition files
 - Use bind mounts for faster iteration in restricted environments
 - Validate container behavior from a Jupyter notebook
 - Debug common container build and runtime issues
@@ -25,8 +25,8 @@ Make sure to read about, and use the template found on the xref:ROOT:templates.a
 [NOTE]
 ====
 - A lot of this project is done in the terminal, and we will use the notebook mainly to verify deliverables.
-- Create a clean working directory for this project and adjust file paths to match your filesystem.
-- In this handout, we intentionally build code in parts. Please do not skip ahead and paste a full solution from somewhere else.
+- Create a clean working directory for this project and adjust file paths to match your file system.
+- In this handout, we intentionally build code in parts. Please do not skip ahead and paste a full solution from an external source.
 - The point is to read each section and understand what changed.
 ====
 
@@ -43,19 +43,19 @@ The handout tells you where to run commands and where to show notebook output.
 
 ==== Containers - What are they?
 
-If you have ever worked on production code, you have probably run that code in some type of container, most likely Docker. Docker is commonly used in industry. But due to the current status of Anvil, we cannot run Docker very easily, so we are using Apptainer instead. It is similar in principle to Docker but has some key differences that make it more fitted for running on HPC (High Performance Computing) environments because of those implementation differences.
+If you have ever worked on production code, you have probably run that code in some type of container, most likely Docker. Docker is commonly used in industry. But due to the current status of Anvil, we cannot run Docker very easily, so we are using Apptainer instead. It is similar in principle to Docker but has some key differences that make it better suited for running on HPC (High Performance Computing) environments because of those implementation differences.
 
 Right, but what actually is a **container** and what do they do?
 
-Containers at their core provide a common working environment for your code - no matter where it is. The age old excuse of "_well it works on my computer_" is effectively nullified when you consider using containers. What's even more convenient is that as long as the device can run the container software (which most devices can) then your software can run there. No problem. Much fewer compatibility issues!
+Containers at their core provide a common working environment for your code - no matter where it is. The age old excuse of "_well it works on my computer_" is effectively nullified when you consider using containers. What is even more convenient is that as long as a device can run the container software (which most devices can) then your software can run there. No problem. Much fewer compatibility issues!
 
-Do not tell my boss but there is even a https://www.instagram.com/reel/DNlRHfvt-Z5/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==[funny cat video] talking about this. :)
+There is even a https://www.instagram.com/reel/DNlRHfvt-Z5/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==[humorous cat video] illustrating this concept.
 
 That sounds nice but if you have heard of virtual machines you may ask why would we need containers? Well, there are a few good reasons. 
 
-It really depends on your application, but most of the time running entire virtual machine, either virtualized or emulated, is _much much_ heavier on your system than just creating a container, especially if you are deploying multiple containers or hosting your product on less beefy devices. Virtual machines are also generally less compatible than container software.
+It really depends on your application, but most of the time running an entire virtual machine, either virtualized or emulated, is _much much_ heavier on your system than just creating a container, especially if you are deploying multiple containers or hosting your product on less beefy devices. Virtual machines are generally heavier and require more resources compared to containers.
 
-The https://www.bmc.com/blogs/containers-vs-virtual-machines/[two images below] provides a visualization on the differences between containers (on the right) and virtual machines (on the left). Containers will create a basic filesystem for your program to use while running but it will not bother running an entirely new OS layer for every container deployed.
+The https://www.bmc.com/blogs/containers-vs-virtual-machines/[two images below] provides a visualization on the differences between containers (on the right) and virtual machines (on the left). Containers will create a basic file system for your program to use while running but it will not bother running an entirely new OS layer for every container deployed.
 
 image::containers-vs-virtual-machines.jpg[container vs virtual machine diagram, 600,450, loading=lazy, title="Container vs virtual machine diagram (https://www.bmc.com/blogs/containers-vs-virtual-machines/[The link source of the diagram], accessed at 01/31/2026)"]
 
@@ -87,6 +87,8 @@ Feel free to read more about containers and registries from the two links provid
 1.2 Write 2-3 sentences explaining what images and registries are. +
 1.3 Write 2-3 sentences explaining why Apptainer is a good fit in restricted/HPC-like environments.
 ====
+
+In the next sections, you will move from these concepts to building and running your own container.
 
 === Question 2 (2 points)
 
@@ -137,7 +139,7 @@ Next we are going to create a requirements.txt file that just has requests==2.31
 requests==2.31.0
 ----
 
-Now we can create a file called `Apptainer.def` - `.def` is the specific file type used to define your image for Apptainer. This is a brief overview of some of the main sections of a Apptainer definition file:
+Now we can create a file called `Apptainer.def` - `.def` is the specific file type used to define your image for Apptainer. This is a brief overview of some of the main sections of an Apptainer definition file:
 
 [source,def]
 ----
@@ -157,7 +159,7 @@ From: # the image you want to pull from the registry
   # this is where you can define environment variables you may need
 
 %runscript
-  # this is where you run the script that for your program
+  # this is where you run the script for your program
 ----
 
 [NOTE]
@@ -201,11 +203,11 @@ Like just mentioned, this runs prior to `%post`. This is where we map/move the f
     . /app
 ----
 
-will do. This takes all files in the current directory (`.`) and copies them into a folder called `/app` in the container's filesystem (it will automatically create the directory `/app` for us).
+will do. This takes all files in the current directory (`.`) and copies them into a folder called `/app` in the container's file system (it will automatically create the directory `/app` for us).
 
 ==== Setting Up Environment - `%post`
 
-Now we have our basic Linux environment with Python installed and our necessary app files moved over, its generally good practice to update your Linux and ensure dependencies for your Python installation are up to date.
+Now we have our basic Linux environment with Python installed and our necessary app files moved over, it is generally good practice to update your Linux and ensure dependencies for your Python installation are up to date.
 
 At the most basic level we can just run:
 
@@ -227,7 +229,7 @@ Now that our Linux is updated and we have the base dependencies we need installe
     pip install --no-cache-dir -r /app/requirements.txt
 ----
 
-Note that since we are in a separated workspace, installing globally is okay, in fact it is generally done this way. There is not much need to worry about creating a virtual environment when you are working in a container since it is an entirely clean and isolated environment.
+Note that since we are in a separated workspace, installing packages globally is acceptable, in fact it is generally done this way. There is not much need to worry about creating a virtual environment when you are working in a container since it is an entirely clean and isolated environment.
 
 ==== Defining Environment Variables - `%environment`
 
@@ -242,7 +244,7 @@ We will workaround with the PATH environment variables, here is the application 
 
 We prepend our `PATH` with `/home/$USER/.local/bin` so when running commands, our shell will know to look in `./local/bin` for the Python environment that we have installed our requirements into.
 
-We specify `HOME` in case some other tools rely on the environment variable `HOME` - if we did not have it set then the tools may break since they are trying to point to an invalid place.
+We specify `HOME` in case other tools rely on the `HOME` environment variable - if we did not have it set then the tools may break since they are trying to point to an invalid place.
 
 This part is optional, but we choose to add `APP_DIR` here which just gives us the option to use that as a shortcut to specify certain paths. For some more complex projects, it may be convenient to create these environment variables. One reason is that in case you refactor general structure, then you do not necessarily need to go through a bunch of different paths and fix them, you can just fix the environment variables.
 
@@ -272,7 +274,7 @@ apptainer build myapp.sif Apptainer.def
 
 This may take a minute and sometimes it says it will take an hour or more, but the time fluctuates a lot. It typically only took ~30 seconds to build.
 
-Now we have a `.sif` file which is pure compiled program that now can be moved anywhere and run anywhere!
+Now we have a `.sif` file which is a compiled program which can now be moved and run on different systems.
 
 Let's run it with (_in the command line_):
 
@@ -307,7 +309,7 @@ Please add this to your script, rebuild the container, and run it again. You sho
 
 ==== Docker vs Apptainer & Trick for faster development
 
-You may have noticed earlier that even when you make a small change you have to recompile the whole project. Now if we were using Docker then we could avoid this since they have a more intelligent way of building the images. They build it in layers. So, if you only modify one "layer" then Docker will just reuse the cached layers that did not change, cutting down on build time.
+You may have noticed earlier that even when you make a small change you have to rebuild the entire image. Now if we were using Docker then we could avoid this since they have a more efficient layered build process. They build it in layers. So, if you only modify one "layer" then Docker will just reuse the cached layers that did not change, cutting down on build time.
 
 However, Apptainer is designed to be run on HPCs and is meant to run as a singular standalone executable file. It's not meant to be as flexible as Docker but it is however well suited for the environment it runs in and the tasks it is generally used for.
 
@@ -323,7 +325,7 @@ The slow changing parts include the base operating system, Python runtime, and P
 
 Ideally, we would build a _custom_ Apptainer image that contains only the slow-changing dependencies, and then bind-mount the fast-changing application code during development. This mirrors Docker's layered build philosophy while remaining compatible with Apptainer's HPC-oriented design.
 
-However, in this Jupyter/HPC environment (Anvil), Apptainer image builds are slightly more restricted. Specifically, Apptainer is not permitted to mount `/proc` during image builds, which prevents building and binding to custom SIF images locally due to hardware differences between the host and the container. However, we can pull a prebuilt image from the Docker registry that matches our architecture and then bind-mount our local code folder into the container at runtime.
+However, in this Jupyter/HPC environment (Anvil), Apptainer image builds are slightly more restricted. Specifically, Apptainer is restricted from mounting `/proc` during image builds, which prevents building and binding to custom SIF images locally due to hardware differences between the host and the container. However, we can pull a prebuilt image from the Docker registry that matches our architecture and then bind-mount our local code folder into the container at runtime.
 
 Since we are using a prebuilt image, we want to make sure the image we are going to pull matches our architecture. We can do this by running:
 
@@ -377,9 +379,9 @@ Now run your `hello.py` from Question 2 using a bind mount:
 apptainer run --bind $(pwd):/app python_amd64.sif python /app/hello.py
 ----
 
-This way all we need to do is rerun this command and the changes in our code will be visible inside the container! This achieves the same development workflow as Docker's layered caching, but in a way that is compatible with Apptainer and restricted HPC environments.
+With this approach, we only need to rerun this command and the changes in our code will be visible inside the container! This achieves the same development workflow as Docker's layered caching, but in a way that is compatible with Apptainer and restricted HPC environments.
 
-Now, lets test it out by modifying `hello.py` in two steps.
+Now, let's test it out by modifying `hello.py` in two steps.
 
 ===== Part A - Add hostname
 
@@ -420,7 +422,7 @@ Please also run `cat [your project directory]/hello.log` again to see the update
 The command stays the same. Your source code changes are visible because the host folder is mounted into `/app`.
 ====
 
-This means you can easily edit your code and take advantage of the sandboxed environment while still seeing the changes without having to fully rebuild the container which takes a lot longer!
+This means you can easily edit your code and take advantage of the sandboxed environment while still seeing the changes without having to fully rebuild the container which takes significantly longer.
 
 .Deliverables
 ====
