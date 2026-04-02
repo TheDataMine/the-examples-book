@@ -4,7 +4,7 @@
 
 We are going to cover the basics of containers and Apptainer in more depth. This project focuses on building, running, inspecting, and debugging containers in a restricted development environment.
 
-This project consists of two parts. The first part will be covered this week (Project 10), and the second part next week (Project 11). It is crucial that you complete Part 2 as well; otherwise, your containerization process will remain unfinished.
+This project consists of two parts. The first part was covered last week (Project 10), and the second part will be covered this week. It is important to complete Part 1 (Project 10) before working on this project; otherwise, your containerization process may remain incomplete.
 
 .Learning Objectives
 ****
@@ -20,7 +20,17 @@ Make sure to read about, and use the template found on the xref:ROOT:templates.a
 == Dataset
 - None for this project
 
-== Useful Things
+[[ai-note]]
+[IMPORTANT]
+====
+If AI is used in any cases, such as for debugging, research, etc., we now require that you submit a link to the entire chat history. For example, if you used ChatGPT, there is an “Share” option in the conversation sidebar. Click on “Create Link” and please add the shareable link as a part of your citation.
+
+The project template in the Examples Book now has a “Link to AI Chat History” section; please have this included in all your projects. If you did not use any AI tools, you may write “None”.
+
+We allow using AI for learning purposes; however, all submitted materials (code, comments, and explanations) must all be your own work and in your own words. No content or ideas should be directly applied or copy pasted to your projects. Please refer to https://the-examples-book.com/projects/spring2026/syllabus#guidance-on-generative-ai[GenAI page] in the example book. Failing to follow these guidelines is considered as academic dishonesty.
+====
+
+
 
 [NOTE]
 ====
@@ -39,269 +49,6 @@ The handout tells you where to run commands and where to show notebook output.
 
 == Questions
 
-=== Question 1 (2 points)
-
-==== Containers - What are they?
-
-If you have ever worked on production code, you have probably run that code in some type of container, most likely Docker. Docker is commonly used in industry. But due to the current status of Anvil, we cannot run Docker very easily, so we are using Apptainer instead. It is similar in principle to Docker but has some key differences that make it more fitted for running on HPC (High Performance Computing) environments because of those implementation differences.
-
-Right, but what actually is a **container** and what do they do?
-
-Containers at their core provide a common working environment for your code - no matter where it is. The age old excuse of "_well it works on my computer_" is effectively nullified when you consider using containers. What's even more convenient is that as long as the device can run the container software (which most devices can) then your software can run there. No problem. Much fewer compatibility issues!
-
-Do not tell my boss but there is even a https://www.instagram.com/reel/DNlRHfvt-Z5/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==[funny cat video] talking about this. :)
-
-That sounds nice but if you have heard of virtual machines you may ask why would we need containers? Well, there are a few good reasons. 
-
-It really depends on your application, but most of the time running entire virtual machine, either virtualized or emulated, is _much much_ heavier on your system than just creating a container, especially if you are deploying multiple containers or hosting your product on less beefy devices. Virtual machines are also generally less compatible than container software.
-
-The https://www.bmc.com/blogs/containers-vs-virtual-machines/[two images below] provides a visualization on the differences between containers (on the right) and virtual machines (on the left). Containers will create a basic filesystem for your program to use while running but it will not bother running an entirely new OS layer for every container deployed.
-
-image::containers-vs-virtual-machines.jpg[container vs virtual machine diagram, 600,450, loading=lazy, title="Container vs virtual machine diagram (https://www.bmc.com/blogs/containers-vs-virtual-machines/[The link source of the diagram], accessed at 01/31/2026)"]
-
-Since the containers can be run on one shared operating system, use the same lightweight container engine to manage containers, it saves a lot of resources and also simplifies things like communication between containers since the engine typically can help handle that routing.
-
-So how do you make a container?
-
-You need something called an _image_. You typically start by using a base preset of whatever kind of software you need. For example, if you want to run a Python service, then you can create a Python based image, if you want to create a JavaScript app then you can create a Node based image. If you want to create a Postgres container, you can create a Postgres based image, etc. Different container services provide access to these base images slightly different but the idea is the same - there is some central registry that stores different versions of prebuilt, ready to use images for many types of software you can pull down.
-
-Once you have the starting image, you can also create your own custom images and push them to these registries that people can pull down from, too. The process is shown visually below:
-
-image::docker-registry.jpg[docker registry graph, 600, 450, loading=lazy, title="Docker registry graph (https://www.geeksforgeeks.org/devops/what-is-docker-registry/[The link source of the graph], accessed at 01/31/2026)"]
-
-[NOTE]
-====
-Even though the https://www.geeksforgeeks.org/devops/what-is-docker-registry/[graphic] says "Dockerfile", the concept is the same for Apptainer. Apptainer even lets you bootstrap images from the Docker registry which is very convenient!
-====
-
-Some of this may seem a little abstract, but once we get into creating our own images in the next question, some of the potential confusion should be cleared up.
-
-Feel free to read more about containers and registries from the two links provided below and please answer the questions in the deliverable:
-
-- https://www.geeksforgeeks.org/devops/what-is-docker-registry[Docker registry page] from Geeks for Geeks, +
-- https://www.bmc.com/blogs/containers-vs-virtual-machines[Containers vs virtual machines blog page] from bmc. +
-
-.Deliverables
-====
-1.1 Write 2-3 sentences explaining container vs virtual machine in your own words. +
-1.2 Write 2-3 sentences explaining what images and registries are. +
-1.3 Write 2-3 sentences explaining why Apptainer is a good fit in restricted/HPC-like environments.
-====
-
-=== Question 2 (2 points)
-
-==== Build your first Apptainer image (in parts)
-
-We are going to containerize a tiny Python script. Create a clean folder, for example `project_containers`, and add these files:
-
-[source,text]
-----
-project_containers/
-├── hello.py
-├── requirements.txt
-└── Apptainer.def
-----
-
-Start with this script that just prints out "hello world" a few times:
-
-[source,python]
-----
-# hello.py
-import logging
-from datetime import datetime
-from time import sleep
-
-# this will log everything into a file called hello.log
-logging.basicConfig(
-    level=logging.INFO,
-    filename="hello.log",
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
-logger = logging.getLogger(__name__)
-
-
-def main():
-    for i in range(3):
-        logger.info(f"[{datetime.now().time()}] hello from apptainer loop={i}")
-        sleep(1)
-
-if __name__ == "__main__":
-    main()
-----
-
-Next we are going to create a requirements.txt file that just has requests==2.31.0 in it. This is a simple library that we will use to make HTTP requests later on:
-
-[source,text]
-----
-# requirements.txt
-requests==2.31.0
-----
-
-Now we can create a file called `Apptainer.def` - `.def` is the specific file type used to define your image for Apptainer. This is a brief overview of some of the main sections of a Apptainer definition file:
-
-[source,def]
-----
-# project3/Apptainer.def
-Bootstrap: # registry location you are bootstrapping from
-From: # the image you want to pull from the registry
-
-%files
-  # this is where you copy over the relevant files from your local workspace to your container workspace
-
-%post
-  # this is where you run the necessary bash commands to create the environment you want for your program to run in
-  # i.e. customizing base file structure, updating dependencies to ensure a stable environment, installing python requirements into the environment 
-
-
-%environment
-  # this is where you can define environment variables you may need
-
-%runscript
-  # this is where you run the script that for your program
-----
-
-[NOTE]
-====
-Note that Apptainer has a set order of executing the sections during build time:
-
-bootstrap -> files -> post -> environment -> runscript
-
-So the order in which you write your sections does not matter - it simply is a matter of personal preference. Some people may write `%post` _prior_ to `%files` since that is closer to the Dockerfile structure.
-====
-
-.Deliverables
-====
-2.1 In your Notebook, please run `ls [your project directory]`.
-====
-
-=== Question 3 (2 points)
-
-==== Defining Base Image
-
-We mentioned in the last problem that we can just use the Docker registry even though we are using Apptainer which is very convenient. We can set the location we are pulling from to be the default Docker registry by specifying the `Bootstrap` parameter. We also want to grab a Python image from that registry so we can run our program:
-
-[source,def]
-----
-# project3/Apptainer.def
-Bootstrap: docker
-From: python:3.11-slim
-----
-
-We specified the location to be `docker` and then our base image to be `python:3.11-slim`.
-
-Slim is a lighter-weight variant of the official Python image (smaller than the full image but still Debian-based). You often don't need the full Python installation for your app, so using slim saves image size and build time. We use slim rather than Alpine here because many Python packages with C extensions (e.g. NumPy, cryptography) build more reliably on Debian/glibc; Alpine uses musl libc and can require more work to get some wheels building. 
-
-==== File Mapping - `%files`
-
-Like just mentioned, this runs prior to `%post`. This is where we map/move the files from our local workspace to inside the container. For a small example like this we do not need much, something as simple as:
-
-
-[source,def]
-----
-    . /app
-----
-
-will do. This takes all files in the current directory (`.`) and copies them into a folder called `/app` in the container's filesystem (it will automatically create the directory `/app` for us).
-
-==== Setting Up Environment - `%post`
-
-Now we have our basic Linux environment with Python installed and our necessary app files moved over, its generally good practice to update your Linux and ensure dependencies for your Python installation are up to date.
-
-At the most basic level we can just run:
-
-[source,def]
-----
-    # update and install build dependencies
-    apt-get update && apt-get install -y gcc libc-dev && rm -rf /var/lib/apt/lists/*
-----
-
-Some Python libraries like `numpy`, `pandas`, `psycopg2`, `cryptography` etc. all have some native code written in C, so we need to make sure C compilers (gcc & libc-dev) are installed in our environment so the packages can properly compile when we install them into our environment.
-
-We then remove the files in `/var/lib/apt/lists/*` because these are files created by the commands `apt-get update` && `apt-get install` which are only needed during the installation of the packages. Once the necessary dependencies are installed, we can remove them to reduce bloat and have a slimmer final image.
-
-Now that our Linux is updated and we have the base dependencies we need installed. We then install our requirements into our environment which we can do like so:
-
-[source,def]
-----
-    # install python dependencies
-    pip install --no-cache-dir -r /app/requirements.txt
-----
-
-Note that since we are in a separated workspace, installing globally is okay, in fact it is generally done this way. There is not much need to worry about creating a virtual environment when you are working in a container since it is an entirely clean and isolated environment.
-
-==== Defining Environment Variables - `%environment`
-
-We will workaround with the PATH environment variables, here is the application of where we will specify environment variables like PATH to make sure we use the correct Python and such.
-
-[source,def]
-----
-    export PATH=/home/$USER/.local/bin:$PATH 
-    export HOME=/home/$USER
-    export APP_DIR=/app
-----
-
-We prepend our `PATH` with `/home/$USER/.local/bin` so when running commands, our shell will know to look in `./local/bin` for the Python environment that we have installed our requirements into.
-
-We specify `HOME` in case some other tools rely on the environment variable `HOME` - if we did not have it set then the tools may break since they are trying to point to an invalid place.
-
-This part is optional, but we choose to add `APP_DIR` here which just gives us the option to use that as a shortcut to specify certain paths. For some more complex projects, it may be convenient to create these environment variables. One reason is that in case you refactor general structure, then you do not necessarily need to go through a bunch of different paths and fix them, you can just fix the environment variables.
-
-==== Running The Script - `%runscript`
-The final section is generally very simple. For our case all we need to tell it to execute the main script. Add this into the `%runscript` section:
-
-[source,def]
-----
-    exec python /app/hello.py
-----
-
-We could also use our environment variable `APP_DIR` and do this: 
-
-[source,def]
-----
-    exec python $APP_DIR/hello.py
-----
-
-==== Building the Container
-
-Now we can build the container and run our program. Run this in the command line:
-
-[source,bash]
-----
-apptainer build myapp.sif Apptainer.def
-----
-
-This may take a minute and sometimes it says it will take an hour or more, but the time fluctuates a lot. It typically only took ~30 seconds to build.
-
-Now we have a `.sif` file which is pure compiled program that now can be moved anywhere and run anywhere!
-
-Let's run it with (_in the command line_):
-
-[source,bash]
-----
-apptainer run myapp.sif
-----
-
-However we dont see the output in the terminal because we are logging to a file. We can view the output in the terminal by adding a handler:
-
-[source,python]
-----
-# /hello.py
-...
-
-logging.basicConfig(
-  ... # same as above
-)
-logging.getLogger().addHandler(logging.StreamHandler()) # adding this will log to the terminal
-logger = logging.getLogger(__name__)
-----
-
-Please add this to your script, rebuild the container, and run it again. You should now see the output in the terminal.
-
-.Deliverables
-====
-3.1 In your Notebook, please run `cat [your project directory]/hello.log`. +
-3.2 Write 3-5 sentences explaining what `Bootstrap/From`, `%files`, `%post`, and `%runscript` each do.
-====
 
 === Question 4 (2 points)
 
@@ -746,12 +493,16 @@ Once you have completed the questions, save your Jupyter notebook. You can then 
 
 .Items to submit
 ====
-- firstname_lastname_project##.ipynb
+- firstname_lastname_project11.ipynb
 ====
 
 [WARNING]
 ====
-You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+It is necessary to document your work, with comments about each solution.  All of your work needs to be your own work, with citations to any source that you used.  Please make sure that your work is your own work, and that any outside sources (people, internet pages, generative AI, etc.) are cited properly in the project template.
+
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not.
+
+**Please** take the time to double check your work. See xref:ROOT:submissions.adoc[submissions page] for instructions on how to double check this.
 
 You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
 ====
