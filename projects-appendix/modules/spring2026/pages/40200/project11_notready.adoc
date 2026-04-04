@@ -15,8 +15,9 @@ This project introduces Survival Analysis and Cox proportional hazards regressio
 - Estimate and compare survival functions using Kaplan–Meier curves and learn about the log rank test.
 
 - Build and interpret a multivariable Cox proportional hazards model, including calculation of hazard ratios, statistical significance, and percent change in hazard for clinical predictors.
-
 ****
+
+Make sure to read about, and use the template found on the xref:ROOT:templates.adoc[template page], and the important information about project submissions on the xref:ROOT:submissions.adoc[submission page].
 
 == Dataset
 - /anvil/projects/tdm/data/survival/SurvivalData.csv
@@ -38,12 +39,7 @@ The project template in the Examples Book now has a “Link to AI Chat History�
 We allow using AI for learning purposes; however, all submitted materials (code, comments, and explanations) must all be your own work and in your own words. No content or ideas should be directly applied or copy pasted to your projects. Please refer to https://the-examples-book.com/projects/spring2026/syllabus#guidance-on-generative-ai[GenAI page] in the example book. Failing to follow these guidelines is considered as academic dishonesty.
 ====
 
-
 == Introduction 
-
-image::StethoscopeImage.jpg[Decorative, a close-up view of a stethoscope on a medical background, width=300, height=250, title="A close-up view of a stethoscope on a medical background."]
-
-
 In many studies, we are interested in whether an event occurs, such as whether a patient survives surgery.  
 In those cases, a binary modeling approach like logistic regression may seem like it can be used. However, when the **timing of the event matters**, survival analysis is more adequate. For example, a patient who dies during a medical procedure and a patient who dies two months later both experience death, yet a simple yes or no model would give them the same label. Ignoring how long it took for the event to occur removes valuable information and limits our ability to see important patterns.
 
@@ -53,11 +49,11 @@ Instead of modeling only whether an event occurs, survival analysis models **the
 
 Common examples of events include
 
-* Death of a patient
-* Progression of a disease
-* Failure of a machine part
-* Cancellation of a customer subscription
-* Time until pregnancy
+* Death of a patient,
+* Progression of a disease,
+* Failure of a machine part,
+* Cancellation of a customer subscription,
+* Time until pregnancy.
 
 In all of these situations, the main response variable is the **time from a defined beginning until an event happens**.
 
@@ -82,8 +78,6 @@ So
 
 We will use this same notation when we describe censored data in more detail.
 
-
-
 **Our Example Data Set**
 
 Consider our dataset which is study of lung cancer patients.
@@ -101,6 +95,7 @@ For each patient
 The data set does not record calendar dates for diagnosis or death.  
 Instead, it records **elapsed time in days** between study start and the outcome.  Each recorded survival time therefore represents how many days a patient lived after diagnosis or enrollment.
 
+image::StethoscopeImage.jpg[Decorative, a close-up view of a stethoscope on a medical background, width=300, height=250, title="A close-up view of a stethoscope on a medical background."]
 
 == Questions
 
@@ -112,7 +107,7 @@ Instead, it records **elapsed time in days** between study start and the outcome
 
 .Deliverables
 ====
-**1a. Load the `survival_data` dataset using the file path provided and display the first 5 rows along with the size of the data.**
+1a. Load the `survival_data` dataset using the file path provided and display the first 5 rows along with the size of the data.
 
 [source,python]
 ----
@@ -121,7 +116,7 @@ import pandas as pd
 survival_data = pd.read_csv('~/data/survival/SurvivalData.csv')
 ----
 
-**1b. Recode the status variable so that death is labeled as 1 and censored cases are labeled as 0.**
+1b. Recode the status variable so that death is labeled as 1 and censored cases are labeled as 0.
 
 
 [source,python]
@@ -130,8 +125,7 @@ survival_data.loc[survival_data.status==_, '____']=_ # For YOU to fill
 survival_data.loc[survival_data.status==_, '____']=_ # For YOU to fill 
 ----
 
-
-**1c. Apply linear interpolation to fill missing values in the meal.cal and wt.loss columns, then use forward fill and backward fill to handle any remaining NaNs in these two columns. Fill the missing values in the inst column using the column's mode.**
+1c. Apply linear interpolation to fill missing values in the `meal.cal` and `wt.loss` columns, then use forward fill and backward fill to handle any remaining NaNs in these two columns. Fill the missing values in the inst column using the column's mode.
 
 Hint: Use `.ffill()` and `bfill()` for forward and backward fill. 
 
@@ -147,7 +141,7 @@ survival_data[['meal.cal', 'wt.loss']] = _____ # For YOU to fill in
 survival_data['inst'] =  # For YOU to fill in
 ----
 
-**1d. For the remaining variables with missing data (ph.ecog, ph.karno, and pat.karno), fill the NaN values using the median of each respective column. Finally, display the updated missing-value counts for all columns to confirm that no missing values remain in the dataset.**
+1d. For the remaining variables with missing data (ph.ecog, ph.karno, and pat.karno), fill the NaN values using the median of each respective column. Finally, display the updated missing-value counts for all columns to confirm that no missing values remain in the dataset.
 
 [source,python]
 ----
@@ -200,10 +194,7 @@ So for each individual we have the pair $(Y, \delta)$.
 * If $\delta = 1$, then the event occurred at time $Y$.  
 * If $\delta = 0$, then the observation is censored and the true event time is greater than $Y$.
 
-
-
 Even though censored observations do not give us the exact event time, they still provide important information. Each censored patient tells us that the event did not occur before their last observed time.
-
 
 **Types of Censoring**
 
@@ -215,14 +206,12 @@ Right censoring occurs when we know that the event time is at least as large as 
 
 $T \ge Y$
 
-
 Examples
 
 * The study ends while the patient is still alive.  
 * The patient leaves the study or is lost to contact before the event occurs.
 
 In both cases, we do not know the exact value of $T$, but we do know that $T$ is larger than the final observed time.
-
 
 **Left Censoring**
 
@@ -263,8 +252,7 @@ image::censoreddata.png[width=600, height=450, title="Example Survival Timelines
 
 In the figure above, each horizontal line represents one patient’s follow-up time starting at study entry (time = 0). An X marks when a death occurs (event observed), and an open circle marks a censored observation (patient still alive at last follow-up). The dashed vertical line shows a **chosen reference (landmark) time at 365 days**, which we use as a snapshot of follow-up rather than the true end of the study.
 
-Notice that some patients die before this reference time (e.g., Patients 1 and 2), while others die after it (e.g., Patient 4). Patients who remain alive beyond the reference time (e.g., Patient 5) have survival times that extend past 365 days. From the perspective of a snapshot taken at day 365, patients who die after this point and patients who remain alive after this point **are indistinguishable at that moment**, because neither outcome has occurred yet. This demonstrates why survival analysis must explicitly account for censoring and time-to-event information rather than relying on simple yes/no outcome models.
-
+Notice that some patients die before this reference time (e.g., Patients 1 and 2), while others die after it (e.g., Patient 3 and 4). Patients who remain alive beyond the reference time (e.g., Patient 5) have survival times that extend past 365 days. From the perspective of a snapshot taken at day 365, patients who die after this point and patients who remain alive after this point **are indistinguishable at that moment**, because neither outcome has occurred yet. This demonstrates why survival analysis must explicitly account for censoring and time-to-event information rather than relying on simple yes/no outcome models.
 
 
 **Assumption About Censoring**
@@ -278,7 +266,7 @@ Informally, this means that whether or when a subject is censored should not dep
 
 .Deliverables
 ====
-**2a. Using the `status` event indicator variable, calculate how many observations are events (status = 1) and how many are right-censored (status = 0). Print the counts and create a bar plot showing the proportion of censored versus observed events.**
+2a. Using the `status` event indicator variable, calculate how many observations are events (status = 1) and how many are right-censored (status = 0). Print the counts and create a bar plot showing the proportion of censored versus observed events.
 
 [source,python]
 ----
@@ -293,7 +281,7 @@ plt.title('______')
 plt.show()
 ----
 
-**2b. Use the code below to create a scatter plot that displays each patient’s follow-up time on the x-axis and the patient index (after sorting by time) on the y-axis. Then, write 1–2 sentences interpreting the results.**
+2b. Use the code below to create a scatter plot that displays each patient’s follow-up time on the x-axis and the patient index (after sorting by time) on the y-axis. Then, write 1–2 sentences interpreting the results.
 
 _Note: Follow-up time is the length of time each patient is observed in the study, from study entry until either death occurs (event) or the patient is censored (e.g., study ends or they are lost to follow-up). In this dataset, follow-up time is stored in the time column and is measured in days._
 
@@ -331,7 +319,7 @@ plt.grid(alpha=0.3)
 plt.show()
 ----
 
-**2c. Use the code below to generate a survival timeline plot for the first 10 patients in `survival_data`, including a dashed vertical reference line at 365 days to represent a snapshot of follow-up. Write 1–2 sentences interpreting the plot and stating how many patients experienced an observed death at our point of reference versus how many were a censored outcome.**
+2c. Use the code below to generate a survival timeline plot for the first 10 patients in `survival_data`, including a dashed vertical reference line at 365 days to represent a snapshot of follow-up. Write 1–2 sentences interpreting the plot and stating how many patients experienced an observed death at our point of reference versus how many were a censored outcome.
 
 [source,python]
 ----
@@ -383,15 +371,15 @@ plt.show()
 <iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_ehjeg3w2&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_x2loh602%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 860px;height: 440px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Spring 2025 Question 3 Survival Analysis"></iframe>
 ++++
 
-The survival function can be written using the Kaplan Meier product formula:
+The survival function can be estimated using the https://en.wikipedia.org/wiki/Kaplan–Meier_estimator[Kaplan Meier] estimator:
 
-$S(t) = \prod_{t_i \le t} \left(1 - \frac{d_i}{n_i}\right)$
+$\hat{S}(t) = \prod_{t_i \le t} \left(1 - \frac{d_i}{n_i}\right)$.
 
 In this form
 
-* $t_i$ represents each observed event time  
-* $d_i$ is the number of deaths that occur at time $t_i$  
-* $n_i$ is the number of individuals at risk immediately before time $t_i$
+* $t_i$ represents each observed event time,  
+* $d_i$ is the number of deaths that occur at time $t_i$, 
+* $n_i$ is the number of individuals at risk immediately before time $t_i$.
 
 
 At each event time, survival is updated by multiplying the previous survival probability by a new fraction that accounts for how many deaths occurred out of the group still being observed.
@@ -400,10 +388,10 @@ At each event time, survival is updated by multiplying the previous survival pro
 
 We demonstrate this process using our lung cancer dataset. Each row of the data includes
 
-* **time**: the number of days observed
+* **time**: the number of days observed,
 * **event**:
-  * 1 indicates death occurred
-  * 0 indicates the observation is censored
+  ** 1 indicates death occurred,
+  ** 0 indicates the observation is censored.
 
 Example rows from the dataset are shown below.
 
