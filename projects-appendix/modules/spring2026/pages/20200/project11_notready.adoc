@@ -2,7 +2,7 @@
 
 == Project Objectives
 
-This is **Part 2** of the containers project. You will turn a bind-mounted workflow into a **small config-driven batch job**, **verify outputs from a notebook**, and **debug typical Apptainer runtime mistakes** (mounts, paths, environment variables). You will also compare `apptainer exec` and `apptainer run`, and wrap a container invocation in a **simple shell script**—the kind of glue you often use before scheduling real work on a shared cluster.
+This is **Part 2** of the containers project. You will turn a bind-mounted workflow into a small config-driven batch job, verify outputs from a notebook, and debug typical Apptainer runtime mistakes like mount, path, or environment variable issues.
 
 This project consists of two parts. The first part was covered last week (https://the-examples-book.com/projects/spring2026/20200/project10[Project 10]), and this second part is covered this week. It is important to complete Part 1 (Project 10) before working on this project; otherwise, your 
 containerization process may remain incomplete.
@@ -109,7 +109,7 @@ Create `workload.py`:
 import random
 
 def run_once(num_samples: int) -> float:
-    """Return an approximate pi value using num_samples random points (implementation detail)."""
+    """Return an approximate pi value using num_samples random points"""
     inside = 0
     for _ in range(num_samples):
         x = random.random()
@@ -134,6 +134,7 @@ from pathlib import Path
 
 from workload import run_once
 
+# here we build the relative file pathing
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_DIR / "config.json"
 RESULTS_PATH = BASE_DIR / "results.json"
@@ -231,7 +232,7 @@ Because `/app` is bound to `analysisdemo` on the host, `analysis.log` and `resul
 .Deliverables
 ====
 2.1 In your notebook, show the contents of `analysisdemo/` after a successful run (for example list files so `results.json` and `analysis.log` are visible). +
-2.2 In your notebook, display either the contents of `analysis.log` or a short excerpt (first and last ~10 lines are enough if the file is long). +
+2.2 In your notebook, display either the contents of `analysis.log` (first ~10 lines are enough if the file is long). +
 2.3 In **2-4 sentences**, describe what `analyze.py` is responsible for versus what `workload.run_once` is responsible for, and why splitting them makes the project easier to maintain or swap out later.
 ====
 
@@ -251,21 +252,20 @@ import json
 project_dir = Path("...")  # TODO: replace with the path to your project folder
 analysis_dir = project_dir / "analysisdemo"
 
-print("Files in analysisdemo:", sorted(p.name for p in analysis_dir.iterdir()))
-
 with (analysis_dir / "results.json").open() as f:
     results = json.load(f)
 
 print("Experiment name:", ... ) # TODO: replace with the experiment name
 print("Number of runs:", ... ) # TODO: replace with the number of runs
 print("First run:", ... ) # TODO: replace with the first run
+print("Timestamp:", ... ) # TODO: replace with the timestamp
 ----
 
 Then edit `config.json` on the host in a way that clearly changes the outcome. For example, increase `num_runs` or `samples_per_run`, or change `experiment_name`. Do not rebuild any image. Re-run the exact same `apptainer run --bind ...` command from Question 2.
 
 .Deliverables
 ====
-3.1 Notebook output showing at least: experiment name, number of runs, and the first run object from `results.json` before your config change. +
+3.1 Notebook output showing at least: experiment name, number of runs, the first run object, and the timestamp from `results.json` before your config change. +
 3.2 Notebook output showing the same fields after your config change (so we can see the effect of editing the config). +
 3.3 In **2-3 sentences**, explain how the bind mount lets you pass inputs into the container and retrieve outputs without copying files manually or editing the SIF.
 ====
@@ -411,12 +411,12 @@ For batch and HPC-style work you often want two habits: run an explicit command 
 
 ==== Part A - Compare `exec` and `run`
 
-Both subcommands start your program in the container, but they are not identical:
+Both subcommands start programs inside a container, but they differ in how the command is resolved:
 
-- `apptainer run` invokes the image's runscript (for images built from Docker definitions, this is often wired to the Docker `ENTRYPOINT` / `CMD` behavior).
-- `apptainer exec` **does not** use the runscript; it runs the command line you give, which is typically preferred for **batch pipelines** where the command should be obvious from the job script.
+- `apptainer run` executes the container's *runscript* (a default command defined at build time).
+- `apptainer exec` bypasses the runscript and executes the command provided by the user directly.
 
-From your project root, run **both** of the following (they should both work for this class image):
+We run the following commands:
 
 [source,bash]
 ----
@@ -428,7 +428,71 @@ apptainer exec python_amd64.sif python -c "import sys; print('via exec', sys.ver
 apptainer run python_amd64.sif python -c "import sys; print('via run', sys.version.split()[0])" >> run_output.log 2>&1
 ----
 
-Please cat the output of the commands in your notebook.
+Run these in the notebook:
+
+[source,bash]
+----
+cat exec_output.log
+cat run_output.log
+----
+
+Both commands produce identical output:
+
+[source,text]
+----
+via exec 3.11.15
+via run 3.11.15
+----
+
+This occurs because the provided `python_amd64.sif` image defines a runscript that simply invokes Python. As a result, `apptainer run` forwards arguments to Python in the same way that `apptainer exec` directly invokes it.
+
+To better understand the difference, we can inspect the container's runscript:
+
+[source,bash]
+----
+apptainer inspect --runscript python_amd64.sif
+----
+
+Looking at the output of the container runscript we can see why `apptainer run` and `apptainer exec` behave identically in this case:
+
+[source,bash]
+----
+OCI_ENTRYPOINT=''
+OCI_CMD='"python3"'
+----
+
+This indicates that the container does not define a custom entrypoint and instead defaults to running `python3`.
+
+Logic later on in the runscript confirms that if arguments are provided, they override the default command:
+
+[source,bash]
+----
+if [ -n "$OCI_CMD" ] && [ -z "$OCI_ENTRYPOINT" ]; then
+    if [ $# -gt 0 ]; then
+        SINGULARITY_OCI_RUN="${CMDLINE_ARGS}"
+    else
+        SINGULARITY_OCI_RUN="${OCI_CMD}"
+    fi
+fi
+----
+
+As a result, both of the following commands:
+
+[source,bash]
+----
+apptainer run python_amd64.sif python -c "..."
+apptainer exec python_amd64.sif python -c "..."
+----
+
+end up executing the same underlying command inside the container.
+
+But in general:
+
+- `apptainer run` depends on container-defined behavior (which may not be obvious to the user).
+- `apptainer exec` is explicit and reproducible, making it preferable for batch jobs and HPC workflows.
+
+Even though the outputs match in this case, `exec` is still generally safer and more transparent choice since you clearly specify the commmand being run.
+
 
 ==== Part B - A minimal `run_analysis.sh`
 
