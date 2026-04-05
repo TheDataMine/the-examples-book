@@ -4,11 +4,10 @@
 
 This is **Part 2** of the containers project. You will turn a bind-mounted workflow into a **small config-driven batch job**, **verify outputs from a notebook**, and **debug typical Apptainer runtime mistakes** (mounts, paths, environment variables). You will also compare `apptainer exec` and `apptainer run`, and wrap a container invocation in a **simple shell script**—the kind of glue you often use before scheduling real work on a shared cluster.
 
-This project consists of two parts. The first part was covered last week (https://the-examples-book.com/projects/spring2026/20200/project10[Project 10]), and the second part will be 
-covered this week. It is important to complete Part 1 (Project 10) before working on this project; otherwise, your 
+This project consists of two parts. The first part was covered last week (https://the-examples-book.com/projects/spring2026/20200/project10[Project 10]), and this second part is covered this week. It is important to complete Part 1 (Project 10) before working on this project; otherwise, your 
 containerization process may remain incomplete.
 
-You should already have pulled `python_amd64.sif`, as well as understand bind mounts, and be comfortable running `apptainer run` from a terminal. This handout assumes `analysisdemo/` and `rundebug/` live next to that SIF in your project folder (directories introduced later in the project). If not, please work on https://the-examples-book.com/projects/spring2026/20200/project10[Project 10], first. 
+You should already have pulled `python_amd64.sif`, as well as understand bind mounts, and be comfortable running `apptainer run` from a terminal. This handout assumes `analysisdemo/` and `rundebug/` live next to that SIF file in your project folder (directories introduced later in the project). If not, please work on https://the-examples-book.com/projects/spring2026/20200/project10[Project 10], first before continuing. 
 
 .Learning Objectives
 ****
@@ -40,7 +39,7 @@ We allow using AI for learning purposes; however, all submitted materials (code,
 - A lot of this project is done in the terminal, and we will use the notebook mainly to verify deliverables.
 - Use the same working directory from https://the-examples-book.com/projects/spring2026/20200/project10[Project 10].
 - In this handout, we intentionally build code in parts. Please do not skip ahead and paste a full solution from somewhere else.
-- The point is to read each section and understand what changed.
+- The point is to read each section and understand what has changed.
 ====
 
 [IMPORTANT]
@@ -56,7 +55,7 @@ The handout tells you where to run commands and where to show notebook output.
 
 ==== From ad-hoc scripts to a batch-shaped project
 
-In Project 10 you edited `hello.py` on the host and re-ran `apptainer run` with a bind mount so the container always saw the latest code. That pattern scales to **batch jobs**: keep code and a **config file** in one folder, mount that folder at a fixed path inside the container, and treat everything the job writes (logs, JSON, CSVs) as **artifacts** that land back on the host because the mount is shared.
+In https://the-examples-book.com/projects/spring2026/20200/project10[Project 10] you edited `hello.py` on the host and re-ran `apptainer run` with a bind mount so the container always saw the latest code. That pattern scales to **batch jobs**: keep code and a **config file** in one folder, mount that folder at a fixed path inside the container, and treat everything the job writes (logs, JSON, CSVs) as **artifacts** that land back on the host because the mount is shared.
 
 Create a folder called `analysisdemo` in the **same directory** as `python_amd64.sif` (your Project 10 pull). For this question, only the layout and config need to exist; you will add Python modules in Question 2.
 
@@ -77,7 +76,7 @@ Use this starter `config.json` that describes a tiny experiment (several sequent
 }
 ----
 
-The field `samples_per_run` will control how much “work” each run does inside a small helper module in Question 2. Note that you do **not** need to understand the math behind that workload, the point is the **structure**: config drives behavior, and the container sees `/app` as this folder.
+The field `samples_per_run` will control how much “work” each run does inside a small helper module in Question 2. Note that you do **not** need to understand the underlying math behind that workload, the point is the **structure**: config drives behavior, and the container sees `/app` as this folder.
 
 .Deliverables
 ====
@@ -100,7 +99,7 @@ analysisdemo/
 └── analyze.py
 ----
 
-The file `workload.py` holds a single routine that does a fixed amount of numeric work per call. We use a tiny random Monte Carlo estimate of π only as a **black-box workload**. The actual logic of the Monte Carlo we are using is not important for this project. What matters is clean separation: `analyze.py` reads config, calls `workload.run_once`, and records metrics.
+The file `workload.py` holds a single routine that does a fixed amount of numeric work per call. We use a tiny random Monte Carlo estimate of π only as a **black-box workload**. The actual logic of the Monte Carlo we are using is not important for this project. What matters is a clean separation: `analyze.py` reads config, calls `workload.run_once`, and records metrics.
 
 Create `workload.py`:
 
@@ -120,9 +119,9 @@ def run_once(num_samples: int) -> float:
     return 4.0 * inside / num_samples
 ----
 
-Next we will create the `analyze.py` file. This file will read the config file, call the `workload.run_once` function, and record the metrics.
+Next, we will create the `analyze.py` file. This file will read the config file, call the `workload.run_once` function, and record the metrics.
 
-First we will import the necessary modules and set up our directory structure and logging:
+First, we will import the necessary modules and set up the directory structure and logging:
 
 [source,python]
 ----
@@ -151,7 +150,7 @@ logger = logging.getLogger(__name__)
 ...
 ----
 
-Next we create the main function. This function will read the config file, set up the experiment, and run the workload.
+Next, we create the main function. This function will read the config file, set up the experiment, and run the workload.
 
 [source,python]
 ----
@@ -175,7 +174,7 @@ def main():
     logger.info("Runs=%s, samples_per_run=%s", num_runs, samples_per_run)
 ----
 
-We loaded up our config file and extracted the values we need so now we can start our experiment. We will first initialize our results dictionary which will store the results of each run of our experiment and then we will run the workload for each run.
+We loaded the config file and extracted the values we need so now we can start our experiment. We will first initialize our results dictionary which will store the results of each run of our experiment and then we will run the workload for each run.
 
 [source,python]
 ----
@@ -275,7 +274,7 @@ Then edit `config.json` on the host in a way that clearly changes the outcome. F
 
 ==== Debug a broken container run on a restricted HPC system
 
-In real projects, containers often fail because of subtle runtime configuration mistakes: wrong bind mounts, missing files, or environment variables not being set. On restricted HPC systems where building custom images is limited, these issues typically show up when you use `apptainer run` with existing SIF images.
+In real projects, containers often fail due to subtle runtime configuration mistakes: wrong bind mounts, missing files, or environment variables not being set. On restricted HPC systems where building custom images is limited, these issues typically show up when you use `apptainer run` with existing SIF images.
 
 In this question, we will intentionally misconfigure a small batch job that reads an input file and uses an environment variable. Your task is to debug and fix the run configuration without building any new images.
 
@@ -357,7 +356,7 @@ We will start with a **broken** Apptainer command (do not fix it yet):
 apptainer run python_amd64.sif python /data/job.py >> job_error.log 2>&1
 ----
 
-Run this command from the directory that contains `rundebug/`. The failure will be logged to `job_error.log` which you can open and use to answer the questions below and then fix the command step by step.
+Run this command from the directory containing `rundebug/`. The failure will be logged to `job_error.log`, which you can open and use to answer the questions below and then fix the command step by step.
 
 ==== Part A - Fix the bind mount
 
@@ -370,7 +369,7 @@ Hint: you will need `--bind` and to adjust the path you give to `python`.
 
 ==== Part B - Fix the environment variable
 
-Once the bind mount is correct, the script will complain about `RUN_MODE`. Fix this by:
+Once the bind mount is correct, the script will complain about `RUN_MODE`. Fix this by doing the following:
 
 - running once with `RUN_MODE=SUM`
 - running again with `RUN_MODE=PRODUCT`
@@ -415,7 +414,7 @@ For batch and HPC-style work you often want two habits: run an explicit command 
 Both subcommands start your program in the container, but they are not identical:
 
 - `apptainer run` invokes the image's runscript (for images built from Docker definitions, this is often wired to the Docker `ENTRYPOINT` / `CMD` behavior).
-- `apptainer exec` **does not** use the runscript; it runs the command line you give, which is usually what you want for **batch pipelines** where the command should be obvious from the job script.
+- `apptainer exec` **does not** use the runscript; it runs the command line you give, which is typically preferred for **batch pipelines** where the command should be obvious from the job script.
 
 From your project root, run **both** of the following (they should both work for this class image):
 
@@ -435,16 +434,16 @@ Please cat the output of the commands in your notebook.
 
 Create a shell script named `run_analysis.sh` in your project root (alongside `python_amd64.sif` and `analysisdemo/`) that:
 
-- Changes to the project root directory using the script's location (so it works no matter where you launch it from). Hint: `dirname` and `"$0"`.
+- Changes to the project root directory based on the script's location (so it works no matter where you launch it from). Hint: `dirname` and `"$0"`.
 - Runs the same Apptainer bind-mount analysis invocation from Question 2, for example: +
 `apptainer run --bind "$(pwd)/analysisdemo:/app" python_amd64.sif python /app/analyze.py` +
 - Captures success or failure with the script's exit code (for example `set -e`, or check `$?` after the `apptainer` line).
 
-Finally, we are going to make the script executable (`chmod +x run_analysis.sh`) and run it once from **another directory** (for example `cd /tmp` then invoke your script with an absolute path) to confirm it still finds the SIF and `analysisdemo/`.
+Finally, make the script executable (`chmod +x run_analysis.sh`) and run it once from **another directory** (for example `cd /tmp` then invoke your script with an absolute path) to confirm it still finds the SIF and `analysisdemo/`.
 
 [NOTE]
 ====
-We don't need this here, however it is helpful to note that you can also include commands like `conda activate` or `module load` to activate the correct environment or load the correct modules when running the script like so:
+We do not need this here, however it is helpful to note that you can also include commands like `conda activate` or `module load` to activate the correct environment or load the correct modules when running the script like so:
 
 [source,bash]
 ----
@@ -454,7 +453,7 @@ conda activate myenv
 python /some/path/to/your/script.py
 ----
 
-This way you dont need to remember to activate the environment or load the modules before running the script.
+This way, you do not need to remember to activate the environment or load the modules before running the script.
 ====
 
 .Deliverables
