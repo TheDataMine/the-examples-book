@@ -15,8 +15,9 @@ This project introduces Survival Analysis and Cox proportional hazards regressio
 - Estimate and compare survival functions using Kaplan–Meier curves and learn about the log rank test.
 
 - Build and interpret a multivariable Cox proportional hazards model, including calculation of hazard ratios, statistical significance, and percent change in hazard for clinical predictors.
-
 ****
+
+Make sure to read about, and use the template found on the xref:ROOT:templates.adoc[template page], and the important information about project submissions on the xref:ROOT:submissions.adoc[submission page].
 
 == Dataset
 - /anvil/projects/tdm/data/survival/SurvivalData.csv
@@ -38,26 +39,21 @@ The project template in the Examples Book now has a “Link to AI Chat History�
 We allow using AI for learning purposes; however, all submitted materials (code, comments, and explanations) must all be your own work and in your own words. No content or ideas should be directly applied or copy pasted to your projects. Please refer to https://the-examples-book.com/projects/spring2026/syllabus#guidance-on-generative-ai[GenAI page] in the example book. Failing to follow these guidelines is considered as academic dishonesty.
 ====
 
-
 == Introduction 
-
-image::StethoscopeImage.jpg[Decorative, a close-up view of a stethoscope on a medical background, width=300, height=250, title="A close-up view of a stethoscope on a medical background."]
-
-
 In many studies, we are interested in whether an event occurs, such as whether a patient survives surgery.  
 In those cases, a binary modeling approach like logistic regression may seem like it can be used. However, when the **timing of the event matters**, survival analysis is more adequate. For example, a patient who dies during a medical procedure and a patient who dies two months later both experience death, yet a simple yes or no model would give them the same label. Ignoring how long it took for the event to occur removes valuable information and limits our ability to see important patterns.
 
 This is where **survival analysis** becomes useful.
 
-Instead of modeling only whether an event occurs, survival analysis models **the time until an event occurs.** This time is called the **survival time** or **event time**. The survival time is measured from a clearly defined starting point until the event happens.
+Instead of modeling only whether an event occurs, survival analysis models **the time until the event occurs.** This time is called the **survival time** or **event time**. The survival time is measured from a clearly defined starting point until the event happens.
 
 Common examples of events include
 
-* Death of a patient
-* Progression of a disease
-* Failure of a machine part
-* Cancellation of a customer subscription
-* Time until pregnancy
+* Death of a patient,
+* Progression of a disease,
+* Failure of a machine part,
+* Cancellation of a customer subscription,
+* Time until pregnancy.
 
 In all of these situations, the main response variable is the **time from a defined beginning until an event happens**.
 
@@ -82,11 +78,9 @@ So
 
 We will use this same notation when we describe censored data in more detail.
 
-
-
 **Our Example Data Set**
 
-Consider our dataset which is study of lung cancer patients.
+Consider our dataset which is a study of lung cancer patients. Please see the https://the-examples-book.com/projects/spring2026/40200/project11#appendix-data-dictionary-for-survivaldata-csv[Appendix] for data dictionary.
 
 In this data set
 
@@ -101,6 +95,7 @@ For each patient
 The data set does not record calendar dates for diagnosis or death.  
 Instead, it records **elapsed time in days** between study start and the outcome.  Each recorded survival time therefore represents how many days a patient lived after diagnosis or enrollment.
 
+image::StethoscopeImage.jpg[Decorative, a close-up view of a stethoscope on a medical background, width=300, height=250, title="A close-up view of a stethoscope on a medical background."]
 
 == Questions
 
@@ -112,16 +107,16 @@ Instead, it records **elapsed time in days** between study start and the outcome
 
 .Deliverables
 ====
-**1a. Load the `survival_data` dataset using the file path provided and display the first 5 rows along with the size of the data.**
+1a. Load the `survival_data` dataset using the file path provided and display the first 5 rows along with the size of the data.
 
 [source,python]
 ----
 # Load data
 import pandas as pd
-survival_data = pd.read_csv('~/data/survival/SurvivalData.csv')
+survival_data = pd.read_csv('/anvil/projects/tdm/data/survival/SurvivalData.csv')
 ----
 
-**1b. Recode the status variable so that death is labeled as 1 and censored cases are labeled as 0.**
+1b. Recode the status variable so that death is labeled as 1 and censored cases are labeled as 0. (In the raw dataset, status = 2 corresponds to death and status = 1 corresponds to censored observations.)
 
 
 [source,python]
@@ -130,15 +125,14 @@ survival_data.loc[survival_data.status==_, '____']=_ # For YOU to fill
 survival_data.loc[survival_data.status==_, '____']=_ # For YOU to fill 
 ----
 
-
-**1c. Apply linear interpolation to fill missing values in the meal.cal and wt.loss columns, then use forward fill and backward fill to handle any remaining NaNs in these two columns. Fill the missing values in the inst column using the column's mode.**
+1c. Apply linear interpolation to fill missing values in the `meal.cal` and `wt.loss` columns, then use forward fill and backward fill to handle any remaining NaNs in these two columns. Fill the missing values in the inst column using the column's mode.
 
 Hint: Use `.ffill()` and `bfill()` for forward and backward fill. 
 
 [source,python]
 ----
 survival_data[['meal.cal', 'wt.loss']] = (
-    survival_data[['meal.cal', 'wt.loss']].interpolate(method='___')) # For YOu to fill in
+    survival_data[['meal.cal', 'wt.loss']].interpolate(method='___')) # For you to fill in
 
 # Fill any remaining NaNs using forward and backward fill
 survival_data[['meal.cal', 'wt.loss']] = _____ # For YOU to fill in
@@ -147,7 +141,7 @@ survival_data[['meal.cal', 'wt.loss']] = _____ # For YOU to fill in
 survival_data['inst'] =  # For YOU to fill in
 ----
 
-**1d. For the remaining variables with missing data (ph.ecog, ph.karno, and pat.karno), fill the NaN values using the median of each respective column. Finally, display the updated missing-value counts for all columns to confirm that no missing values remain in the dataset.**
+1d. For the remaining variables with missing data (ph.ecog, ph.karno, and pat.karno), fill the NaN values using the median of each respective column. Finally, display the updated missing-value counts for all columns to confirm that no missing values remain in the dataset.
 
 [source,python]
 ----
@@ -177,7 +171,7 @@ For censored individuals:
 * We only know that their true event time occurs **after** their last follow-up time.
 
 Censored data is still informative because each censored observation tells us 
-the patient survived at least as long as their recorded follow-up time.
+the patient survived at least up to their recorded follow-up time.
 
 
 Using the notation above, we still observe
@@ -200,10 +194,7 @@ So for each individual we have the pair $(Y, \delta)$.
 * If $\delta = 1$, then the event occurred at time $Y$.  
 * If $\delta = 0$, then the observation is censored and the true event time is greater than $Y$.
 
-
-
 Even though censored observations do not give us the exact event time, they still provide important information. Each censored patient tells us that the event did not occur before their last observed time.
-
 
 **Types of Censoring**
 
@@ -215,14 +206,12 @@ Right censoring occurs when we know that the event time is at least as large as 
 
 $T \ge Y$
 
-
 Examples
 
 * The study ends while the patient is still alive.  
 * The patient leaves the study or is lost to contact before the event occurs.
 
 In both cases, we do not know the exact value of $T$, but we do know that $T$ is larger than the final observed time.
-
 
 **Left Censoring**
 
@@ -263,8 +252,7 @@ image::censoreddata.png[width=600, height=450, title="Example Survival Timelines
 
 In the figure above, each horizontal line represents one patient’s follow-up time starting at study entry (time = 0). An X marks when a death occurs (event observed), and an open circle marks a censored observation (patient still alive at last follow-up). The dashed vertical line shows a **chosen reference (landmark) time at 365 days**, which we use as a snapshot of follow-up rather than the true end of the study.
 
-Notice that some patients die before this reference time (e.g., Patients 1 and 2), while others die after it (e.g., Patient 4). Patients who remain alive beyond the reference time (e.g., Patient 5) have survival times that extend past 365 days. From the perspective of a snapshot taken at day 365, patients who die after this point and patients who remain alive after this point **are indistinguishable at that moment**, because neither outcome has occurred yet. This demonstrates why survival analysis must explicitly account for censoring and time-to-event information rather than relying on simple yes/no outcome models.
-
+Notice that some patients die before this reference time (e.g., Patients 1 and 2), while others die after it (e.g., Patient 3 and 4). Patients who remain alive beyond the reference time (e.g., Patient 5) have survival times that extend past 365 days. From the perspective of a snapshot taken at day 365, patients who die after this point and patients who remain alive after this point **are indistinguishable at that moment**, because neither outcome has occurred yet. This demonstrates why survival analysis must explicitly account for censoring and time-to-event information rather than relying on simple yes/no outcome models.
 
 
 **Assumption About Censoring**
@@ -278,7 +266,7 @@ Informally, this means that whether or when a subject is censored should not dep
 
 .Deliverables
 ====
-**2a. Using the `status` event indicator variable, calculate how many observations are events (status = 1) and how many are right-censored (status = 0). Print the counts and create a bar plot showing the proportion of censored versus observed events.**
+2a. Using the `status` event indicator variable, calculate how many observations are events (status = 1) and how many are right-censored (status = 0). Print the counts and create a bar plot showing the proportion of censored versus observed events.
 
 [source,python]
 ----
@@ -287,13 +275,13 @@ Informally, this means that whether or when a subject is censored should not dep
 # Plot the proportions
 import matplotlib.pyplot as plt
 survival_data['status'].value_counts().plot(kind='bar')
-plt.xticks([0,1], ['Censored (0)', 'Death (1)'])
+plt.xticks([1,0], ['Censored (0)', 'Death (1)'])
 plt.ylabel('______')
 plt.title('______')
 plt.show()
 ----
 
-**2b. Use the code below to create a scatter plot that displays each patient’s follow-up time on the x-axis and the patient index (after sorting by time) on the y-axis. Then, write 1–2 sentences interpreting the results.**
+2b. Use the code below to create a scatter plot that displays each patient’s follow-up time on the x-axis and the patient index (after sorting by time) on the y-axis. Then, write 1–2 sentences interpreting the results.
 
 _Note: Follow-up time is the length of time each patient is observed in the study, from study entry until either death occurs (event) or the patient is censored (e.g., study ends or they are lost to follow-up). In this dataset, follow-up time is stored in the time column and is measured in days._
 
@@ -331,7 +319,7 @@ plt.grid(alpha=0.3)
 plt.show()
 ----
 
-**2c. Use the code below to generate a survival timeline plot for the first 10 patients in `survival_data`, including a dashed vertical reference line at 365 days to represent a snapshot of follow-up. Write 1–2 sentences interpreting the plot and stating how many patients experienced an observed death at our point of reference versus how many were a censored outcome.**
+2c. Use the code below to generate a survival timeline plot for the first 10 patients in `survival_data`, including a dashed vertical reference line at 365 days to represent a snapshot of follow-up. Write 1–2 sentences interpreting the plot and stating how many patients experienced an observed death at our point of reference versus how many were a censored outcome.
 
 [source,python]
 ----
@@ -383,15 +371,15 @@ plt.show()
 <iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_ehjeg3w2&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_x2loh602%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 860px;height: 440px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Spring 2025 Question 3 Survival Analysis"></iframe>
 ++++
 
-The survival function can be written using the Kaplan Meier product formula:
+The survival function can be estimated using the https://en.wikipedia.org/wiki/Kaplan–Meier_estimator[Kaplan Meier] estimator:
 
-$S(t) = \prod_{t_i \le t} \left(1 - \frac{d_i}{n_i}\right)$
+$\hat{S}(t) = \prod_{t_i \le t} \left(1 - \frac{d_i}{n_i}\right)$.
 
 In this form
 
-* $t_i$ represents each observed event time  
-* $d_i$ is the number of deaths that occur at time $t_i$  
-* $n_i$ is the number of individuals at risk immediately before time $t_i$
+* $t_i$ represents each observed event time,  
+* $d_i$ is the number of deaths that occur at time $t_i$, 
+* $n_i$ is the number of individuals at risk immediately before time $t_i$.
 
 
 At each event time, survival is updated by multiplying the previous survival probability by a new fraction that accounts for how many deaths occurred out of the group still being observed.
@@ -400,10 +388,10 @@ At each event time, survival is updated by multiplying the previous survival pro
 
 We demonstrate this process using our lung cancer dataset. Each row of the data includes
 
-* **time**: the number of days observed
+* **time**: the number of days observed,
 * **event**:
-  * 1 indicates death occurred
-  * 0 indicates the observation is censored
+  ** 1 indicates death occurred,
+  ** 0 indicates the observation is censored.
 
 Example rows from the dataset are shown below.
 
@@ -504,20 +492,20 @@ The survival probabilities calculated for our first two event times are summariz
 |===
 
 
-**Kaplan Meier Pattern**
+// **Kaplan Meier Pattern**
 
-Each Kaplan Meier step follows the same process:
+// Each Kaplan Meier step follows the same process:
 
-1. Identify the next event time.
-2. Count how many individuals are still at risk $n_i$.
-3. Count how many deaths occur at that time $d_i$.
-4. Compute the fraction
+// 1. Identify the next event time.
+// 2. Count how many individuals are still at risk $n_i$.
+// 3. Count how many deaths occur at that time $d_i$.
+// 4. Compute the fraction
 
-$1 - \frac{d_i}{n_i}$
+// $1 - \frac{d_i}{n_i}$
 
-5. Multiply that fraction by the current survival probability
+// 5. Multiply that fraction by the current survival probability
 
-$S(t_i) = S(t_{i-1}) \times \left(1 - \frac{d_i}{n_i}\right)$
+// $S(t_i) = S(t_{i-1}) \times \left(1 - \frac{d_i}{n_i}\right)$
 
 
 Repeating this procedure at all event times builds the full Kaplan Meier survival curve.
@@ -526,7 +514,7 @@ image::KaplanMeierCurve.png[width=600, height=450, title="Kaplan Meier Curve."]
 
 .Deliverables
 ====
-**3a. Use the code below to identify the first two event times in the dataset and explain what an “event time” means in the context of Kaplan Meier estimation. Then, in 1–2 sentences, explain what the survival function $S(t)$ represents in plain language.**
+3a. Use the code below to identify the first two event times in the dataset and explain what an “event time” means in the context of Kaplan Meier estimation. Then, in 1–2 sentences, explain what the survival function $S(t)$ represents in plain language.
 
 [source,python]
 ----
@@ -541,7 +529,7 @@ event_times = (
 # For YOU to do: Identify the first two event times
 ----
 
-**3b. Use the code below to calculate the first survival probability $S(5)$. Then write 1 sentence explaining what $S(5)$ means for patients in this study.**
+3b. Use the code below to calculate the first survival probability $S(5)$. Then write 1 sentence explaining what $S(5)$ means for patients in this study.
 
 [source,python]
 ----
@@ -561,10 +549,7 @@ print("Deaths d1 =", d1)
 print("S(t1) =", S1)
 ----
 
-
-**3c. Using the value of $S(5)$ from Question 3b, calculate the updated survival probability $S(11)$. Then write 1 sentence explaining what $S(11)$ means for patients in this study.**
-
-
+3c. Using the value of $S(5)$ from Question 3b, calculate the updated survival probability $S(11)$. Then write 1 sentence explaining what $S(11)$ means for patients in this study.
 
 [source,python]
 ----
@@ -590,14 +575,12 @@ print("S(t2) =", S2)
 
 **Comparing Survival Curves: The Log-Rank Test**
 
-Once survival curves are estimated using the Kaplan–Meier method, we often want to compare **survival between two or more groups** (for example, male vs female patients).
-
-While visual inspection of Kaplan–Meier curves can suggest differences between groups, overlap or small separations can be difficult to interpret by eye alone. To formally evaluate whether any observed differences are statistically meaningful, we use the **log-rank test**.
+Once survival curves are estimated using the Kaplan–Meier method, we often want to compare **survival between two or more groups** (for example, male vs female patients). While visual inspection of Kaplan–Meier curves can suggest differences between groups, overlap or small separations can be difficult to interpret by eye alone. To formally evaluate whether any observed differences are statistically meaningful, we use the **log-rank test**.
 
 The **log-rank test** compares:
 
-* The **observed number of deaths** in each group at every event time  
-* To the **number of deaths expected** if both groups truly had the **same underlying survival experience**
+* The **observed number of deaths** in each group at every event time,  
+* To the **number of deaths expected** if both groups truly had the **same underlying survival experience**.
 
 These comparisons are summed across all event times to produce a **test statistic** and corresponding **p-value**.
 
@@ -608,11 +591,9 @@ These comparisons are summed across all event times to produce a **test statisti
 
 The log-rank test therefore provides a **formal statistical complement** to Kaplan–Meier plots, moving beyond visual comparison to hypothesis testing.
 
-
-
 .Deliverables
 ====
-**4a. Using the code below, fit and plot the overall Kaplan Meier survival curve using all patients. Then write 1–2 sentences explaining what the curve communicates about survival probabilities over time.**
+4a. Using the code below, fit and plot the overall Kaplan Meier survival curve using all patients. Then write 1–2 sentences explaining what the curve communicates about survival probabilities over time.
 
 [source,python]
 ----
@@ -634,7 +615,7 @@ plt.grid(alpha=0.3)
 plt.show()
 ----
 
-**4b. Create Kaplan Meier survival curves stratified by sex (sex = 1 for male, sex = 2 for female). Then write 1–2 sentences comparing survival between male and female patients and noting any visible separation between the curves.**
+4b. Create Kaplan Meier survival curves stratified by sex (sex = 1 for male, sex = 2 for female). Then write 1–2 sentences comparing survival between male and female groups and noting any visible separation between the curves.
 
 [source,python]
 ----
@@ -666,7 +647,7 @@ plt.legend()
 plt.show()
 ----
 
-**4c. Using the code below, perform a log rank test to compare survival between male patients (sex = 1) and female patients (sex = 2). Then, in 1–2 sentences, state whether the p-value from the log rank test provides evidence that the log hazards differ between male and female patients.**
+4c. Using the code below, perform a log rank test to compare survival between male patients (sex = 1) and female patients (sex = 2). Then, in 1–2 sentences, state whether the p-value from the log rank test provides evidence that the log hazards differ between male and female groups.
 
 [source,python]
 ----
@@ -698,15 +679,14 @@ The **Cox Proportional Hazards model** describes how patient characteristics (**
 
 The hazard function is:
 
-$h(t) = h_0(t)\exp(\beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_p X_p)$
+$h(t) = h_0(t)\exp(\beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_p X_p)$,
 
 where:
 
-* $h(t)$ is the instantaneous risk of death at time $t$  
-* $h_0(t)$ is the **baseline hazard** (when all covariates equal 0)  
-* $X_1,\ldots,X_p$ are covariates from `survival_data`, including  
-  `age`, `sex`, `ph.ecog`, `ph.karno`, `pat.karno`, `meal.cal`, and `wt.loss`  
-* $\beta_1,\ldots,\beta_p$ are the estimated model coefficients  
+* $h(t)$ is the instantaneous risk of death at time $t$,  
+* $h_0(t)$ is the **baseline hazard** (when all covariates equal 0),  
+* $X_1,\ldots,X_p$ are covariates from `survival_data`, including `age`, `sex`, `ph.ecog`, `ph.karno`, `pat.karno`, `meal.cal`, and `wt.loss`, 
+* $\beta_1,\ldots,\beta_p$ are the estimated model coefficients. 
 
 Each covariate receives one coefficient.
 
@@ -733,7 +713,7 @@ Example coefficient output:
 
 | Sex (female vs male)
 | -0.60
-| Lower hazard for females
+| Lower hazard for females than males
 
 | ph.ecog
 | 0.90
@@ -744,11 +724,12 @@ Example coefficient output:
 
 Coefficients are converted to hazard ratios using:
 
-$HR = e^{\beta}$
+$HR = e^{\beta}$.
 
 **Why do we take the exponent of the log hazard coefficient?**
 
 Because the model uses an exponential function:
+
 * Coefficients are estimated on the **log scale**.
 
 * A one-unit increase in a predictor changes the **log of the hazard**, not the hazard directly.
@@ -853,9 +834,9 @@ Because the CI does not include 1 and the p-value is < 0.05, ECOG performance st
 .Deliverables
 ====
 
-**5a. Use the following covariates (age, sex, ph.ecog, ph.karno, pat.karno, meal.cal and wt.loss) to fit a Cox regression model and display the coefficient summary table.**
+5a. Use the following covariates (age, sex, ph.ecog, ph.karno, pat.karno, meal.cal and wt.loss) to fit a Cox regression model and display the coefficient summary table.
 
-See documentation on CoxPHFItter https://lifelines.readthedocs.io/en/latest/fitters/regression/CoxPHFitter.html[here.]
+See documentation on https://lifelines.readthedocs.io/en/latest/fitters/regression/CoxPHFitter.html[CoxPHFitter].
 
 [source,python]
 ----
@@ -872,7 +853,7 @@ cph.fit(cox_data, duration_col='time', event_col='status')
 
 ----
 
-**5b. Create a table that summarizes the hazard ratios, p-values, percent change in hazard, and statistical significance for each predictor in the Cox model by completing and running the code below. Then, using the generated table.**
+5b. Create a table that summarizes the hazard ratios, p-values, percent change in hazard, and statistical significance for each predictor in the Cox model by completing and running the code below.
 
 [source,python]
 ----
@@ -910,7 +891,7 @@ hr_table[['Log_Hazard_Ratio (coef)',
 hr_table
 ----
 
-**5c. Write 1–2 sentences explaining which variables significantly increase or decrease patient hazard and what these results suggest about survival risk in the lung cancer dataset.**
+5c. Using the generated table in 5b, write 1–2 sentences explaining which variables significantly increase or decrease patient hazard and what these results suggest about survival risk in the lung cancer dataset.
 
 ====
 
@@ -957,8 +938,7 @@ For a detailed discussion of the Cox model assumptions and how to assess them, s
 .Deliverables
 ====
 
-**6a. One key assumption of the Cox model is that the effect of each predictor on patient risk stays constant over time. To evaluate this for the variable age, use the Schoenfeld residual test below and examine the resulting p-value. After viewing the output, write 1 sentence stating whether the proportional hazards assumption seems reasonable for age.**
-
+6a. One key assumption of the Cox model is that the effect of each predictor on patient risk remains constant over time. To evaluate this for the variable age, use the Schoenfeld residual test below and examine the resulting p-value. After viewing the output, write 1 sentence stating whether the proportional hazards assumption seems reasonable for age.
 
 
 [source,python]
@@ -971,8 +951,9 @@ print(results.summary.loc[['age']])
 
 ----
 
-**6b. Using the scatter plot below for the continuous predictor *age*, briefly explain whether assuming a linear relationship between age and the *log hazard* appears reasonable. Support your answer with 1–2 sentences describing any visible patterns in the plot.**
+6b. Using the scatter plot below for the continuous predictor *age*, briefly explain whether assuming a linear relationship between age and the *log hazard* appears reasonable. Support your answer with 1–2 sentences describing any visible patterns in the plot.
 
+This plot provides an informal check for patterns, but does not directly test linearity in the Cox model.
 
 [source,python]
 ----
@@ -987,10 +968,30 @@ plt.grid(alpha=0.3)
 plt.show()
 ----
 
-**6c.  In 2-3 sentences, describe what a violation of Cox proportional hazards model assumptions would imply for interpreting the hazard ratio.**
+6c.  In 2-3 sentences, describe what a violation of Cox proportional hazards model assumptions would imply for interpreting the hazard ratio.
 
 ====
 
+=== Appendix: Data Dictionary for `SurvivalData.csv`
+
+[cols="1,1,1,4", options="header"]
+|====
+
+| Column Name | Data Type | Variable Type | Description
+
+| `Unnamed: 0` | Integer | Categorical (ID) | Index column from original file (identifier only; not used for analysis)
+| `inst` | Integer | Categorical | Institution or hospital center identifier
+| `time` | Integer | **Continuous** | Survival time in days until death or censoring
+| `status` | Integer | **Categorical (Binary)** | Event indicator: 1 = censored (event not observed), 2 = death (event observed)
+| `age` | Integer | **Continuous** | Patient age in years at study entry
+| `sex` | Integer | **Categorical (Binary)** | Patient sex: 1 = male, 2 = female
+| `ph.ecog` | Float | **Categorical (Ordinal)** | ECOG performance status score (0 = fully active; higher values indicate worse condition)
+| `ph.karno` | Float | **Continuous** | Karnofsky performance status as assessed by physician (0–100 scale; higher values = better condition)
+| `pat.karno` | Float | **Continuous** | Karnofsky performance status as assessed by patient (0–100 scale)
+| `meal.cal` | Float | **Continuous** | Daily caloric intake from meals (in calories)
+| `wt.loss` | Float | **Continuous** | Weight loss over the previous six months (in pounds)
+
+|====
 
 **References**
 
