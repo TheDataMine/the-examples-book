@@ -1,0 +1,548 @@
+= TDM 20200: Project 11 - Containers with Apptainer - Part 2
+
+== Project Objectives
+
+This is **Part 2** of the containers project. You will turn a bind-mounted workflow into a small config-driven batch job, verify outputs from a notebook, and debug typical Apptainer runtime mistakes like mount, path, or environment variable issues.
+
+This project consists of two parts. The first part was covered last week (https://the-examples-book.com/projects/spring2026/20200/project10[Project 10]), and this second part is covered this week. It is important to complete Part 1 (Project 10) before working on this project; otherwise, your 
+containerization process may remain incomplete.
+
+You should already have pulled `python_amd64.sif`, as well as understand bind mounts, and be comfortable running `apptainer run` from a terminal. This handout assumes `analysisdemo/` and `rundebug/` live next to that SIF file in your project folder (directories introduced later in the project). If not, please work on https://the-examples-book.com/projects/spring2026/20200/project10[Project 10], first before continuing. 
+
+.Learning Objectives
+****
+- Design a config-driven batch-style job whose inputs and outputs pass through a bind-mounted directory
+- Implement a minimal multi-run Python driver that writes structured artifacts (log + JSON)
+- Interpret container failures involving missing bind mounts and unset environment variables—without rebuilding images
+- Choose between `apptainer run` and `apptainer exec` for explicit batch commands
+- Encapsulate a container run in a small shell script and describe what you would adjust on an HPC scheduler
+****
+
+Make sure to read about, and use the template found on the xref:ROOT:templates.adoc[template page], and the important information about project submissions on the xref:ROOT:submissions.adoc[submission page].
+
+== Dataset
+- None for this project
+
+[[ai-note]]
+[IMPORTANT]
+====
+If AI is used in any cases, such as for debugging, research, etc., we now require that you submit a link to the entire chat history. For example, if you used ChatGPT, there is an “Share” option in the conversation sidebar. Click on “Create Link” and please add the shareable link as a part of your citation.
+
+The project template in the Examples Book now has a “Link to AI Chat History” section; please have this included in all your projects. If you did not use any AI tools, you may write “None”.
+
+We allow using AI for learning purposes; however, all submitted materials (code, comments, and explanations) must all be your own work and in your own words. No content or ideas should be directly applied or copy pasted to your projects. Please refer to https://the-examples-book.com/projects/spring2026/syllabus#guidance-on-generative-ai[GenAI page] in the example book. Failing to follow these guidelines is considered as academic dishonesty.
+====
+
+
+[NOTE]
+====
+- A lot of this project is done in the terminal, and we will use the notebook mainly to verify deliverables.
+- Use the same working directory from https://the-examples-book.com/projects/spring2026/20200/project10[Project 10].
+- In this handout, we intentionally build code in parts. Please do not skip ahead and paste a full solution from somewhere else.
+- The point is to read each section and understand what has changed.
+====
+
+[IMPORTANT]
+====
+Do **NOT** try to run every terminal command directly inside the notebook.
+
+The handout tells you where to run commands and where to show notebook output.
+====
+
+== Questions
+
+=== Question 1 (2 points)
+
+==== From ad-hoc scripts to a batch-shaped project
+
+In https://the-examples-book.com/projects/spring2026/20200/project10[Project 10] you edited `hello.py` on the host and re-ran `apptainer run` with a bind mount so the container always saw the latest code. That pattern scales to **batch jobs**: keep code and a **config file** in one folder, mount that folder at a fixed path inside the container, and treat everything the job writes (logs, JSON, CSVs) as **artifacts** that land back on the host because the mount is shared.
+
+Create a folder called `analysisdemo` in the **same directory** as `python_amd64.sif` (your Project 10 pull). For this question, only the layout and config need to exist; you will add Python modules in Question 2.
+
+[source,text]
+----
+analysisdemo/
+└── config.json
+----
+
+Use this starter `config.json` that describes a tiny experiment (several sequential runs, each doing the same kind of work):
+
+[source,json]
+----
+{
+  "experiment_name": "container-hpc-demo",
+  "num_runs": 5,
+  "samples_per_run": 10000
+}
+----
+
+The field `samples_per_run` will control how much “work” each run does inside a small helper module in Question 2. Note that you do **not** need to understand the underlying math behind that workload, the point is the **structure**: config drives behavior, and the container sees `/app` as this folder.
+
+.Deliverables
+====
+1.1 In your notebook, show the contents of your project directory (for example `ls` of the folder that contains `python_amd64.sif` and `analysisdemo/`) so we can see `analysisdemo/` next to the SIF. +
+1.2 In your notebook, display the contents of `analysisdemo/config.json` (for example with `cat` or by reading the file in Python). +
+1.3 In 3-5 sentences, explain why pairing a config file with a bind-mounted project folder is useful when you want reproducible, tweakable batch runs inside a container (contrast with hard-coding parameters only inside Python or only inside the Apptainer definition).
+====
+
+=== Question 2 (2 points)
+
+==== Implement the analysis driver and a small workload module
+
+Add two Python files under `analysisdemo/`:
+
+[source,text]
+----
+analysisdemo/
+├── config.json
+├── workload.py
+└── analyze.py
+----
+
+The file `workload.py` holds a single routine that does a fixed amount of numeric work per call. We use a tiny random Monte Carlo estimate of π only as a **black-box workload**. The actual logic of the Monte Carlo we are using is not important for this project. What matters is a clean separation: `analyze.py` reads config, calls `workload.run_once`, and records metrics.
+
+Create `workload.py`:
+
+[source,python]
+----
+# analysisdemo/workload.py
+import random
+
+def run_once(num_samples: int) -> float:
+    """Return an approximate pi value using num_samples random points"""
+    inside = 0
+    for _ in range(num_samples):
+        x = random.random()
+        y = random.random()
+        if x * x + y * y <= 1.0:
+            inside += 1
+    return 4.0 * inside / num_samples
+----
+
+Next, we will create the `analyze.py` file. This file will read the config file, call the `workload.run_once` function, and record the metrics.
+
+First, we will import the necessary modules and set up the directory structure and logging:
+
+[source,python]
+----
+# analysisdemo/analyze.py
+import json
+import logging
+import math
+from datetime import datetime, timezone
+from pathlib import Path
+
+from workload import run_once
+
+# here we build the relative file pathing
+BASE_DIR = Path(__file__).resolve().parent
+CONFIG_PATH = BASE_DIR / "config.json"
+RESULTS_PATH = BASE_DIR / "results.json"
+LOG_PATH = BASE_DIR / "analysis.log"
+
+logging.basicConfig(
+    level=logging.INFO,
+    filename=str(LOG_PATH),
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+logging.getLogger().addHandler(logging.StreamHandler())
+logger = logging.getLogger(__name__)
+
+...
+----
+
+Next, we create the main function. This function will read the config file, set up the experiment, and run the workload.
+
+[source,python]
+----
+# analysisdemo/analyze.py
+
+...
+
+def main():
+    if not CONFIG_PATH.exists():
+        raise FileNotFoundError(f"Missing {CONFIG_PATH} - is the folder bound correctly?")
+
+    with CONFIG_PATH.open() as f:
+        config = json.load(f)
+
+    # here we are extracting the values from the config file
+    experiment_name = config.get("experiment_name", "unnamed-experiment")
+    num_runs = int(config.get("num_runs", 3))
+    samples_per_run = int(config.get("samples_per_run", 1000))
+
+    logger.info("Starting experiment '%s'", experiment_name)
+    logger.info("Runs=%s, samples_per_run=%s", num_runs, samples_per_run)
+----
+
+We loaded the config file and extracted the values we need so now we can start our experiment. We will first initialize our results dictionary which will store the results of each run of our experiment and then we will run the workload for each run.
+
+[source,python]
+----
+# analysisdemo/analyze.py
+
+def main():
+    ...
+
+    # here we are initializing our results dictionary which will store the results of our experiment
+    results = {
+        "experiment_name": experiment_name,
+        "started_at": datetime.now(timezone.utc).isoformat() + "Z",
+        "num_runs": num_runs,
+        "samples_per_run": samples_per_run,
+        "runs": [],
+    }
+
+    # here we are running the workload for each run
+    for run_idx in range(num_runs):
+        est = run_once(samples_per_run)
+        err = abs(math.pi - est)
+        logger.info("Run %s -> est=%.5f (abs error vs pi=%.5f)", run_idx, est, err)
+        results["runs"].append(
+            {
+                "run_index": run_idx,
+                "estimate": est,
+                "abs_error": err,
+            }
+        )
+
+    results["finished_at"] = datetime.now(timezone.utc).isoformat() + "Z"
+
+    with RESULTS_PATH.open("w") as f:
+        json.dump(results, f, indent=2)
+
+    logger.info("Wrote results to %s", RESULTS_PATH.resolve())
+
+
+if __name__ == "__main__":
+    main()
+----
+
+
+Now that our main function is complete, we can run our analysis. From your **project root** (the directory that contains `analysisdemo/` and `python_amd64.sif`), run:
+
+[source,bash]
+----
+apptainer run --bind $(pwd)/analysisdemo:/app python_amd64.sif \
+  python /app/analyze.py
+----
+
+Because `/app` is bound to `analysisdemo` on the host, `analysis.log` and `results.json` appear in `analysisdemo/` on your machine.
+
+.Deliverables
+====
+2.1 In your notebook, show the contents of `analysisdemo/` after a successful run (for example list files so `results.json` and `analysis.log` are visible). +
+2.2 In your notebook, display either the contents of `analysis.log` (first ~10 lines are enough if the file is long). +
+2.3 In **2-4 sentences**, describe what `analyze.py` is responsible for versus what `workload.run_once` is responsible for, and why splitting them makes the project easier to maintain or swap out later.
+====
+
+=== Question 3 (2 points)
+
+==== Bind mounts as I/O contract + validating JSON in the notebook
+
+The bind mount `$(pwd)/analysisdemo:/app` is your I/O contract: anything the job reads from `config.json` or from sibling paths under `/app` comes from the host and anything it writes under `/app` shows up on the host.
+
+In your notebook, load and print a short summary of `results.json`:
+
+[source,python]
+----
+from pathlib import Path
+import json
+
+project_dir = Path("...")  # TODO: replace with the path to your project folder
+analysis_dir = project_dir / "analysisdemo"
+
+with (analysis_dir / "results.json").open() as f:
+    results = json.load(f)
+
+print("Experiment name:", ... ) # TODO: replace with the experiment name
+print("Number of runs:", ... ) # TODO: replace with the number of runs
+print("First run:", ... ) # TODO: replace with the first run
+print("Timestamp:", ... ) # TODO: replace with the timestamp
+----
+
+Then edit `config.json` on the host in a way that clearly changes the outcome. For example, increase `num_runs` or `samples_per_run`, or change `experiment_name`. Do not rebuild any image. Re-run the exact same `apptainer run --bind ...` command from Question 2.
+
+.Deliverables
+====
+3.1 Notebook output showing at least: experiment name, number of runs, the first run object, and the timestamp from `results.json` before your config change. +
+3.2 Notebook output showing the same fields after your config change (so we can see the effect of editing the config). +
+3.3 In **2-3 sentences**, explain how the bind mount lets you pass inputs into the container and retrieve outputs without copying files manually or editing the SIF.
+====
+
+=== Question 4 (2 points)
+
+==== Debug a broken container run on a restricted HPC system
+
+In real projects, containers often fail due to subtle runtime configuration mistakes: wrong bind mounts, missing files, or environment variables not being set. On restricted HPC systems where building custom images is limited, these issues typically show up when you use `apptainer run` with existing SIF images.
+
+In this question, we will intentionally misconfigure a small batch job that reads an input file and uses an environment variable. Your task is to debug and fix the run configuration without building any new images.
+
+Create a folder called `rundebug` next to your other project folders:
+
+[source,text]
+----
+rundebug/
+├── data/
+│   └── numbers.txt
+└── job.py
+----
+
+Create `numbers.txt` with a few integers, one per line:
+
+[source,text]
+----
+1
+2
+3
+4
+5
+----
+
+Now create `job.py`:
+
+[source,python]
+----
+# rundebug/job.py
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+DATA_PATH = BASE_DIR / "data" / "numbers.txt"
+MODE = os.environ.get("RUN_MODE", "UNKNOWN")
+
+def read_numbers(path: Path) -> list[int]:
+    if not path.exists():
+        raise FileNotFoundError(f"Expected data file at {path}, but it was not found.")
+    values: list[int] = []
+    with path.open() as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            values.append(int(line))
+    return values
+
+
+def main():
+    print(f"RUN_MODE={MODE}")
+    if MODE not in {"SUM", "PRODUCT"}:
+        raise ValueError(
+            "RUN_MODE must be set to either 'SUM' or 'PRODUCT' "
+            "(set it via an environment variable when running the container)."
+        )
+
+    nums = read_numbers(DATA_PATH)
+
+    if MODE == "SUM":
+        result = sum(nums)
+    else:  # PRODUCT
+        result = 1
+        for n in nums:
+            result *= n
+
+    print(f"Read {len(nums)} numbers from {DATA_PATH}")
+    print(f"RUN_MODE={MODE}, result={result}")
+
+
+if __name__ == "__main__":
+    main()
+----
+
+We will start with a **broken** Apptainer command (do not fix it yet):
+
+[source,bash]
+----
+apptainer run python_amd64.sif python /data/job.py >> job_error.log 2>&1
+----
+
+Run this command from the directory containing `rundebug/`. The failure will be logged to `job_error.log`, which you can open and use to answer the questions below and then fix the command step by step.
+
+==== Part A - Fix the bind mount
+
+The script expects to find the data and code at `/data` **inside** the container, but right now we are not binding anything. Update the command so that:
+
+- the host folder `rundebug` is visible as `/data` inside the container
+- `job.py` is run from `/data` inside the container
+
+Hint: you will need `--bind` and to adjust the path you give to `python`.
+
+==== Part B - Fix the environment variable
+
+Once the bind mount is correct, the script will complain about `RUN_MODE`. Fix this by doing the following:
+
+- running once with `RUN_MODE=SUM`
+- running again with `RUN_MODE=PRODUCT`
+
+You can set environment variables for Apptainer using either a shell prefix (`RUN_MODE=... apptainer run ...`) or `--env RUN_MODE=...`. Use whichever style you prefer.
+
+==== Part C - Verify from your notebook
+
+Finally, from your notebook:
+
+[source,python]
+----
+from pathlib import Path
+
+project_dir = Path("...")  # TODO: replace with the path to your project folder
+rundebug_dir = project_dir / "rundebug"
+
+print("numbers.txt contents:")
+print((rundebug_dir / "data" / "numbers.txt").read_text())
+----
+
+Then, in a separate cell, briefly summarize what changes you made to the Apptainer command and why they fixed the errors.
+
+.Deliverables
+====
+* 4.1 Output from the `job_error.log` file containing:
+** the original command failure,
+** output after fixing the bind mount,
+** output after fixing the environment variable,
+** output from both the `SUM` and `PRODUCT` runs.
+* 4.2 A short explanation (**3-5 sentences**) describing: why the original command failed, how the bind mount fixed the file path problem, and how setting `RUN_MODE` fixed the logic error.
+====
+
+=== Question 5 (2 points)
+
+==== `apptainer exec` vs `apptainer run`, and wrapping the job in a shell script
+
+For batch and HPC-style work you often want two habits: run an explicit command inside the image (instead of relying on whatever default entrypoint the image defines), and capture that in a small shell script so your scheduler or future you can rerun the same steps.
+
+==== Part A - Compare `exec` and `run`
+
+Both subcommands start programs inside a container, but they differ in how the command is resolved:
+
+- `apptainer run` executes the container's *runscript* (a default command defined at build time).
+- `apptainer exec` bypasses the runscript and executes the command provided by the user directly.
+
+We run the following commands:
+
+[source,bash]
+----
+apptainer exec python_amd64.sif python -c "import sys; print('via exec', sys.version.split()[0])" >> exec_output.log 2>&1
+----
+
+[source,bash]
+----
+apptainer run python_amd64.sif python -c "import sys; print('via run', sys.version.split()[0])" >> run_output.log 2>&1
+----
+
+Run these in the notebook:
+
+[source,bash]
+----
+cat exec_output.log
+cat run_output.log
+----
+
+Both commands produce identical output:
+
+[source,text]
+----
+via exec 3.11.15
+via run 3.11.15
+----
+
+This occurs because the provided `python_amd64.sif` image defines a runscript that simply invokes Python. As a result, `apptainer run` forwards arguments to Python in the same way that `apptainer exec` directly invokes it.
+
+To better understand the difference, we can inspect the container's runscript:
+
+[source,bash]
+----
+apptainer inspect --runscript python_amd64.sif
+----
+
+Looking at the output of the container runscript we can see why `apptainer run` and `apptainer exec` behave identically in this case:
+
+[source,bash]
+----
+OCI_ENTRYPOINT=''
+OCI_CMD='"python3"'
+----
+
+This indicates that the container does not define a custom entrypoint and instead defaults to running `python3`.
+
+Logic later on in the runscript confirms that if arguments are provided, they override the default command:
+
+[source,bash]
+----
+if [ -n "$OCI_CMD" ] && [ -z "$OCI_ENTRYPOINT" ]; then
+    if [ $# -gt 0 ]; then
+        SINGULARITY_OCI_RUN="${CMDLINE_ARGS}"
+    else
+        SINGULARITY_OCI_RUN="${OCI_CMD}"
+    fi
+fi
+----
+
+As a result, both of the following commands:
+
+[source,bash]
+----
+apptainer run python_amd64.sif python -c "..."
+apptainer exec python_amd64.sif python -c "..."
+----
+
+end up executing the same underlying command inside the container.
+
+But in general:
+
+- `apptainer run` depends on container-defined behavior (which may not be obvious to the user).
+- `apptainer exec` is explicit and reproducible, making it preferable for batch jobs and HPC workflows.
+
+Even though the outputs match in this case, `exec` is still generally safer and more transparent choice since you clearly specify the commmand being run.
+
+
+==== Part B - A minimal `run_analysis.sh`
+
+Create a shell script named `run_analysis.sh` in your project root (alongside `python_amd64.sif` and `analysisdemo/`) that:
+
+- Changes to the project root directory based on the script's location (so it works no matter where you launch it from). Hint: `dirname` and `"$0"`.
+- Runs the same Apptainer bind-mount analysis invocation from Question 2, for example: +
+`apptainer run --bind "$(pwd)/analysisdemo:/app" python_amd64.sif python /app/analyze.py` +
+- Captures success or failure with the script's exit code (for example `set -e`, or check `$?` after the `apptainer` line).
+
+Finally, make the script executable (`chmod +x run_analysis.sh`) and run it once from **another directory** (for example `cd /tmp` then invoke your script with an absolute path) to confirm it still finds the SIF and `analysisdemo/`.
+
+[NOTE]
+====
+We do not need this here, however it is helpful to note that you can also include commands like `conda activate` or `module load` to activate the correct environment or load the correct modules when running the script like so:
+
+[source,bash]
+----
+#!/bin/bash
+conda activate myenv
+
+python /some/path/to/your/script.py
+----
+
+This way, you do not need to remember to activate the environment or load the modules before running the script.
+====
+
+.Deliverables
+====
+* 5.1 Output showing the exec command and the run command results from Part A. +
+* 5.2 The full contents of `run_analysis.sh` (`cat` in a cell). +
+* 5.3 Evidence you ran the script from a different working directory than the project root (for example a `pwd` before the call and the script path you used). +
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project11.ipynb
+====
+
+[WARNING]
+====
+It is necessary to document your work, with comments about each solution.  All of your work needs to be your own work, with citations to any source that you used.  Please make sure that your work is your own work, and that any outside sources (people, internet pages, generative AI, etc.) are cited properly in the project template.
+
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not.
+
+**Please** take the time to double check your work. See xref:ROOT:submissions.adoc[submissions page] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
