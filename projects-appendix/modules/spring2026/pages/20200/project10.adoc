@@ -198,12 +198,26 @@ We mentioned in the last problem that we can just use the Docker registry even t
 ----
 # project3/Apptainer.def
 Bootstrap: docker
-From: python:3.11-slim
+From: python:3.11-slim # CHECK THE IMPORTANT NOTE BELOW
 ----
 
 We specified the location to be `docker` and then our base image to be `python:3.11-slim`.
 
 Slim is a lighter-weight variant of the official Python image (smaller than the full image but still Debian-based). You often don't need the full Python installation for your app, so using slim saves image size and build time. We use slim rather than Alpine here because many Python packages with C extensions (e.g. NumPy, cryptography) build more reliably on Debian/glibc; Alpine uses musl libc and can require more work to get some wheels building. 
+
+[IMPORTANT]
+====
+Due to the high volume of requests to the Docker registry, connections may be rate-limited. To avoid these limits, we recommend using Purdue’s cached registry instead:
+
+[source,def]
+----
+# project3/Apptainer.def
+Bootstrap: docker
+From: geddes-registry.rcac.purdue.edu/docker-hub-cache/library/python:3.11-slim
+----
+
+This configuration first checks Purdue’s internal cache for the Docker image. Once a single user at Purdue has pulled the image, it becomes available locally for others, reducing redundant external requests and avoiding rate limits from Docker Hub.
+====
 
 ==== File Mapping - `%files`
 
@@ -338,7 +352,7 @@ Let's take a look at our containerized application from a higher level. Conceptu
 
 The slow changing parts include the base operating system, Python runtime, and Python dependencies. These components change infrequently and are expensive to rebuild. The fast changing parts are the application source files themselves (e.g. hello.py), which may change often during development.
 
-Ideally, we would build a _custom_ Apptainer image that contains only the slow-changing dependencies, and then bind-mount the fast-changing application code during development. This mirrors Docker's layered build philosophy while remaining compatible with Apptainer's HPC-oriented design.
+Ideally, we would build a _custom_ Apptainer image (like we just did) that contains only the slow-changing dependencies, and then bind-mount the fast-changing application code during development. This mirrors Docker's layered build philosophy while remaining compatible with Apptainer's HPC-oriented design.
 
 However, in this Jupyter/HPC environment (Anvil), Apptainer image builds are slightly more restricted. Specifically, Apptainer is restricted from mounting `/proc` during image builds, which prevents building and binding to custom SIF images locally due to hardware differences between the host and the container. However, we can pull a prebuilt image from the Docker registry that matches our architecture and then bind-mount our local code folder into the container at runtime.
 
@@ -351,12 +365,23 @@ uname -m
 
 You should see that your architecture is likely `x86_64`.
 
-Now we can pull the prebuilt image from the Docker registry that matches our architecture:
+Now we can pull the prebuilt image from the Docker registry that matches our architecture (using the cached registry again):
 
+[source,bash]
+----
+apptainer pull --arch amd64 python_amd64.sif \
+docker://geddes-registry.rcac.purdue.edu/docker-hub-cache/library/python:3.11-slim
+----
+
+[NOTE]
+====
+We want to use the cache here to avoid rate limits, but note that we could also do this to pull directly from the Docker hub:
 [source,bash]
 ----
 apptainer pull --arch amd64 python_amd64.sif docker://python:3.11-slim
 ----
+====
+
 
 We can see some information about the image by running:
 
@@ -371,6 +396,7 @@ You should see that the image is `amd64` and the base image is `python:3.11-slim
 ----
 apptainer run python_amd64.sif uname -m
 ----
+
 
 You should see that its architecture is also `x86_64`. This means the image matches our architecture and we can use it to run our application!
 
