@@ -417,7 +417,7 @@ Remember that in the previous example our histogram used `df[features]`. We want
 
 === Question 4 - Feature Relationships & More Streamlit Tools (2 points)
 
-So far our app is a single scrolling page that displays all content simultaneously. Imagine we continued to grow the page and added a lot more information into it, then it would be harder to quickly see and navigate all content. Streamlit provides layout tools that is useful when it comes to organization. In this question, we will use these to visualize feature relationship on our Streamlit webpage, and cover correlation between features, group comparisons, and outlier detection.
+So far we just have a single scrolling page that displays all content simultaneously. Imagine we continued to grow the page and added a lot more information into it, then it would be harder to quickly see and navigate all content. Stemalit provides layout tools that is useful when it comes to organization. In this question, we will use these to visualize feature relationship on our Streamlit webpage, and cover correlation between features and comparisons. 
 
 [big]#*https://docs.streamlit.io/develop/api-reference/layout/st.tabs[Streamlit Tabs]*#
 
@@ -441,7 +441,7 @@ We will use https://seaborn.pydata.org/[Seaborn]'s heatmap so you should have be
 import seaborn as sns
 ----
 
-We use `with tab1` below, and similar to 'with col1', this makes sure all content within the tab1 block appears only when the Correlation tab is active. 
+We use 'with tab1' below, and similar to 'with col1', this makes sure all content within the tab1 block appears only when the Correlation tab is active. 
 
 [source,python]
 ----
@@ -465,15 +465,15 @@ with tab1:
     plt.close(fig)
 ----
 
-- `corr = filtered_df.corr()`: This computes the Pearson correlation coefficient (by default) between all columns and returns a new dataframe containing values ranging from -1 to 1 (the correlation coefficients), with rows and columsn being the features. Also note that it uses `filtered_df`. If the user filters for a specific option, for example "Heart Attack Only", then the heatmap will update automatically to show correlation for just that filtered group. 
+- `corr = filtered_df.corr()`: This computes the Pearson correlation coefficient (by default) between all columns and returns a new dataframe containing values ranging from -1 to 1 (the correlation coefficients), with rows and columsn being the features. Also note that it uses 'filtered_df'. If the user filters for a specific option, for example "Heart Attack Only", then the heatmap will update automatically to show correlation for just that filtered group. 
 
-- https://seaborn.pydata.org/generated/seaborn.heatmap.html[sns.heatmap()]: This is Seaborn's function to plot a 2D data you pass in as a coloured matrix. 
+- https://seaborn.pydata.org/generated/seaborn.heatmap.html[`sns.heatmap()`]: This is Seaborn's function to plot a 2D data you pass in as a coloured matrix. 
 
-• We passed in the correlation matrix data calculated above by setting `corr` as the parameter. Since a dataframe is passed in, its column is used for column/row labelling. 
+• We passed in the correlation matrix data calculated above by setting 'corr' as the parameter. Since a dataframe is passed in, its column is used for column/row labelling. 
 
-• `annot=True` makes the values appear inside the boxes.
+• 'annot=True' makes the values appear inside the boxes.
 
-• `cmap="Blues"` sets the https://python-graph-gallery.com/92-control-color-in-seaborn-heatmaps/[Seaborn Heatmaps Colour Scheme].
+• 'cmap="Blues" sets the https://python-graph-gallery.com/92-control-color-in-seaborn-heatmaps/[Seaborn Heatmaps Colour Scheme]
 
 Below is the obtained correlation matrix:
 
@@ -481,30 +481,45 @@ image::q4_correlation_matrix.png[Image of the feature correlation matrix, 400, 5
 
 As mentioned before, the values are ranged -1 to 1. We can see that the entire diagonal has the value of 1.0; this is perfect correlation as we are comparing a variable with itself. The colours also distinguish the different ranges of correlation with darker blue representing a higher value, and as it gets lighter the values also decrease. 
 
-Take a look at the intersections of `Systolic_BP` and `Diastolic_BP`. Other than the diagonal entries, the two intersections have one of the highest correlation value. Although it is not extremely close to 1, it does have a fairly strong relation; this makes sense because although it cannot be generalized for everyone, Systolic BP and Diatolic BP measure parts of the same heart cycle and commonly rise and fall together. Similarly, the 0.68 correlation between `Sodium` and `Saturated_Fat` implies diet consisting of one usually involves the other as well. 
+Take a look at the intersections of Systolic_BP and Diastolic_BP. Other than the diagonal entries, the two intersections have one of the highest correlation value. Although it is not extremely close to 1, it does have a fairly strong relation; this makes sense because although it can not be generalized for everyone, Systolic BP and Diatolic BP measure parts of the same heart cycle and commonly rise and fall together. Similarly, the 0.68 correlation between Sodium and Saturated_Fat implies diet consisting of one usually involves the other as well. 
 
 Earlier we noted understanding multicolinearity as one of the important result of EDA and data analysis; the general concept of that is represented here. If you were to work on tasks such as regression later on, characteristics like multicolinearity can create challenges in isolating individual effect on the dependent variable. 
 
 Additionally, note that these correlation in the correlation matrix only captures linear relationships; low correlation values do not always means variables are independent. 
 
-Moving on, now the goal is to add a section for correlation between features and a specific variable (our target): `Heart_attack`.
+Moving on, now the goal is to add a section for correlation between features and a specific variable (our target), Heart_attack.
+
+[NOTE]
+====
+After this section, you will see that we will be changing the view and information presented if the user decides to filter for a specific group. We will get more into it after this section.
+
+Some related ideas:
+
+- Goal of analysis can change based on focus area and scope of data
+
+- These types of conceptual ideas can affect what users see (for example, missing or irrelevant results, needing a more appropriate UI for specific scenario, etc). We should be aware of the context and know what parts of data and analysis is relevant, as well as how to maintain dynamic or appropriate application/UI.
+====
+
+[underline]#Unfiltered Case - Using Correlation#
 
 [source,python]
 ----
-# Correlation with target specifically
+# Switch based on what filter user selected
+ if choice == "All":
+    # Correlation with target specifically
     st.subheader("Correlation with Heart Attack")
 
     target_corr = (corr["Heart_attack"].drop("Heart_attack").sort_values(ascending=False))
     
     # Create two columns
-    col1, col2 = st.columns([1, 2])
+    col1, col2 = st.columns([1.5, 2])
 ----
 
 - `target_corr`
 
-• `corr["Heart_attack"]`: Here we select the column corresponding to `Heart_attack`, which gives the correlation of all variables with the target. 
+• corr["Heart_attack"]: Here we select the column corresponding to Heart_attack, which gives the correlation of all variables with the target. 
 
-• `.drop("Heart_attack").sort_values(ascending=False)`: Self correlation always produces a value 1 - we remove this. Then, we sort the values from highest to lowest to see the strongest positive relationship first. 
+• .drop("Heart_attack").sort_values(ascending=False): Self correlation always produces a value 1 - we remove this. Then, we sort the values from highest to lowest to see the strongest positive relationship first. 
 
 - `col1, col2 = st.columns([1.5, 2])`: [1.5, 2] you see here is width ratio definition. The numbers are relative weights, and here col1 gets 1.5/(1.5+2), approximately 43% of the width, and col2 gets 2/3.5, approximatley 57% of the width. You are free to adjust as you see fit on the screen. 
 
@@ -522,13 +537,13 @@ with col1:
 
 - To-do:
 
-• Take `target_corr` and rename to "Correlation"
-• Convert into a dataframe. You can use `.reset_index()` which automatically moves index into a column.
-• Rename the column `index` into "Feature".
+• Take 'target_corr' and rename to "Correlation"
+• Convert into a dataframe. You can use .reset_index() which automatically moves index into a column.
+• Rename the column "index" into "Feature"
 
 [NOTE]
 ====
-We divided up the code a little bit to understand each sections, but note that `with col1:` and `with col2:` should be inside `with tab1:`.
+We divided up the code a little bit to understand each sections, but note that 'with col1:' and 'with col2:' should be inside 'with tab1:'.
 ====
 
 On the right hand side we have:
@@ -561,23 +576,102 @@ with col2:
 
 - To-do:
 
-• Loop through each value in `target_corr.values`, and if the value is greater than 0 (positive correlation), set it to a specific colour, and if the value is less than 0 (negative correlation), set it to a different colour than the first. (You can use either for loop or list comprehension!)
+• Loop through each value in target_corr.values, and if the value is greater than 0 (positive correlation), set it to a specific colour, and if the value is less than 0 (negative correlation), set it to a different colour than the first. (You can use either for loop or list comprehension!)
 
 • Add in necessary labels and title.
 
-- https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.barh.html[`.barh()`]: Using matplotlib, we create a horizontal bar plot. Passing in `target_corr.index` makes the feature names on the y axis and `target_corr.values` makes the correlation values on the x axis. We apply the colour condition by setting `color=color`. Thus, we end up with each bar representing one feature and its length represneting the correlation strength. 
+- https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.barh.html[`.barh()`]: Using matplotlib, we create a horizontal bar plot. Passing in 'target_corr.index' makes the feature names on the y axis and 'target_corr.values' makes the correlation values on the x axis. We apply the colour condition by setting 'color=color'. Thus, we end up with each bar representing one feature and its length represneting the correlation strength. 
 
-- https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.axvline.html[`.axvline()`]: We want to visually separate the positive and negative correlations. This function helps draw a reference line at $x=0$. 
+- https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.axvline.html[`.axvline()`]: We want to visually separate the positive and negative correlations. This function helps draw a reference line at x=0. 
 
-Below is the output you can expect to see showing correlations of several variables (with heart attack) and also the corresponding bar plot:
+Below is the output you can expect to see:
 
-image::q4_corr_w_heartattack.png[Image of correlation value table and horizontal barchart, title="Image of correlation value table and horizontal barchart", 500, 500, align="center"]
+image::q4_corr_w_heartattack.png[Image of correlation value table and horizontal barchart, 500, 500, align="center"]
+
+[underline]#Filtered Case - Average Comparisons#
+
+'All' group contains both 0 (no heart attack) and 1 (heart attack), meaning there exists variance in the target. However, once we filter for either 'No Heart Attack' or 'Heart Attack', all individuals in that data has either 0 or 1, leading to no variance. We can not obtain a valid correlation value when variance is zero. 
+
+So here, we will focus on some basic analysis and presentation of mean values, changing the view over from correlation we previously did. 
+
+Below, we first do the usual setup procedure, and calculate the mean values for both filtered and overall group. (This type of comparison would be useful, for example, if we wanted to easily see which variables increase or is dominating in high risk patients).
+
+Please calculate the mean for the selected column using `.mean()`.
+
+[source,python]
+----
+# If Filtering Option is Selected
+ else:
+    st.subheader(f"{choice}")
+
+    features = ['Age', 'BMI', 'Systolic_BP', 'Diastolic_BP', 'Total_Colesterol', 'C_Reactive',  'Sodium', 'Saturated_Fat']
+
+    # Average calculation for the full, original data
+    '''YOUR CODE HERE'''
+
+    # Average calculation for filtered subset
+    '''YOUR CODE HERE'''
+        
+    col1, col2 = st.columns([1.7, 2])
+----
+
+On the left side, we will present a numerical table of the mean values of each features.
+
+[source,python]
+----
+with col1:
+    # Text description of this section using st.write()
+    '''YOUR CODE HERE'''
+
+    info = pd.DataFrame({"Feature": features,
+                         "Group Avg": filtered_avg.values,
+                         "Overall Avg": overall_avg.values})
+    
+    st.dataframe(info)
+----
+
+- We created a Pandas Dataframe by combining the three information into one table. The keys ('Feature', 'Group Avg', 'Overall Avg') become headers for the columns, and the values (features, filtered_avg.values, overall_avg.values) become the rows for the data. 
+
+On the right side, we will present a visualization that lets users see the bar plot of the mean values, for both filtered and unfiltered sets. Please see below this code section for more explanation. 
+
+[source,python]
+----
+with col2:
+    # Text description of this section using st.write()
+    '''YOUR CODE HERE'''
+
+    fig3, ax3 = plt.subplots(figsize=(8, 6))
+    
+    # Specific dataframe for plotting
+    df_plot = pd.DataFrame({choice: filtered_avg, 'Overall Average': overall_avg}, index=features)
+    
+    # Horizontal bar plot
+    df_plot.plot(kind='barh', ax=ax3, color=['lightsteelblue', 'slategrey'])
+    
+    ax3.set_xlabel('Average Value')
+    ax3.set_title('Filtered vs Overall Average')
+    plt.tight_layout()
+
+    st.pyplot(fig3)
+    plt.close(fig3)
+----
+
+- For `df_plot`, we created a new dataframe formatted for the purpose of plotting. The argument passed in is a dictionary and similar to what we did in 'col1' previously, the keys (choice, 'Overall Average') are column headers, and values (filtered_avg, overall_avg) are the numbers. Maplotlib automatically creates a legend using the headers. The parameter 'index=features' is what gives the y-axis label in our horizontal chart using our list of features. This method is useful for comparing specific subsets of data against overall data. 
+
+- We should be quite familiar with plotting now; we have used many plotting methods before and `barh` is one of them. It works the same way here, creating the horizontal plot in the specified axis (ax3) created earlier with `plt.subplots()`. We also selected specific colours for the two distinct groups (you are free to pick your own!).
+
+- For the users, this type of visualization provides immediate visual contrast. 
+• 'Overall Average' in the plot represents the state based on all individuals. The filtered bar (lighter blue in this example) defines characteristics of a certain group, for example, having a significantly longer bar for 'Sodium' in 'Heart Attack Only' group.
+
+Below is an example of an expected output and behaviour. 
+
+video::q4_filter.mov[Video of expected outputs for correlation (for filter - 'All') and comparison information (for when filtering exists). width=650, height=400, opts="autoplay, loop", align="center"]
 
 .Deliverables
 ====
 - 4a. Explain how correlation between features are found and what correlation matrix tells us. 
-- 4b. Write a few sentences on your interpretation of, and new findings from the results in "Correlation with Heart Attack" section. 
-- 4b. All code and output for Correlation tab content.
+- 4b. Write a few sentences on your interpretation of, and new findings from the results in "Correlation with Heart Attack" section and any one of the barplots. 
+- 4b. All code and output for Correlation and Comparison as mentioned in this question. 
 ====
 
 === Question 5 - Box Plots, Outlier Detection & More Streamlit Tools (2 points)
