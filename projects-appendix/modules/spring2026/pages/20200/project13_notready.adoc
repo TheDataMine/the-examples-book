@@ -1,0 +1,886 @@
+:stem: latexmath
+
+= TDM 20200 Project 13 - Geospatial Data and Analysis
+
+== Project and Learning Objectives 
+
+****
+- Understand concepts and applications behind geospatial data.
+- Work with GeoPandas.
+****
+
+== Dataset
+
+The dataset used in this project is https://www.nhtsa.gov/research-data/fatality-analysis-reporting-system-fars[Fatality Analysis Reporting System] (FARS), a US nationwide database tracking all fatal motor vehicle crashes, provided by National Highway Traffic Safety Administration (NHTSA). It can be useful in identifying and evaluating traffic safety problems and trends. 
+
+We also have more information under our "Data Sets": "https://the-examples-book.com/projects/data-sets/FARS[here].
+
+We also use the 2021 TIGER/LINE shapefiles from the US Census Bureau's database that provides geospatial data on state and national boundaries, roads, and water features. Data obtained from https://catalog.data.gov/dataset/tiger-line-shapefile-2021-nation-u-s-states-and-equivalent-entities/resource/2c2a9b10-39cd-4a6a-98fc-bf9d55c3b281?inner_span=True[here].
+
+== Questions
+
+Geospatial data is numeric data that describes objects and events on specific locations on Earth. It consists of attributes such as characteristics of objects and time of occurrence, and coordinate information which are latitude and longitude. 
+
+We have been working with large datasets all the time; relevant to this, as data continues to grow larger, having an additional spatial dimension and information allow us to gain insights usually unobtainable from just numbers, for example variable changes or patterns across regions and boundaries, localized relationships or dependencies, and mapping and tracking. 
+
+Additionally for reference, https://www.ibm.com/think/topics/geospatial-data[this website] has a good summary on what Geospatial data and analytics are, and the applications. 
+
+=== Question 1 - EDA & Motivation (2 points)
+
+Let's get familiar with the dataset and know the basic structure before getting started.
+
+Load in the 2021 data using:
+
+[source,python]
+----
+df = pd.read_csv('/anvil/projects/tdm/data/fars/2021/accident.csv', encoding='latin1')
+----
+
+Please print the head and shape of the dataset. Note the number of rows is the number of crashes. 
+
+[source,python]
+----
+# Head of the dataset
+'''YOUR CODE HERE'''
+
+# Shape of the dataset
+'''YOUR CODE HERE'''
+----
+
+We now check for missing data to see if there are any unusual characteristics we should be aware of, or if any cleaning is needed. 
+
+[source,python]
+----
+# Check missing values for all columns
+'''YOUR CODE HERE'''
+----
+
+You should see that it returns 0 for all the columns. At a first glance, it might look normal and all good to use, but try running:
+
+[source,python]
+----
+print(df['LATITUDE'].value_counts().sort_index())
+print(df['LONGITUD'].value_counts().sort_index())
+----
+
+Below will be the output values:
+
+[cols="1,1", frame=none, grid=none]
+|===
+a|
+.Latitude
+[source,text]
+----
+19.060325     1
+19.082319     1
+19.196472     1
+19.294000     1
+19.425025     1
+             ..
+65.500278     1
+66.897883     1
+77.777700    79
+88.888800    12
+99.999900    44
+Name: count, Length: 39169, dtype: int64
+----
+
+a|
+.Longitude
+[source,text]
+----
+-162.594406     1
+-161.899131     1
+-161.779986     1
+-159.341614     1
+-159.338922     1
+               ..
+-67.245550      1
+-67.231300      1
+ 777.777700    79
+ 888.888800    12
+ 999.999900    44
+Name: count, Length: 39239, dtype: int64
+----
+|===
+
+When you inspect the value counts for the coordinates, the sentinel values become immediately apparent at the end of the sorted index:
+
+Specifically, take the look at the last three values for both longitude and latitude. Does that make sense for a coordinate? Longitude can range from -180 to 180, and latitude can range from -90 to 90. The reason we see this is because NHTSA uses "sentinel values" instead of leaving null values. Variations of 7s represent "Not Reported", 8s represent "Not Applicable", and 9s represent "Unknown"; the last three values (77.777700 / 777700 and onwards) are the recoded numbers. "FARS/CRSS Coding and Validation Manual 2021" (https://crashstats.nhtsa.dot.gov/#!/PublicationList/106[and related documents]) have detailed information on this. 
+
+Please print the number of the invalid latitdue and longitude values in the dataset, and the number of normal, valid coordinates. 
+
+[source,python]
+----
+# Determine invalid latitude values
+no_lat = (df['LATITUDE'] == 77.7777) | (df['LATITUDE'] == 88.8888) | (df['LATITUDE'] == 99.9999)
+
+# Determine invalid longitude values
+no_long = '''YOUR CODE HERE'''
+
+print(f"\nNumber of missing/unknown latitude: {'''YOUR CODE HERE'''}")
+print(f"Number of missing/unknown longitude: {'''YOUR CODE HERE'''}")
+print(f"Normal coordinates: {'''YOUR CODE HERE'''}")
+----
+
+- In 'no_lat', we check every row to see if latitude has the same value as the specified codes. We can do similar for 'no_long'. The variables will contain 'True' for invalid data, and 'False' for valid data. 
+
+- Obtaining the number of normal coordinates can be done by calling `.sum()`. Before that, we can use logical NOT to flip the 'True/False' values as not only do we want the valid counts, but also 'True' is what is counted by `.sum()`.
+
+You should get: 
+
+[screen]
+----
+Number of missing/unknown latitude: 135
+Number of missing/unknown longitude: 135
+Normal coordinates: 39373
+----
+
+The total number of rows found in the beginning was 39508, and we can find from the current result that the invalid data accounts for approximately 0.3% of the entire data. It is fine to filter these out; additionally, not removing them could cause problems later with geographical visualization and analysis. 
+
+[source,python]
+----
+# Remove invalid data
+df_clean = df[~no_lat & ~no_long].copy()
+----
+
+Please write code for below:
+
+[source,python]
+----
+# Shape of the cleaned dataset
+print(df_clean.shape)
+# Range of values latitdue in this dataset take on
+print(f"Latitude Range: {'''YOUR CODE HERE'''} to {'''YOUR CODE HERE'''}")
+# Range of values longitude in this dataset take on
+print(f"Longitude Range: {'''YOUR CODE HERE'''} to {'''YOUR CODE HERE'''}")
+----
+
+- We can use `.min()` and `.max()` to obtain the lowest and highest values in a specific column. 
+
+Below is the expected output. 
+
+[screen]
+----
+(39373, 80)
+Latitude Range: 19.060325 to 66.89788333
+Longitude Range: -162.59440556 to -67.2313
+----
+
+The shape matches our previous calculation since we dropped the 135 rows containing unusable location data. As well, the new latitude and longitude ranges correspond geogrpahically with the actual US latitude and longitude (Approximately: Latitude southernmost at 18.91°N, northernmost at 71.44°N & Longitude 66.95°W to 172.46°E); sentinel values also can not be contained in these ranges. 
+
+Lastly for this question, find the number of crashes per state:
+
+[source,python]
+----
+print(df.groupby('STATENAME')['FATALS'].sum().sort_values(ascending=False))
+----
+
+This results in list of fatality counts for all states, which one initially may think directly corresponds to the problem; however, this only gives us the pure count and no information on where. As well, crashes do not happen in an evenly spread manner within states, and we can not obtain deeper insights with tables alone. 
+
+[source,python]
+----
+print(df[['STATENAME', 'LATITUDE', 'LONGITUD', 'FATALS']])
+----
+
+- Above selected the four columns ([[]] allows us to pick multiple specified columns simultaneously), and each row in the output represents a single event of a crash. The coordinates of where the crash happened is included here. 
+
+We need to utilize geographical information; coordinates in the data will help us bridge the regular dataset and table we started off with and spatial analysis. 
+
+.Deliverables
+====
+- 1a. Code and corresponding documentation, and outputs for all required sections in the question.
+- 1b. New cleaned dataset, output of its shape and required latitude and longitude values. 
+====
+
+=== Question 2 - Introduction to Geospatial Data & GeoPandas (2 points)
+
+In our first question, we identified and cleaned coordinate data so now have valid data to work with. If, for instance, we wanted to know where clusters occur for crashes, we would need geospatial tools. Clustering here refers to a technique that groups data points using similar geographical features and proximity. 
+
+Working with geospatial data in Python can be done by using the https://geopandas.org/en/stable/getting_started/introduction.html[GeoPandas] library. We can think of GeoPandas as a combination of the Pandas library and geometry. It has the abilites to perform spatial operations, geometric manipulations, and create maps. 
+
+[big]#*Geometry Types*#
+
+There are three main geomtry types for Geospatial data
+
+1. Points: Single (x,y) pair identifying a specific location. 
+- Example: A crash that happened at a latitude/longitude.
+2. Lines: Ordered set of connected coordinate pairs. Lines have length unlike points, but do not have an enclosed area like polygons do. 
+- Example: A road.
+3. Polygons: Series of points forming a closed loop. 
+- Example: A state.
+
+These are also the three basic geometric object classes in GeoPandas. 
+
+[big]#*https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.html[GeoDataFrame]*#
+
+GeoDataFrame is an extension of the Pandas dataframe to accomodate geospatial vector data. It works the same way except there is an additional 'geometry' column storing shapes that represent Earth's physical locations. 
+
+We already have GeoPandas on Anvil. Just import with:
+
+[source,python]
+----
+import geopandas as gpd
+----
+
+[source,python]
+----
+new_df = gpd.GeoDataFrame(df_clean, geometry=gpd.points_from_xy(df_clean['LONGITUD'], df_clean['LATITUDE']), crs='EPSG:4326')
+----
+
+- `gpd.GeoDataFrame()`: returns the dataframe containing geometry. We passed in EPSG:4326 as 'crs' (Coordinate Reference System). EPSG:4326 is the "World Geodetic System 1984", which is the standard and the most widely used coordinate reference system. 
+
+- `geometry=gpd.points_from_xy(df_clean['LONGITUD'], df_clean['LATITUDE'])`: https://geopandas.org/en/stable/docs/reference/api/geopandas.points_from_xy.html[`.points_from_xy()`] takes in the longitude and latitude columns and converts into Point objects. It creates a GeometryArray directly. 
+
+[NOTE]
+====
+When we say it gets converted into Point objects, the full detail is `shapely.geometry.Point`. GeoPandas' geomtries are Shapely pbjects and it relies on Shapely to perform operations on them. 
+
+https://shapely.readthedocs.io/en/stable/[Shapely] is a Python library meant to perform spatial operations on Cartesian plane (2D surface). It does not work with coordinate reference systems so for those aspects, it gets combined with GeoPandas. 
+====
+
+Print the type of the converted dataframe, which will confirm it. 
+
+[source,python]
+----
+# Type of new_df
+'''YOUR CODE HERE'''
+----
+
+[screen]
+----
+<class 'geopandas.geodataframe.GeoDataFrame'>
+----
+
+Then, print the full head, and head of the dataframe including only these columns: 'STATENAME', 'FATALS', 'LATITUDE', 'LONGITUD', 'geometry'.
+
+For the second head print, you should see: 
+
+[screen]
+----
+[5 rows x 81 columns]
+  STATENAME  FATALS   LATITUDE   LONGITUD                    geometry
+0   Alabama       2  33.601642 -86.312383  POINT (-86.31238 33.60164)
+1   Alabama       2  33.541361 -86.643744  POINT (-86.64374 33.54136)
+2   Alabama       1  33.419797 -86.752572   POINT (-86.75257 33.4198)
+3   Alabama       1  33.360894 -86.777139  POINT (-86.77714 33.36089)
+4   Alabama       1  33.815208 -86.825342  POINT (-86.82534 33.81521)
+----
+
+Note that the geometry column consists of values that looks like 'POINT (-86.31238 33.60164)'. These are shapely Point objects; geometry type is POINT which represents a single geographic location, with structure (longitude, latitude).
+
+Now that we have the points, we want to know and see the geographic context, which requires a map for plotting. Please load:
+
+[source,python]
+----
+states_gdf = gpd.read_file('tl_2021_us_state.zip')
+----
+
+As mentioned in the beginning of the project under the "dataset" section, this loads the US states boundary polygons from the Census Bureau's TIGER dataset. 
+
+We can see the contents of the zipfile using Python's zipfile module. 
+
+[source,python]
+----
+import zipfile
+
+zf = zipfile.ZipFile('tl_2021_us_state.zip', 'r')
+print(zf.namelist())
+zf.close()
+----
+
+- `namelist()` in zipfile module returns a list of all file names inside zip. 'r' tells zipfile to open the existing file for reading. 
+
+Below is the output, which are the list of files inside the zip file. 
+
+[screen]
+----
+['tl_2021_us_state.cpg', 'tl_2021_us_state.dbf', 'tl_2021_us_state.prj', 'tl_2021_us_state.shp', 'tl_2021_us_state.shp.ea.iso.xml', 'tl_2021_us_state.shp.iso.xml', 'tl_2021_us_state.shx']
+----
+
+GeoPandas detects that we have a ZIP and scans content for datasets and finds the shapefile components. Here it consists of multiple files like .shp, .shx, .dbf together storing geomtry and attribute data; they are read together as one data, and are loaded into a GeoDataFrame. 
+
+Please print the head and shape of this dataframe. 
+
+[source,python]
+----
+# Shape
+print(f"states_gdf shape: {'''YOUR CODE HERE'''}")
+# Head
+'''YOUR CODE HERE'''
+----
+
+Also please check the CRS of both states_gdf and new_df using `.crs`.
+
+[source,python]
+----
+# Print CRS of states_gdf
+'''YOUR CODE HERE'''
+# Print CRS of new_df
+'''YOUR CODE HERE'''
+----
+
+It outputs:
+
+[screen]
+----
+EPSG:4269
+EPSG:4326
+----
+
+EPSG:4326 (WGS 84) and EPSG:4269 (NAD83) are both coordinate systems that uses latitude and longitude, but WGS84 is the standard global system that is based on the center of mass of the Earth, while NAD83 is catered towards North America. The coordinates are very close to each other, but there are small numerical differences. 
+
+GeoPandas generally can not correctly plot two dataframes with different CRS, as alignment between layers will not be correct. To prevent problems, we use https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.to_crs.html[`.to_crs()`] which lets us change the coordinate reference system for all points in all objects. 
+
+[source,python]
+----
+states_gdf = states_gdf.to_crs('EPSG:4326')
+----
+
+Print the head of states_gdf. Notice in the 'geometry' column, we now have 'POLYGON' and 'MULTIPOLYGON' objects instead of Points. Multipolygon is another geomtry type in GeoPandas describing a single geographical feature made of separate polygons; here in another words, states with islands or some separated area but still a part of that state (for example, Florida or Hawaii). 
+
+Also, re-print state_gdf's crs to confirm. 
+
+[source,python]
+----
+print(f"New states_gdf crs: '''YOUR CODE HERE''' ") 
+----
+
+We will create our first plot soon, but before that we should further inspect the column and understand geometry object. Let's select one state (we picked Indiana here because Purdue is in Indiana! But feel free to pick a state of your choice).
+
+Please complete the code, and see below the code block for more guidance.
+
+[source,python]
+----
+indiana = states_gdf[states_gdf['NAME'] == 'Indiana'].iloc[0]
+# Print state name
+print(f"State: {indiana['NAME']}")
+# Print geometry type
+print(f"Geometry type: {indiana.geometry.geom_type}")
+# Print bounding box
+print(f"Bounding box: {indiana.geometry.bounds}")
+----
+
+- The first line filters for 'Indiana' and we use .iloc[0] to get the first matching row as a spatial series (and not one row dataframe).
+
+- State name can be printed by accessing the column as usual. 
+
+- Finding the geometry type: As mentioned, spatial data is stored in GeoPandas' special column 'geometry'. Look into `.geometry()` and you can use that in the code. Since Indiana here is a single row, it will directly access that object. `.geom_type()` returns the type of geometry. 
+
+- Finding bounding box: You can use https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoSeries.bounds.html[`.bounds()`] here. It returns a tuple (minx, miny, maxx, maxy), which are westernmost longitude, southernmost latitude, easternmost longitude, and northernmost latitude, respectively. A polygon's boundary is a sequence of coordinate paris. 
+
+[screen]
+----
+State: Indiana
+Geometry type: Polygon
+Bounding box: (-88.097892, 37.771672, -84.784535, 41.761368)
+----
+
+Above is the result for Indiana. We can see that it is represented as a single polygon, so it has continuous boundary and no separate area belonging to the state. In GeoPandas, we can also obtain the list of all coordinates at the boundary using https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoSeries.exterior.html[`.GeoSeries.exterior`]; polygons can have an exterior (outer boundary) or interiors (boundaries of any holes inside), and this selects the outer part. We can then obtain raw coordinate sequences using `.coords` (get list of all dots that make up the outer ring). Use this information to find the number of coordinates at the border. 
+
+[source,python]
+----
+print(f"Number of coordinates of Indiana border: {'''YOUR CODE HERE'''}")
+----
+
+[screen]
+----
+Number of coordinates of Indiana border: 16235
+----
+
+As we can see, Indiana border is defined by 16235 pairs. We note, first this is another way to see that the dataset itself is high resolution that captures many small details. Secondly, the high numbers make sense considering the parts of Indiana borders that are very bent and not linear; more bend there is, more (x,y) would be needed in the exterior.coords list. 
+
+
+[big]#*Plotting*#
+
+Now we layer the two GeoDataFrames on the same matplotlib axes. We will put polygons in the background and points on top. 
+
+[source,python]
+----
+fig, ax = plt.subplots(figsize=(10, 6))
+
+states_gdf.plot(ax=ax, color='silver')
+new_df.plot(ax=ax, color='red', markersize=0.2)
+
+ax.set_title('All Fatal Traffic Crashes — 2021')
+plt.show()
+----
+
+- 'states_gdf.plot(ax=ax, color='silver')': This draws the state boundaries onto the created axes.
+
+- 'new_df.plot(ax=ax, color='red', markersize=0.2)': This is for the point layer. We put this line after the state plot, allowing us to draw dots on top of the state shapes. Additionally, setting the markersize lower can help us see individual points and density a little more clearly, since we have a huge number of total crashes and large dots would overlap. 
+
+image::q2_map1.png[Image of the map of all fatal crashes in the USA, 400, 500, align="center"]
+
+Notice the map covers a very large area because we are including all locations, territories, and states of the USA. This makes the map very zoomed out. Below we filter out noncontiguous states and territories for visual scaling. 
+
+[source,python]
+----
+fig, ax = plt.subplots(figsize=(14, 8))
+
+# Only showing contiguous states (excluding noncontiguous and territories)
+to_exclude = ['Alaska', 'Hawaii', 'American Samoa', 'Guam','Commonwealth of the Northern Mariana Islands','Puerto Rico', 'United States Virgin Islands']
+
+contiguous_states = states_gdf[~states_gdf['NAME'].isin(to_exclude)]
+
+accidents = new_df[~new_df['STATENAME'].isin(['Alaska', 'Hawaii', 'Puerto Rico'])]
+
+# State (background)
+'''YOUR CODE HERE'''
+
+# Crash points
+'''YOUR CODE HERE'''
+
+# Title and output of the map
+'''YOUR CODE HERE'''
+----
+
+- 'contiguous_states': We select the NAME column from the dataframe and use `.isin(to_exclude)` to check if each value is in the 'to_exclude' list; it produces boolean series where 'True' values will be excluded. Since we will use indexing to only keep the rows with true condition, logical NOT is used to change the true/false values. Thus, this results is all states except the ones listed in 'to_exclude'. 'accidents' works in a similar way. 
+
+[NOTE]
+====
+FARS dataset includes: 50 U.S. states, the District of Columbia, and Puerto Rico
+TIGER dataset includes: All of the United States and associated territories
+
+We exclude what is actually present in the data. 
+====
+
+You will get the following map:
+
+image::q2_map2.png[Image of the new map only using contiguous states, 400, 500, align="center"]
+
+.Deliverables
+====
+- 2a. Code and corresponding documentation, and outputs for all required sections in the question.
+- 2b. Written explanation on your observation and findings from the map outputs. What information do we obtain?
+====
+
+=== Question 3 - Spatial Join & Map (2 points)
+
+We found where crashes occurred in the map in question 2. In order to find out where we get the most crashes, we connect the points to the polygon it belongs inside. We can do this with GeoPandas' https://geopandas.org/en/stable/docs/reference/api/geopandas.sjoin.html['.sjoin()']. 
+
+Spatial join combines two datasets by matching rows by spatial relationship (similar to merge in padas, but here we are not matching by common attribute value), for example which polygon contains a point, if there is an intersection, and proximity. 
+
+[source,python]
+----
+crash_joined = gpd.sjoin(accidents, contiguous_states,  how="inner", predicate='within')
+----
+
+- 'accidents' is the left/primary dataset which are the points we want to keep, and 'contiguous_states' is the right/reference dataset where we get the information from and attach it to the points. 
+
+- We then define some rules. how="inner" keeps the rows that finds a match only. predicate='within' means the point must be inside the polygon. 
+
+Please complete code below. 
+
+[source,python]
+----
+new_col = []
+for c in crash_joined.columns:
+  # Check if column is not in accidents
+  '''YOUR CODE HERE'''
+    # append to new_col
+    '''YOUR CODE HERE'''
+
+print(f"Columns added: {new_col}")
+----
+
+[screen]
+----
+Columns added: ['index_right', 'REGION', 'DIVISION', 'STATEFP', 'STATENS', 'GEOID', 'STUSPS', 'NAME', 'LSAD', 'MTFCC', 'FUNCSTAT', 'ALAND', 'AWATER', 'INTPTLAT', 'INTPTLON']
+----
+
+All the columns above came from 'contiguous_states'
+
+Also, especially note
+
+[NOTE]
+====
+https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2021/TGRSHP2021_TechDoc.pdf[TIGER Technical Documentation 2021] is a good reference to find more information on how geographic data is structured, coded, and used. This includes some definitions, attribute tables, and relationships that may be helpful.  
+====
+
+Print the head of the joined data. We can immediately see from first few rows that they are Alabama crashes; take a look at some columns, including ALAND (land area), AWATER (water area), INTPTLAT/INTPTLON (Current latitude of the internal point), and we can also observe they all have Alabama specific attributes (for example, ALAND = 131175477769 in square meters - consistent with Alabama's known square miles size of approx. 50,750).  
+
+[source,python]
+----
+crashes_per_state = (crash_joined.groupby('NAME').agg(crash_cnt=('ST_CASE', 'count'),
+                                                      total_fatals=('FATALS', 'sum'),
+                                                      land_area=('ALAND', 'first')).reset_index())
+----
+
+- We first grouped the dataset by 'NAME' column so that rows are grouped together if they belong in the same state. 
+
+- `.agg()` is used to get the statistic for each group. Here we create three new columns:
+• 'crash_cnt' counts the number of rows/crashes per state. 'ST_CASE' is a unique case identifier. 
+• 'total_fatals' gets the total falities in each state
+• 'land_area' gets the land area of each state. We chose the first value, since all rows in the same state will have the same land area, and we just need to get one.
+
+[source,python]
+----
+# Print top 10 states by crash counts
+'''YOUR CODE HERE'''
+----
+
+The output will be:
+
+[screen]
+----
+              NAME  crash_cnt  total_fatals     land_area
+41           Texas       4066          4495  676681550479
+3       California       3970          4271  403671756816
+8          Florida       3444          3731  138961722096
+9          Georgia       1670          1797  149486624386
+31  North Carolina       1525          1653  125933327733
+33            Ohio       1242          1354  105823653399
+40       Tennessee       1229          1327  106791957894
+11        Illinois       1205          1329  143778561906
+36    Pennsylvania       1152          1229  115881784866
+38  South Carolina       1112          1198   77866200776
+----
+
+Texas has the highest number of fatal crashes, followed by California, Florida, and so on. To visualize this, we can merge the statistic with geographic boundaries and plot a choropleth. Different geographic regions will be shaded based on the value of a variable. In this case, the states will be coloured depending on the number of fatal crashes; spatial patterns or clusters will be easily identified. 
+
+[source,python]
+----
+# Merge statistics back with map shapes
+states_with_stat = '''YOUR CODE HERE'''
+
+fig, ax = plt.subplots(figsize=(10, 6))
+
+# Plot choropleth
+states_with_stat.plot(column='crash_cnt', ax=ax, legend=True,edgecolor='white', linewidth=0.5)
+
+# Map output
+'''YOUR CODE HERE'''
+----
+
+- To do: 
+
+• Use `.merge()` to combine 'contiguous_states' and 'crashes_per_state' (get state shapes & crash statistic from each). You should keep all states in the map dataset and add in the crash data where we have it. 
+
+• Output the map and add in labelling/title. Note: https://geopandas.org/en/stable/docs/user_guide/mapping.html[This guide] has good introduction to more plotting/mapping tools. 
+
+It will look like: 
+
+image::q3.png[Choropleth output using raw total counts of crashes per state, 400, 500, align="center"]
+
+It shows us geogrpahic distribution of fatal crashes across US states. The lighter colours denote states with higher raw crash counts, and the pattern for this is quite clear. The states with these colours are also the states with highest population in the country. Conversely, states in areas such as upper midwest show the opposite result. 
+
+.Deliverables
+====
+- 3a. Code and corresponding documentation, and outputs for all required sections in the question.
+- 3b. Write a few sentences on your own understanding of how we obtained 'crash_joined', your interpretation of resulting data and where it could be useful. As well, what are your observations are from printing the head (you are free to explore and take a look at other attributes and outputs as well)?
+- 3c. Write about your interpretation of the choropleth. Also, are there any patterns? Do you think there are limitations to what we have right now and information it conveys? 
+====
+
+=== Question 4 - (2 points)
+
+While the map using raw count is useful for total volume, there can be bias incorporated; states such as Texas and California inherently will have more crashes as they are a lot more populated with larger land area and road and infrastructure counts. So to make comparison, we will normalize and create our visualization using density. 
+
+We will use 'ALAND' (land area) column we obtained from joining. It will first be converted to square km just for managing the numbers and readability. 
+
+[source,python]
+----
+# Convert sq m -> sq km
+crashes_per_state['land_area_sqkm'] = crashes_per_state['land_area'] / 1000000
+----
+
+Now we calculate the density menasuring how concentrated the fatal crashes are in each state. 
+
+[source,python]
+----
+# Crashes per 1000 sq km
+crashes_per_state['crash_density'] = (crashes_per_state['crash_cnt'] / crashes_per_state['land_area_sqkm']) * 1000
+----
+
+- 'crash_cnt' has the total number of fatal crashes in the state and 'land_area_sqkm' has the size of the state in square kilometers. Divide and we get crashes per square km. The last multiplication by 1000 scales it to per 1000 sq km, which is better for reading and comparing. 
+
+Please write the code to sort by either 'crash_cnt' or 'crash_density' column and make the highest values be shown first. Print the first 10 rows after. 
+
+[source,python]
+----
+print("Top 10 States for Crash Count")
+'''YOUR CODE HERE'''
+
+print("\n Top 10 States for Crash Count - Density (per 1000 sq km)")
+'''YOUR CODE HERE'''
+----
+
+The second print output shows:
+
+[screen]
+----
+ Top 10 States for Crash Count - Density (per 1000 sq km)
+                    NAME  crash_cnt  total_fatals     land_area  \
+7   District of Columbia         36            37     158316124   
+28            New Jersey        667           697   19048916230   
+6               Delaware        131           135    5046731559   
+8                Florida       3444          3731  138961722096   
+5            Connecticut        283           298   12541690473   
+37          Rhode Island         60            62    2677763359   
+18              Maryland        526           565   25151992308   
+19         Massachusetts        397           417   20204390225   
+38        South Carolina       1112          1198   77866200776   
+31        North Carolina       1525          1653  125933327733   
+
+    land_area_sqkm  crash_density  
+7       158.316124     227.393137  
+28    19048.916230      35.015115  
+6      5046.731559      25.957394  
+8    138961.722096      24.783803  
+5     12541.690473      22.564741  
+37     2677.763359      22.406760  
+18    25151.992308      20.912856  
+19    20204.390225      19.649195  
+38    77866.200776      14.280907  
+31   125933.327733      12.109582  
+----
+
+We had Texas as the highest raw crash count previously, but here it disappeared from the top 10 list. Texas is geographically very big which makes crashes spread out over a large area. On the other hand, smaller states such as New Jersey and onwards were never seen and now they took over the top 10 list; they are geographically small but have a much denser infrastructure and high traffic volumnes, so while the total crashes is lower, they can have higher concentration of incidents per square km. Lastly, District of Columbia appears as a bit of an outlier in density results due to its very small land area compared to other states; since the calculation used division of number of crashes by land area, even small number of crashes is amplified. This could lead to some sensitivity.
+
+Try creating a mapped visualization for this, similar to what we did in question 3. 
+
+[source,python]
+----
+# Merge with map shapes (crashes_per_state)
+density_map = '''YOUR CODE HERE'''
+
+fig, ax = plt.subplots(figsize=(10,6))
+
+density_map.plot(column='crash_density', ax=ax, legend=True, edgecolor='white', linewidth=0.5)
+
+# Map output with label/title
+'''YOUR CODE HERE'''
+----
+
+You will see that the map is generally same coloured with not much variation at all. This is not necessarily a data problem, but a scaling problem in visualization. Remember there was one data point significantly higher than the rest (DC); since a linear scale was used, all other values get compressed into the same bin for colouring. We can use https://matplotlib.org/stable/api/_as_gen/matplotlib.colors.LogNorm.html[`norm=plt.matplotlib.colors.LogNorm()`], which transforms into a log scale, to fix the visualization.
+
+[source,python]
+----
+density_map.plot(column='crash_density', ax=ax, legend=True, edgecolor='white', linewidth=0.5, norm=plt.matplotlib.colors.LogNorm())
+----
+
+[cols="a,a", frame=none, grid=none]
+|===
+| .Original
+image::q4_before.png[Original map, 400, 500, align="center"]
+| .After scaling
+image::q4_after.png[Log scaled map with more distinct variation in colour, 400, 500, align="center"]
+|===
+
+Now there are distinct shades across states that were not visible previously. 
+
+.Deliverables
+====
+- 4a. Code and corresponding documentation, and outputs for all required sections in the question.
+- 4b. Take a look at the result for District of Columbia and write a few sentences on your interpretation. In this case and in general, are there any outliers? What is causing DC to have unusual numbers? 
+- 4c. Map outputs of both before and after scaling. Can this change spatial interpretation of fatal crash across states?
+====
+
+=== Question 5 (2 points)
+
+In previous questions, we looked at crash patterns and information at the state level, but there exists localized variations within a state. For instance, crashes in urban areas could differ from those occuring on rural places. To address this, we will examine pattern in a single state. 
+
+[big]#*Local Focus*#
+
+Let's filter our data to Indiana only and look at the crash distribution. We will colour each crash point by whether it happened on a rural or urban road using the `RUR_URB` column (this indicates whether crash happened in a rural or an urban setting).
+
+Below code will first tell us how many crashes happened in Indiana, and how they are split between rural and urban locations. 
+
+[source,python]
+----
+# Crashes in indiana only
+indiana_crashes = accidents[accidents['STATENAME'] == 'Indiana'].copy()
+# Indiana only state boundary
+indiana_boundary = contiguous_states[contiguous_states['NAME'] == 'Indiana']
+
+# Number of crashes in indiana_crashes
+print(f"Number of fatal crashes in Indiana (2021): '''YOUR CODE HERE'''")
+
+# Description of what we are printing below
+'''YOUR CODE HERE'''
+
+# Rural and Urban crashes counts
+'''YOUR CODE HERE'''
+----
+
+- indiana_crashes is a filtered dataset with just Indiana rows. 
+
+- For rural and urban crash counts, look at the column 'RUR_URBNAME', and we can use `value_counts()`.
+
+Now we visualize both on the same map. 
+
+[source,python]
+----
+fig, ax = plt.subplots(figsize=(8, 7))
+
+# Put indiana state boundary as the background
+indiana_boundary.plot(ax=ax, color='whitesmoke')
+
+# Crashes by rural & urban + different colours
+rural = indiana_crashes[indiana_crashes['RUR_URB'] == 1]
+urban = indiana_crashes[indiana_crashes['RUR_URB'] == 2]
+
+rural.plot(ax=ax, color='slategrey', markersize=3, label='Rural')
+urban.plot(ax=ax, color='lightsteelblue', markersize=3, label='Urban')
+----
+
+We can also add a legend manually; to do this, we use:
+
+[source,python]
+----
+import https://matplotlib.org/stable/api/patches_api.html[matplotlib.patches] as mpatches
+----
+
+Patches are geometric shapes we can draw on plot in matplotlib. This allows us to create patches and put in legend. In below code, we use in 'legend_elements' to define each parts and corresponding colours. This allows us to create 
+We could create legends automatically, but this is another way to do it while having more control over placement and design, especially if we want to be specific in a more complex plot.
+
+[source,python]
+----
+# Legend
+legend_elements = [mpatches.Patch(color='slategrey', label=f'Rural ({len(rural)} crashes)'),
+                   mpatches.Patch(color='lightsteelblue', label=f'Urban ({len(urban)} crashes)')]
+
+ax.legend(handles=legend_elements)
+
+# Map output with label/title
+'''YOUR CODE HERE'''
+----
+
+Above creates a list of legend elements. By using mpatches.patch(), Matplotlib knows to create coloured box in the legend. You can see the parameters where we can choose the legend colour box and label; we can also do custom formatting (it allows fstrings, value modifications, and getting certain stats like len()). 
+
+image::q5_rural_urban.png[Output map of Indiana crashes (rural, urban), width=40%, align="center"]
+
+Some things we can notice include the way they cluster. Urban crashes seem to be more merged around major population and transportation areas, while rural crashes are more spread out across the state; also, a lot of them are most likely occuring near highways or longer distance roads with attributes such as higher speed limits. 
+
+Now let's compare the fatality rates, and find out which of the two are more fatal on average. Please print the average fatality per crash for both areas. 
+
+[source,python]
+----
+rural_fatal = '''YOUR CODE HERE'''
+urban_fatal = '''YOUR CODE HERE'''
+
+print(f"Average fatalities (rural): {'''YOUR CODE HERE'''}")
+print(f"Average fatalities (urban): {'''YOUR CODE HERE'''}")
+----
+
+- For 'rural_fatal', use the dataset filtered to rural crashes only, and select the column that shows the death/fatal counts per crash. Then, compute average value. Use similar idea for 'urban_fatal', but only using urban rows and its statistic. 
+
+You will see below statistic: 
+
+[screen]
+----
+Average fatalities (rural): 1.1128608923884515
+Average fatalities (urban): 1.0542797494780793
+----
+
+Rural crashes have higher average fatalities per incident compared to that of urban crashes. Taking real world scenario into account, we could infer they could be caused by factors such as higher speed limits as mentioned previously, less access to safety features and emergency responders, and varying road conditions. 
+
+[big]#*https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.dissolve.html[Dissolve]*#
+
+Please print all unique values in the 'REGION' column of states_gdf.
+
+[source,python]
+----
+print('''YOUR CODE HERE''')
+----
+
+US Census Bureau has geographic region definition that uses single integer value to represent four US regions: Northeast, Midwest, South, and West.
+
+[screen]
+----
+Original Region Codes:
+['3' '2' '1' '4' '9']
+----
+
+- '9' is not part of the four standard regions, and we can think of them as unidentified by state or some other entry.
+
+We will combine the crash stats with state geometry/boundaries. Below merge matches rows using 'NAME' (state name) and keeps all states in contiguous_states and add in the crash data. 
+
+[source,python]
+----
+states_region = contiguous_states.merge(crashes_per_state, on='NAME', how='left')
+----
+
+Since coded values were used originally for each regions, we create readable region names. Below is a dictionary mapping numeric region codes to labels, where 1 = Northeast, 2 = Midwest, 3 = South, and 4 = West. 
+
+[source,python]
+----
+region_names = {'1': 'Northeast', '2': 'Midwest', '3': 'South', '4': 'West'}
+states_region['REGION_NAME'] = states_region['REGION'].map(region_names)
+----
+
+[source,python]
+----
+# Head of states_region
+'''YOUR CODE HERE'''
+----
+
+You will notice the the mapping operation is reflected. Take a look at 'REGION' and 'REGION_NAME' columns. For example, West Virginia has region 3 and the assigned name is South. You might also be able to infer some other information regarding how high or low crash counts and density are between regions relatively. 
+
+Now, we will use GeoPandas' `.dissolve()` . A way to think of it is like performing groupby with shapes. As the name suggests, it merges geometries within a group into one feature and aggregates all rows in a group. 
+
+[source,python]
+----
+regions_gdf = states_region.dissolve(by='REGION_NAME',
+                                       aggfunc={'crash_cnt': 'sum',
+                                                'total_fatals': 'sum',
+                                                'land_area': 'sum'}).reset_index()
+----
+
+- `states_region.dissolve()`: As mentioned, this groups geometries and data based on category. 
+• We used 'by='REGION_NAME'', meaning all states with same region name are grouped and combined into one geometry. 
+• By using 'aggfunc={}', we add all states for each of the three columns - crash_cnt, total_fatals, and land_area. We obtain the regional total. 
+
+Print regions_gdf, and we will get:
+
+[screen]
+----
+  REGION_NAME                                           geometry  crash_cnt  \
+0     Midwest  POLYGON ((-98.34819 36.99815, -98.34874 36.998...       7454   
+1   Northeast  MULTIPOLYGON (((-74.48282 39.28414, -74.48695 ...       3949   
+2       South  MULTIPOLYGON (((-80.18532 25.33851, -80.18697 ...      19394   
+3        West  MULTIPOLYGON (((-118.65436 33.07495, -118.6413...       8423   
+
+   total_fatals      land_area  
+0          8126  1943991852468  
+1          4185   419354636236  
+2         21156  2249835530078  
+3          9169  3041775201247  
+----
+
+Now we are at the last step of normalizing and creating visualization; we will be able to compare regions visually. Please complete the code below. The process will be quite similar to what we did previously. 
+
+[source,python]
+----
+# Convert land area from sq m to sq km
+regions_gdf['land_area_sqkm'] = '''YOUR CODE HERE'''
+
+# Calculate density with (total crashes/total area) * 1000
+regions_gdf['crash_density'] = '''YOUR CODE HERE'''
+
+# Print result highest to lowest
+'''YOUR CODE HERE'''
+----
+
+Then print the regional choropleth map, which will result in:
+
+[source,python]
+----
+fig, ax = plt.subplots(figsize=(10,6))
+
+regions_gdf.plot(column='crash_density', ax=ax, legend=True, edgecolor='white', linewidth=0.5)
+
+ax.set_title('Fatal Crash Density by Region — 2021')
+ax.set_axis_off()
+plt.tight_layout()
+plt.show()
+----
+
+image::q5_region.png[Regional choropleth map, 400, 500, align="center"]
+
+.Deliverables
+====
+- 5a. Code and corresponding documentation, and outputs for all required sections in the question.
+- 5b. Write a few sentences on your findings from the urban & rural map. What differences do you notice and what do you think the reasons are? Do you think this is related to fatality rates, and why?
+- 5c. Print regions_gdf and what insights can you get from the dataset initially? 
+====
