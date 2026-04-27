@@ -1,0 +1,762 @@
+:page-mathjax: true
+
+= Introduction to Linear Mixed Models
+
+== Project Objectives
+
+This is a past seminar project where we introduced linear mixed effects models and explore how they account for subject-level variability in longitudinal data. Although it was used for teaching purposes, it is still useful for introducing linear mixed models. 
+
+.Learning Objectives
+****
+- Understand the difference between fixed effects and random effects.
+- Compare simple linear regression to subject-specific regression lines.
+- Fit and interpret a linear mixed effects model using Python.
+- Extract and interpret subject-level random effects.
+****
+
+== Dataset
+
+- /anvil/projects/tdm/data/sleepstudy/sleepstudy.csv
+
+- sleepstudy : A longitudinal reaction time dataset commonly used to demonstrate linear mixed effects models. Please refer to the https://rdrr.io/cran/VCA/man/sleepstudy.html[sleepstudy documentation page on CRAN] for more info.
+
+
+== Introduction to Linear Mixed Effects Models
+
+++++
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_c8b6lvvc&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_ifb3r94m%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 860px;height: 540px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Introduction to Mixed Models"></iframe>
+++++
+
+
+image::mixedmodelsleepstudy.jpg[Days vs Reaction Time, 600, 450, loading=lazy, title="The line plot representing an example of different slopes and intercepts across subjects"]
+
+
+Mixed effects models are called "mixed" because they combine fixed effects and random effects within the same model. Fixed effects describe the overall population relationship. These are the primary effects we want to estimate, similar to the coefficients in a standard linear regression. Random effects capture group-level variation by allowing certain parameters (such as intercepts or slopes) to vary across groups. They allow certain parameters (such as intercepts or slopes) to vary across groups of repeated measurements. 
+
+When we collect repeated measurements from the same individual, those observations are not independent. A mixed model accounts for this dependency by allowing each individual to deviate from the overall population trend.
+
+
+Consider our sleep study dataset:
+
+* X: Days of sleep deprivation,  
+* Y: Reaction time,  
+* Each subject represents a different individual.  
+
+If we fit a simple linear regression:
+
+$Reaction \sim \beta_0 + \beta_1 \cdot Days$.
+
+In this model, we assume:
+
+* All subjects share the same baseline reaction time,  
+* Reaction time increases at the same rate for everyone,  
+* Any remaining differences are random noise.  
+
+However, when we examine the data more closely:
+
+* Some individuals begin with faster reaction times (lower intercepts),  
+* Others begin with slower reaction times (higher intercepts),  
+* The overall trend may be similar, but subjects differ in their starting point.  
+
+**What a Mixed Model Does**
+
+Rather than forcing one line to describe everyone, a mixed model assumes that there is an overall population trend, and individuals vary around that trend. Instead of writing $Reaction \sim Days$, we specify:
+
+$Reaction \sim Days + (1 \mid Subject)$
+
+This notation means:
+
+* $Days$ represents the fixed effect (the average slope across all subjects),  
+* $(1 \mid Subject)$ allows each subject to have their own intercept. 
+
+As a result:
+
+There is one average increase in reaction time per day of sleep deprivation, but each subject begins at a different baseline level.
+
+**Visual Interpretation**
+
+You can think of the model as:
+
+* One overall population line,  
+* Parallel subject-specific lines, 
+* Each line shifted vertically.  
+
+That vertical shift represents the random intercept. In other words, in a random intercept model, each subject's line follows the same slope but starts at a different height.  
+
+**Example Subject-Level Equations**
+
+Subject 371:
+
+$Reaction = 248.11 + 10.47 \cdot Days$,
+
+Subject 337:
+
+$Reaction = 323.59 + 10.47 \cdot Days$.
+
+Notice:
+
+* The slope (10.47) is the same for both subjects,  
+* The intercept differs, reflecting subject-level variation.  
+
+**Implementing a Random Intercept Model in Python**
+
+We can fit this model in Python using `statsmodels`:
+
+[source,python]
+----
+import statsmodels.formula.api as smf
+
+# Fit a mixed-effects model with a random intercept for Subject
+mixed_model = smf.mixedlm(
+    "Reaction ~ Days",
+    sleep_study_data,
+    groups=sleep_study_data["Subject"])
+
+mixed_results = mixed_model.fit()
+
+print(mixed_results.summary())
+----
+
+In this code:
+
+* `"Reaction ~ Days"` defines the fixed-effects portion of the model.
+* `groups=sleep_study_data["Subject"]` specifies that we want a random intercept for each subject.
+* The model summary reports:
+  - The fixed intercept,
+  - The fixed slope for Days,
+  - The variance of the random intercept,
+  - The residual variance.
+
+This framework allows us to estimate both the overall population relationship and subject-specific deviations in a unified model.
+
+== Questions
+
+=== Question 1 - Data Overview (2 points)
+++++
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_kgmu4emf&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_1tg0wfcz%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 860px;height: 540px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Question 1 Mixed Models"></iframe>
+++++
+
+.Deliverables
+====
+1a. Load the `sleep_study_data` dataset using the file path provided and display the first 5 rows along with the size of the data.
+
+[source,python]
+----
+import pandas as pd
+sleep_study_data = pd.read_csv('/anvil/projects/tdm/data/sleepstudy/sleepstudy.csv')
+----
+
+1b. Create a histogram of Reaction Time in the dataset. Write 1-2 sentences of your observations. + 
+1c. Determine the minimum and maximum values for `Days`, as well as the minimum and maximum values for `Reaction`.
+====
+
+.Solution
+****
+*1a.*
+
+[source,python]
+----
+import pandas as pd
+
+sleep_study_data = pd.read_csv('/anvil/projects/tdm/data/sleepstudy/sleepstudy.csv')
+
+# Display first 5 rows
+print(sleep_study_data.head())
+
+# Display the size (rows, columns)
+print("Shape:", sleep_study_data.shape)
+----
+
+*1b.*
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+
+plt.figure()
+plt.hist(sleep_study_data["Reaction"], bins=20, edgecolor="black")
+plt.xlabel("Reaction Time (ms)")
+plt.ylabel("Frequency")
+plt.title("Histogram of Reaction Times")
+plt.show()
+----
+
+_Observation:_ The distribution of reaction times is roughly unimodal and slightly right-skewed, with most values falling between approximately 200 and 400 milliseconds. A small number of subjects exhibit noticeably longer reaction times, indicating some right-tail variability.
+
+*1c.*
+
+[source,python]
+----
+print("Days  - Min:", sleep_study_data["Days"].min(),
+      " Max:", sleep_study_data["Days"].max())
+print("Reaction - Min:", sleep_study_data["Reaction"].min(),
+      " Max:", sleep_study_data["Reaction"].max())
+----
+
+The `Days` variable ranges from 0 to 9, and `Reaction` times span from roughly 194 ms to 466 ms.
+****
+
+=== Question 2 - Exploring the Relationship (2 points)
+
+++++
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_fx1rfk6k&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_ru789gz2%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 860px;height: 540px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Question 2 Mixed Models"></iframe>
+++++
+
+.Deliverables
+====
+2a. Determine whether there are any zero or `NA` values in the `Reaction` or `Subject` variables. If any are present, remove those observations from the dataset. +
+2b. Develop a graph that shows how Days and Reaction Times move together. +
+2c. What is the correlation between these two variables?
+====
+
+.Solution
+****
+*2a.*
+
+[source,python]
+----
+# Check for NA values
+print("NA counts:\n", sleep_study_data[["Reaction", "Subject"]].isna().sum())
+
+# Check for zero values
+print("Zero Reaction values:", (sleep_study_data["Reaction"] == 0).sum())
+print("Zero Subject values:", (sleep_study_data["Subject"] == 0).sum())
+
+# Remove rows with NA or zero in Reaction or Subject
+sleep_study_data = sleep_study_data[
+    sleep_study_data["Reaction"].notna() &
+    sleep_study_data["Subject"].notna() &
+    (sleep_study_data["Reaction"] != 0) &
+    (sleep_study_data["Subject"] != 0)
+]
+
+print("Clean dataset shape:", sleep_study_data.shape)
+----
+
+*2b.*
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+
+plt.figure()
+plt.scatter(sleep_study_data["Days"], sleep_study_data["Reaction"], alpha=0.6)
+plt.xlabel("Days of Sleep Deprivation")
+plt.ylabel("Reaction Time (ms)")
+plt.title("Days of Sleep Deprivation vs Reaction Time")
+plt.show()
+----
+
+*2c.*
+
+[source,python]
+----
+correlation = sleep_study_data["Days"].corr(sleep_study_data["Reaction"])
+print(f"Correlation between Days and Reaction: {correlation:.4f}")
+----
+
+The correlation between `Days` and `Reaction` is approximately **0.53**, indicating a moderate positive relationship — as days of sleep deprivation increase, reaction times tend to increase as well.
+****
+
+=== Question 3 - Simple Linear Regression (2 points)
+
+++++
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/983291/embedPlaykitJs/uiconf_id/56090002?iframeembed=true&amp;entry_id=1_08gwwqj3&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_0m5poxxn%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 860px;height: 540px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" title="Question 3 Mixed Models"></iframe>
+++++
+.Deliverables
+====
+3a. Complete the code below to fit a simple linear regression model with Reaction as the response variable and Days as the predictor. Report the estimated intercept and slope.
+
+[source,python]
+----
+import statsmodels.api as sm
+
+X = sleep_study_data["____"] # For YOU to fill in 
+y = sleep_study_data["____"] # For YOU to fill in 
+
+# Add intercept term
+X = sm.add_constant(X)
+
+# Fit model
+model = sm.OLS(y, X).fit()
+----
+
+3b. Use the code below to overlay the regression line from Question 3a on the scatterplot of `Reaction` versus `Days`. How well does this single regression line capture the variability across subjects? How do you think `Subject` might influence this relationship? Write 1–2 sentences reflecting on these questions.
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Create values for regression line (Days on x-axis)
+x_vals = np.linspace(
+    sleep_study_data["Days"].min(),
+    sleep_study_data["Days"].max(),
+    100)
+
+# Predicted Reaction values from fitted model
+y_vals = model.params["const"] + model.params["Days"] * x_vals
+
+# Plot
+plt.figure()
+plt.scatter(sleep_study_data["Days"], sleep_study_data["Reaction"], alpha=0.6)
+plt.plot(x_vals, y_vals)
+
+plt.xlabel("______") # For YOU to fill in
+plt.ylabel("______") # For YOU to fill in
+plt.title("______") # For YOU to fill in
+plt.show()
+----
+
+3c. Use the code below to select 10 unique `Subject` IDs and fit a separate simple linear regression of `Reaction` on `Days` for each subject. Plot the fitted regression lines on the same graph. What differences do you observe in the slopes or intercepts across subjects? Write 1–2 sentences explaining what this suggests about individual variability.
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+import numpy as np
+
+plt.figure()
+# Select 10 unique subjects
+subjects = sleep_study_data["Subject"].unique()[:10]
+for subject in subjects:
+    subset = sleep_study_data[sleep_study_data["Subject"] == subject]
+
+    # Only fit if enough observations
+    if len(subset) > 1:
+        m, b = np.polyfit(subset["Days"], subset["Reaction"], 1)
+
+        x_vals = np.linspace(
+            subset["Days"].min(),
+            subset["Days"].max(),
+            100)
+        y_vals = m * x_vals + b
+        plt.plot(x_vals, y_vals, label=f"Subject {subject}")
+
+plt.xlabel("_________")
+plt.ylabel("___________")
+plt.title("___________")
+plt.legend(title="Subject", bbox_to_anchor=(1.05, 1))
+plt.show()
+----
+====
+
+.Solution
+****
+*3a.*
+
+[source,python]
+----
+import statsmodels.api as sm
+
+X = sleep_study_data["Days"]   # predictor
+y = sleep_study_data["Reaction"]  # response
+
+# Add intercept term
+X = sm.add_constant(X)
+
+# Fit model
+model = sm.OLS(y, X).fit()
+print(model.summary())
+
+print(f"\nEstimated Intercept: {model.params['const']:.4f}")
+print(f"Estimated Slope (Days): {model.params['Days']:.4f}")
+----
+
+The estimated intercept is approximately **251.41 ms** and the slope is approximately **10.47 ms/day**, meaning reaction time increases by about 10.47 ms for each additional day of sleep deprivation.
+
+*3b.*
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+import numpy as np
+
+x_vals = np.linspace(
+    sleep_study_data["Days"].min(),
+    sleep_study_data["Days"].max(),
+    100)
+
+y_vals = model.params["const"] + model.params["Days"] * x_vals
+
+plt.figure()
+plt.scatter(sleep_study_data["Days"], sleep_study_data["Reaction"], alpha=0.6)
+plt.plot(x_vals, y_vals, color="red", linewidth=2, label="OLS Fit")
+
+plt.xlabel("Days of Sleep Deprivation")
+plt.ylabel("Reaction Time (ms)")
+plt.title("Reaction Time vs Days of Sleep Deprivation (OLS)")
+plt.legend()
+plt.show()
+----
+
+_Reflection:_ The single regression line captures the general upward trend but does not account for the wide vertical spread of points at each day value. This spread likely reflects substantial subject-to-subject differences in baseline reaction time, suggesting that `Subject` is an important source of variability that a simple linear model ignores.
+
+*3c.*
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+import numpy as np
+
+plt.figure()
+subjects = sleep_study_data["Subject"].unique()[:10]
+for subject in subjects:
+    subset = sleep_study_data[sleep_study_data["Subject"] == subject]
+    if len(subset) > 1:
+        m, b = np.polyfit(subset["Days"], subset["Reaction"], 1)
+        x_vals = np.linspace(subset["Days"].min(), subset["Days"].max(), 100)
+        y_vals = m * x_vals + b
+        plt.plot(x_vals, y_vals, label=f"Subject {subject}")
+
+plt.xlabel("Days of Sleep Deprivation")
+plt.ylabel("Reaction Time (ms)")
+plt.title("Subject-Specific Regression Lines (10 Subjects)")
+plt.legend(title="Subject", bbox_to_anchor=(1.05, 1))
+plt.tight_layout()
+plt.show()
+----
+
+_Observation:_ The lines vary noticeably in both their starting points (intercepts) and steepness (slopes) across subjects, indicating that individuals differ both in their baseline reaction times and in how strongly sleep deprivation affects them. This individual variability is precisely the kind of structure that a mixed effects model is designed to capture.
+****
+
+=== Question 4 - Individual Subject Models (2 points)
+
+.Deliverables
+====
+4a. Subset the data to include only observations for Subject 308 only. Create a scatterplot of Reaction versus Days and overlay the fitted simple linear regression line.
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+import numpy as np
+
+subset = sleep_study_data[sleep_study_data["Subject"] == ___]
+
+# Fit simple linear regression (Reaction ~ Days)
+m, b = np.polyfit(subset["Days"], subset["Reaction"], 1)
+
+# Create regression line values
+x_vals = np.linspace(subset["Days"].min(), subset["Days"].max(), 100)
+y_vals = m * x_vals + b
+
+# Plot
+plt.figure()
+plt.scatter(subset["Days"], subset["Reaction"], alpha=0.7)
+plt.plot(x_vals, y_vals)
+
+plt.xlabel("________")
+plt.ylabel("________")
+plt.title("________")
+
+# Add equation text on the plot
+eq_text = f"Reaction = {m:.2f} * Days + {b:.2f}"
+plt.text(
+    0.05, 0.95, eq_text,
+    transform=plt.gca().transAxes,
+    verticalalignment="top")
+
+plt.show()
+----
+
+4b. Now, subset the data to include only observations for Subject 309 only. Create a scatterplot of Reaction versus Days and overlay the fitted simple linear regression line.
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Subset data for Subject 309
+subset = sleep_study_data[sleep_study_data["Subject"] == ____]
+
+# Fit simple linear regression (Reaction ~ Days)
+m, b = np.polyfit(subset["Days"], subset["Reaction"], 1)
+
+# Create regression line values
+x_vals = np.linspace(subset["Days"].min(), subset["Days"].max(), 100)
+y_vals = m * x_vals + b
+
+# Plot
+plt.figure()
+plt.scatter(subset["Days"], subset["Reaction"], alpha=0.7)
+plt.plot(x_vals, y_vals)
+
+plt.xlabel("______")
+plt.ylabel("_____")
+plt.title("_______")
+
+# Add equation text on the plot
+eq_text = f"Reaction = {m:.2f} * Days + {b:.2f}"
+plt.text(
+    0.05, 0.95, eq_text,
+    transform=plt.gca().transAxes,
+    verticalalignment="top")
+
+plt.show()
+----
+
+4c. In 1-2 sentences explain What the major differences are between the two equations for each subject. Why do you think that is?
+
+====
+
+.Solution
+****
+*4a.*
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+import numpy as np
+
+subset = sleep_study_data[sleep_study_data["Subject"] == 308]
+
+m, b = np.polyfit(subset["Days"], subset["Reaction"], 1)
+
+x_vals = np.linspace(subset["Days"].min(), subset["Days"].max(), 100)
+y_vals = m * x_vals + b
+
+plt.figure()
+plt.scatter(subset["Days"], subset["Reaction"], alpha=0.7)
+plt.plot(x_vals, y_vals, color="steelblue", linewidth=2)
+
+plt.xlabel("Days of Sleep Deprivation")
+plt.ylabel("Reaction Time (ms)")
+plt.title("Subject 308: Reaction Time vs Days")
+
+eq_text = f"Reaction = {m:.2f} * Days + {b:.2f}"
+plt.text(0.05, 0.95, eq_text, transform=plt.gca().transAxes, verticalalignment="top")
+
+plt.show()
+----
+
+*4b.*
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+import numpy as np
+
+subset = sleep_study_data[sleep_study_data["Subject"] == 309]
+
+m, b = np.polyfit(subset["Days"], subset["Reaction"], 1)
+
+x_vals = np.linspace(subset["Days"].min(), subset["Days"].max(), 100)
+y_vals = m * x_vals + b
+
+plt.figure()
+plt.scatter(subset["Days"], subset["Reaction"], alpha=0.7)
+plt.plot(x_vals, y_vals, color="darkorange", linewidth=2)
+
+plt.xlabel("Days of Sleep Deprivation")
+plt.ylabel("Reaction Time (ms)")
+plt.title("Subject 309: Reaction Time vs Days")
+
+eq_text = f"Reaction = {m:.2f} * Days + {b:.2f}"
+plt.text(0.05, 0.95, eq_text, transform=plt.gca().transAxes, verticalalignment="top")
+
+plt.show()
+----
+
+*4c.*
+
+_Explanation:_ Subject 308 tends to have a steeper slope than Subject 309, meaning sleep deprivation increases their reaction time more rapidly. The intercepts also differ, reflecting different baseline reaction speeds when fully rested. These differences highlight natural individual variability — people respond to sleep deprivation in distinct ways, which is exactly why subject-level random effects are valuable in a mixed model.
+****
+
+=== Question 5 - Mixed Effects Model (2 points)
+
+.Deliverables
+====
+5a. Use the code below to run a mixed-effects model predicting Reaction from Days, including a random intercept for Subject. Use the same fixed effect as in the simple linear model.
+
+[source,python]
+----
+import statsmodels.formula.api as smf
+
+# Mixed-effects model with random intercept for Subject
+mixed_model = smf.mixedlm(
+    "Reaction ~ Days",
+    sleep_study_data,
+    groups=sleep_study_data["Subject"])
+
+mixed_results = mixed_model.fit()
+
+print(mixed_results.summary())
+----
+
+5b. Use the model summary to identify the population-level fixed effects and the subject-specific random intercept effects. In 2–3 sentences, describe how the intercept varies across subjects.
+
+5c. Use the code below to extract and display the subject-specific random intercept effects from the mixed-effects model. What do these values represent? In 2–3 sentences, explain how these subject-level deviations modify the overall intercept and what this tells you about individual baseline reaction times.
+
+[source,python]
+----
+random_effects = mixed_results.random_effects
+for Subject, effect in random_effects.items():
+    print(f"Subject: {Subject}, Random Intercept: {effect.values[0]:.3f}")
+----
+====
+
+.Solution
+****
+*5a.*
+
+[source,python]
+----
+import statsmodels.formula.api as smf
+
+mixed_model = smf.mixedlm(
+    "Reaction ~ Days",
+    sleep_study_data,
+    groups=sleep_study_data["Subject"])
+
+mixed_results = mixed_model.fit()
+
+print(mixed_results.summary())
+----
+
+Running this model produces a summary that includes the fixed-effect intercept (~251 ms), the fixed-effect slope for `Days` (~10.47 ms/day), the variance of the random intercepts across subjects, and the residual variance.
+
+*5b.*
+
+From the model summary, the **fixed intercept** represents the average baseline reaction time across all subjects (~251 ms), and the **fixed slope** for `Days` (~10.47) represents the average increase in reaction time per day of sleep deprivation. The random intercept variance (Group Var) quantifies how much subjects differ from this average baseline — a large value indicates that some subjects start considerably faster or slower than average, confirming that a single intercept is insufficient to describe all individuals.
+
+*5c.*
+
+[source,python]
+----
+random_effects = mixed_results.random_effects
+for Subject, effect in random_effects.items():
+    print(f"Subject: {Subject}, Random Intercept: {effect.values[0]:.3f}")
+----
+
+Each random intercept value represents the subject's **deviation** from the overall population intercept. A subject with a random intercept of, say, +40 has a baseline reaction time about 40 ms higher than average, while one with −30 is 30 ms faster than average. Adding these deviations to the fixed intercept gives each subject's personal starting point, allowing the model to capture individual differences in baseline performance while still estimating a single shared slope across the population.
+****
+
+=== Question 6 - Subject Comparisons (2 points)
+
+.Deliverables
+====
+6a. Use the mixed-effects model and the code below (not the SLR model) to compare two specific subjects 371 and 337 by plotting their subject-specific regression lines.
+
+[source,python]
+----
+import statsmodels.formula.api as smf
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Fit mixed model
+mixed_model = smf.mixedlm(
+    "Reaction ~ Days",
+    sleep_study_data,
+    groups=sleep_study_data["Subject"])
+
+mixed_results = mixed_model.fit()
+
+# Fixed effects
+fixed_intercept = mixed_results.fe_params["Intercept"]
+fixed_slope = mixed_results.fe_params["Days"]
+
+# Extract random intercepts
+random_effects = mixed_results.random_effects
+
+# Choose subjects
+subject_1 = ___
+subject_2 = ___
+
+# Subject-specific intercepts
+intercept_1 = fixed_intercept + random_effects[subject_1].values[0]
+intercept_2 = fixed_intercept + random_effects[subject_2].values[0]
+
+# X values
+x_vals = np.linspace(
+    sleep_study_data["Days"].min(),
+    sleep_study_data["Days"].max(),
+    100)
+
+# Predicted lines
+y_1 = intercept_1 + fixed_slope * x_vals
+y_2 = intercept_2 + fixed_slope * x_vals
+
+plt.figure()
+
+# Plot lines
+plt.plot(x_vals, y_1, linewidth=2, label=f"Subject {subject_1}")
+plt.plot(x_vals, y_2, linewidth=2, label=f"Subject {subject_2}")
+
+plt.xlabel("______")
+plt.ylabel("______")
+plt.title("______")
+
+# Add equations to plot
+eq1 = f"S371: Reaction = {intercept_1:.2f} + {fixed_slope:.2f}*Days"
+eq2 = f"S337: Reaction = {intercept_2:.2f} + {fixed_slope:.2f}*Days"
+
+plt.text(0.02, 0.95, eq1, transform=plt.gca().transAxes, verticalalignment="top")
+plt.text(0.02, 0.88, eq2, transform=plt.gca().transAxes, verticalalignment="top")
+
+plt.legend()
+plt.show()
+----
+
+6b. Write 1-2 sentences on what you notice about the differences between the two lines.
+
+====
+
+.Solution
+****
+*6a.*
+
+[source,python]
+----
+import statsmodels.formula.api as smf
+import numpy as np
+import matplotlib.pyplot as plt
+
+mixed_model = smf.mixedlm(
+    "Reaction ~ Days",
+    sleep_study_data,
+    groups=sleep_study_data["Subject"])
+
+mixed_results = mixed_model.fit()
+
+fixed_intercept = mixed_results.fe_params["Intercept"]
+fixed_slope = mixed_results.fe_params["Days"]
+
+random_effects = mixed_results.random_effects
+
+subject_1 = 371
+subject_2 = 337
+
+intercept_1 = fixed_intercept + random_effects[subject_1].values[0]
+intercept_2 = fixed_intercept + random_effects[subject_2].values[0]
+
+x_vals = np.linspace(
+    sleep_study_data["Days"].min(),
+    sleep_study_data["Days"].max(),
+    100)
+
+y_1 = intercept_1 + fixed_slope * x_vals
+y_2 = intercept_2 + fixed_slope * x_vals
+
+plt.figure()
+plt.plot(x_vals, y_1, linewidth=2, label=f"Subject {subject_1}")
+plt.plot(x_vals, y_2, linewidth=2, label=f"Subject {subject_2}")
+
+plt.xlabel("Days of Sleep Deprivation")
+plt.ylabel("Reaction Time (ms)")
+plt.title("Mixed Model: Subject-Specific Lines for Subjects 371 and 337")
+
+eq1 = f"S371: Reaction = {intercept_1:.2f} + {fixed_slope:.2f}*Days"
+eq2 = f"S337: Reaction = {intercept_2:.2f} + {fixed_slope:.2f}*Days"
+
+plt.text(0.02, 0.95, eq1, transform=plt.gca().transAxes, verticalalignment="top")
+plt.text(0.02, 0.88, eq2, transform=plt.gca().transAxes, verticalalignment="top")
+
+plt.legend()
+plt.show()
+----
+
+*6b.*
+
+The two lines are parallel, they share the same slope (~10.47 ms/day) because the random intercept model constrains all subjects to have the same rate of change. The only difference is their vertical position: Subject 337 has a noticeably higher intercept (~323 ms) compared to Subject 371 (~248 ms), indicating that Subject 337 had a slower baseline reaction time even before sleep deprivation began.
+****
+
+
