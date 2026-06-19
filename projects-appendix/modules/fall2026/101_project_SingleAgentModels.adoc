@@ -1,0 +1,1098 @@
+= TDM 10[]00: Project [] - Single Agent Models
+
+== Project Objectives
+
+Motivation: Large Language Models (LLMs) can generate rext, but many tasks require them to interact with external systems, and to make decisions based on available information. AI agents extend what LLMs can do by allowing the model to use tools, follow workflows, and complete tasks on behalf of users.
+
+Context: In this project, students will build a single-agent system using LangGraph, LangChain, Ollama, and a customer order dataset. Students will create tools, design agent workflows, connect the agent to a dataset, and implement safeguards to ensure the agent follows set rules. 
+
+Scope: AI agents, LangGraph, LangChain, tool calling
+
+.Learning Objectives
+****
+- Understand the purpose and workflow of a single-agent system.
+- Build agent workflows using LangGraph and state-based execution.
+- Connect an agent to an external dataset.
+- Set rules for agent behavior to ensure reliability.
+****  
+
+== Dataset
+- /anvil/projects/tdm/data/orders/Superstore_modified.csv
+
+### Superstore
+This dataset contains a collection of insights into sales, customer behavior, and product performance of a store's sales.  There are 22 columns and nearly 10,000 rows of data. The columns cover many details from each order placed with this store, describing who placed the order, what item was ordered, what country it was from, and more. 
+
+Some of the columns from the Superstore dataset we will be working with include:
+
+- `Order ID`: representing the origin country, year, and a code unique to the order
+- `Customer Name`: name connected to the user who placed the order
+- `Order Status`: current status of the order
+
+The Order Status column starts only containing "Shipped" and "Pending" values. However, thoughout this project, we will modify it by "cancelling" certain orders. Use `myDF.value_counts()` to check how these values have shifted as you go. 
+
+== Questions
+image::pusheen_computer.jpg[align=center, width=60%]
+
+Use 4 cores for this project!
+
+=== Question 1 (2 points)
+In an agent system, an autonomous agent uses artificial intelligence to perceive their environment, make decisions, and take actions to achieve a set goal. 
+
+There are two kinds of agent systems:
+
+- Single-agent system - a system that has a single agent accessing multiple tools, and that solves the set task by itself
+ - Multi-agent system - a network of agents working together, each with its own specialization in certain skills or knowledge
+
+Single-agent systems can be used across many different contexts. Our agent will act as a customer support chatbot, so it needs to be able to handle customers' FAQs, order status requests, and to follow company policy over user demand. These systems do need to be running using an LLM, so we will be using an Ollama server. Run `/anvil/projects/tdm/bin/ollama serve` in a new Terminal window. 
+
+[NOTE]
+====
+To check what Ollama models you currently have, do this in a second Terminal window:
+
+[source,Bash]
+----
+/anvil/projects/tdm/bin/ollama list
+----
+
+In the case that your models have been cleared, run this in the Terminal to pull llama3.2, and define a model that uses 2 threads:
+
+[source,Bash]
+----
+/anvil/projects/tdm/bin/ollama pull llama3.2
+
+cat > ~/mymodel << HERE
+FROM llama3.2
+PARAMETER num_thread 2
+HERE
+
+/anvil/projects/tdm/bin/ollama create llama3.2-2 -f ~/mymodel
+----
+====
+
+Agents are given a set of tools that they are able to reference when asked a specific question. When there is a user asking to cancel their order, the system should have clear instructions on how the agent actually goes about doing this. 
+
+[source,Python]
+----
+from langchain.tools import tool
+
+@tool
+def cancel_order(order_id: str) -> str:
+    """Cancel an order that has not shipped."""
+    return f"Cancel order {order_id}."
+
+TOOLS = {
+    "cancel_order": cancel_order
+}
+----
+
+[NOTE]
+====
+Any tools you define for the model should also be added to the `TOOLS` lookup dictionary. This way, we don't have to pass each tool's definition into the agent's context window each time we need to use it.
+====
+
+Next, define a graph state. 
+
+[source,Python]
+----
+from typing_extensions import TypedDict
+from langgraph.graph import StateGraph
+
+class GraphState(TypedDict):
+    order_id: dict
+    messages: list
+----
+
+`LangGraph` passes a shared state object, basically saying that this graph will store `order_id` and `messages`. This will be more directly relevant in our testing. 
+
+Create the LLM - this is where the Ollama server comes in. Set the parameters so the model being selected is the llama3.2-2 one, and set `temperature` to 0 - this makes the output less random. The `llm` can only generate text, so we need to bind it with each of the tools we've defined so it can generate tool calls.
+
+[source,Python]
+----
+from langchain_ollama import ChatOllama
+
+# define the LLM
+llm = ChatOllama(
+    model="llama3.2-2",
+    temperature=0
+)
+
+# bind the tools
+llm_with_tools = llm.bind_tools(list(TOOLS.values()))
+----
+
+Every time the graph runs, there should be a function `call_model` that executes. This is our main agent logic. It tracks conversation history and order information, creates a prompt for the system, and has two model calls. 
+
+In the first model call, the model receives the prompt and the user's request. If the message is direct, like "cancel my order", it should easily determine which tool is needed, and outputs a message representing the tool result. 
+
+In the second model call, the model receives the prompt, user request, assistant's tool call, and the tool's response, and is then able to generate a final response. For cancelling an order, this could look like "Order [....] has been cancelled".
+
+[source,Python]
+----
+def call_model(state: GraphState):
+
+    order_id = state.get("order", {"order_id": "UNKNOWN"})
+    messages = state["messages"]
+
+    prompt = f"""
+    You are an ecommerce support agent.
+    
+    ORDER ID: {order_id}
+
+    Rules:
+    - To cancel an order, call the cancel_order tool.
+    - Tool results are final and accurate.
+    - Always explain tool results clearly.
+    """
+
+    conversation = [SystemMessage(content=prompt)] + messages
+
+    outputs = []
+
+    # first model call
+    response = llm_with_tools.invoke(conversation)
+    outputs.append(response)
+    conversation.append(response)
+
+    # tool execution
+    if response.tool_calls:
+        for tc in response.tool_calls:
+            tool_name = tc["name"]
+            tool = TOOLS[tool_name]
+
+            result = tool.invoke(tc["args"])
+            
+            tool_msg = ToolMessage(
+                content=result,
+                tool_call_id=tc["id"]
+            )
+    
+            outputs.append(tool_msg)
+            conversation.append(tool_msg)
+
+    # second model call
+        final_response = llm_with_tools.invoke(conversation)
+        outputs.append(final_response)
+
+    return {
+        "messages": outputs,
+           "order_id": order_id
+    }
+----
+
+Finally, use LangGraph to create a graph to be the state's structure. Add the node called "assistant" to run the `call_model()` function we just defined. And create an entry point for where the graph should start, as well as a finish point for where the graph ends. That way, the workflow should be a very simple graph that goes start -> assistant -> end. 
+
+[source,Python]
+----
+# graph
+def construct_graph():
+
+    graph = StateGraph(GraphState)
+
+    graph.add_node("assistant", call_model)
+
+    graph.set_entry_point("assistant")
+    graph.set_finish_point("assistant")
+
+    return graph.compile()
+
+graph = construct_graph()
+----
+
+.Deliverables
+====
+1.1 Write definitions for the `cancel_order` tool +
+1.2 Add comments throughout the `call_model()` function to explain what each part does +
+1.3 Run tests to verify that the `cancel_order` tool is working with the agent's logic workflow:
+
+[source,Python]
+----
+from langchain_core.messages import (
+    HumanMessage,
+    SystemMessage,
+    ToolMessage
+)
+
+# test using fake order IDs
+tests = [
+    (
+        "CANCEL ORDER TEST #1",
+        "B73973",
+        "Please cancel order #B73973."
+    )
+]
+
+for name, order_id, prompt in tests:
+    result = graph.invoke({
+        "messages": [HumanMessage(content=prompt)],
+        "order_id": {"order_id": order_id}
+    })
+
+    print(f"\n{name}")
+
+    for msg in result["messages"]:
+        print(f"\n{type(msg).__name__}")
+        print(msg.content)
+----
+====
+
+=== Question 2 (2 points)
+What we did in Question 1 is really important for the base of this project. However, we will continue to modify these long sections of code in each of the following questions, thus creating copies of each modified section, which would make the Python Notebook huge, and messy to work in. If this were a project where we're working to build an agent that some company is going to use, or that is going to be looked back on beyond this project, these long sections of code would be split into a few different files:
+
+- `tools.py`
+- `state.py`
+- `graph.py`
+
+We will also create these new Python files. 
+
+==== tools.py
+This file needs to contain anything related to creating the tools for your agent. That includes each tool's definition, and the `TOOLS` dictionary. 
+
+[source,Python]
+----
+# tools.py
+from langchain.tools import tool
+
+@tool
+def cancel_order(order_id: str) -> str:
+.....
+....
+
+TOOLS = {
+    .....
+    ....
+}
+----
+
+==== state.py
+This file is where definition of what information flows through the graph gets stored. 
+
+[source,Python]
+----
+# state.py
+
+from typing_extensions import TypedDict
+
+class GraphState(TypedDict):
+    order_id: dict
+    messages: list
+----
+
+==== graph.py
+This is where much of the remaining code from Question 1 goes. `graph.py` should hold the creation of the LLM, agent, and graph. The agent includes everything within `call_model()`, so the messages from the user, agent prompt, first model call, and second model call. The graph is where we're telling the agent what steps to take from start to finish - this is also important to include in `graph.py`.
+
+[source,Python]
+----
+# graph.py
+
+from langgraph.graph import StateGraph
+from langchain_core.messages import (
+    SystemMessage,
+    ToolMessage
+)
+from langchain_ollama import ChatOllama
+from state import GraphState
+from tools import TOOLS
+
+# define the LLM
+llm = ChatOllama(
+    .....
+    ...
+)
+
+# bind the model with the tools
+llm_with_tools = llm.bind_tools([
+    .....
+    ...
+])
+
+##### agent
+def call_model(state: GraphState):
+......
+...
+    return {
+        "messages": outputs,
+           "order_id": order_id
+    }
+
+##### graph
+def construct_graph():
+.......
+....
+    return graph.compile()
+----
+
+At the top of the "Question 2" section of your notebook, run
+
+[source,Python]
+----
+%load_ext autoreload
+%autoreload 2
+----
+
+...so that when something changes in `tools.py`, `state.py`, or `graph.py`, the environment knows to automatically reload anything from the imported modules that have changed. 
+
+To see how the agent handles the `cancel_order` tool, we only have to construct the graph, and run tests. 
+
+[source,Python]
+----
+from graph import construct_graph
+
+# this must be run each time anything in the python files changes
+# otherwise the graph will not be updated
+# even while using auto-reload
+graph = construct_graph()
+----
+
+[source,Python]
+----
+# import again if needed
+from langchain_core.messages import HumanMessage
+
+# (Same test as from Question 1)
+tests = [
+    (
+        "CANCEL ORDER TEST",
+        "B73973",
+        "Please cancel order #B73973."
+    )
+]
+
+for name, order_id, prompt in tests:
+    result = graph.invoke({
+        "messages": [HumanMessage(content=prompt)],
+        "order_id": {"order_id": order_id}
+    })
+
+    print(f"\n{name}")
+
+    for msg in result["messages"]:
+        print(f"\n{type(msg).__name__}")
+        print(msg.content)
+----
+
+
+.Deliverables
+====
+2.1 Create three new files to contain the agent system code +
+2.2 Fill in `tools.py`, `state.py`, and `graph.py` with their respective code sections from Question 1 +
+2.3 Run '%load_ext autoreload' and '%autoreload 2' so your environment automatically updates as the Python files do. Use `graph = construct_graph()` to reconstruct the graph with these updates +
+2.4 In your notebook, run:
+
+[source,Python]
+----
+%%bash
+cat tools.py
+----
+
+[source,Python]
+----
+%%bash
+cat state.py
+----
+
+[source,Python]
+----
+%%bash
+cat graph.py
+----
+
+....to print the contents of these files.
+====
+
+=== Question 3 (2 points)
+Read in the Superstore Sales dataset as `myDF` using the Pandas library. 
+
+Up to this point, we haven't actually been working with any real datasets - our tests used a fake order ID (#B73973). It could be really cool to take this agentic system and test it using a real dataset. The Superstore Sales dataset contains information about thousands of orders made by many different customers through the time this data was being tracked. 
+
+The `Order Status` column tracks if the customers' orders are "Shipped", "Pending", or "Cancelled". We'll have to make an additional tool that will check that the order has not already been shipped before calling `cancel_order`. 
+
+In the `get_order_status` tool, the agent should be given a prompt that instructs it to view the current status of an order, and return the status and ID of the order. This will be defined in `tools.py`, as follows:
+
+[source,Python]
+----
+# tools.py
+
+from langchain.tools import tool
+
+# for YOU to fill in
+# 1. get_order_status prompt for the agent 
+# 2. get_order_status return message
+# 3. add get_order_status to the TOOLS dictionary
+
+# get order status tool
+@tool
+def get_order_status(order_id: str) -> str:
+    """........"""
+    return f"........."
+
+# cancel orders tool
+@tool
+def cancel_order(order_id: str) -> str:
+    """Cancel an order that has not shipped."""
+    return f"Cancel order {order_id}."
+
+# dictionary
+TOOLS = {
+    .....
+    "cancel_order": cancel_order
+}
+----
+
+For the graph state, there are two changes:
+
+- `order_id: str` (was previously a dictionary). 
+- `df: pd.DataFrame`- allows us to connect the agent to a dataset; we'll then search for real order IDs from the row entries.
+
+In `graph.py`, we have to modify the `call_model()` function. The definition for `order_id` changes now that it is defined as a string (simpler than before), and we have to define what should be used as `df`. 
+
+[source,Python]
+----
+# graph.py
+
+# simpler than the original (order_id = state.get("order", {"order_id": "UNKNOWN"}))
+    order_id = state["order_id"]
+# define df to be whatever dataframe is given to the agent
+    df = state["df"]
+----
+
+The prompt is where you can set specific rules for the agent that might not be set within the tools or other sections of code. We now have two tools (`cancel_order`, `get_order_status`) so having the rule "To cancel an order, call the `cancel_order` tool." doesn't quite work, as no rules are yet specifically telling the agent how to deal with the `get_order_status` tool. 
+
+Example for one way to update your prompt / rules:
+
+[source,Python]
+----
+# graph.py
+
+# changing the prompt will affect the result of using the agent
+# it's OK to have a long prompt or lots of set rules
+# Most important is that the intent is clear for the agent
+
+    prompt = f"""
+        You are an ecommerce support agent.
+        
+        ORDER ID: {order_id}
+
+        Rules:
+        - Use tools when needed
+        - Tool results are final and accurate.
+        - Always explain tool results clearly.
+        """
+----
+
+It's now more important to determine how the agent should execute its set of tools, as there are now two of them. Before, the entire tool execution section could just focus on telling the agent to deal with the fake order we were testing on. Now, to cancel an order, the agent must ensure that the order has not already been shipped (looking at the `Order Status` column) before allowing it to be cancelled. 
+
+When using the `cancel_order` tool, if the status of an order is "Shipped", the result should be a message saying that it has already shipped and thus cannot be cancelled. Cancellation should also be denied if the order has already been cancelled - orders can't be cancelled twice. Only in cases where it is currently "Pending" can it be cancelled - the agent is told to switch the "Pending" status to then be "Cancelled". 
+
+[source,Python]
+----
+# graph.py
+
+    # tool execution
+    if response.tool_calls:
+        for tc in response.tool_calls:
+            tool_name = tc["name"]
+
+            ##### cancel_order 
+            if tool_name == "cancel_order":
+                row = df[df["Order ID"] == order_id]
+                status = row.iloc[0]["Order Status"]
+                
+            # if the order has been shipped,
+            # nothing changes
+                if status == "Shipped":
+                    result = (
+                        f"Order {order_id} has already shipped "
+                        f"and cannot be cancelled."
+                    )
+
+            # if the order has already been cancelled
+            # nothing changes
+                elif status == "Cancelled":
+                    result = (
+                        f"Order {order_id} is already cancelled."
+                    )
+                    
+            # other cases (order "Pending")
+            # order status becomes "Cancelled"
+                else:
+                    df.loc[
+                        df["Order ID"] == order_id,
+                        "Order Status"
+                    ] = "Cancelled"
+            
+                    result = (
+                        f"Order {order_id} cancelled successfully."
+                    )
+
+
+            ##### get_order_status 
+            elif tool_name == "get_order_status":
+            .....
+            ....
+            ...
+----
+
+Now, if the agent is told to use the `get_order_status` tool, it needs to know to take `df`, and search its rows to find the relevant order ID. With that row (or rows, if the person ordered multiple items), it should find the order status of that order, and save that to the result. This will allow the agent to determine if it is allowed to cancel the order or not. 
+
+[source,Python]
+----
+# graph.py
+
+# tool execution
+    if response.tool_calls:
+        for tc in response.tool_calls:
+            tool_name = tc["name"]
+
+            ##### cancel_order
+            if tool_name == "cancel_order":
+            ......
+            ....
+            ...
+
+            ##### get_order_status
+            elif tool_name == "get_order_status":
+            
+                row = df[df["Order ID"] == order_id]
+            
+                result = (
+                    f"Status: "
+                    f"{row.iloc[0]['Order Status']}"
+                )
+
+            tool_msg = ToolMessage(
+                content=result,
+                tool_call_id=tc["id"]
+            )
+    
+            outputs.append(tool_msg)
+            conversation.append(tool_msg)
+----
+
+[NOTE]
+====
+At the very end of `call_model()`, make sure to update what is being returned, so it matches what is requried by the state:
+
+[source,Python]
+----
+    return {
+        "messages": outputs,
+        "order_id": order_id,
+        "df": df
+    }
+----
+====
+
+[IMPORTANT]
+====
+You must use `graph = construct_graph()` in your notebook to reconfigure the graph with any changes made in the Python files. 
+====
+
+.Deliverables
+====
+3.1 Print the value counts of the *original* `Order Status` column +
+3.2 Print the tail of the dataset to view rows #9989-9993. Run tests using this sample code:
+
+[source,Python]
+----
+tests = [
+    # test using real information from rows of the dataset
+
+    # from row #9993
+    (
+        "CANCEL ORDER - TEST #1",
+        "CA-2014-119914",
+        "Please cancel order CA-2014-119914."
+    ),
+    # from rows #9990-9992 (one order, three rows)
+    (
+        "ORDER STATUS - TEST #2",
+        "CA-2014-121258",
+        "Where is my order CA-2014-121258?"
+    )
+]
+
+for name, order_id, prompt in tests:
+    result = graph.invoke({
+        "messages": [HumanMessage(content=prompt)],
+        "order_id": order_id,
+        "df": myDF
+    })
+
+# this is important!!!!!!
+# if myDF isn't updated with the results, 
+# the rows will not show that the Order Status of the order
+# you cancelled actually changed
+    myDF = result["df"]
+
+    print(f"\n{name}")
+
+    for msg in result["messages"]:
+        print(f"\n{type(msg).__name__}")
+        print(msg.content)
+----
+
+3.3 Print the value counts of the `Order Status` column after successfully cancelling at least one order +
+3.4 In your notebook, run:
+
+[source,Python]
+----
+%%bash
+cat tools.py
+----
+
+[source,Python]
+----
+%%bash
+cat state.py
+----
+
+[source,Python]
+----
+%%bash
+cat graph.py
+----
+
+....to print the contents of these files.
+====
+
+=== Question 4 (2 points)
+With many companies beginning to use AI for tasks that used to be done manually by humans, it is very important that they are aware of the risks that could occur, and know how they would be handled in the case that they happen. The prompts given to the agents are suggestions on how it should opperate, but these models can still ignore these things we set as rules unless they're specifically put into its code. 
+
+I.e. 
+[source,Python]
+----
+# the agent can sometimes ignore this 
+prompt = f""" 
+Do not cancel the order if it doesn't belong to the person making the request 
+""" 
+----
+vs. 
+
+[source,Python]
+----
+# this is a set rule in the agent's programming
+if row.iloc[0]["Customer Name"] != customer_name:
+    result = "You do not own this order. Cancellation denied."
+----
+
+[NOTE]
+====
+There are a lot of interesting articles on this subject. Here are some: 
+
+- https://dev.to/aws/ai-agent-guardrails-rules-that-llms-cannot-bypass-596d[AI Agent Guardrails: Rules That LLMs Cannot Bypass]
+- https://auth0.com/blog/why-ai-agents-need-their-own-permission-model/[Why AI Agents Need Their Own Permission Model]
+- https://www.reddit.com/r/AI_Agents/comments/1quvalz/who_owns_it_when_agents_go_off_the_rails/[Who owns it when agents go off the rails?]
+
+There is still a lot of discussion on how exactly accountability should be handled with AI agents. Something most people can agree on is that there should be clear set rules that cannot be ignored for if the AI agent is doing anything that would be impactful in a project, especially related to users and security tasks. 
+====
+
+Currently, if we provide the order ID for an order that is in the "Pending" shipping status, the agent will cancel it. This is great, in theory. But this also allows us to cancel any pending order, even if we're not the owner of it. Which is not secure for a system at all. At the very least, there should be a check verifying that the user making the cancellation request is also the same user who placed the order in the first place. 
+
+We have to make some changes to our Python files to implement this;
+
+[source,Python]
+----
+# tools.py
+
+# no new tools for this question!
+----
+
+To update the graph state, we need to add a field for the customer's name as an field in the memory space. So when the agent is given a name, it will be able to inject this bit of personalization into its prompts - for example, if the agent is given the name 'Tom', it can say things like "Sorry Tom, but your order cannot be cancelled.", which can really help with the user experience, in addition to it being used as a security verification step in order processing. 
+
+[source,Python]
+----
+# state.py
+
+# add customer_name to the graph state
+# customer_name should be stored as a **string**
+class GraphState(TypedDict):
+    order_id: str
+    messages: list
+    # add customer_name
+    df: pd.DataFrame
+----
+
+The agent should know to store the state's `customer_name` as the user's name. This gets defined at the very start of `call_model()`:
+
+[source,Python]
+----
+# graph.py
+
+# define the LLM
+.....
+# bind the tools
+....
+
+##### agent
+def call_model(state: GraphState):
+    order_id = state["order_id"]
+    messages = state["messages"]
+    # define customer_name = .....
+    df = state["df"]
+----
+
+The prompt is our way of "talking" to the agent before it begins testing, so there should also be rules in the prompt that cover how we want the agent to deal with customer identification. These won't directly show up in the agent's response to the user, but it is very important to give clear details here.
+
+[source,Python]
+----
+# graph.py
+
+    # clearly highlight that customer_name is what the customer should be called
+    prompt = f"""
+    You are an ecommerce support agent.
+    
+    ORDER ID: {order_id}
+    CUSTOMER: {customer_name}
+    ......
+    ....
+    """
+----
+
+It is also important to update the rules in the prompt so the agent knows specifically how you want it to follow the new code it's been given. 
+
+[NOTE]
+====
+There isn't a set way you should write out the "Rules:" section of the prompt. The following is an example of a good set of rules to tell this agent to abide by:
+
+[source,Python]
+----
+Rules:
+- Ownership verification is handled by the system.
+- Do not ask customers to verify ownership.
+- Use tools when needed.
+- Tool results are final and accurate.
+- If a tool reports success, inform the customer of the successful result.
+----
+====
+
+If the customer's name does not match that which is in the same row as the entered order ID, then the order cancellation request should be denied. This is the top priority, and should be determined before the order's status is even assessed. 
+
+[source,Python]
+----
+# graph.py
+
+            ##### cancel_order
+            if tool_name == "cancel_order":
+                row = df[df["Order ID"] == order_id]
+                status = row.iloc[0]["Order Status"]
+
+            # if the customer does not own the order.....
+                if row.iloc[0]["Customer Name"] != customer_name:
+                    result = "You do not own this order."
+                
+            # if the order has been shipped
+                elif status == "Shipped":
+                    result = (
+                        f"Order {order_id} has already shipped and cannot be cancelled."
+                    )
+
+            # if the order has already been cancelled
+            .......
+            ....
+
+            ##### get_order_status
+            elif tool_name == "get_order_status":
+
+                row = df[df["Order ID"] == order_id]
+                
+                # if the customer does not own the order.....
+                if row.iloc[0]["Customer Name"] != customer_name:
+                    result = "You do not own this order."
+
+                else:
+
+                    result = (
+                        f"Status: "
+                        f"{row.iloc[0]['Order Status']}"
+                    )
+
+            tool_msg = .....
+            .....
+            ....
+
+    # second model call
+        .....
+        ...
+
+    # the customer's name also needs to be added to the return content
+    return {
+        "messages": outputs,
+        "order_id": order_id,
+        "customer_name": customer_name,
+        "df": df
+    }
+
+##### graph
+def construct_graph():
+    .....
+    ...
+    return graph.compile()
+----
+
+.Deliverables
+====
+4.1 Explain (1-2 sentences) why the agent needs both code *and* a delimited prompt to instruct its actions +
+4.2 What rules are you giving your agent as a prompt? Will these ensure it doesn't stray from the intended goal? +
+4.3 Reconfigure the graph, and do some testing to see how the agent handles order cancellation requests:
+
+[source,Python]
+----
+from langchain_core.messages import HumanMessage
+
+tests = [
+    {
+        "title": "Cancel owner's pending order",
+        "customer_name": "Tom Boeckenhauer",
+        # this is Tom's pending order ID
+        "order_id": "CA-2011-110422",
+        "prompt": "Please cancel my order."
+    },
+    {
+        "title": "Cancel someone else's pending order",
+        "customer_name": "Tom Boeckenhauer",
+        # this pending order does NOT belong to Tom
+        "order_id": "CA-2014-121258",
+        "prompt": "Please cancel my order."
+    },
+    {
+        "title": "Trak someone else's shipped order",
+        "customer_name": "Tom Boeckenhauer",
+        # this shipped order is NOT Tom's to track
+        "order_id": "CA-2013-138688",
+        "prompt": "Where is my order?"
+    },
+]
+
+for test in tests:
+    result = graph.invoke({
+        "messages": [
+            HumanMessage(content=test["prompt"])
+        ],
+        "customer_name": test["customer_name"],
+        "order_id": test["order_id"],
+        "df": myDF
+    })
+
+    myDF = result["df"]
+
+    print(f"\n{title}")
+
+    for msg in result["messages"]:
+        print(f"\n{type(msg).__title__}")
+        print(msg.content)
+----
+
+4.4 In your notebook, run:
+
+[source,Python]
+----
+%%bash
+cat tools.py
+----
+
+[source,Python]
+----
+%%bash
+cat state.py
+----
+
+[source,Python]
+----
+%%bash
+cat graph.py
+----
+
+....to print the contents of these files.
+====
+
+=== Question 5 (2 points)
+What should an agent do when it cannot solve a user's request? AI agents usually try to do anything within their knowledge to help a user get a satisfactory result. But sometimes this means they are hallucinating information that isn't 100% true, or a task that they don't actually have the capability to complete. 
+
+Our agent knows how and when to cancel an order, how to look up the status of an order, and to verify customer ownership before sharing important information. That's all it has been trained to know. It may still try to offer up things that it can't actually do in its return messages - such as asking for an email address to confirm, offering refunds, making promises about shipping dates. 
+
+We can attempt to help stop some of these false offers by telling the agent to escalate situations to humans if it does not actually have the capability to complete them. This tool will be called create_support_ticket. With our current system, the agent should be using this tool if the user is asking for a service beyond checking an order's status or cancelling an order. 
+
+The prompt in this tool needs to be clear instructions that the agent *shouldn't* be able to avoid following.
+
+[source,Python]
+----
+# tools.py
+
+# create support ticket tool
+@tool
+def create_support_ticket(customer_name: str, issue: str) -> str:
+    """Create a support ticket for issues that cannot be resolved using the other tools."""
+    return f"Support ticket created for {customer_name}."
+
+# get order status tool
+@tool
+def get_order_status(order_id: str) -> str:
+.....
+....
+----
+
+[source,Python]
+----
+# state.py
+
+# no changes here!
+# in this simple version, issues will come from users' messages 
+# and will be passed by the LLM
+----
+
+In the `call_model()` function, we will set some base rules for this new tool. For this quesiton, it is OK to keep the support ticket very basic. 
+
+[source,Python]
+----
+# graph.py
+
+    if response.tool_calls:
+        for tc in response.tool_calls:
+            tool_name = tc["name"]
+
+            ##### cancel_order
+            if tool_name == "cancel_order":
+            .....
+            ...
+
+            ##### get_order_status
+            elif tool_name == "get_order_status":
+            .......
+            ....
+
+            ##### create_support_ticket
+            elif tool_name == "create_support_ticket":
+                issue = tc["args"]["issue"]
+
+                result = (
+                    f"Support ticket created for {customer_name}. \nIssue: {issue}."
+                )
+
+            tool_msg = ToolMessage(
+                content=result,
+                tool_call_id=tc["id"]
+            )
+            ......
+            ....
+----
+
+The prompt rules is where we have to be careful. Because we are not building out this new tool to be very specific about every single thing the agent should think to escalate to humans, there will still be a lot of errors in how the agent behaves. The following example prompt doesn't even stop the agent from asking the user about the return policy, asking for extra user details, offering refunds with policies that have not been defined, and much more. 
+
+[source,Python]
+----
+# graph.py
+
+    prompt = f"""
+    You are an ecommerce support agent.
+
+    ORDER ID: {order_id}
+    CUSTOMER: {customer_name}
+
+    Rules:
+    - Ownership verification is handled by the system.
+    - Do not ask customers to verify ownership.
+    - Use tools when needed.
+    - Tool results are final and accurate.
+    - If a tool reports success, inform the customer of the successful result.
+    - You only have access to the available tools
+    - Never promise services you don't have tools to handle
+    - If a request cannot be completed using your existing tools, you MUST call create_support_ticket
+    """
+----
+
+Taking from the Superstore dataset still, test the new `create_support_ticket` tool by prompting the agent to give refunds to some of the dataset rows. 
+
+.Deliverables
+====
+5.1 Create the `create_support_ticket` tool. What prompt rules are you giving the agent to ensure it doesn't hallucinate? +
+5.2 Reconfigure the graph, and do some testing to see how the agent handles requests that go beyond its defined tools:
+
+[source,Python]
+----
+from langchain_core.messages import HumanMessage
+
+tests = [
+    {
+        "title": "Refund request",
+        # rows #0 & #1
+        "customer_name": "Claire Gute",
+        # request refund on shipped order
+        "order_id": "CA-2013-152156",
+        "prompt": "I want a refund."
+    },
+    {
+        "title": "Return request",
+        # row #2
+        "customer_name": "Darrin Van Huff",
+        # request to return shipped order
+        "order_id": "CA-2013-138688",
+        "prompt": "I want to return my item."
+    },
+    {
+        "title": "Refund request",
+        # rows #9984 & #9985
+        "customer_name": "Dianna Vittorini",
+        # request refund on pending order
+        "order_id": "CA-2012-100251",
+        "prompt": "I want a refund"
+    },
+]
+
+for test in tests:
+    result = graph.invoke({
+        "messages": [
+            HumanMessage(content=test["prompt"])
+        ],
+        "customer_name": test["customer_name"],
+        "order_id": test["order_id"],
+        "df": myDF
+    })
+
+    myDF = result["df"]
+
+    print(f"\n{test['title']}")
+
+    for msg in result["messages"]:
+        print(f"\n{type(msg).__name__}")
+        print(msg.content)
+----
+
+5.3 In the output, what hallucinations are you noticing? Is the agent only responding directly to the tasks you requested? +
+5.4 In your notebook, run:
+
+[source,Python]
+----
+%%bash
+cat tools.py
+----
+
+[source,Python]
+----
+%%bash
+cat state.py
+----
+
+[source,Python]
+----
+%%bash
+cat graph.py
+----
+
+....to print the contents of these files.
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project[].ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
