@@ -1,0 +1,838 @@
+= TDM 40100: Project Survival Analysis
+
+== Project Objectives
+
+This project introduces survival analysis and Cox proportional hazards regression, guiding you through building, evaluating, and interpreting models to understand patient risk over time.
+
+.Learning Objectives
+****
+- Prepare and clean a real survival dataset by loading data, recoding event indicators, evaluating class balance, and imputing missing values using appropriate methods.
+
+- Understand censoring and survival time concepts through descriptive statistics and visualizations that distinguish observed events from right-censored observations.
+
+- Estimate and compare survival functions using Kaplan–Meier curves overall and across patient subgroups.
+
+- Build and interpret a multivariable Cox proportional hazards model, including calculation of hazard ratios, statistical significance, and percent change in hazard for clinical predictors.
+
+- Evaluate model assumptions and practical use, checking proportional hazards and linearity assumptions, generating risk scores, and interpreting model results in a real-world context.
+****
+
+== Dataset
+- '/anvil/projects/tdm/data/survival/SurvivalData.csv'
+
+[IMPORTANT]
+====
+Use 4 cores for this project. 
+====
+
+== Introduction 
+
+image::StethoscopeImage.jpg[width=600, height=450, title="A close-up view of a stethoscope on a medical background."]
+
+
+In many studies, we are interested in whether an event occurs, such as whether a patient survives surgery.  
+In those cases, a binary modeling approach like logistic regression may seem like it can be used. However, when the **timing of the event matters**, this approach is not adequate.
+
+For example, a patient who dies during a medical procedure and a patient who dies two months later both experience death, yet a simple yes or no model would give them the same label. Ignoring how long it took for the event to occur removes valuable information and limits our ability to see important patterns.
+
+This is where **survival analysis** becomes useful.
+
+Instead of modeling only whether an event occurs, survival analysis models:
+
+**the time until an event occurs**.
+
+This time is called the **survival time** or **event time** and is usually written as
+
+[stem]
+++++
+T
+++++
+
+The survival time is measured from a clearly defined starting point until the event happens.
+
+Common examples of events include
+
+* Death of a patient
+* Progression of a disease
+* Failure of a machine part
+* Cancellation of a customer subscription
+* Time until pregnancy
+
+In all of these situations, the main response variable is the **time from a defined beginning until an event happens**.
+
+
+**True Survival Time and True Censoring Time**
+
+In survival analysis, we imagine that each individual has two underlying time values:
+
+* **True survival time** \(T\): the time when the event actually occurs  
+* **True censoring time** \(C\): the time when observation of that individual stops
+
+We do not usually observe both of these. Instead, we only see whichever occurs first.
+
+The **observed time** for each individual is
+
+[stem]
+++++
+Y = \min(T, C)
+++++
+
+So
+
+* If the event occurs before observation stops, then \(Y = T\).  
+* If observation stops before the event occurs, then \(Y = C\).
+
+We will use this same notation when we describe censored data in more detail.
+
+
+**Our Example Data Set**
+
+Consider our dataset which is study of lung cancer patients.
+
+In this data set
+
+* **Survival time** is the **number of days from enrollment into the study until the outcome occurs**.
+* The outcome is either **Death**, when the event is observed, or **Censoring**, when the event is not observed during the period of observation.
+
+For each patient
+
+* Time begins at **enrollment into the study or diagnosis**.
+* Time ends at **death**, if the patient dies during the study, or at the **last recorded contact**, if the patient is still alive or no longer in contact with the study team. Those patients are treated as censored observations, which we describe next.
+
+The data set does not record calendar dates for diagnosis or death.  
+Instead, it records **elapsed time in days** between study start and the outcome.  
+Each recorded survival time therefore represents how many days a patient lived after diagnosis or enrollment.
+
+
+== Questions
+
+=== Question 1 (2 points)
+
+.Deliverables
+====
+**1a. Load the `survival_data` dataset using the file path provided and display the first 5 rows along with the size of the data.**
+
+[source,python]
+----
+# Load data
+import pandas as pd
+survival_data = pd.read_csv('~/data/survival/SurvivalData.csv')
+----
+
+**1b. Recode the covid_status variable so that death is labeled as 1 and censored cases are labeled as 0 (assign death= 1 when covid_status = 2 and 0 when covid_status = 1).**
+
+_Hint: Use .`loc`_
+
+**1c. Apply linear interpolation to fill missing values in the meal.cal and wt.loss columns, then use forward fill and backward fill to handle any remaining NaNs in these two columns. Fill the missing values in the inst column using the column's mode.**
+
+Hint: Use `.ffill()` and `bfill()` for forward and backward fill. 
+
+[source,python]
+----
+survival_covid[['meal.cal', 'wt.loss']] = (
+    survival_covid[['meal.cal', 'wt.loss']].interpolate(method='____')) # For YOU to fill in 
+
+# Fill any remaining NaNs using forward and backward fill
+survival_data[['meal.cal', 'wt.loss']] = _______ # For YOU to fill in 
+
+# Fill in inst using mode
+survival_data['inst'] = ______ # For YOU to fill in 
+----
+
+**1d. For the remaining variables with missing data (ph.ecog, ph.karno, and pat.karno), fill the NaN values using the median of each respective column. Finally, display the updated missing-value counts for all columns to confirm that no missing values remain in the dataset.**
+
+[source,python]
+----
+# Fill any missing values using median
+survival_data[['ph.ecog','ph.karno','pat.karno']] = _________ # For YOU to fill in 
+
+# For YOU to do: confirm no missing values remain
+----
+====
+
+=== Question 2 - Understanding Time, Censoring, and Survival (2 points)
+
+**Censored Observations**
+
+As we mentioned, although this setup may appear similar to a regression problem, an important complication exists: many patients survive past the end of the study, so their exact event times are unknown.
+
+
+Those patients are considered **censored**.
+
+For censored individuals:
+
+* The true event (death) has not been observed.
+* They may experience the event days, months, or years later.
+* We only know that their true event time occurs **after** their last follow-up time.
+
+Censored data is still informative because each censored observation tells us 
+the patient survived at least as long as their recorded follow-up time.
+
+
+Using the notation above, we still observe
+
+[stem]
+++++
+Y = \min(T, C)
+++++
+
+but now we also record a **status indicator** to tell us whether the event was actually seen.
+
+[stem]
+++++
+\delta =
+\begin{cases}
+1 & \text{if } T \le C \quad \text{(event observed)} \\
+0 & \text{if } T > C \quad \text{(censored)}
+\end{cases}
+++++
+
+So for each individual we have the pair \((Y, \delta)\)
+
+* If \(\delta = 1\), then the event occurred at time \(Y\).  
+* If \(\delta = 0\), then the observation is censored and the true event time is greater than \(Y\).
+
+Even though censored observations do not give us the exact event time, they still provide important information. Each censored patient tells us that the event did not occur before their last observed time.
+
+
+**Types of Censoring**
+
+There are several ways in which censoring can occur. The most common types are **right censoring**, **left censoring**, and **interval censoring**.
+
+**Right Censoring**
+
+Right censoring occurs when we know that the event time is at least as large as the observed time. In notation
+
+[stem]
+++++
+T \ge Y
+++++
+
+Examples
+
+* The study ends while the patient is still alive.  
+* The patient leaves the study or is lost to contact before the event occurs.
+
+In both cases, we do not know the exact value of \(T\), but we do know that \(T\) is larger than the final observed time.
+
+**Left Censoring**
+
+Left censoring occurs when the event happens before the time that observation begins, but the exact event time is unknown.
+
+In this case
+
+[stem]
+++++
+T \le Y
+++++
+
+Example
+
+Suppose we survey a group of pregnant women at one visit late in pregnancy. Some of them have already given birth by the time of the survey. For those women, we only know that the birth occurred some time before the survey date, which means their pregnancy duration is less than the time since conception that corresponds to the survey.
+
+**Interval Censoring**
+
+Interval censoring occurs when we only know that the event happened between two observation times.
+
+In this setting we know that
+
+[stem]
+++++
+T \in (L, U)
+++++
+
+where \(L\) and \(U\) are the last time the event was known not to have happened and the first time it was known to have happened.
+
+Example
+
+* Patients are checked once per week.  
+* At one visit, the event has not occurred.  
+* At the next visit, the event has occurred.
+
+We do not know the exact day of the event, only that it occurred at some time between two visits.
+
+**Censored Data in Our Example Dataset**
+
+image::censoreddata.png[width=600, height=450, title="Example Survival Timelines (5 Patients from Dataset)"]
+
+*Figure interpretation:*  
+
+In the figure above, each horizontal line represents one patient’s follow-up time starting at study entry (time = 0). An **X** marks when a death occurs (event observed), and an open **circle** marks a censored observation (patient still alive at last follow-up). The dashed vertical line shows a **365-day study cut-off**.
+
+Notice that some patients die **before** the cut-off (e.g., Patients 1 and 2), while others die **after** the cut-off (e.g., Patient 4). Patients who remain alive beyond the cut-off (e.g., Patient 5) are censored. From the perspective of a 365-day study, both patients who die after the cut-off and patients who remain alive after the cut-off appear **the same**, both are treated as right-censored at the cut-off time. This demonstrates why survival analysis must explicitly account for censoring rather than using simple yes/no outcome models.
+
+
+**Assumption About Censoring**
+
+In order for standard survival analysis methods to give valid results, we usually assume that
+
+* The censoring process is independent of the event time, after we account for the observed covariates in the model.
+
+Informally, this means that whether or when a subject is censored should not depend on their unobserved survival time in a way that is not already explained by the variables in the model. When this assumption is reasonable, censored observations still contribute correct information about the survival experience of the population.
+
+
+.Deliverables
+====
+**2a. Using the `status` event indicator variable, calculate how many observations are events (status = 1) and how many are right-censored (status = 0). Print the counts and create a bar plot showing the proportion of censored versus observed events.**
+
+[source,python]
+----
+# Print how many observations are (dead = 1) and how many are (dead = 0).
+
+# Plot the proportions
+import matplotlib.pyplot as plt
+survival_covid['dead'].value_counts().plot(kind='bar')
+plt.xticks([0,1], ['Censored (0)', 'Death (1)'])
+plt.ylabel('_______') # For YOU to fill in
+plt.title('_____') # For YOU to fill in
+plt.show()
+----
+
+**2b. Use the code below to create a scatter plot that displays each patient’s follow-up time on the x-axis and the patient index (after sorting by time) on the y-axis. Then, write 1–2 sentences interpreting the results.**
+
+_Note: Follow-up time is the length of time each patient is observed in the study, from study entry until either death occurs (event) or the patient is censored (e.g., study ends or they are lost to follow-up). In this dataset, follow-up time is stored in the time column and is measured in days._
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+
+# Sort by follow-up time for better visualization
+df_sorted = survival_covid.sort_values(by='time')
+
+# Color mapping: red = death (event), blue = censored
+colors = df_sorted['dead'].map({1.0: 'red', 0.0: 'blue'})
+
+plt.figure(figsize=(10, 6))
+plt.scatter(
+    df_sorted['time'],
+    range(len(df_sorted)),
+    c=colors,
+    alpha=0.7
+)
+
+plt.title("______") # For YOU to fill in
+plt.xlabel("______") # For YOU to fill in
+plt.ylabel("______") # For YOU to fill in
+
+# Custom legend
+plt.legend(handles=[
+    plt.Line2D([], [], marker='o', color='red', linestyle='None',
+               label='Death (event observed)'),
+    plt.Line2D([], [], marker='o', color='blue', linestyle='None',
+               label='Censored (event not observed during study)')
+])
+
+plt.grid(alpha=0.3)
+plt.show()
+----
+
+**2c. Create boxplots comparing follow-up time (time) for patients who experienced the event (status = 1) versus those who were right-censored (status = 0). Then, write 1–2 sentences describing what these plots suggest about how long censored vs. uncensored patients are typically observed.**
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+
+plt.boxplot(
+    [
+        survival_covid[survival_covid.dead == 1]['time'],
+        survival_covid[survival_covid.dead == 0]['time']
+    ],
+    tick_labels=['Death', 'Censored']
+)
+
+plt.ylabel('_______') # For YOU to fill in 
+plt.title('________') # For YOU to fill in 
+plt.grid(alpha=0.3)
+plt.show()
+----
+
+====
+
+=== Question 3 (2 points)
+
+The **survival curve**, also called the **survival function**, is defined as
+
+[stem]
+++++
+S(t) = Pr(T > t)
+++++
+
+This expression means
+
+**The probability that an individual survives beyond time \(t\).**
+
+The survival function can also be written using the Kaplan Meier product formula:
+
+[stem]
+++++
+S(t) = \prod_{t_i \le t} \left(1 - \frac{d_i}{n_i}\right)
+++++
+
+In this form
+
+* \( t_i \) represents each observed event time
+* \( d_i \) is the number of deaths that occur at time \( t_i \)
+* \( n_i \) is the number of individuals at risk immediately before time \( t_i \)
+
+At each event time, survival is updated by multiplying the previous survival probability by a new fraction that accounts for how many deaths occurred out of the group still being observed.
+
+**Data Used for Illustration**
+
+We demonstrate this process using our lung cancer dataset. Each row of the data includes
+
+* **time**: the number of days observed
+* **event**:
+  * 1 indicates death occurred
+  * 0 indicates the observation is censored
+
+Example rows from the dataset are shown below.
+
+[source]
+----
+   time  event
+0   306      1
+1   455      1
+2  1010      0
+3   210      1
+4   883      1
+----
+
+**Identify Event Times**
+
+Kaplan Meier updates the survival probability only at time points where deaths occur. These are called **event times**.
+
+From our dataset, the first two event times are:
+
+[source]
+----
+[5, 11]
+----
+
+This means
+
+* At least one patient died at day 5.
+* At least one patient died at day 11.
+
+We now calculate survival probabilities at each of these two event times.
+
+** Step 1 Calculate Survival at Time 5**
+
+At the first event time:
+
+* \( t_1 = 5 \)
+* Number at risk just before day 5  
+  \( n_1 = 228 \)
+* Number of deaths on day 5  
+  \( d_1 = 1 \)
+
+Apply the Kaplan Meier step formula:
+
+[stem]
+++++
+S(5) = 1 \times \left(1 - \frac{1}{228}\right)
+++++
+
+This gives
+
+[stem]
+++++
+S(5) = 0.995614
+++++
+
+**Interpretation**
+
+After day 5, approximately **99.56 percent** of patients are estimated to survive beyond that time.
+
+**Step 2 Calculate Survival at Time 11**
+
+Move to the second event time.
+
+* \( t_2 = 11 \)
+* Number at risk just before day 11  
+  \( n_2 = 227 \)
+* Number of deaths on day 11  
+  \( d_2 = 3 \)
+
+The survival probability is updated by multiplying the previous estimate by a new fraction:
+
+[stem]
+++++
+S(11) = S(5) \times \left(1 - \frac{3}{227}\right)
+++++
+
+This gives
+
+[stem]
+++++
+S(11) = 0.982456
+++++
+
+**Interpretation**
+
+After day 11, approximately **98.25 percent** of patients are estimated to survive beyond this time.
+
+**Summary Table**
+
+The survival probabilities calculated for our first two event times are summarized below.
+
+[cols="1,1,1,1"]
+|===
+| Time (days) | Deaths \(d_i\) | At risk \(n_i\) | Survival probability
+
+| 5
+| 1
+| 228
+| 0.995614
+
+| 11
+| 3
+| 227
+| 0.982456
+|===
+
+
+**Kaplan Meier Pattern**
+
+Each Kaplan Meier step follows the same process:
+
+1. Identify the next event time.
+2. Count how many individuals are still at risk \(n_i\).
+3. Count how many deaths occur at that time \(d_i\).
+4. Compute the fraction
+
+[stem]
+++++
+1 - \frac{d_i}{n_i}
+++++
+
+5. Multiply that fraction by the current survival probability
+
+[stem]
+++++
+S(t_i) = S(t_{i-1}) \times \left(1 - \frac{d_i}{n_i}\right)
+++++
+
+Repeating this procedure at all event times builds the full Kaplan Meier survival curve.
+
+image::KaplanMeijerCurve.png[width=600, height=450, title="Kaplan Meijer Curve."]
+
+.Deliverables
+====
+**3a. Identify the first two event times in the dataset and explain what an “event time” means in the context of Kaplan Meier estimation. Then, in 1–2 sentences, explain what the survival function \(S(t)\) represents in plain language.**
+
+[source,python]
+----
+# Identify event times
+event_times = (
+    survival_data
+    .loc[survival_data["status"] == 1, "time"]
+    .sort_values()
+    .unique()
+)
+
+print("First two event times:", event_times[:2])
+----
+
+**3b. Calculate the first survival probability \(S(5)\). Then write 1 sentence explaining what \(S(5)\) means for patients in this study.**
+
+
+**3c. Using the value of \(S(5)\) from Question 3b, calculate the updated survival probability \(S(11)\). Then write 1 sentence explaining what \(S(11)\) means for patients in this study.**
+
+
+====
+
+=== Question 4 (2 points)
+
+**Comparing Survival Curves: The Log-Rank Test**
+
+Once survival curves are estimated using the Kaplan–Meier method, we often want to compare **survival between two or more groups** (for example, male vs female patients).
+
+While visual inspection of Kaplan–Meier curves can suggest differences between groups, overlap or small separations can be difficult to interpret by eye alone. To formally evaluate whether any observed differences are statistically meaningful, we use the **log-rank test**.
+
+The **log-rank test** compares:
+
+* The **observed number of deaths** in each group at every event time  
+* To the **number of deaths expected** if both groups truly had the **same underlying survival experience**
+
+These comparisons are summed across all event times to produce a **test statistic** and corresponding **p-value**.
+
+**Interpretation**
+
+* A **small p-value (typically < 0.05)** provides evidence that the survival curves differ between groups, suggesting **different hazard rates**.
+* A **large p-value** indicates that any visible differences in the curves are likely due to random variation rather than a true difference in survival.
+
+The log-rank test therefore provides a **formal statistical complement** to Kaplan–Meier plots, moving beyond visual comparison to hypothesis testing.
+
+
+
+.Deliverables
+====
+**4a. Using the code below, fit and plot the overall Kaplan Meier survival curve using all patients. Then write 1–2 sentences explaining what the curve communicates about survival probabilities over time.**
+
+[source,python]
+----
+from lifelines import KaplanMeierFitter
+import matplotlib.pyplot as plt
+
+kmf = KaplanMeierFitter()
+
+kmf.fit(
+    durations=survival_data["time"],
+    event_observed=(survival_data["status"] == 1)
+)
+
+kmf.plot(ci_show=True)
+plt.xlabel("_______") # For YOU to fill in 
+plt.ylabel("_______") # For YOU to fill in 
+plt.title("______") # For YOU to fill in 
+plt.grid(alpha=0.3)
+plt.show()
+----
+
+**4b. Create Kaplan Meier survival curves stratified by sex (sex = 1 for male, sex = 2 for female). Then write 1–2 sentences comparing survival between male and female patients and noting any visible separation between the curves.**
+
+[source,python]
+----
+from lifelines import KaplanMeierFitter
+import matplotlib.pyplot as plt
+
+kmf = KaplanMeierFitter()
+
+plt.figure(figsize=(6, 4))
+
+for sex_value, label in [(1, "Male"), (2, "Female")]:
+    group = survival_data[survival_data["sex"] == sex_value]
+
+    if group.empty:
+        continue
+
+    kmf.fit(
+        durations=group["time"],
+        event_observed=(group["status"] == 1),
+        label=label
+    )
+    kmf.plot(ci_show=False)
+
+plt.xlabel("______")  # For YOU to fill in 
+plt.ylabel("______")  # For YOU to fill in 
+plt.title("______")  # For YOU to fill in 
+plt.grid(alpha=0.3)
+plt.legend()
+plt.show()
+----
+
+**4c. Using the code below, perform a log rank test to compare survival between male patients (sex = 1) and female patients (sex = 2). Then, in 1–2 sentences, state whether the p-value from the log rank test provides evidence that the log hazards differ between male and female patients.**
+
+[source,python]
+----
+from lifelines.statistics import logrank_test
+
+# Separate data by sex
+male = survival_data[survival_data["sex"] == 1]
+female = survival_data[survival_data["sex"] == 2]
+
+# Run log rank test
+results = logrank_test(
+    male["time"],
+    female["time"],
+    event_observed_A=(male["status"] == 1),
+    event_observed_B=(female["status"] == 1)
+)
+
+# Print results
+results.print_summary()
+----
+
+====
+
+=== Question 5 (2 points)
+
+
+.Deliverables
+====
+
+**5a. Use the following covariates (age, sex, ph.ecog, ph.karno, pat.karno, meal.cal and wt.loss) to fit a Cox regression model and display the coefficient summary table.**
+
+See docoumentation on CoxPHFItter https://lifelines.readthedocs.io/en/latest/fitters/regression/CoxPHFitter.html[here.]
+
+[source,python]
+----
+from lifelines import CoxPHFitter
+
+# Prepare modeling dataset
+cox_data = survival_data[['time', 'status', 'age', 'sex',
+                           'ph.ecog', 'ph.karno',
+                           'pat.karno', 'meal.cal', 'wt.loss']]
+
+# Fit Cox model
+cph = CoxPHFitter()
+cph.fit(cox_data, duration_col='time', event_col='status')
+
+----
+
+**5b. Create a table that summarizes the hazard ratios, p-values, percent change in hazard, and statistical significance for each predictor in the Cox model by completing and running the code below. Then, using the generated table.**
+
+[source,python]
+----
+import pandas as pd
+import numpy as np
+
+# Extract coefficients and p-values
+hr_table = cph.summary[['coef', 'p']].reset_index()
+hr_table.columns = ['Predictor', 'Log_Hazard_Ratio (coef)', 'p_value']
+
+# Compute hazard ratio from the log hazard coefficient
+hr_table['Hazard_Ratio (HR)'] = np.___(hr_table['Log_Hazard_Ratio (coef)']) # For YOU to fill in
+
+
+# Using the table above, fill in the Effect column:
+# * If the hazard ratio is greater than 1, fill in whether it increases or decreases hazard.
+ #* If the hazard ratio is less than 1, fill in whether it increases or decreases hazard.
+
+hr_table['Effect'] = np.where(
+    hr_table['Hazard_Ratio (HR)'] >= ____, # For YOU to fill in 
+    '________', # For YOU to fill in 
+    '_______' # For YOU to fill in 
+)
+
+# Round values for display
+hr_table[['Log_Hazard_Ratio (coef)',
+          'Hazard_Ratio (HR)',
+          'p_value']] = (
+    hr_table[['Log_Hazard_Ratio (coef)',
+              'Hazard_Ratio (HR)',
+              'p_value']]
+    .round(3)
+)
+
+hr_table
+----
+
+**5c. Write 1–2 sentences explaining which variables significantly increase or decrease patient hazard and what these results suggest about survival risk in the lung cancer dataset.**
+
+====
+
+=== Question 6 Cox Proportional Hazards Model Assumptions (2 points)
+
+The Cox proportional hazards model relies on several important assumptions.  
+These assumptions help ensure that the hazard ratios estimated by the model are meaningful and valid.
+
+
+**Assumption 1 – Proportional Hazards**
+
+The **proportional hazards assumption** states that the hazard ratios for predictors are **constant over time**.
+
+This means:
+
+* The relative risk between two individuals does **not change as time passes**.
+* If one group has higher risk early in the study, that same group should continue to have higher risk later.
+* The survival curves for different groups should not cross dramatically over time.
+
+In other words, the effect of a predictor on risk is assumed to be **stable across the entire follow-up period**.
+
+**Testing the Assumption**
+
+The proportional hazards assumption can be tested statistically using tests such as the **Schoenfeld residual test**, which produces a **p-value** for each predictor.
+
+* A **large p-value (typically > 0.05)** suggests that the assumption holds — there is **no evidence** that the effect of the predictor changes over time.
+* A **small p-value (typically < 0.05)** suggests that the assumption may be violated — the predictor’s effect **may vary across time**, meaning the reported hazard ratio may not be valid.
+
+
+**Assumption 2 – Linearity of Continuous Predictors**
+
+The Cox model assumes that **continuous predictors have a linear relationship with the log hazard**.
+
+This means:
+
+* A one-unit increase in a continuous variable corresponds to a constant proportional change in hazard.
+* The effect of a predictor increases or decreases smoothly rather than abruptly changing at different values.
+
+If a variable has a highly non-linear effect on risk, transformations or modeling adjustments may be needed.
+
+
+**Assumption 3 – Independent (Non-Informative) Censoring**
+
+We assume that **censoring is independent of survival**, after accounting for observed covariates.
+
+This means:
+
+* Whether a patient is censored should not depend on their unobserved death time.
+* Censored patients are assumed to have the **same survival prospects as non-censored patients with similar covariate values**.
+
+=== Question 6 (2 points)
+
+
+.Deliverables
+====
+
+**6a.One key assumption of the Cox model is that the effect of each predictor on patient risk stays constant over time. To evaluate this for the variable age, use the Schoenfeld residual test below and examine the resulting p-value. After viewing the output, write 1 sentence stating whether the proportional hazards assumption seems reasonable for age.**
+
+
+
+[source,python]
+----
+from lifelines.statistics import proportional_hazard_test
+
+# Test proportional hazards for age
+results = proportional_hazard_test(cph, cox_data, time_transform='rank')
+print(results.summary.loc[['age']])
+
+----
+
+**6b. Choose one continuous predictor from the model (for example, age or ph.karno) and briefly explain whether assuming a linear relationship with the log hazard seems reasonable. In 1–2 sentences, describe what a violation of this assumption would imply for interpreting the hazard ratio.**
+
+[source,python]
+----
+import pandas as pd
+import numpy as np
+
+# Extract coefficients and p-values
+hr_table = cph.summary[['coef', 'p']].reset_index()
+hr_table.columns = ['Predictor', 'Log_Hazard_Ratio (coef)', 'p_value']
+
+# Compute hazard ratio from the log hazard coefficient
+hr_table['Hazard_Ratio (HR)'] = np.___(hr_table['Log_Hazard_Ratio (coef)']) # For YOU to fill in
+
+
+# Using the table above, fill in the Effect column:
+# * If the hazard ratio is greater than 1, fill in whether it increases or decreases hazard.
+ #* If the hazard ratio is less than 1, fill in whether it increases or decreases hazard.
+
+hr_table['Effect'] = np.where(
+    hr_table['Hazard_Ratio (HR)'] >= ____, # For YOU to fill in 
+    '________', # For YOU to fill in 
+    '_______' # For YOU to fill in 
+)
+
+# Round values for display
+hr_table[['Log_Hazard_Ratio (coef)',
+          'Hazard_Ratio (HR)',
+          'p_value']] = (
+    hr_table[['Log_Hazard_Ratio (coef)',
+              'Hazard_Ratio (HR)',
+              'p_value']]
+    .round(3)
+)
+
+hr_table
+----
+
+**6c. Write 1–2 sentences explaining which variables significantly increase or decrease patient hazard and what these results suggest about survival risk in the lung cancer dataset.**
+
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project1.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
