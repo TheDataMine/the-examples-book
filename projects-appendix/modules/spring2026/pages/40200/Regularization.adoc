@@ -1,0 +1,624 @@
+:page-mathjax: true
+= TDM 40200: Project Lasso and Ridge
+
+== Project Objectives
+
+The objective of this project is to learn regularization. Student will learn the difference between lasso and ridge regression. 
+
+.Learning Objectives
+****
+- Students will review how a linear regression line is fit by minimizing the sum of squared residuals.
+
+- Students will recall what a residual represents and how the sum of squared residuals (SSR) is used to evaluate model fit.
+
+- Students will learn how regression coefficients are estimated using ridge regression.
+
+- Students will understand the role of the penalty term in ridge regression and how it influences coefficient shrinkage.
+
+- Students will learn how lasso regression estimates coefficients, including how the L1 penalty affects the objective function.
+
+- Students will be able to distinguish how linear regression, ridge regression, and lasso regression differ in estimating coefficients for a regression problem.
+****
+
+
+== Introduction
+
+image::spotify_project_image.jpg[width=600, height=450, caption="Several Guitars Image"]
+
+In this project, you will work with a Spotify dataset containing song-level audio features such as danceability, energy, loudness, tempo, and other characteristics extracted from each track. The response variable of interest is song popularity, a numerical score intended to capture how widely a song is listened to. Our goal is to understand how these audio features relate to popularity and how different regression techniques estimate that relationship.
+
+**Recall Linear Regressinon** 
+
+We will recall linear regression, which models the relationship between a response variable $y$ and one or more predictors $x_1, x_2, \dots, x_p$ as a linear combination. The linear regression model can be written as
+
+$\hat{y} = \hat{\beta}_0 + \hat{\beta}_1 x_1 + \cdots + \hat{\beta}_p x_p$
+
+where $\hat{y}$ represents the predicted response value, $\hat{\beta}_0$ is the estimated intercept, and $\hat{\beta}_1, \dots, \hat{\beta}_p$ are the estimated coefficients associated with each predictor.
+
+
+The coefficients in linear regression are estimated using the least squares approach. For an observed response value $y_i$ and corresponding prediction $\hat{y}_i$, the residual is defined as
+
+$e_i = y_i - \hat{y}_i$
+
+The residual sum of squares (SSR) measures the overall discrepancy between the observed values and the model predictions and is defined as
+
+$\text{SSR} = \sum_{i=1}^{n} (y_i - \hat{y}_i)^2$
+
+The least squares approach chooses coefficient values $\beta_0, \beta_1, \dots, \beta_p$ that minimize the SSR. This results in a regression line (or hyperplane) that best fits the data in the sense of minimizing squared prediction errors.
+
+**Regularization in Linear Models**
+
+Ridge regression and lasso regression are both examples of regularization methods in linear modeling. Regularization refers to the practice of modifying the ordinary least squares objective function by adding a penalty term that constrains the size of the regression coefficients. Ridge regression and lasso regression extend linear regression by adding a penalty term to the SSR objective function. This penalty discourages overly large coefficient values, intentionally trading a small amount of bias for a meaningful reduction in variance and improved model stability. Both methods preserve the familiar linear structure of the model but differ in how they manage coefficient complexity. While ridge and lasso are both regularization techniques, they serve slightly different purposes. Ridge regression primarily stabilizes coefficient estimates by shrinking them toward zero, which is especially helpful when predictors are highly correlated. Lasso regression, on the other hand, goes a step further by allowing some coefficients to be exactly zero, effectively performing feature selection alongside coefficient estimation. 
+
+
+**Ridge Regression**
+
+Ridge regression estimates coefficients by minimizing the following objective function:
+
+$\text{SSR} + \lambda \sum_{j=1}^{p} \beta_j^2$
+
+where $\lambda \ge 0$ is a tuning parameter that controls the strength of the penalty. The ridge penalty shrinks coefficient values toward zero, reducing variance and improving stability, but it does not set coefficients exactly to zero.
+
+**Lasso Regression**
+
+Lasso regression uses a different penalty and minimizes the objective
+
+$\text{SSR} + \lambda \sum_{j=1}^{p} |\beta_j|$
+
+
+Because of the absolute value penalty, lasso regression can shrink some coefficients exactly to zero. As a result, lasso performs both regularization and feature selection, producing models that are often easier to interpret. In this project, you will compare linear regression, ridge regression, and lasso regression using the same Spotify dataset. You will explore how coefficient estimates change across methods, how regularization affects model performance, and how these techniques balance prediction accuracy, stability, and interpretability.
+
+
+== Questions
+
+=== Question 1 - Preparing the Data (2 points)
+
+.Deliverables
+====
+**1a. Read in the `spotify_popularity_data` then make sure to drop the columns in the `drop_cols` list.**
+
+[source,python]
+----
+import pandas as pd
+
+spotify_popularity_data = pd.read_csv("/anvil/projects/tdm/data/spotify/linear_regression_popularity.csv")
+
+drop_cols = [
+    "Unnamed: 0", "Unnamed: 0.1", "track_id", "track_name", "available_markets", "href",
+    "album_id", "album_name", "album_release_date", "album_type",
+    "artists_names", "artists_ids", "principal_artist_id",
+    "principal_artist_name", "artist_genres", "analysis_url", "duration_min", "principal_artist_followers"]
+
+# For YOU to do: drop the columns in the `drop_cols` list from spotify_popularity_data 
+----
+
+**1b. Separate the target variable (popularity) into y and place all remaining variables into the feature matrix X using the code below. Then, in 1–2 sentences, explain why the target variable is isolated from the predictor variables when training a machine-learning model.**
+
+[source,python]
+----
+# Target and features
+y = spotify_popularity_data["popularity"].copy()
+X = spotify_popularity_data.drop(columns=["popularity"]).copy()
+----
+
+**1c. Use the code below to create an 80/20 train–test split with random_state = 42. Then, in 1–2 sentences, explain why the data is split into training and testing sets along with why we fix a random seed.**
+
+[source,python]
+----
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+----
+
+====
+
+=== Question 2 -  Linear Regression and Least Squares (2 points)
+
+In the previous question, you prepared the Spotify dataset and created training and testing splits. We now turn to fitting linear regression models and interpreting their outputs. The goal of this section is to help you recall how linear regression estimates coefficients and how model fit is evaluated using residuals. Recall that linear regression estimates coefficients using the least squares approach, which selects coefficient values that minimize the residual sum of squares (SSR)), defined as
+
+$\text{SSR} = \sum_{i=1}^{n} (y_i - \hat{y}_i)^2$
+
+
+
+.Deliverables
+====
+**2a. Recall that the linear regression model is written as**
+
+$\hat{y} = \hat{\beta}_0 + \hat{\beta}_1 x_1 + \cdots + \hat{\beta}_p x_p$
+
+
+**In 2–3 sentences of your own words, explain what $\hat{y}$ represents, what $\beta_0$ represents, and how the coefficients $\beta_1, \dots, \beta_p$ relate to predicting Spotify song popularity.**
+
+[source,python]
+----
+from sklearn.linear_model import LinearRegression
+
+# Fit standard linear regression
+lr = LinearRegression()
+lr.fit(X_train, y_train)
+
+# Evaluate performance
+train_score = lr.score(X_train, y_train)
+test_score = lr.score(X_test, y_test)
+
+print("Training R^2:", train_score)
+print("Testing R^2:", test_score)
+----
+
+**2b. Use the code below to fit a simple linear regression model to the training data using only the danceability feature to predict popularity and develop a plot. On the plot, let's overlay the fitted model against an alternative candidate (Line 2) and calculate the Sum of Squared Residuals (SSR) for both. In 2-3 sentences, explain which line would be selected by the least squares approach and why.**
+
+[source,python]
+----
+import warnings
+warnings.filterwarnings("ignore")
+from sklearn.linear_model import LinearRegression
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Fit simple linear regression
+X_dance = X_train[["danceability"]]
+lr = LinearRegression().fit(X_dance, y_train)
+x_line = np.linspace(X_dance.min()[0], X_dance.max()[0], 100)
+y_line_1 = lr.predict(x_line.reshape(-1, 1))      
+y_line_2 = y_line_1 + 5 
+
+ssr_1 = np.sum((y_train - lr.predict(X_dance))**2)
+ssr_2 = np.sum((y_train - (lr.predict(X_dance) + 5))**2)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(X_dance, y_train, alpha=0.4, label="Actual Data", color="gray")
+
+# Plotting the lines
+plt.plot(x_line, y_line_1, color="blue", linewidth=2, label=f"Line 1 (Fitted): SSR={ssr_1:.0f}")
+plt.plot(x_line, y_line_2, "--", color="red", linewidth=2, label=f"Line 2 (Shifted): SSR={ssr_2:.0f}")
+
+# Adding the SSR Equation in a box
+ssr_formula = r'$SSR = \sum_{i=1}^{n} (y_i - \hat{y}_i)^2$'
+plt.text(0.05, 0.95, ssr_formula, transform=plt.gca().transAxes, fontsize=14,
+         verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.5))
+
+plt.title("______") # For YOU to fill in
+plt.xlabel("______") # For YOU to fill in
+plt.ylabel("______") # For YOU to fill in
+plt.legend(loc="lower right")
+plt.show()
+----
+
+**2c. Now let's fit a multivariable linear regression model using all features and display actual values, predicted values, and residuals side by side for the test set. Let's compute the Sum of Squared Residuals (SSR) from the residual column. Fill in the formula for residuals and then in 2–3 sentences, explain what a residual measures and why the residuals are squared rather than summed directly.**
+
+[source,python]
+----
+# Fit full linear regression
+lr = LinearRegression()
+lr.fit(X_train, y_train)
+
+# Generate predictions
+y_pred = lr.predict(X_test)
+
+comparison_df = pd.DataFrame({
+    "Actual (y)": y_test.values,
+    "Predicted (ŷ)": y_pred,
+    "Residual (y − ŷ)": ______ # For YOU to fill in
+})
+
+comparison_df.head()
+----
+
+**2d. Use the code below to display the coefficients estimated by the multivariable regression model. In 2–3 sentences, explain how we the coefficient values shown in the table are computed.**
+
+[source,python]
+----
+print("Intercept (β₀):", round(lr.intercept_, 3))
+
+pd.DataFrame({
+    "Feature": X.columns,
+    "Estimated Coefficient": lr.coef_
+}).round(4)
+----
+
+====
+
+=== Question 3 - Feature Selection and Subset Selection(2 points)
+
+Let's recall how in multiple linear regression, we model the relationship between a response variable $Y$ and a set of predictors $X_1, X_2, \dots, X_p$ using the linear model:
+
+$Y = \beta_0 + \beta_1 X_1 + \cdots + \beta_p X_p + \varepsilon$
+
+
+This model is typically fit using **least squares**.  However, sometimes only a subset of the available predictors may be truly associated with the response, and including irrelevant variables adds unnecessary complexity to the model. Feature selection methods aim to address these issues by identifying a subset of predictors that are most relevant to the response, resulting in models that are simpler, more interpretable, and potentially better at generalizing to new data.
+
+**Subset Selection Methods**
+
+Subset selection methods aim to identify a smaller set of predictors that are most strongly related to the response. Rather than fitting a single full model with all predictors, these methods search over models of varying sizes to balance model fit, complexity, and interpretability.
+
+**Forward Stepwise Selection**
+
+Forward stepwise selection begins with the null model, which contains no predictors and predicts the sample mean of $Y$. Predictors are then added to the model one at a time. At each step, the predictor that provides the greatest improvement according to a specified criterion is included, conditional on the predictors already in the model.
+This procedure continues until no remaining predictor improves the model sufficiently, or until a stopping rule is met.
+
+Different criteria can be used to guide forward selection. In earlier work, we explored information-criterion-based approaches such as AIC, which balance model fit and complexity and are motivated by predictive performance.
+
+Alternatively, forward selection can be based on p-values. In this approach, a predictor is added only if its associated p-value is below a chosen significance level (for example, $\alpha = 0.05$), conditional on the predictors already in the model. This emphasizes inferential reasoning, as the p-value measures the strength of evidence against the null hypothesis that a coefficient is equal to zero.
+
+**Backward Stepwise Selection**
+
+Backward stepwise selection takes the opposite approach. The procedure begins with the full model, which includes all $p$ predictors. At each step, the predictor whose removal leads to the smallest decrease in model performance is removed, according to a specified criterion.
+As with forward selection, the criterion may be based on an information criterion such as AIC or on p-values. In a p-value-based approach, the predictor with the largest p-value (above a chosen threshold) is removed at each step.
+Backward stepwise selection continues until all remaining predictors satisfy the stopping rule. Unlike forward selection, backward selection requires that $n > p$, since the full least squares model must be fit at the start.
+
+**Stepwise Selection**
+
+Stepwise selection is a hybrid approach that combines elements of both forward and backward selection. The procedure typically begins like forward selection by adding predictors one at a time. However, after each new predictor is added, the method checks whether any previously included predictors should be removed based on the chosen criterion.
+This allows predictors to enter and leave the model dynamically as the selection process proceeds. While stepwise selection can be more flexible than purely forward or backward procedures, it remains a greedy algorithm and does not guarantee identification of the model with the lowest test error.
+
+.Deliverables
+====
+
+**3a. Use the provided function to perform forward stepwise selection based on p-values. In 2–3 sentences, explain how forward selection works and describe the role of the p-value threshold.**
+
+[source,python]
+----
+import pandas as pd
+import statsmodels.api as sm
+import numpy as np
+
+# Keep only numeric columns and drop missing values
+X_num = X_train.select_dtypes(include=[np.number]).dropna()
+y_num = pd.to_numeric(y_train, errors="coerce").loc[X_num.index]
+
+def forward_selection_pvalues(X, y, alpha=0.05):
+    remaining = list(X.columns)
+    selected = []
+
+    while remaining:
+        pvals = []
+
+        for feature in remaining:
+            X_model = sm.add_constant(X[selected + [feature]].values.astype(float))
+            model = sm.OLS(y.values.astype(float), X_model).fit()
+            pvals.append((model.pvalues[-1], feature))
+
+        best_pval, best_feature = min(pvals)
+
+        if best_pval < alpha:
+            selected.append(best_feature)
+            remaining.remove(best_feature)
+        else:
+            break
+
+    return selected
+
+selected_features = forward_selection_pvalues(X_num, y_num)
+print("Forward-selected features:")
+print(selected_features)
+----
+
+**3b. Use the code below to compute the test-set $R^2$ for the full multivariable linear regression model and for the reduced model selected using forward selection based on p-values and display a table. Then in 2–3 sentences, discuss the tradeoff between using a simpler model with fewer predictors and a more complex model with many predictors in terms of interpretability and prediction accuracy.**
+
+[source,python]
+----
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
+
+# Full model
+lr_full = LinearRegression()
+lr_full.fit(X_train, y_train)
+y_pred_full = lr_full.predict(X_test)
+r2_full = r2_score(y_test, y_pred_full)
+
+# P-value selected model
+lr_pval = LinearRegression()
+lr_pval.fit(X_train[selected_features], y_train)
+y_pred_pval = lr_pval.predict(X_test[selected_features])
+r2_pval = r2_score(y_test, y_pred_pval)
+
+# Display results
+print("Test-set R^2 comparison")
+print("-----------------------")
+print(f"Full model R^2:        {r2_full:.3f}")
+print(f"P-value model R^2:     {r2_pval:.3f}")
+----
+**3c. In 2–3 sentences, discuss the tradeoff between using a simpler model with fewer predictors and a more complex model with many predictors in terms of interpretability and prediction accuracy.**
+
+====
+
+=== Question 4 - Ridge Regression (2 points)
+
+Ridge regression closely mirrors ordinary least squares, with one important modification: when estimating the coefficients, we add a penalty that discourages large coefficient values. Rather than focusing solely on fitting the data as closely as possible, Ridge regression balances model fit with coefficient size.
+
+Ridge regression estimates the coefficients by minimizing  
+
+$\sum_{i=1}^{n} (y_i - \hat{y}_i)^2 + \lambda \sum_{j=1}^{p} \beta_j^2$
+
+
+The first term, $\sum_{i=1}^{n} (y_i - \hat{y}_i)^2$, is the sum of squared residuals (SSR) and measures how closely the model’s predictions match the observed data. In the Spotify popularity dataset, this corresponds to how far the predicted popularity values are from the actual popularity scores based on features such as danceability, energy, loudness, and tempo.
+
+The second term, $\lambda \sum_{j=1}^{p} \beta_j^2$, is the Ridge penalty. The tuning parameter $\lambda \ge 0$ determines how strongly we penalize large slope coefficients.
+
+When $\lambda = 0$, the penalty term drops out entirely and the objective reduces to  
+$\sum_{i=1}^{n} (y_i - \hat{y}_i)^2$,  
+which is exactly the ordinary least squares criterion. In this case, Ridge regression yields the same coefficient estimates as OLS.
+
+As $\lambda$ increases, large coefficients become increasingly costly in the objective function. To keep the overall objective small, the model is forced to reduce the magnitude of the slope coefficients, shrinking them toward zero. This has the effect of stabilizing the model and making it less sensitive to noise in the training data, which helps reduce overfitting.
+
+In a multivariable Spotify popularity model, Ridge regression shrinks all feature coefficients toward zero, but not necessarily by the same amount. This occurs because the coefficients must balance two competing goals in the objective function: reducing the sum of squared residuals and keeping the penalty term small. Features that are strongly associated with popularity, such as danceability or energy, contribute substantially to reducing the SSR, so shrinking their coefficients too much would noticeably worsen the model fit. As a result, these coefficients tend to remain relatively larger, while weaker predictors, such as disc number or track number, can be shrunk much more with little impact on the SSR.
+
+
+.Deliverables
+====
+**4a. Ridge regression is similar to ordinary least squares, but the coefficients are estimated by minimizing a function that includes a penalty on the size of the coefficients. Specifically, Ridge regression estimates the coefficients by minimizing:**
+
+$\sum_{i=1}^{n} (y_i - \hat{y}_i)^2 + \lambda \sum_{j=1}^{p} \beta_j^2$
+
+
+**In 1–2 sentences of your own words, describe what happens to the Ridge regression objective and the estimated coefficients when $\lambda = 0$. What equation does it remind you of?**
+
+**4b. Now focus on the penalty term in the objective function for Ridge:**
+
+$\lambda \sum_{j=1}^{p} \beta_j^2$
+
+
+**As $\lambda$ increases, the contribution of this penalty term to the objective function becomes larger.  In 1–2 sentences, explain how the slope coefficients would need to change in order to minimize the overall objective function as $\lambda$ gets bigger, and why this behavior could help reduce overfitting.**
+
+**4c. To better understand how Ridge regularization affects the estimated coefficient, we will focus on a single predictor variable. Use the code below to plot Spotify popularity vs. danceability and overlay the regression lines from Ordinary Least Squares (OLS) and Ridge regression with alpha = 25. In 1–2 sentences, describe how the Ridge regression line compares to the OLS line. What change do you observe in the slope, and how does this reflect the effect of regularization?**
+
+[source,python]
+----
+import warnings
+from scipy.linalg import LinAlgWarning
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression, Ridge
+
+warnings.filterwarnings("ignore", category=LinAlgWarning)
+
+# Select a single predictor
+X_train_single = X_train[["danceability"]]
+
+# Create grid for plotting regression lines (with feature name)
+x_vals = pd.DataFrame(
+    np.linspace(
+        X_train_single.min().values[0],
+        X_train_single.max().values[0],
+        100),
+    columns=["danceability"])
+
+# Fit OLS and Ridge
+ols = LinearRegression()
+ols.fit(X_train_single, y_train)
+y_ols = ols.predict(x_vals)
+ridge = Ridge(alpha=25)
+ridge.fit(X_train_single, y_train)
+y_ridge = ridge.predict(x_vals)
+
+# Plot data and regression lines
+plt.scatter(X_train_single["danceability"], y_train, alpha=0.3, label="Training data")
+plt.plot(x_vals["danceability"], y_ols, label="OLS (alpha = 0)", linewidth=2)
+plt.plot(x_vals["danceability"], y_ridge, linestyle="--", label="Ridge (alpha = 25)", linewidth=2)
+
+plt.xlabel("______")
+plt.ylabel("______")
+plt.title("______")
+plt.legend()
+plt.show()
+----
+
+**4d. So far, you examined how Ridge regression affects the slope of a single predictor. Now, consider a multivariable setting with all predictors included. Use the code below to fit both a standard multiple linear regression model and a multiple Ridge regression model using the same predictors and a fixed value of $\lambda$ (alpha). Use the code below to create a table that displays the coefficients from both models side by side. In 2–3 sentences, describe how the Ridge regression coefficients compare to the ordinary least squares coefficients and explain how this comparison illustrates the idea of coefficient shrinkage.**
+
+[source,python]
+----
+from sklearn.linear_model import LinearRegression, Ridge
+import pandas as pd
+
+# Fit OLS model
+ols = LinearRegression()
+ols.fit(X_train, y_train)
+
+# Fit Ridge model
+ridge = Ridge(alpha=25)
+ridge.fit(X_train, y_train)
+
+# Compare coefficients
+coef_compare = pd.DataFrame({
+    "Feature": X_train.columns,
+    "OLS Coefficient": ols.coef_,
+    "Ridge Coefficient (alpha = 25)": ridge.coef_
+}).round(4)
+
+coef_compare
+----
+
+
+====
+
+=== Question 5 - Lasso Regression (2 points)
+
+Lasso regression is closely related to Ridge regression, but it introduces an important difference in how the model penalizes large coefficients. While both methods apply regularization to reduce overfitting, they do so in different ways, which leads to meaningful differences in model behavior and interpretability.
+
+One key distinction is that Lasso regression has the ability to exclude variables entirely from the model. This means that some predictors can be removed from the final equation, resulting in a simpler and more interpretable model. In contrast, Ridge regression shrinks coefficients toward zero but does not eliminate predictors.
+
+This difference arises from the form of the penalty used by each method. Ridge regression penalizes squared coefficients, while Lasso regression penalizes the absolute value of the coefficients.
+
+Instead of minimizing a penalty involving squared slopes, Lasso regression estimates coefficients by minimizing  
+
+$\sum_{i=1}^{n} (y_i - \hat{y}_i)^2 + \lambda \sum_{j=1}^{p} |\beta_j|$
+
+
+Here, the first term is the sum of squared residuals, which measures how well the model fits the data, and the second term penalizes large coefficient values using absolute values rather than squares. The tuning parameter $\lambda \ge 0$ controls the strength of this penalty and is typically chosen using cross-validation.
+
+The most important practical difference between Ridge and Lasso regression is how coefficients behave as $\lambda$ increases. Ridge regression can shrink coefficients very close to zero, but they generally remain nonzero. Lasso regression, on the other hand, can force some coefficients to become exactly zero when $\lambda$ is sufficiently large.
+
+As a result, increasing $\lambda$ in a Lasso model can cause some predictors to drop out of the model entirely. This makes Lasso particularly useful in settings where the dataset contains many predictors that contribute little to explaining the response.
+
+Because Lasso can remove insignificant variables from the equation, it can be more effective than Ridge regression at reducing variance in models that contain a large number of weak or irrelevant predictors. Like other regularization methods, this comes at the cost of introducing some bias, but the overall bias–variance tradeoff often leads to improved predictive performance.
+
+
+.Deliverables
+====
+**5a. Lasso regression is closely related to Ridge regression, but it uses a different penalty on the coefficients. Specifically, the Lasso estimates the coefficients by minimizing**
+
+$\sum_{i=1}^{n} (y_i - \hat{y}_i)^2 + \lambda \sum_{j=1}^{p} |\beta_j|$
+
+**In 1–2 sentences, explain how the Lasso objective function differs from the Ridge regression objective. How does replacing the squared penalty with an absolute value penalty change the behavior of the estimated coefficients?**
+
+**5b. Now focus on the Lasso penalty term**
+
+$\lambda \sum_{j=1}^{p} |\beta_j|$
+
+**As $\lambda$ increases, this penalty increasingly discourages large coefficient values. In 1–2 sentences, explain why the Lasso can force some coefficients to become exactly zero, and how this property makes Lasso different from Ridge regression in terms of variable selection and model interpretability.**
+
+**5c. Use the code below to fit three models using the same set of predictors: a standard multiple linear regression model, a Ridge regression model, and a Lasso regression model. Display the table that shows the estimated coefficients from all three models side by side. In 2–3 sentences, compare the coefficients across the three methods. Describe how Ridge and Lasso differ from ordinary least squares in terms of coefficient magnitude, and explain what additional behavior you observe for Lasso that does not occur with Ridge.**
+
+
+[source,python]
+----
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
+import pandas as pd
+
+# Fit models
+ols = LinearRegression().fit(X_train, y_train)
+ridge = Ridge(alpha=25).fit(X_train, y_train)
+lasso = Lasso(alpha=1, max_iter=10000).fit(X_train, y_train)
+
+# Compare coefficients
+coef_table = pd.DataFrame({
+    "Feature": X_train.columns,
+    "OLS": ols.coef_,
+    "Ridge (alpha = 25)": ridge.coef_,
+    "Lasso (alpha = 25)": lasso.coef_
+}).round(4)
+
+coef_table
+----
+
+**5d. Suppose you are building a model to predict Spotify song popularity using many audio features, some of which may be weakly related or irrelevant. In 1-2 sentences, explain when you would prefer using Lasso regression over Ridge regression.**
+
+====
+
+
+=== Question 6 - Cross-Validation (2 points)
+
+In the previous questions, you explored how regularization methods such as Ridge and Lasso control model complexity by shrinking coefficient estimates and, in the case of Lasso, performing variable selection. While these methods can help reduce overfitting, their effectiveness depends critically on the choice of the tuning parameter (for example, $\lambda$ or $\alpha$), which determines the strength of the penalty applied to the coefficients.
+
+Rather than selecting this parameter arbitrarily, we typically rely on cross-validation to guide this choice. Cross-validation allows us to evaluate how a model performs on multiple subsets of the data, providing a more stable and reliable estimate of predictive performance than a single train–test split. By repeatedly training the model on different portions of the data and validating it on held-out folds, cross-validation helps balance the tradeoff between bias and variance.
+
+In this question, you will use k-fold cross-validation to assess the performance of Lasso regression across a range of $\alpha$ values. This process will help you identify a level of regularization that generalizes well to unseen data, rather than one that simply performs well on a single split of the dataset.
+
+
+.Deliverables
+====
+**6a. In **2–3 sentences**, explain what *k-fold cross validation* is and how it differs from using a single train–test split.**
+
+**6b. Use the code below to perform 5-fold cross-validation for Lasso across a grid of $\alpha$ values. Based on the cross-validated $R^2$ scores, identify the value of $\alpha$ that yields the highest average performance and report the corresponding $R^2$.**
+
+_The `KFold` function controls how the data are split into training and validation folds during cross-validation. You can learn more about how `KFold` works, including the role of `n_splits`, `shuffle`, and `random_state`, here: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html_
+
+
+[source,python]
+----
+from sklearn.linear_model import Lasso
+from sklearn.model_selection import KFold, cross_val_score
+import numpy as np
+import pandas as pd
+
+alphas = np.logspace(-3, 1, 10)
+
+cv_results = []
+
+kf = KFold(n_splits=___, shuffle=True, random_state=42) # For YOU to fill in
+
+for a in alphas:
+    lasso = Lasso(alpha=a, max_iter=10000)
+    
+    scores = cross_val_score(
+        lasso,
+        X_train,
+        y_train,
+        cv=kf,
+        scoring="r2"
+    )
+    
+    cv_results.append({
+        "alpha": a,
+        "mean_cv_r2": scores.mean()
+    })
+
+cv_df = pd.DataFrame(cv_results).round(4)
+cv_df
+
+----
+
+**6c. In 2–3 sentences, explain how cross-validation helps guide the choice of $\lambda$ for regularized models such as Lasso. Discuss why selecting hyperparameters using cross-validation is more reliable than evaluating model performance on a single test set.**
+====
+
+
+== Dataset
+
+- /anvil/projects/tdm/data/spotify/linear_regression_popularity.csv
+
+Learn more about the source: https://the-examples-book.com/projects/data-sets/Spotify[Spotify Dataset 1986–2023]. Feature names and their descriptions are below for your reference: 
+
+[cols="1,3", options="header"]
+|===
+| Feature | Description
+
+| track_id | Unique identifier for the track
+| track_name | Name of the track
+| popularity | Popularity score (0–100) based on Spotify plays
+| available_markets | Markets/countries where the track is available
+| disc_number | Disc number (for albums with multiple discs)
+| duration_ms | Track duration in milliseconds
+| explicit | Whether the track contains explicit content (True/False)
+| track_number | Position of the track within the album
+| href | Spotify API endpoint URL for the track
+| album_id | Unique identifier for the album
+| album_name | Name of the album
+| album_release_date | Release date of the album
+| album_type | Album type (album, single, compilation)
+| album_total_tracks | Total number of tracks in the album
+| artists_names | Names of the artists on the track
+| artists_ids | Unique identifiers of the artists
+| principal_artist_id | ID of the principal/primary artist
+| principal_artist_name | Name of the principal/primary artist
+| artist_genres | Genres associated with the principal artist
+| principal_artist_followers | Number of Spotify followers of the principal artist
+| acousticness | Confidence measure of whether the track is acoustic (0–1)
+| analysis_url | Spotify API URL for detailed track analysis
+| danceability | How suitable a track is for dancing (0–1)
+| energy | Intensity and activity measure of the track (0–1)
+| instrumentalness | Predicts whether a track contains vocals (0–1)
+| key | Estimated key of the track (integer, e.g., 0=C, 1=C#/Db)
+| liveness | Presence of an audience in the recording (0–1)
+| loudness | Overall loudness of the track in decibels (dB)
+| mode | Modality of the track (1=major, 0=minor)
+| speechiness | Presence of spoken words (0–1)
+| tempo | Estimated tempo in beats per minute (BPM)
+| time_signature | Estimated overall time signature
+| valence | Musical positivity/happiness of the track (0–1)
+| year | Year the track was released
+| duration_min | Track duration in minutes
+|===
+
+
+== References
+
+Some explanations, examples, and terminology presented in this section were adapted from the following sources for educational purposes:
+
+* James, G., Witten, D., Hastie, T., Tibshirani, R., & Taylor, J. (2023). _An Introduction to Statistical Learning: with Applications in Python_. Springer Texts in Statistics. Springer.
+
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project1.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
