@@ -1,0 +1,397 @@
+= TDM 10[]00: Project [] - Retrieval Augmented Generation
+
+== Project Objectives
+
+Motivation: Large Language Models (LLMs) are powerful tools, but they are limited to information that's within their training data and may generate incorrect responses. Retrival-Augmented Generation (RAG) improves the accuracy of LLMs by allowing them to retrieve and use information from external documents when generating answers. 
+
+Context: In this project, students will build a RAG pipeline using Ollama, LangChain, and Milvus. Students will convert document text into embeddings, store those embeddings in a vector database, retrieve relevant document chunks in response to questions, and evaluate how context influences generate answers.
+
+Scope: RAG, Ollama, LangChain, Milvus, document chunking
+
+.Learning Objectives
+****
+- Understand the purpose and workflow of a Retrieval-Augmented Generation system.
+- Create embeddings from document text and store them in a vector database.
+- Evaluate how document retrieval affects the accuracy and relevance of generated answers.
+- Analyze similarity scores on specific document chunks to understand selections made during retrieval. 
+****  
+
+== Dataset
+In Question 2, we will use a PDF document as our "dataset" to send to the LLM. Some relevant PDF files you _could_ use are:
+
+- https://github.com/TheDataMine/the-examples-book/blob/main/data_projects/TDM-Report_2024-4.pdf
+- https://github.com/TheDataMine/the-examples-book/blob/main/data_projects/Data-Mine-Corporate-Brochure.pdf
+- https://github.com/TheDataMine/the-examples-book/blob/main/data_projects/Academic-Partners-Overview_2024.pdf
+- https://github.com/TheDataMine/the-examples-book/blob/main/data_projects/Year-End-Report-2023.pdf
+
+== Questions
+[IMPORTANT]
+====
+Please use 4 Cores for this project.
+====
+
+=== Question 1 (2 points) 
+A Retrieval-Augmented Generation (RAG) system is a way to improve AI responses by searching a set of documents, finding relevant information from them, and then using that information to generate an applicable answer. Responses from LLMs using RAG search for this information before creating an output, so its answers are based on real data you've inputted rather than just what it has been previously trained to know. 
+
+LLMs cannot be directly trained on text. First, the text must be converted to a vector-format using embeddings - we experienced a bit of this towards the end of the previous project. BUT it can be computationally intensive to make the conversion from a lot of text into numbers. It is best to store the vetors in a database that we can easily come back to later. 
+
+In this case, we will use the vector database `Milvus` - to get a deeper understanding of how Milvus works, read the https://en.wikipedia.org/wiki/Milvus_(vector_database)[Wikipedia page here].
+
+
+The Milvus database belongs in the `SCRATCH` directory on Anvil - similar to large Ollama files, Milvus takes up too much memory to be stored in our home directories.
+
+In your notebook, start by directing your Milvus URI to run from your SCRATCH directory:
+
+[source,Python]
+----
+import os
+
+URI = f"{os.getenv('SCRATCH')}/milvus_demo.db"
+collection_name = "[first_name]_[last_name]_test_collection" # change to YOUR name
+
+print("Using Milvus DB at:", URI)
+print("Using the collection:", collection_name)
+----
+
+[NOTE]
+====
+If you are, for some reason, needing to remove your entire Milvus database and start over, you can delete it. To do this fully, you must remove the database AND the database lock file. This is done by running 'rm $SCRATCH/milvus_demo.db $SCRATCH/.milvus_demo.db.lock' in the Terminal. 
+
+This should be reserved for when you are getting errors creating or updating the vector store.
+====
+
+We will begin working with an Ollama server. Run `/anvil/projects/tdm/bin/ollama serve` in a new Terminal window. 
+
+[source,Python]
+----
+# show what port your Ollama server is running on!
+
+with open(f"/dev/shm/ollama.{os.getuid()}") as hostfile:
+    hostline = [line.rstrip() for line in hostfile]
+os.environ["OLLAMA_HOST"] = hostline[0]
+print(os.environ["OLLAMA_HOST"])
+----
+
+`LangChain` is a framework designed to build applications by connecting LLMs to external data sources. We will use it here to help connect Ollama to our retrieval chains and prompts to the model.
+
+[source,Python]
+----
+from langchain_ollama import OllamaLLM
+
+# choose to use the llama3.2 model that uses 2 threads !!
+llm = OllamaLLM(model="[model_name]")
+----
+
+And then we should be able to speak to the LLM! Try writing a few questions or prompts, and sending them to the model:
+
+[source,Python]
+----
+questions = ["my first question is...", "my second question is....", ....]
+
+for q in questions:
+    print(f"\nQuestion: {q}")
+    print("Answer:", llm.invoke(q))
+----
+
+.Deliverables
+====
+1.1 Connect Milvus to your SCRATCH directory +
+1.2 Display what port your Ollama server is running on +
+1.3 Show the results from sending the model 3 prompts in `questions` +
+1.4 Explain how Milvus, Ollama, and LangChain are currently being used together here
+====
+
+=== Question 2 (2 points)
+To begin using our models for text embedding, we will need to download mxbai-embed-large. This allows the LangChain-Ollama LLM to begin converting text into numerical vectors. 
+
+[source,Python]
+----
+from langchain_ollama import OllamaEmbeddings
+
+# choose to use the mxbai-embed-large model that uses 2 threads !!
+embed_model = OllamaEmbeddings(model="[model_name]")
+----
+
+In the 'Dataset' section at the top of the page, we provided a few example PDFs that could be used to test text embedding. The page that you choose to load in here will determine what questions make sense to ask you model later. 
+
+[source,Python]
+----
+from langchain_community.document_loaders import PyPDFLoader
+
+loader = PyPDFLoader("https://github.com/TheDataMine/the-examples-book/blob/main/data_projects/TDM-Report_2024-4.pdf") # change as needed
+data = loader.load()
+----
+
+If you want to print out the `data` that we've just defined, you can. This will display the PDF as its raw document data. This consists of two main categories:
+
+- Metadata (`metadata`) - a dictionary that provides context about the document, such as author, creation date, total number of pages, etc.
+- Page Content (`page_content`) - a long string containing the raw text extracted from each page of the document
+
+`data` should display your PDF content page by page, so if there were 5 pages in your document, you should be able to find a `metadata` and `page_content` pair for each page. 
+
+Since the PDF is currently split by page, there should be just a few big blocks of text. We need to break these up into smaller chunks, as embedding models work best when the text is at a more manageable scale. If the chunks are too large, the meaning of each passage becomes a bit diluted or lost. If they're too small, there isn't enough context to make the text meaningful to the model. 
+
+[IMPORTANT]
+====
+In RAG, you aren't looking for which page matches your query. You are asking the model to understand related passages just about relevant content, not return based on unrelated information, and be specific to what may have appeared in the document. 
+====
+
+To split up the raw PDF content, we will use the text splitter `RecursiveCharacterTextSplitter()`:
+
+[source,Python]
+----
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0)
+all_splits = text_splitter.split_documents(data)
+----
+
+[NOTE]
+====
+Adjusting the chunk_size and chunk_overlap will change how the model chooses to split up the text - how much text per chunk, and how much content overlap there is between chunks, respectively. 
+====
+
+Once you've saved the split text to all_splits, you can view how it looks in a bit cleaner format using `.page_content`. You can do this all at once, or use a for loop to split up the output by chunk:
+
+[source,Python]
+----
+for i in range([your_num_of_chunks]):
+    print(f"\n--- Chunk {i} ---\n")
+    print(all_splits[i].page_content)
+----
+
+.Deliverables
+====
+2.1 Read in a PDF (your choice), convert it to raw text form, and split it into chunks +
+2.2 Look at the length of `all_splits`. How many chunks were created? +
+2.3 Explain (1-2 sentences) what you notice about how the PDF content looks when you display the page text
+====
+
+=== Question 3 (2 points)
+Milvus has a function called `.from_documents`. Basically, this takes documents, embeds them, and stores them into the Milvus database. We will use a basic structure to make sure all of our important information gets included:
+
+[source,Python]
+----
+# imports
+from langchain_milvus import Milvus
+
+vector_store = Milvus.from_documents(
+    documents=, 
+    embedding=,
+    collection_name=, 
+    connection_args={"uri":},
+    drop_old=True,
+)
+----
+
+The documents, in this case, would be the list of all of the chunks that resulted from splitting up your PDF. Each chunk then becomes one entry in the vector database. 
+
+For embedding, you should use the embed_model from Ollama, so that each of the chunks from all_splits gets converted into a vector. 
+
+We defined a collection name and URI way back at the start of the project, when first directing the Milvus database to live in the SCRATCH directory.
+
+Once vector_store has been created, we will need to turn the store into a retriever object. This will allow it to take a question, then find the most relevant chunks of the text. With this retriever, the next step is to create a retrieval chain, which will take the selected chunks, and use them to generate the response. 
+
+[source,Python]
+----
+from langchain.chains import create_retrieval_chain
+
+retriever = vector_store.as_retriever()
+chain = create_retrieval_chain(combine_docs_chain=llm,retriever=retriever)
+----
+
+We will use an already made prompt template from `LangChain Hub` that is specifically designed for RAG. Its very base-level thinking is:
+
+[source]
+----
+Use the following context to answer the question:
+
+Context:
+{context}
+
+Question:
+{input}
+----
+
+If the LLM had to process each retrieved chunk individually, the process could easily begin to take a long time. So instead, the context will consist of any and all selected relevant chunks. 
+
+`combine_docs_chain = create_stuff_documents_chain(llm, retrieval_qa_chat_prompt)` will handle inserting the {context}, the {input}, and calling the selected model via Ollama. 
+
+[source,Python]
+----
+from langchain import hub
+from langchain.chains.combine_documents import create_stuff_documents_chain
+
+retrieval_qa_chat_prompt = hub.pull("langchain-ai/retrieval-qa-chat")
+combine_docs_chain = create_stuff_documents_chain(
+    llm, retrieval_qa_chat_prompt
+)
+retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
+----
+
+`retrieval_chain` will connect everything together! So the final pipeline should be:
+
+[source]
+----
+User Question -> Retriever -> Combine Docs Chain -> LLM
+----
+
+To actually go and test the LLM:
+
+[source,Python]
+----
+# ask the model something about your selected PDF document
+response = retrieval_chain.invoke({"input": "[your input]"})  
+print(response['answer'])
+----
+
+.Deliverables
+====
+3.1 Build the vector_store based on your splits, embedding model, collection, and URI +
+3.2 Test your model by sending a prompt related to the PDF file to the LLM +
+3.3 Explain (2-3 sentences) what steps need to be taken to make the LLM be able to understand the text from a document +
+3.4 Show how the model handles a question about something that is *NOT* actually in the document - i.e. while using a PDF about The Data Mine, ask what the document says about making coffee
+====
+
+=== Question 4 (2 points)
+Custom prompts are a powerful way to control how a RAG system behaves. They allow us to create and enforce rules, formatting, and relevance constraints on the model's output. 
+
+In Question 3, we used a pre-made template for how the model should handle context and inputs. 
+
+`ChatPromptTemplate` (from `langchain.prompts`) will allow us to build our own custom prompt to control how the model uses retrieved context when answering questions.
+
+[source,Python]
+----
+from langchain.prompts import ChatPromptTemplate
+
+custom_prompt = ChatPromptTemplate.from_template("""
+Use ONLY the following context to answer the question.
+
+If the answer is relevant to data science, Purdue University, The Data Mine, or student academics, answer in 1-5 sentences, using proper formatting. 
+
+If the answer is not in the relevant context, write reponses in FULLY CAPITALIZED FORMATTING. 
+
+Context:
+{context}
+
+Question:
+{input}
+""")
+----
+
+This prompt introduces *rules* for how the model should behave:
+
+- It must rely only on the retrieved context
+- It changes formatting depending on whether the question is relevant to the text
+- It prevents the model from using outside knowledge
+
+Next, we would need to rebuild the document combination chain and retrieval chain to use this new prompt. 
+
+This ensures that the retrieved document chunks are inserted into the {context} section, and that the model follows the custom instructions when generating responses. 
+
+We can now test how the model behaves by inputting some different types of questions:
+
+[source,Python]
+----
+my_questions = ["What does this report say about the Corporate Partners program?",
+            "What does this document say about The Data Mine in Indianapolis?",
+            "Why the sky is blue?"
+            ]
+
+for q in my_questions:
+    print(f"\nQuestion:\n {q}")
+
+    response = retrieval_chain_custom.invoke({"input": q})
+    print("Answer:\n", response['answer'])
+----
+
+.Deliverables
+====
+4.1 Create a custom context rule for the model. How does this change the outputs? +
+4.2 Test at least one relevant and one unrelevant prompt, using the custom model behavior.
+====
+
+=== Question 5 (2 points)
+We've built a RAG system that retrieves relevant document chunks, and uses them to generate answers. However, it is also important to understand _why_ chunks are being used and how relevant they are to a given query. 
+
+To do this, we will use a RetrievalQA chain, with `return_source_documents=True`, which will allow us to inspect the chunks that were retrieved and passed to the model. 
+
+[source,Python]
+----
+from langchain.chains import RetrievalQA
+
+# Wrap your llm & retriever in a RetrievalQA chain
+# Use return_source_documents=True to get the chunks
+qa_chain = RetrievalQA.from_chain_type(
+    llm=[your_llm_name],
+    retriever=[your_retriever_name],
+    return_source_documents=????
+)
+
+result = qa_chain.invoke({"query": "What does this document tell us about The Data Mine's programs?"})
+print("Answer:", result["result"])
+----
+
+We can then examine the actual retrieved chunks:
+
+[source,Python]
+----
+print("\nChunks used to answer this question:")
+
+for idx, doc in enumerate(result["source_documents"]):
+    print(f"\nChunk {idx+1}:\n{doc.page_content[:40]}...") 
+    if hasattr(doc, "metadata"):
+        print("Metadata:", doc.metadata)
+----
+
+This shows the specific portions of the document that were used as context for generating the answer. 
+
+But why were these chunks selected? How can we verify that these were the most important parts of the document to look at? 
+
+We can compute similarity scores between the query and _all_ of the document chunks:
+
+[source,Python]
+----
+# Get all of the chunks, and give them similarity scores
+docs_and_scores = vector_store.similarity_search_with_score(
+    query,
+    k=len([your_name_for_total_splits])
+)
+----
+
+From this, we can then sort and display the results.
+
+[source,Python]
+----
+docs_and_scores.sort(key=lambda x: x[1])
+
+for idx, (doc, score) in enumerate(docs_and_scores):
+    print(f"\nScore: {score:.4f}")
+    print(f"Chunk Content:")
+    print(doc.page_content[:60], "...")
+----
+
+These similarity scores that Milvus has returned are distance values - so the smaller the score, the more accurate it is. The larger scores are linked to the chunks in the text that weren't shown to be as helpful in answering what was asked of the model. 
+
+.Deliverables
+====
+5.1 Create `qa_chain`, then display the chunks that were used in the response +
+5.2 Score the chunks based on how relevant they were to the `qa_chain` question +
+5.3 Add comments throughout the example code to help with future understanding +
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project[].ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====

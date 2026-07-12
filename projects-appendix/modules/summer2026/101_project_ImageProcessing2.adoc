@@ -1,0 +1,432 @@
+= TDM 10[]00: Project [] - Image Processing 2
+
+== Project Objectives
+
+Motivation: Images often contain multiple objects that must be identified and analyzed individually. Computer vision models can now detect objects, determine their locations within an image, separate them from their backgrounds, and even remove them entirely. 
+
+Context: In this project, students will use YOLO and SAM to detect, segment, and modify objects within an image. Students will generate bounding boxes, create segmentation masks, and use inpainting techniques to remove selected objects and reconstruct image content. 
+
+Scope: Object Detection, YOLO, SAM, image segmentation, inpainting
+
+.Learning Objectives
+****
+- Understand how object detection models identify and localize objects within images. 
+- Generate and interpret bounding boxes, labels, and confidence scores using YOLO. 
+- Create segmentation masks using the Segment Anything Model (SAM). 
+- Apply inpainting to remove objects and reconstruct image content. 
+****  
+
+== Dataset
+- /anvil/projects/tdm/data/images/seq_000014.jpg
+
+### Image "seq_000014"
+This is an image screenshot from a shopping mall security camera video clip. There are some people scattered throughout the scene. The camera footage isn't particularly clear, but the computer will still recognize these figures as people when we go to classify the objects in the image. 
+
+== Questions
+
+=== Question 1 (2 points)
+Object detection is a computer vision technique in image processing that is used to identify, label, and locate specific objects from within images or videos. This method uses bounding boxes to show what items it has detected, and labels them accordingly. This is commonly done with cars, people, or animals in many different contexts. 
+
+One of the faster approaches to perform object detection is through YOLO. YOLO stands for "You Only Look Once", as this algorithm detects using only a single regression problem. More traditional detectors are multi-stage, and take two steps to propose the regions and then classify them. YOLO does this in a single neural network to predict the bounding boxes AND to classify its certainty, all within one forward pass. 
+
+For this project, we will be using a pretrained model - YOLOv8 nano - along with a selected image from a mall camera footage video. To load these in, read in the image and load the model:
+
+[source,Python]
+----
+from PIL import Image
+from ultralytics import YOLO
+
+yolo_model = YOLO("yolov8n.pt")
+
+image_path = "/anvil/projects/tdm/data/images/seq_000014.jpg"
+
+Image.open(image_path)
+----
+
+It's actually simple to use the model to predict the contents of the image. Use "`yolo_results = yolo_model.predict(source=image_path)`", and show the results. There should be a count of how many people (and plants) there were found to be. Did the model correctly predict all relevant objects in the image?
+
+We can use this model further to show us what parts of the image it thinks are people, and how certain of this it is. The `confidence score` will be calculated for each box in the YOLO results - the coordinates for each box will get stored based on the x-min, y-min, x-max, and y-max values. The given class ID that the model assigned will need to be converted to a human-readable format (e.g. "person"). To store the results, save all bounding boxes, get the total count of how many of each object type there are, and track the labels given to the objects.
+
+[source,Python]
+----
+input_boxes = []
+counts = {}
+detected_names = []
+
+for result in yolo_results:
+    for box in result.boxes:
+        # Get coordinates in [xmin, ymin, xmax, ymax] format
+        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+        
+        # Prediction confidence score
+        conf = box.conf[0]
+        
+        # Get class ID and assign readable name (e.g., 'person')
+        cls = int(box.cls[0])
+        name = result.names[cls]
+        
+        # use ':.2f' to shorten the shown decimals of the confidence score
+        print(f"Found {name} with {conf:.2f} confidence at {x1, y1, x2, y2}")
+
+        input_boxes.append([float(x1), float(y1), float(x2), float(y2)])
+        counts[name] = counts.get(name, 0) + 1
+        detected_names.append(name)
+----
+
+[IMPORTANT]
+====
+Print 'counts' to show how many occurrences there were of each object type in the image. 
+====
+
+We've created these "boxes" to classify the image objects, but this doesn't really have much of a meaning to us yet. To help make this make sense, we can loop through the results and overlay them on the original image. 
+
+`yolo_results` is where everything is stored. For each result in `yolo_results`, plot it to display the box and score. 
+
+[source,Python]
+----
+import matplotlib.pyplot as plt
+
+for r in [______]: # fill this in
+    im_array = r.plot() 
+    plt.imshow(im_array)
+    plt.axis('off')
+    plt.show()
+----
+
+.Deliverables
+====
+1.1 Explain (2-3 sentences) what YOLO is and how it is used in image detection +
+1.2 Run the model on the image. What objects is it predicting? +
+1.3 Print the results of 'counts', and explain (1-2 sentences) how the model is indicating there are people in the image +
+1.4 Display the original image, with the bounding boxes, object labels, and confidence scores from `yolo_results` overlaid +
+====
+
+=== Question 2 (2 points)
+In Question 2, we will introduce SAM, and use it to further our work on the image processing. 
+
+The Segment Anything Model (SAM) is a AI foundational model that is designed for image segmentation. This model is able to identify and isolate any object within an image or video with zero-shot generalization. 
+
+[NOTE]
+====
+Zero-shot generalization is where an AI model correctlly performs a task or classifies data into categories that it hadn't encountered during any of its training. It's able to understand the relationship between data it has seen and data it has never seen. 
+====
+
+Previously, we were using YOLO to define *boxes* for the objects. We can use SAM take the bounding boxes, find which pixels belong to each, and then create *masks* for the defined objects. This method of pixel-level segmentation allows for more precision when processing an image. 
+
+To start, load in Meta's SAM model:
+[source,Python]
+----
+import torch
+from transformers import SamModel, SamProcessor
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+sam_model = SamModel.from_pretrained("facebook/sam-vit-base")
+sam_processor = SamProcessor.from_pretrained("facebook/sam-vit-base")
+sam_model.to(device)
+----
+
+We've got to save the original image, and then put it into the SAM processor along with the bounding boxes (saved as `input_boxes`). 
+
+[source,Python]
+----
+original_img = Image.open(image_path)
+
+sam_inputs = sam_processor([image name], input_boxes=[[your input boxes]], return_tensors="pt")
+----
+
+[IMPORTANT]
+====
+In the SAM processor, make sure to keep the name of your input boxes within a set of []. Otherwise this will not run correctly. 
+
+For example, `input_boxes=[input_boxes]`. 
+====
+
+When running the model: SAM will predict masks for each box. 
+
+[source,Python]
+----
+with torch.no_grad():
+    outputs = sam_model(**sam_inputs)
+----
+
+Once the masks exist, they will need to be post-processed. In this case, this means rescaling the masks to the size that makes sense with the actual image, and ensuring that there is one mask per input box. To do this:
+
+[source,Python]
+----
+masks = sam_processor.image_processor.post_process_masks(
+    outputs.pred_masks,
+    sam_inputs["original_sizes"],
+    sam_inputs["reshaped_input_sizes"]
+)[0]
+----
+
+These masks *should* be closer to the actual shape of the objects being predicted in the image. To visualize them onto the original image, we have to:
+
+- Display the image (as the background layer)
+- Fix mask shape (mask should be a 2D array)
+- Overlay on image
+
+[source,Python]
+----
+m = masks[0]
+
+plt.imshow(original_img)
+
+if m.ndim == 3:
+    m = m[0]
+    
+plt.imshow(m, alpha=0.4)
+plt.axis("off")
+plt.show()
+----
+
+This will display the mask for one selected object in the image. 
+
+.Deliverables
+====
+2.1 Explain (1-2 sentences) what SAM is, and what it is used for in image processing +
+2.2 Define and predict masks for each object in the image using SAM +
+2.3 Assign, resize, and overlay the mask for *one* object on the original image
+====
+
+=== Question 3 (2 points)
+We have looked at the mask for just one object in this image. The YOLO model is predicting 18 items - 17 people, 1 plant. If we tried taking our lines from earlier and looping through each item of 'masks':
+
+[source,Python]
+----
+# display the image
+# ......
+
+# loop through the masks
+for mask in masks:
+    if mask.ndim == 3:
+        mask = mask[0]
+    plt.imshow(mask, alpha=0.4)
+
+# clean up the display
+# ......
+----
+
+....the image is not very clear. The image from Question 2 showed the mask as yellow for the object, purple for everything else. When we layer 18 slightly different versions of this together, the background color is going to build up and block almost everything. 
+
+There are a few ways to avoid this. 
+
+==== Method 1
+Display a copy of the image for each mask. This could be as simple as changing how the for loop is defined:
+
+- (old) for mask in masks: ....
+- (new) for i, mask in masks: ....
+
+This does work, but create a very long output. The code below helps format these image to make them more viewable at once.
+
+[source,Python]
+----
+fig, axes = plt.subplots(6, 3, figsize=(10, 18))
+axes = axes.flatten()
+
+for i, mask in enumerate(masks):
+    if mask.ndim == 3:
+        mask = mask[0]
+
+    axes[i].imshow(original_img)
+    axes[i].imshow(mask, alpha=0.4)
+
+plt.show()
+----
+
+==== Method 2
+Display *just* the masks for each of the objects, no background coverage. 
+
+Because we're going to be coming back to the original image later, it is important to make a copy here. At the same time, we'll also make sure it is a NumPy array, and convert it to be of type float to allow for blending to happen.
+
+[NOTE]
+====
+You could avoid making a copy of the image by just re-reading it in later. Either way, this copy is going to be "drawn" on (will have color shapes added). 
+====
+
+[source,Python]
+----
+import numpy as np
+
+image = np.array(original_img).copy()
+overlay = image.astype(np.float32)
+----
+
+Now we can bring back our loop from the start of Question 3, and add in some lines. 
+
+[source,Python]
+----
+for mask in masks:
+# fill in with the mask loop lines
+    if mask.ndim == 3:
+        mask = mask[0]
+
+    # random color for each object
+    color = np.random.rand(3)
+
+    # simple coloring
+    overlay[mask > 0] = color * 255
+
+overlay = overlay.astype(np.uint8)
+plt.imshow(overlay)
+plt.axis("off")
+plt.show()
+----
+
+.Deliverables
+====
+3.1 Try layering the masks (objects + backgrounds) onto the original image. Why doesn't this work very well? +
+3.2 Use Method 1 to display an image for each object mask. Display the result +
+3.3 Use Method 2 to take the object masks and put them onto one image. Display the result 
+====
+
+=== Question 4 (2 points)
+The "remove from image" feature that is now commonly found in media editing tools uses AI to remove people, objects, and text while automatically smoothing and filling in the background. This technique of editing within the image is called inpainting (vs. "outpainting" where they extrended beyond the boundaries of the images). In an endless, almost magical take on this, Adobe's article on https://www.adobe.com/products/photoshop/inpainting.html["What is inpainting?"] helps to showcase some of the extreme (and hard to put into practice) possiblities of inpainting. 
+
+The tools in Photoshop have been developed by a number of people over a long period of time. That is to say, the inpainting we will be doing will be nowhere that fancy. In this question, we'll start by just removing one person. 
+
+To get started, we are going to take the mask of the selected person, and convert it to be a binary mask.
+
+[NOTE]
+====
+The cv2.inpaint() function from OpenCV is what is going to be editing the image. However, this does require the mask to either be 0 (keep) or 255 (remove) values. 
+====
+
+[source,Python]
+----
+mask = masks[0][0].numpy() 
+
+# make binary mask (0 or 255)
+mask = mask.astype(np.uint8) * 255
+----
+
+The cv2.inpaint() function requires some information before it can be used:
+
+- chosen image
+- mask layer
+- inpaintRadius
+- flags
+
+Use the original image (no masks or object shapes), and the defined binary mask. The general range for the inpaintRadius is size 3 to 9 - this determines which surrounding pixels are included by distance - so choose a value accordingly. The flags are the algorithm used; there are two standard flags - cv2.INPAINT_NS, and cv2.INPAINT_TELEA. For this inpainting, use cv2.INPAINT_TELEA. This method is reliably fast and high quality. 
+
+[NOTE]
+====
+cv2.inpaint() requires images to be in the BGR color format. The first line of the code below takes the selected image and reads it in using cv2.imread(), which is in BGR by default. 
+====
+
+[source,Python]
+----
+import cv2
+
+image_bgr = cv2.imread(image_path)
+
+my_result = cv2.inpaint(
+    image_bgr,
+    [your_binary_mask_name],
+    inpaintRadius=???,
+    flags=???
+)
+----
+
+To display the results of this:
+
+[source,Python]
+----
+plt.imshow(cv2.cvtColor(my_result, cv2.COLOR_BGR2RGB))
+plt.axis("off")
+plt.show()
+----
+
+There is a subtle change here (the images below have been drawn on to point out the differences). The person in blue with the green bag has more or less disappeared into the abyss. 
+
+image:seq_000014_copy.jpg[width=45%]
+image:output.png[width=45%]
+
+.Deliverables
+====
+4.1 Explain (1-2 sentences) how objects are removed from images using AI +
+4.2 Use inpainting to remove one 'person' object from the image +
+4.3 Display the results of the image with one person removed
+====
+
+=== Question 5 (2 points)
+The YOLO model predicted both people and a plant in this image. These labels are stored in `detected_names`, containing 'person' and 'potted plant' values. The bounding boxes and NOT the masks are what presently have these distinguishing labels. 
+
+To remove just the masks of the people, we will have to loop through `masks` *and* `detected_names` (the bounding box titles) to match the shapes to the labels. 
+
+[source,Python]
+----
+combined_mask = None
+
+for i, mask in enumerate(masks):
+    # if it is NOT a person, skip it
+    if detected_names[i] != 'person':
+        continue
+
+    mask = mask.cpu().numpy()
+
+    if mask.ndim == 3:
+        mask = mask[0]
+
+    if combined_mask is None:
+        combined_mask = np.zeros_like(mask, dtype=np.uint8)
+
+# combined_mask contains ALL "person" masks
+    combined_mask = np.maximum(combined_mask, mask)
+
+combined_mask = combined_mask.astype(np.uint8) * 255
+----
+
+Then use cv2.inpaint() to remove the masks in `combined_masks`, and plt.imshow() to display the results, as in Question 4. 
+
+If you look closely, there are still some ridged outlines from where the people used to be. The inpainting did good at removing the people, but it hasn't yet blended their lingering outlines back into the background floor, shadows, etc. 
+
+We can use cv2.GaussianBlur() to blur the masks: `combined_mask = cv2.GaussianBlur(combined_mask, (7,7), 0)`. 
+
+And again, use inpainting to place these masks onto the image and display it. 
+
+[source,Python]
+----
+result = cv2.inpaint(
+    image_bgr,
+    combined_mask,
+    inpaintRadius=5,
+    flags=cv2.INPAINT_TELEA
+)
+
+result = cv2.inpaint(
+    image_bgr,
+    combined_mask,
+    inpaintRadius=5,
+    flags=cv2.INPAINT_TELEA
+)
+----
+
+image:output2.png[width=45%]
+
+image:output3.png[width=45%]
+
+
+.Deliverables
+====
+5.1 Remove all of the 'person' objects from the image +
+5.2 Use gaussian blur to smooth the removed people outlines +
+5.3 What do you notice that the inpainting did good at smoothing completely? What parts still seem to linger in the cleaned image? 
+====
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project[].ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
