@@ -1,4 +1,4 @@
-= TDM 19000: Running and Changing the Ollama Model
+= TDM 19000: Running, Timing, and Customizing the Ollama Model with Parameters
 
 == Running the Ollama Model
 
@@ -58,4 +58,64 @@ time /anvil/projects/tdm/bin/ollama run llama3.2-[thread count] "Explain why the
 ----  
 
 There is hopefully a very noticable time difference between running the model on 1 thread vs 2. This may be more subtle when comparing 2 cores to more (such as testing with 4 or 8 threads). The ideal number of threads tends to be around 1/2 as many cores as your server is running on - since we are using 4 cores, you should continue using 2 threads. 
+
+== Customizing the Ollama Model with Parameters
+
+A plain-text configuration file - a modelfile - in Ollama can be used to define a new model. The contents of this file specifies:
+
+- `FROM`: the base model
+- `SYSTEM`: prompt for model behavior
+- `PARAMETER`: set model parameters 
+
+The base model will be llama3.2. We could re-define that we want to use 2 threads by setting the PARAMETER, or we could just set the base model to llama3.2-2, as we have already worked with this model. 
+
+In the SYSTEM block, we can send the model a prompt on how to behave. This does not change the model's quality itself, just defines how this model we are creating should style its responses. 
+
+You can reuse this general setup:
+
+[source,Python]
+----
+%%bash
+cat > ~/mymodel << HERE
+FROM [your_model_name]
+SYSTEM """
+[your model behavior prompt] 
+"""
+HERE
+----
+
+A typical generative model's tone and behavior is usually rather neutral until it has training to shape its behavior. 
+
+Now fill out a modelfile with personality and style for the model to use when writing responses. 
+
+Some ideas for this:
+
+- Explain everything written in the language Pig Latin.
+- You are a very grouchy elderly man who does not like people who ask questions. Explain rudely and like you strongly wish for this to end
+- Explain everything to a five-year-old child. Use very simple words and short sentences. Use comparisons and examples children would understand.
+- You are a pirate explaining things to your crew. Use pirate slang and nautical metaphors.
+
+[NOTE]
+====
+So far, we have been defining the modelfiles under the name `mymodel` each time. This is OK, as we are completing our model definitions and saving them each time before defining the next new model. However, you may find that you want to call your files distinct names if you have more than one model in the in-progress stage before running `/anvil/projects/tdm/bin/ollama create [model_version]-[my_model_name] -f ~/[modelfile_name]`.
+====
+
+[IMPORTANT]
+====
+Between defining your model and then going to test it, do not forget to actually create it! 
+
+[source,Bash]
+----
+/anvil/projects/tdm/bin/ollama create [model_name] -f ~/mymodel
+----
+====
+
+Try defining, creating, and running a few models with different system behavior definitions. In the terminal, use:
+
+[source,Bash]
+----
+/anvil/projects/tdm/bin/ollama run llama3.2-[model_name]
+----
+
+...to run each model.
 
