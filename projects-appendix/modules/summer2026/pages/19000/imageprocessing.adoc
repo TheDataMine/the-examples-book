@@ -1,10 +1,10 @@
 = TDM 19000: Image Processing
 
-== Project Objectives
+== Objectives
 
 Motivation: Computers cannot interpret images the way humans do. Instead, images must be converted into numerical representations of themselves that capture import visual features. Learning how image embeddings are created and compared allows us to analyze them, and discover patterns in large collections of images.
 
-Context: In this project, students will use the CLIP model to process images and generate image embeddings, compare images using cosine similarity, and use clustering to group visually similar images based on their extracted features
+Context: Students will use the CLIP model to process images and generate image embeddings, compare images using cosine similarity, and use clustering to group visually similar images based on their extracted features
 
 Scope: Image Processing, CLIP, image embedding, clustering
 
@@ -24,76 +24,18 @@ The Snails folder contains 30 different images of snails - sourced from this Kag
 
 The purpose of this dataset is to give us a sampling of images to break down into vectors, so that we can begin learning about embedding images - putting them into a form the computer will understand. Any dataset of images is fine to use; this was one we found interesting because the snails themselves vary in shape, color, species, and size, as well as the backgrounds of the images can be leaves, dirt, conrete, and other surface, while all still focusing on a singular snail to create consistency across the 30 images.
 
-== Questions
-
-=== Question 1 (2 points)
 Humans are naturally good at finding patterns and understanding context that causes something to look how it does - humans instantly process visual information. It's how we make sense of the world. 
 
 Computers excel at taking text, and searching, sorting, and analyzing it at high speeds. Much faster than humans can do. But a computer cannot technically "see" an image - it sees a collection of pixels (or RGB values) that make up any image it encounters. 
 
 Image processing allows computers to analyze and interpret visual data. This process is done by taking raw visual data, and transforming it into representations of the image that can be analyzed by a computer. These techniques are now commonly combined with machine learning models, in order to identify patterns across large quantities of images at once. 
 
-In this project, we will apply image processing and feature extraction techniques to convert a set of images into numeric embeddings, and then create groups based on similarity. 
+We will apply image processing and feature extraction techniques to convert a set of images into numeric embeddings, and then create groups based on similarity. 
 
-To get started, we will need to download CLIP - a model that comes from OpenAI. This model learns to connect images and text; it can take an image, and tell you what string of text it is similar to. Similar to some other models we've worked with, the CLIP model has some pretty sizable files (far too big for our home directory), so we will have to redirect them to the much larger SCRATCH directory:
+We will work with the CLIP Model and Processor.  There are numerous other models that are more modern now, including (for instance) Apple DFN, BLIP-2, EVA-CLIP, Long-CLIP, MetaCLIP, OpenCLIP, SigLIP, etc.
 
-[source,bash]
-----
-# In the Terminal !
+First, we need to setup the CLIP Model and Processor:  https://the-examples-book.com/projects/summer2026/19000/settingupclip
 
-# Ensure the .cache folder exists
-mkdir -p ~/.cache 
-
-# Create the target directory
-# (Hugging Face is the platform that hosts OpenAI's CLIP models)
-mkdir -p $SCRATCH/huggingface
-
-# Create a symbolic link
-ln -s $SCRATCH/huggingface ~/.cache/huggingface
-----
-
-In your notebook, run: 
-
-[source,bash]
-----
-%%bash
-ls -l ~/.cache/huggingface
-----
-
-...to verify that the huggingface cache is being redirected to SCRATCH. The output should include something similar to this image:
-
-image::Redirecting_directory_to_scratch.png[align=center, width=80%]
-
-
-From here, we need to get the CLIP model and processor:
-
-- CLIPModel - allows us to encode images
-- CLIPProcessor - handles resizing, normalization, and format conversion for images. 
-
-[source,Python]
-----
-from transformers import CLIPModel
-from transformers import CLIPProcessor
-
-# loads a pretrained CLIP model from Hugging Face
-model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
-
-processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-----
-
-[NOTE]
-====
-When importing CLIPProcessor, you may get a long warning message. This is ok to ignore!
-====
-
-.Deliverables
-====
-1.1 Explain (1-2 sentences) how computers "understand" visual content +
-1.2 Direct the CLIP model to store downloads in the SCRATCH directory +
-1.3 Load the model and processor to prepare for image processing
-====
-
-=== Question 2 (2 points)
 Now we can actually begin working with the model, and have it process some images. 
 
 From the 'Snails' folder, choose one image to read in (using Image.open) and view, as done below.
@@ -130,148 +72,15 @@ Think of how you might describe the image you've just displayed. Some common the
 
 Just as we can think of images by a set of key features, so will the computer...just a bit differently. 
 
-For the model to understand what is happening in this image, we must first use the CLIPProcessor (stored as `processor` in Question 1) to prepare the image. This processor will automatically resize the image, normalize the pixel values to be in a range the model expects, and then convert the image into numerical tensors. 
+The CLIP Model and Processor will convert the image into vectors using embeddings:  https://the-examples-book.com/projects/summer2026/19000/imageembeddings
 
-[source,Python]
-----
-inputs = processor(images=my_image, return_tensors="pt")
+One of the most natural concepts to learn is how to compare images.
 
-inputs
-----
+Again, just as with large language models, one way to make comparisons is to use cosign similarity.
 
-[NOTE]
-====
-The resulting `inputs` is a dictionary of tensors, of the shape:
-
-[source]
-----
-{
-    'pixel_values': tensor([...])
-}
-----
-
-This is the formatting that the CLIP model expects and knows how to handle as input. 
-====
-
-From this point, we then need the model to take the processed image, and convert it into a numercial feature vector - an embedding - that represents the image. This is the model's way of storing the meaning of what is in the image. 
-
-[source,Python]
-----
-# break the dictionary up into keyword arguments
-image_features = model.get_image_features(**inputs)
-----
-
-[IMPORTANT]
-====
-image_features stores the important parts of the image that make it itself and not any other image. 
-====
-
-The result is an embedding that does not make too much sense to us when viewed. But it is actually quite useful for the model. This vector will allow us to make similarity comparisons between multiple images in the future. 
-
-[source,Python]
-----
-# normalize the features to ensure the magnitude doesn't matter
-normalized_img_feats = image_features / image_features.norm(dim=-1, keepdim=True)
-----
-
-.Deliverables
-====
-2.1 Read in an image from the Snails dataset folder, and display it. What are some key features you notice about the image? +
-2.2 Convert the image into a dictionary of tensors +
-2.3 Unpack the dictionary (`inputs`) to find keyword arguments +
-2.4 Explain (2-3 sentences) how we are using `processor` and `model` to make the image model-friendly
-====
-
-=== Question 3 (2 points)
-
-If we wanted to compare a group of images and decide which were the most similar, sometimes it is easy to do. In this group, it would be the two images of snails:
-
-image:snail (179).jpg[width=24%]
-image:bike_207.jpg[width=24%]
-image:snail (103).jpg[width=24%]
-image:cat.1.jpg[width=24%]
-
-But in a group with very visually similar images, it is a bit harder for us to just look and know:
-
-image:snail (261).jpg[width=30%]
-image:snail (304).jpg[width=30%]
-image:snail (262).jpg[width=30%]
-
-All three snails look very similar. 
-
-The CLIP model is able to compare how similar images are based on the values in their feature vectors. We will build a loop to read in every image of the `Snails` folder. For each image, it will be important to make sure that it goes through `processor` and `model` so the key description features get stored correctly. 
-
-Here is the base template to fill out (with help from the lines we built in Question 2 when processing just 1 image):
-
-[source,Python]
-----
-# lists to contain the names of the files and the image vectors
-filenames = []
-features = []
-
-folder = "" # Insert the filepath to the 'Snails' folder
-
-for file in os.listdir(folder):
-    if file.endswith(".jpg"):
-        path = os.path.join(folder, file)
-
-        with Image.open(path) as image:
-            # Define 'inputs' to be the result of running processor on 'image'
-            # (so processor will be run on each image)
-            # Return the images in a format that CLIP can process
-            inputs = ......
+We give some examples here:   https://the-examples-book.com/projects/summer2026/19000/imagesimilarity
 
 
-        with torch.no_grad():
-            # 'image_features' should take the processed images and use 
-            # model to convert them into embeddings
-            # to store what each images "means"
-            image_features = ......
-
-        # normalize the image features
-        normalized_img_feats = ......
-
-        features.append(feats)
-        filenames.append(file)
-
-        print(file)
-----
-
-[TIP]
-====
-Print the length of `features` to ensure that it contains all 30 snail images. 
-====
-
-Use `combined_features = torch.cat(features, dim=0)` to take the list of individual image vectors - each image has its own vector - and combine them into one big tensor. Each row of `combined_features` represents one image embedding. 
-
-For this project, we will use cosine similarity to compare how similar the images are. To start very simply, compare the just two images to find their similarity.
-
-[source,Python]
-----
-# compare image #0 to image #1
-first_similarity = torch.matmul(features[0], features[1])
-
-print(first_similarity)
-----
-
-[NOTE]
-====
-In cosine similarity, there are three score categories:
-
-- -1 - items are dissimilar
-- 0 - items are neutral
-- 1 - items are identical
-
-The similarity scores between the images will follow these patterns. 
-====
-
-.Deliverables
-====
-3.1 How might the CLIP model decide that the three images of snails (shown above) are more similar to each other than to an image of a bike or a cat? +
-3.2 Read in the 30 snail images and extract a feature vector for each +
-3.3 Combine the vectors into one total list of vectors +
-3.4 Show the similarity score of image #0 to image #1. Are these two images dissimilar, neutral, or similar? 
-====
 
 === Question 4 (2 points)
 To find the similarity of each image to every single other image, you can do 'similarities = torch.matmul(features, features.T)'. Printing out `similarities` would display a tensor containing a vector for each image. Each vector would contain 30 values - 30 images, scoring the similarity to each of the other 29 images and themself. This is very hard to interpret. 
