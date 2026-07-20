@@ -17,7 +17,7 @@ All three snails look very similar.
 
 The CLIP model is able to compare how similar images are based on the values in their feature vectors. We will build a loop to read in every image of the `Snails` folder. For each image, it will be important to make sure that it goes through `processor` and `model` so the key description features get stored correctly. 
 
-Here is the base template to fill out (with help from the lines we used earlier, when processing just one image):
+First we specify the location of the files, so that we are prepared to loop through them:
 
 [source,Python]
 ----
@@ -25,8 +25,20 @@ Here is the base template to fill out (with help from the lines we used earlier,
 filenames = []
 features = []
 
-folder = "" # Insert the filepath to the 'Snails' folder
+folder = "/anvil/projects/tdm/data/images/Snails"
+----
 
+We need `torch` in order to convert the images into tensors.
+
+[source,Python]
+----
+import torch
+----
+
+Now we loop through the files, running the processor on each image.  The `no.grad` means that we will do this in a light way, with `no gradient calculations`.
+
+[source,Python]
+----
 for file in os.listdir(folder):
     if file.endswith(".jpg"):
         path = os.path.join(folder, file)
@@ -35,19 +47,19 @@ for file in os.listdir(folder):
             # Define 'inputs' to be the result of running processor on 'image'
             # (so processor will be run on each image)
             # Return the images in a format that CLIP can process
-            inputs = ......
+            inputs = processor(images=image, return_tensors="pt")
 
 
         with torch.no_grad():
             # 'image_features' should take the processed images and use 
             # model to convert them into embeddings
             # to store what each images "means"
-            image_features = ......
+            image_features = model.get_image_features(**inputs)
 
-        # normalize the image features
-        normalized_img_feats = ......
+        # We normalize the image features just as we did before
+        normalized_img_feats = image_features / image_features.norm(dim=-1, keepdim=True)
 
-        features.append(feats)
+        features.append(normalized_img_feats)
         filenames.append(file)
 
         print(file)
@@ -58,14 +70,23 @@ for file in os.listdir(folder):
 Print the length of `features` to ensure that it contains all 30 snail images. 
 ====
 
-Use `combined_features = torch.cat(features, dim=0)` to take the list of individual image vectors - each image has its own vector - and combine them into one big tensor. Each row of `combined_features` represents one image embedding. 
+We can use:
 
-For this project, we will use cosine similarity to compare how similar the images are. To start very simply, compare the just two images to find their similarity.
+[source,Python]
+----
+combined_features = torch.cat(features, dim=0)
+----
+
+to take the list of individual image vectors (from each image) and combine them into one big tensor. Each row of `combined_features` represents one image embedding. 
+
+Now we will use cosine similarity, to compare how similar the images are.
+
+To start very simply, compare the just two images to find their similarity.
 
 [source,Python]
 ----
 # compare image #0 to image #1
-first_similarity = torch.matmul(features[0], features[1])
+first_similarity = torch.matmul(features[0], features[1].T)
 
 print(first_similarity)
 ----
