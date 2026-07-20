@@ -205,23 +205,32 @@ Question:
 
 If the LLM had to process each retrieved chunk individually, the process could easily begin to take a long time. So instead, the context will consist of any and all selected relevant chunks. 
 
-`combine_docs_chain = create_stuff_documents_chain(llm, retrieval_qa_chat_prompt)` will handle inserting the {context}, the {input}, and calling the selected model via Ollama. 
+
+[source,Python]
+----
+from langchain import hub
+
+retrieval_qa_chat_prompt = hub.pull("langchain-ai/retrieval-qa-chat")
+----
 
 (Dr Ward learned the method in the block before from Chat GPT!)
 
 [source,Python]
 ----
 from langchain_core.runnables import RunnableLambda
-
-def retrieve_context(inputs):
-    docs = retriever.invoke(inputs["input"])
-    return format_docs(docs)
-
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
 retrieval_chain = (
     {
-        "context": RunnableLambda(retrieve_context),
-        "input": RunnableLambda(lambda x: x["input"]),
-    }
+        "context": lambda x: retriever.invoke(x["input"]),
+        "input": lambda x: x["input"],
+    }    
+    | RunnableLambda(
+        lambda x: {
+            "context": format_docs(x["context"]),
+            "input": x["input"],	
+	}
+    )
     | retrieval_qa_chat_prompt
     | llm
 )
@@ -240,7 +249,7 @@ To actually go and test the LLM:
 ----
 # ask the model something about your selected PDF document
 response = retrieval_chain.invoke({"input": "What is the main idea of this document?"})  
-print(response['answer'])
+print(response)
 ----
 
 Now try this on your own, using a document of your choosing!
