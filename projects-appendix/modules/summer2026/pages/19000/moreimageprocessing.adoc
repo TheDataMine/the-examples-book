@@ -1,178 +1,18 @@
 = TDM 19000: More Image Processing
 
-== Project Objectives
+The image screenshot:
 
-Motivation: Images often contain multiple objects that must be identified and analyzed individually. Computer vision models can now detect objects, determine their locations within an image, separate them from their backgrounds, and even remove them entirely. 
+/anvil/projects/tdm/data/images/seq_000014.jpg
 
-Context: In this project, students will use YOLO and SAM to detect, segment, and modify objects within an image. Students will generate bounding boxes, create segmentation masks, and use inpainting techniques to remove selected objects and reconstruct image content. 
+is from a shopping mall security camera video clip. There are some people scattered throughout the scene. The camera footage is not particularly clear.  The computer will still recognize (most of) these figures as people when we go to classify the objects in the image. 
 
-Scope: Object Detection, YOLO, SAM, image segmentation, inpainting
+=== YOLO
 
-.Learning Objectives
-****
-- Understand how object detection models identify and localize objects within images. 
-- Generate and interpret bounding boxes, labels, and confidence scores using YOLO. 
-- Create segmentation masks using the Segment Anything Model (SAM). 
-- Apply inpainting to remove objects and reconstruct image content. 
-****  
-
-== Dataset
-- /anvil/projects/tdm/data/images/seq_000014.jpg
-
-### Image "seq_000014"
-This is an image screenshot from a shopping mall security camera video clip. There are some people scattered throughout the scene. The camera footage isn't particularly clear, but the computer will still recognize these figures as people when we go to classify the objects in the image. 
-
-=== Part 1
 Object detection is a computer vision technique in image processing that is used to identify, label, and locate specific objects from within images or videos. This method uses bounding boxes to show what items it has detected, and labels them accordingly. This is commonly done with cars, people, or animals in many different contexts. 
 
-One of the faster approaches to perform object detection is through YOLO. YOLO stands for "You Only Look Once", as this algorithm detects using only a single regression problem. More traditional detectors are multi-stage, and take two steps to propose the regions and then classify them. YOLO does this in a single neural network to predict the bounding boxes AND to classify its certainty, all within one forward pass. 
+One of the faster approaches to perform object detection is through YOLO. We added some notes about YOLO for you here:  https://the-examples-book.com/projects/summer2026/19000/introductiontoyolo
 
-For this project, we will be using a pretrained model - YOLOv8 nano - along with a selected image from a mall camera footage video. To load these in, read in the image and load the model:
-
-[source,Python]
-----
-from PIL import Image
-from ultralytics import YOLO
-
-yolo_model = YOLO("yolov8n.pt")
-
-image_path = "/anvil/projects/tdm/data/images/seq_000014.jpg"
-
-Image.open(image_path)
-----
-
-It's actually simple to use the model to predict the contents of the image. Use "`yolo_results = yolo_model.predict(source=image_path)`", and show the results. There should be a count of how many people (and plants) there were found to be. Did the model correctly predict all relevant objects in the image?
-
-We can use this model further to show us what parts of the image it thinks are people, and how certain of this it is. The `confidence score` will be calculated for each box in the YOLO results - the coordinates for each box will get stored based on the x-min, y-min, x-max, and y-max values. The given class ID that the model assigned will need to be converted to a human-readable format (e.g. "person"). To store the results, save all bounding boxes, get the total count of how many of each object type there are, and track the labels given to the objects.
-
-[source,Python]
-----
-input_boxes = []
-counts = {}
-detected_names = []
-
-for result in yolo_results:
-    for box in result.boxes:
-        # Get coordinates in [xmin, ymin, xmax, ymax] format
-        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-        
-        # Prediction confidence score
-        conf = box.conf[0]
-        
-        # Get class ID and assign readable name (e.g., 'person')
-        cls = int(box.cls[0])
-        name = result.names[cls]
-        
-        # use ':.2f' to shorten the shown decimals of the confidence score
-        print(f"Found {name} with {conf:.2f} confidence at {x1, y1, x2, y2}")
-
-        input_boxes.append([float(x1), float(y1), float(x2), float(y2)])
-        counts[name] = counts.get(name, 0) + 1
-        detected_names.append(name)
-----
-
-[IMPORTANT]
-====
-Print 'counts' to show how many occurrences there were of each object type in the image. 
-====
-
-We've created these "boxes" to classify the image objects, but this doesn't really have much of a meaning to us yet. To help make this make sense, we can loop through the results and overlay them on the original image. 
-
-`yolo_results` is where everything is stored. For each result in `yolo_results`, plot it to display the box and score. 
-
-[source,Python]
-----
-import matplotlib.pyplot as plt
-
-for r in [______]: # fill this in
-    im_array = r.plot() 
-    plt.imshow(im_array)
-    plt.axis('off')
-    plt.show()
-----
-
-=== Part 2
-In Part 2, we will introduce SAM, and use it to further our work on the image processing. 
-
-The Segment Anything Model (SAM) is a AI foundational model that is designed for image segmentation. This model is able to identify and isolate any object within an image or video with zero-shot generalization. 
-
-[NOTE]
-====
-Zero-shot generalization is where an AI model correctlly performs a task or classifies data into categories that it hadn't encountered during any of its training. It's able to understand the relationship between data it has seen and data it has never seen. 
-====
-
-Previously, we were using YOLO to define *boxes* for the objects. We can use SAM take the bounding boxes, find which pixels belong to each, and then create *masks* for the defined objects. This method of pixel-level segmentation allows for more precision when processing an image. 
-
-To start, load in Meta's SAM model:
-[source,Python]
-----
-import torch
-from transformers import SamModel, SamProcessor
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
-
-sam_model = SamModel.from_pretrained("facebook/sam-vit-base")
-sam_processor = SamProcessor.from_pretrained("facebook/sam-vit-base")
-sam_model.to(device)
-----
-
-We've got to save the original image, and then put it into the SAM processor along with the bounding boxes (saved as `input_boxes`). 
-
-[source,Python]
-----
-original_img = Image.open(image_path)
-
-sam_inputs = sam_processor([image name], input_boxes=[[your input boxes]], return_tensors="pt")
-----
-
-[IMPORTANT]
-====
-In the SAM processor, make sure to keep the name of your input boxes within a set of []. Otherwise this will not run correctly. 
-
-For example, `input_boxes=[input_boxes]`. 
-====
-
-When running the model: SAM will predict masks for each box. 
-
-[source,Python]
-----
-with torch.no_grad():
-    outputs = sam_model(**sam_inputs)
-----
-
-Once the masks exist, they will need to be post-processed. In this case, this means rescaling the masks to the size that makes sense with the actual image, and ensuring that there is one mask per input box. To do this:
-
-[source,Python]
-----
-masks = sam_processor.image_processor.post_process_masks(
-    outputs.pred_masks,
-    sam_inputs["original_sizes"],
-    sam_inputs["reshaped_input_sizes"]
-)[0]
-----
-
-These masks *should* be closer to the actual shape of the objects being predicted in the image. To visualize them onto the original image, we have to:
-
-- Display the image (as the background layer)
-- Fix mask shape (mask should be a 2D array)
-- Overlay on image
-
-[source,Python]
-----
-m = masks[0]
-
-plt.imshow(original_img)
-
-if m.ndim == 3:
-    m = m[0]
-    
-plt.imshow(m, alpha=0.4)
-plt.axis("off")
-plt.show()
-----
-
-This will display the mask for one selected object in the image. 
-
+We also want to introduce you to SAM, and use it to further our work on the image processing:  https://the-examples-book.com/projects/summer2026/19000/introductiontosam
 
 === Part 3
 We have looked at the mask for just one object in this image. The YOLO model is predicting 18 items - 17 people, 1 plant. If we tried taking our lines from earlier and looping through each item of 'masks':
