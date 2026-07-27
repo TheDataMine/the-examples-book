@@ -1,7 +1,27 @@
-Agents are given a set of tools that they are able to reference when asked a specific question. When there is a user asking to cancel their order, the system should have clear instructions on how the agent actually goes about doing this. 
+Agents are given a set of tools that they are able to reference when asked a specific question. When there is a user asking to cancel their order, the system should have clear instructions on how the agent actually goes about doing this.
+
+We will have long sections of code in each of these three files:
+
+- `tools.py`
+- `state.py`
+- `graph.py`
+
+as we work on the development of a single agent model.  Rather than make the Python Notebook huge, and messy to work in, we will (instead) put our work into these three files.  You can create the files using the File / Text File option from the menu.  Make sure to save your files as ".py" instead of ".txt" files.  Working in this way will help prepare you for what to do when you may be working someday to build an agent that some company is going to use.  We can split long sections of code into these three different files:
+
+Please call the files by the names `tools.py` and `state.py` and `graph.py`, not (for instance) by the name `toolsversion1.py`.
+
+https://the-examples-book.com/projects/summer2026/19000/toolsversion1.adoc
+
+
+
+
+
+
+
 
 [source,Python]
 ----
+# tools.py
 from langchain.tools import tool
 
 @tool
@@ -14,10 +34,70 @@ TOOLS = {
 }
 ----
 
-[NOTE]
-====
-Any tools you define for the model should also be added to the `TOOLS` lookup dictionary. This way, we don't have to pass each tool's definition into the agent's context window each time we need to use it.
-====
+==== state.py
+This file is where definition of what information flows through the graph gets stored. 
+
+[source,Python]
+----
+# state.py
+
+from typing_extensions import TypedDict
+
+class GraphState(TypedDict):
+    order_id: dict
+    messages: list
+----
+
+==== graph.py
+This is where much of the remaining code goes. `graph.py` should hold the creation of the LLM, agent, and graph. The agent includes everything within `call_model()`, so the messages from the user, agent prompt, first model call, and second model call. The graph is where we're telling the agent what steps to take from start to finish - this is also important to include in `graph.py`.
+
+[source,Python]
+----
+# graph.py
+
+from langgraph.graph import StateGraph
+from langchain_core.messages import (
+    SystemMessage,
+    ToolMessage
+)
+from langchain_ollama import ChatOllama
+from state import GraphState
+from tools import TOOLS
+
+# define the LLM
+llm = ChatOllama(
+    .....
+    ...
+)
+
+# bind the model with the tools
+llm_with_tools = llm.bind_tools([
+    .....
+    ...
+])
+
+##### agent
+def call_model(state: GraphState):
+......
+...
+    return {
+        "messages": outputs,
+           "order_id": order_id
+    }
+
+##### graph
+def construct_graph():
+.......
+....
+    return graph.compile()
+----
+
+
+
+
+
+
+
 
 Next, define a graph state. 
 
@@ -165,32 +245,12 @@ for name, order_id, prompt in tests:
 ====
 
 
-What we have done (so far) is really important for the base of this project. However, we will continue to modify these long sections of code in each of the following portions of our development of a single agent model.  We will create copies of each modified section, which would make the Python Notebook huge, and messy to work in. If this were a project where we're working to build an agent that some company is going to use, or that is going to be looked back on beyond this project, these long sections of code would be split into a few different files:
+We will continue to modify these long sections of code in each of the following portions of our development of a single agent model.  We will create copies of each modified section, which would make the Python Notebook huge, and messy to work in. If this were a project where we're working to build an agent that some company is going to use, or that is going to be looked back on beyond this project, these long sections of code would be split into a few different files:
 
 - `tools.py`
 - `state.py`
 - `graph.py`
 
-We will also create these new Python files. 
-
-==== tools.py
-This file needs to contain anything related to creating the tools for your agent. That includes each tool's definition, and the `TOOLS` dictionary. 
-
-[source,Python]
-----
-# tools.py
-from langchain.tools import tool
-
-@tool
-def cancel_order(order_id: str) -> str:
-.....
-....
-
-TOOLS = {
-    .....
-    ....
-}
-----
 
 ==== state.py
 This file is where definition of what information flows through the graph gets stored. 
