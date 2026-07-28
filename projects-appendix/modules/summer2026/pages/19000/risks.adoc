@@ -69,3 +69,52 @@ https://the-examples-book.com/projects/summer2026/19000/graphversion3.adoc
 ----
 graph = construct_graph()
 ----
+
+Reconfigure the graph, and do some testing to see how the agent handles order cancellation requests:
+
+[source,Python]
+----
+from langchain_core.messages import HumanMessage
+
+tests = [
+    {
+        "title": "Cancel owner's pending order",
+        "customer_name": "Tom Boeckenhauer",
+        # this is Tom's pending order ID
+        "order_id": "CA-2011-110422",
+        "prompt": "Please cancel my order."
+    },
+    {
+        "title": "Cancel someone else's pending order",
+        "customer_name": "Tom Boeckenhauer",
+        # this pending order does NOT belong to Tom
+        "order_id": "CA-2014-121258",
+        "prompt": "Please cancel my order."
+    },
+    {
+        "title": "Trak someone else's shipped order",
+        "customer_name": "Tom Boeckenhauer",
+        # this shipped order is NOT Tom's to track
+        "order_id": "CA-2013-138688",
+        "prompt": "Where is my order?"
+    },
+]
+
+for test in tests:
+    result = graph.invoke({
+        "messages": [
+            HumanMessage(content=test["prompt"])
+        ],
+        "customer_name": test["customer_name"],
+        "order_id": test["order_id"],
+        "df": myDF
+    })
+
+    myDF = result["df"]
+
+    print(f"\n{title}")
+
+    for msg in result["messages"]:
+        print(f"\n{type(msg).__title__}")
+        print(msg.content)
+----
