@@ -2,3 +2,70 @@
 
 With many companies beginning to use AI for tasks that used to be done manually by humans, it is very important that they are aware of the risks that could occur, and know how they would be handled in the case that they happen. The prompts given to the agents are suggestions on how it should opperate, but these models can still ignore these things we set as rules unless they're specifically put into its code. 
 
+I.e. 
+[source,Python]
+----
+# the agent can sometimes ignore this 
+prompt = f""" 
+Do not cancel the order if it doesn't belong to the person making the request 
+""" 
+----
+vs. 
+
+[source,Python]
+----
+# this is a set rule in the agent's programming
+if row.iloc[0]["Customer Name"] != customer_name:
+    result = "You do not own this order. Cancellation denied."
+----
+
+[NOTE]
+====
+There are a lot of interesting articles on this subject. Here are some: 
+
+- https://dev.to/aws/ai-agent-guardrails-rules-that-llms-cannot-bypass-596d[AI Agent Guardrails: Rules That LLMs Cannot Bypass]
+- https://auth0.com/blog/why-ai-agents-need-their-own-permission-model/[Why AI Agents Need Their Own Permission Model]
+- https://www.reddit.com/r/AI_Agents/comments/1quvalz/who_owns_it_when_agents_go_off_the_rails/[Who owns it when agents go off the rails?]
+
+There is still a lot of discussion on how exactly accountability should be handled with AI agents. Something most people can agree on is that there should be clear set rules that cannot be ignored for if the AI agent is doing anything that would be impactful in a project, especially related to users and security tasks. 
+====
+
+Currently, if we provide the order ID for an order that is in the "Pending" shipping status, the agent will cancel it. This is great, in theory. But this also allows us to cancel any pending order, even if we're not the owner of it. Which is not secure for a system at all. At the very least, there should be a check verifying that the user making the cancellation request is also the same user who placed the order in the first place. 
+
+We have to make some changes to our Python files to implement this;
+
+Tools does not need to change.
+
+To update the graph state, we need to add a field for the customer's name as an field in the memory space. So when the agent is given a name, it will be able to inject this bit of personalization into its prompts - for example, if the agent is given the name 'Tom', it can say things like "Sorry Tom, but your order cannot be cancelled.", which can really help with the user experience, in addition to it being used as a security verification step in order processing. 
+
+https://the-examples-book.com/projects/summer2026/19000/stateversion3.adoc
+
+The agent should know to store the state's `customer_name` as the user's name. This gets defined at the very start of `call_model()`.
+
+The prompt is our way of "talking" to the agent before it begins testing, so there should also be rules in the prompt that cover how we want the agent to deal with customer identification. These won't directly show up in the agent's response to the user, but it is very important to give clear details here.
+
+It is also important to update the rules in the prompt so the agent knows specifically how you want it to follow the new code it's been given.
+
+[NOTE]
+====
+There isn't a set way you should write out the "Rules:" section of the prompt. The following is an example of a good set of rules to tell this agent to abide by:
+
+[source,Python]
+----
+Rules:
+- Ownership verification is handled by the system.
+- Do not ask customers to verify ownership.
+- Use tools when needed.
+- Tool results are final and accurate.
+- If a tool reports success, inform the customer of the successful result.
+----
+====
+
+If the customer's name does not match that which is in the same row as the entered order ID, then the order cancellation request should be denied. This is the top priority, and should be determined before the order's status is even assessed. 
+
+https://the-examples-book.com/projects/summer2026/19000/graphversion3.adoc
+
+[source,Python]
+----
+graph = construct_graph()
+----
