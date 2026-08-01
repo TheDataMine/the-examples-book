@@ -1,0 +1,580 @@
+= TDM XGBoost Seminar Project 
+
+== Project Objectives
+
+In this project, you will build an XGBoost model to accurately predict fertility rates and discover which features in the data are most important for predicting fertility rates around the globe. 
+
+.Learning Objectives
+****
+- Interpolate missing values in the data to preprocess the data.
+- Compute the correlation of numeric features with the target variable `fertility_rate`.
+- Develop a fertility rate map in order to capture fertility rates trends and patterns around the globe in 2024 using a choropleth math and geopandas library.
+- Build an XGBoost model using `XGBRegressor` and then measure it's accuracy on the test set using RMSE and $R^2$.
+- Extract feature importance from the model and interpret the results. 
+****
+
+== Dataset
+- `/anvil/projects/tdm/data/worldbank/worldbank_data.csv`
+
+
+
+**The data we will model**
+
+We will use a World Bank data with `fertility_rate` (births per woman) and dozens of socioeconomic and health indicators (e.g., adolescent fertility, infant/child mortality, sector value added, literacy, labor participation, energy use). The data was pulled using an API from the World Bank Group. You can find out more about the dataset https://datacatalog.worldbank.org/search/dataset/0037712[here]. 
+
+
+**Dataset Overview**
+
+The table below summarizes the columns and definitions. 
+
+[cols="3,9", options="header"]
+|===
+|Column |Definition/Notes
+|`country`|Name of the country or economy.
+|`year`|Calendar year of observation.
+|`access_to_basic_sanitation`|Access to basic sanitation; see source metadata for exact definition.
+|`access_to_electricity`|Access to electricity; see source metadata for exact definition.
+|`adolescent_fertility`|Births to women ages 15–19 per 1,000 women ages 15–19.
+|`agriculture_value_added`|Value added from agriculture, forestry, and fishing (percent of GDP).
+|`avg_years_schooling`|Average years of schooling; see source metadata for exact definition.
+|`births_attended_by_skill`|Births attended by skilled health staff (percent of total).
+|`births_registered`|Births officially registered with civil authorities (percent).
+|`child_mortality_female`|Under-5 mortality for females (per 1,000 live births).
+|`clean_fuel_access`|Population with access to clean cooking fuels and technologies (percent).
+|`contraceptive_use`|Use of contraception among women ages 15–49 (percent).
+|`electricity_consumption`|Electricity consumption per capita (kWh).
+|`energy_use_per_capita`|Energy use per capita (kg of oil equivalent).
+|`female_employ_agriculture`|Female employment in agriculture (percent of female employment).
+|`female_employ_industry`|Female employment in industry (percent of female employment).
+|`female_employ_services`|Female employment in services (percent of female employment).
+|`female_labor_participation`|Female labor force participation (percent of female population age 15+).
+|`female_literacy`|Female literacy rate (percent of women age 15 and older).
+|`female_parliament_seats`|Proportion of seats held by women in national parliaments (percent).
+|`female_property_rights`|Index or proxy for women’s property/asset rights (scale varies).
+|`female_secondary_edu`|Female secondary school completion or enrollment rate (percent).
+|`female_self_employed`|Self-employed women (percent of female employment).
+|`fertility_rate`|Total fertility rate (births per woman).
+|`gdp_per_capita`|Gross domestic product per capita (current USD).
+|`gini_index`|Gini index of income inequality (0 = equality, 100 = inequality).
+|`government_health_exp`|Government health expenditure (percent of general government spending).
+|`health_exp_gdp`|Total health expenditure as percent of GDP.
+|`industry_value_added`|Industry value added including construction (percent of GDP).
+|`infant_mortality`|Infant mortality rate (deaths under age 1 per 1,000 live births).
+|`internet_usage`|Individuals using the Internet (percent of population).
+|`life_expectancy`|Life expectancy at birth (years).
+|`male_labor_participation`|Male labor force participation (percent of male population age 15+).
+|`male_literacy`|Male literacy rate (percent of men age 15 and older).
+|`male_secondary_edu`|Male secondary school completion or enrollment rate (percent).
+|`maternal_mortality`|Maternal deaths per 100,000 live births.
+|`mean_years_schooling_female`|Average years of schooling among females.
+|`mobile_subscriptions`|Mobile cellular subscriptions (per 100 people).
+|`physicians_per_1000`|Physicians per 1,000 people.
+|`population_growth`|Annual population growth rate (percent).
+|`poverty_headcount_ratio`|Population living below international poverty line (percent).
+|`primary_completion_rate_female`|Female primary school completion rate (percent).
+|`region_map_Europe & Central Asia`|Region indicator for Europe & Central Asia (binary).
+|`region_map_Latin America & Caribbean`|Region indicator for Latin America & Caribbean (binary).
+|`region_map_Middle East`|Region indicator for Middle East (binary).
+|`region_map_North Africa`|Region indicator for North Africa (binary).
+|`region_map_North America`|Region indicator for North America (binary).
+|`region_map_Other / Unassigned`|Region indicator for Other / Unassigned (binary).
+|`region_map_South Asia`|Region indicator for South Asia (binary).
+|`region_map_Sub-Saharan Africa`|Region indicator for Sub-Saharan Africa (binary).
+|`road_density`|Kilometers of road per 100 sq. km of land area.
+|`school_enrollment_primary_female`|Primary school enrollment for females (percent of age group).
+|`school_enrollment_primary_male`|Primary school enrollment for males (percent of age group).
+|`unemployment_female`|Female unemployment (percent of female labor force).
+|`unemployment_male`|Male unemployment (percent of male labor force).
+|`urban_population_pct`|Urban population as a percentage of total population.
+|`youth_literacy_female`|Literacy rate of females aged 15–24 (percent).
+|`youth_literacy_male`|Literacy rate of males aged 15–24 (percent).
+|===
+
+
+
+**Why XGBoost for Fertility Rates**
+
+
+Two properties guide our modeling choice:
+
+-  **XGBoost** is one of the most powerful and widely used machine learning algorithms.
+
+- It builds models *sequentially*, learning from the residuals of previous trees.
+
+- It includes **built-in feature selection**: at each split, it evaluates gain from each feature and selects only those that improve the model.
+
+- It performs well even when the dataset has **dozens or hundreds of features**, thanks to strong **regularization (L1, L2)** that prevent overfitting.
+
+- It ranks features by importance (gain, coverage, frequency).
+
+Because of these properties, XGBoost is especially effective in datasets with:
+
+- High dimensionality (large number of features or variables)
+
+- Correlated variables
+
+- Uneven or missing values
+
+- No clear assumptions about linearity or variable interactions
+
+In this dataset, we will use XGBoost because of the high number of variables we have, because of it's known high performance, and because it has built in feature selection which will help us understand what features are the most importance when predicting fertility rates around the globe. 
+
+[IMPORTANT]
+====
+Use 4 cores for this project. 
+====
+
+== Questions
+
+=== Question 1 (2 points)
+
+**Handling Missing Values Before Modeling**
+
+Real-world datasets especially large ones combining multiple countries and indicators often include missing values. Before we can build a predictive model like XGBoost, we need to deal with these gaps.
+
+Since most columns in this dataset are numeric and measured over time within each country (e.g., fertility rate, literacy, employment), we’ll use **linear interpolation** to estimate missing values. This method assumes a smooth change between known values and is more informed than simply dropping rows or filling with the mean.
+
+Because each country has its own trends, we interpolate **within each country group** to avoid mixing data across different contexts.
+
+After interpolation, we can apply `.ffill()` and `.bfill()` and direction = `both` to fill in any remaining values. This ensures we preserve as much data as possible which is critical when building models that depend on many features.
+
+These steps will help us prepare a complete, clean dataset ready for machine learning.
+
+
+.Deliverables
+====
+**1a. Load the dataset using the file path provided and display the first 5 rows.**
+
+[source,python]
+----
+import pandas as pd
+worldbank_data = pd.read_csv("/anvil/projects/tdm/data/worldbank/worldbank_data.csv")
+----
+
+**1b. Fill in the missing numeric values for each country by performing `linear` interpolation. Only interpolate values that are still missing.**
+
+
+Note: We will group the dataset by country and apply interpolation within each group, making sure to interpolate in both forward and backward directions. The code below has already sorted the data and selected the numeric columns (excluding "year"). Your task is to complete the interpolation method and direction. See documentation on interpolation https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html[here]. 
+
+[source,python]
+----
+# Sort by country and year (already done for you)
+worldbank_data = worldbank_data.sort_values(by=["country", "year"])
+
+# Define numeric columns (excluding 'year')
+numeric_cols = worldbank_data.select_dtypes(include="number").columns.difference(["year"])
+
+# Interpolate only values still missing
+for col in numeric_cols:
+    mask = worldbank_data[col].isna()
+    interpolated = (
+        worldbank_data
+        .groupby("country")[col]
+        .transform(lambda group: group.interpolate(method=____, limit_direction=____).ffill().bfill()) # For YOU to fill in
+    )
+    worldbank_data.loc[mask, col] = interpolated[mask]
+
+----
+
+**1c. Confirm that all numeric columns no longer have missing values after interpolation.**
+
+_Hint:_ You can use `DF[numeric_cols].isna().sum()`
+
+
+====
+
+=== Question 2 (2 points)
+
+**Looking at Correlation Before Modeling**
+
+Before we build a predictive model, it’s important to understand the relationship between our target variable: `fertility_rate` and the features in the dataset.
+
+Correlation allows us to see which features move alongside fertility rates. A positive correlation means the two variables move in the same direction for instance, a strong positive correlation between adolescent fertility and total fertility suggests that higher adolescent fertility move together with higher overall fertility. A negative correlation indicates that the variables move in opposite directions for example, if female literacy has a strong negative correlation with fertility, it suggests that as literacy rises, fertility rates tend to decline.
+
+
+
+.Deliverables
+====
+**2a. Identify the target variable (what you are predicting) for this project and it's mean.**
+
+**2b. Compute the correlation matrix using all numeric features. Report the 5 features most positively and most negatively correlated with fertility rate.**
+
+
+_Note:_ You can use `.corr()` for the correlation matrix and `.sort_values` to sort the correlation matrix. You can see pandas documentation on computing pairwaise correlations https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.corr.html[here]. Use the code structure below as a starting point:
+
+
+[source,python]
+----
+# Drop non-numeric column
+numeric_data = worldbank_data.drop(columns=["country"])
+
+# Compute correlation matrix
+correlations = numeric_data.corr()
+
+# Extract correlations with fertility_rate
+fert_corr = correlations["fertility_rate"].sort_values(ascending=False)
+----
+
+
+
+**2c. Provide an interpretation for one strong positive and one strong negative correlation in 1-2 sentences.**
+====
+
+=== Question 3 (2 points)
+
+**Exploring Fertility Rates Across Countries**
+
+So far, we’ve explored how fertility relates to other features numerically. Now we’ll shift to a **geographic perspective**, using the most recent data available for each country to see how fertility rates vary across the world.
+
+This means converting our dataset so we can see just one row per country, using its most recent year of data. This will allow us to compare countries and identify geographic trends in fertility.
+
+To visualize these differences, we’ll use a **choropleth map**, which shades each country based on its fertility rate. Darker colors typically indicate higher values, and lighter colors indicate lower ones. These maps help us visually detect global patterns that might be hard to spot in tables.  You can learn more about Choropleth mapping with GeoPandas https://geopandas.org/en/stable/docs/user_guide/mapping.html[here]. 
+
+
+**Creating a Map for Geographic Data**
+
+We will use the `GeoPandas` library to load a shapefile of country boundaries and merge it with the fertility data. Here’s what happens in the code:
+
+- `GeoPandas.read_file()` loads a global shapefile (country outlines).
+- Country names in both datasets are **normalized** to ensure they match despite naming differences (e.g., "United States" vs "United States of America").
+- The fertility data is filtered to only include the most recent year (2024).
+- The datasets are merged, and a map is generated 
+
+
+By the end of this question, you’ll be able to recognize **regional fertility patterns**, connect them to real world context, and gain experience using **spatial data visualization** a powerful tool in applied data science.
+
+
+.Deliverables
+====
+
+**3a. Using the most recent year available for each country, create a DataFrame that includes only the `country`, `year`, and `fertility rate` columns.**
+
+_Note:_ Use the code below. Fill in the correct variable names to complete it. If needed, check available column names using `latest_data.columns`.
+
+[source,python]
+----
+latest_data = worldbank_data.loc[worldbank_data.groupby("country")["year"].idxmax()]
+
+fertility_by_country = latest_data[["____", "____", "____"]] # For YOU to fill in
+
+----
+
+**3b. Run the code below to create a choropleth map of fertility rate by country..**
+
+_Note:_ The code below is complete. Your task is to run the code succesfully then interpret the map in the next question (3c). 
+
+[source,python]
+----
+import geopandas as gpd, matplotlib.pyplot as plt, pandas as pd
+
+normalize = lambda name: {"united states": "united states of america", "north macedonia": "republic of north macedonia", "kyrgyz republic": "kyrgyzstan"}.get(
+    str(name).strip().lower().replace("’", "'").replace("&", "and").replace(".", "").replace(",", "").replace("-", " "), 
+    str(name).strip().lower().replace("’", "'").replace("&", "and").replace(".", "").replace(",", "").replace("-", " "))
+
+df = fertility_by_country.copy()
+df = df[df["year"] == 2024]
+df["fertility_rate"] = pd.to_numeric(df["fertility_rate"], errors="coerce")
+df = df.rename(columns={"country": "name"})
+df["name_norm"] = df["name"].apply(normalize)
+df = df[~df["name"].str.contains("income|world|OECD|IDA|IBRD|region|fragile", case=False)]
+world = gpd.read_file("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson")
+world["ADMIN_norm"] = world["ADMIN"].apply(normalize)
+merged = world.merge(df, left_on="ADMIN_norm", right_on="name_norm", how="left")
+merged = merged[~merged["ADMIN"].isin(["Antarctica", "Falkland Islands", "French Southern and Antarctic Lands", "Northern Cyprus", "Somaliland", "Western Sahara"])]
+fig, ax = plt.subplots(1, 1, figsize=(15, 8))
+merged.plot(column="fertility_rate", cmap="YlOrRd", legend=True, edgecolor="black", linewidth=0.3, ax=ax, missing_kwds={"color": "lightgrey", "label": "No Data"})
+ax.set_title("Fertility Rate by Country (2024)", fontsize=15); ax.axis("off")
+
+plt.show()
+----
+
+**3c. Write 1–2 sentences describing any geographic patterns you observe. Comment on which regions have the highest and lowest fertility rates.**
+
+
+====
+
+
+=== Question 4 (2 points)
+**What is XGBoost?**  
+
+XGBoost (Extreme Gradient Boosting) is a powerful machine learning algorithm based on decision trees that can be used for both *regression* and *classification* tasks.
+
+**Key Differences from Random Forest**  
+|===
+| **Random Forest** | **XGBoost** 
+| Each tree is independent | Trees are grown sequentially
+| Uses bootstrap sampling | Modifies original dataset
+| Equal weight for all instances | Increases weight on misclassified instances
+|===
+
+**How XGBoost Works**
+
+XGBoost enhances standard gradient boosting through three things:
+
+1. *Second-order gradients* - Uses both first and second derivatives for more precise updates
+
+2. *Regularization* - Combines L1 (Lasso) and L2 (Ridge) penalties to prevent overfitting
+
+3. *Parallel processing* - Optimizes training speed through efficient resource utilization
+
+**Hyperparameter Tuning Considerations**
+
+XGBoost contains several important hyperparameters. They are hyper parameters because they are hyper parameter and can be adjusted ( best value found by cross validation). 
+
+From practical experience:
+
+- Default parameters (like learning_rate=0.3) often cause the model to learn too quickly without converging properly
+- The learning rate (called `eta` in XGBoost) typically works better when set lower (0.01-0.1)
+- Maximum tree depth (`max_depth`) requires experimentation to find the right balance between underfitting and overfitting
+
+[cols="1,3", options="header"]
+|===
+| Parameter | Practical Guidance
+| `learning_rate` (eta) | Start with 0.1 and adjust lower for better generalization
+| `max_depth` | Begin with 3-6 and increase if model is underfitting
+| `n_estimators` | Increase until validation performance plateaus (100-1000)
+| `subsample` | Use 0.8-1.0 to prevent overfitting
+| `colsample_bytree` | Try 0.8-1.0 for feature sampling
+| `reg_alpha`/`reg_lambda` | Add if model shows signs of overfitting
+|===
+
+**Implementation Best Practices**
+
+1. Always split data into training and test sets (or use cross-validation)
+
+
+2. Monitor performance on both sets to detect overfitting
+
+
+3. Start with conservative parameters and gradually increase complexity
+
+
+4. Use early stopping to prevent unnecessary computation
+
+
+
+
+**Evaluation Metrics**  
+[source,math]
+----
+\text{RMSE} = \sqrt{\frac{1}{n}\sum_{i=1}^n (y_i - \hat{y}_i)^2}
+
+R^2 = 1 - \frac{\sum(y_i - \hat{y}_i)^2}{\sum(y_i - \bar{y})^2}
+----
+
+
+**Loss Function (Regression)**
+
+XGBoost minimizes the *squared error* for regression:
+
+[source,math]
+----
+L(y_i, \hat{y}_i) = (y_i - \hat{y}_i)^2
+----
+
+Where:
+
+- `y_i` = true fertility rate
+
+- `\hat{y}_i` = predicted value
+
+**Key Takeaways**
+
+- Sequentially corrects errors from prior trees
+
+- Provides feature importance scores (e.g., `female_education` may be top predictor)
+
+- "Extreme" optimizations for speed/accuracy
+
+.Deliverables
+====
+**4a. Identify the five features most positively correlated with `fertility_rate`. Use these to create your feature set, then split the data into training and test sets (80% training, 20% test) using random_state=42.**
+
+
+Note: The code below has already selected the top five features for you. All that remains is to split the data using train_test_split. You only need to specify the test size. The training size will be calculated automatically. Refer to the train_test_split https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html[documentation] from sklearn.model_selection for guidance.
+
+
+[source,python]
+----
+from sklearn.model_selection import train_test_split
+
+# correlations with fertility_rate
+correlations = worldbank_data.corr(numeric_only=True)["fertility_rate"]
+
+# Select the top 5 positively correlated features (excluding fertility_rate itself)
+top5_features = correlations.drop("fertility_rate").sort_values(ascending=False).head(5).index.tolist()
+
+# Define X and y using those features
+X_small = worldbank_data[top5_features]
+y = worldbank_data["fertility_rate"]
+
+# Split into 80% train/ 20% test sets
+X_train, X_test, y_train, y_test = train_test_split(X_small, y, test_size=______, random_state=____) # For YOU to fill in
+----
+
+**4b. Use XGBRegressor to create and fit an XGBoost model on the training dataset. When creating the model, only set random_state=42. Then, fit the model using your training data (X_train, y_train) from the previous step.**
+
+[source,python]
+----
+from xgboost import XGBRegressor
+
+# Create the model
+# Only fill in the missing piece use the correct parameter
+
+small_model = XGBRegressor(random_state=__) # For YOU to fill in
+
+# Fit the model on training data 
+small_model.fit(______________, ______________) # For YOU to fill in
+----
+
+**4c. Evaluate the XGBoost model on the test dataset using RMSE and $R^2$., and print the results.**
+
+_Note:_ Most of the code has been provided for you. Your task is to complete the missing pieces to print both the RMSE and $R^2$..
+
+[source,python]
+----
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Predict on the test set
+y_pred = small_model.predict(X_test)
+
+# Calculate RMSE and R^2
+rmse = mean_squared_error(y_test, y_pred) ** 0.5
+r2 = r2_score(y_test, y_pred)
+
+# TODO: Print the RMSE and R^2 values
+----
+
+
+**4d. In 2–3 sentences, explain what `XGBRegressor` does. How does it differ from DecisionTreeRegressor? Why might it perform better?**
+====
+
+=== Question 5 (2 points)
+
+
+.Deliverables
+====
+**5a. Now use all numeric columns from the dataset as features, excluding `"country"` and `"fertility_rate"`. Set `"fertility_rate"` as the target variable `y`. Then split the data into training and test sets using an 80/20 split and `random_state=42`.
+**
+
+
+_Note:_ use the code below to fill in the appropriate column names and states in the code below:
+
+[source,python]
+----
+from sklearn.model_selection import train_test_split
+
+# Define features and target
+X_full = worldbank_data.drop(columns=["__________", "__________"]) # For YOU to fill in 
+y = worldbank_data["__________"] # For YOU to fill in 
+
+# Split into training and test sets
+X_train_full, X_test_full, y_train_full, y_test_full = train_test_split(
+    X_full, y, test_size=0.2, random_state=42) # For YOU to fill in 
+----
+
+
+**5b. Using an XGBRegressor with the following pre-tuned hyperparameters** 
+
+- `max_depth`: 5
+
+- `learning_rate`: 0.1
+
+- `n_estimators`: 100
+
+1. Train the model on the full training set
+2. Report the test set RMSE and R² scores
+
+[source,python]
+----
+from xgboost import XGBRegressor, plot_importance
+from sklearn.metrics import mean_squared_error, r2_score
+import matplotlib.pyplot as plt
+
+# Initialize and train model with pretuned parameters
+tuned_model = XGBRegressor(
+    random_state=42,
+    max_depth=5,
+    learning_rate=0.1,
+    n_estimators=100
+)
+tuned_model.fit(X_train_full, y_train_full)
+----
+
+**5c. Use xgboost.plot_importance to visualize the top 15 most important features in the model.**
+
+Note: Use the code below to develop your plot. Make sure to fill in the number of features and a title. 
+
+[source,python]
+----
+from xgboost import plot_importance
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(10, 6))
+plot_importance(full_model, max_num_features=__) # For YOU to fill in
+plt.title("________") # For YOU to fill in
+plt.tight_layout()
+plt.show()
+----
+
+
+**5d. Which features were most important in predicting fertility rate? Are they consistent with your correlation analysis?**
+
+
+**5e. Compare the RMSE and R² from the top 5 feature model (4c) and the full feature model (5b). Which one performed better?**
+====
+
+
+=== Question 6 (2 points)
+
+
+.Deliverables
+====
+**6a. Which features are most negatively associated with fertility rate? Use correlation values to identify them. What could these relationships imply?**
+
+Hint: Use `DF.corr(numeric_only=True)["______"].sort_values()`
+
+
+**6b. Plot how fertility rate has changed over time for the `United States of America` and `Turkey`. Write 1-2 sentences on the patterns you notice.**
+
+_Note:_ Use the code below for the plot. Make sure to fill in the title and interpret the plot. 
+
+[source,python]
+----
+import matplotlib.pyplot as plt
+
+countries_to_plot = ["_________", "______"] # For YOU to fill in
+
+plt.figure(figsize=(10, 6))
+for country in countries_to_plot:
+    data = worldbank_data[worldbank_data["country"] == country]
+    plt.plot(data["year"], data["fertility_rate"], label=country)
+
+plt.title("_____") # For YOU to fill in
+plt.xlabel("_____") # For YOU to fill in
+plt.ylabel("_______") # For YOU to fill in
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+----
+
+**6c. Write 1-2 sentences: what are two limitations of your XGBoost model compared to decision trees for real-world decision-making?**
+====
+
+
+== Submitting your Work
+
+Once you have completed the questions, save your Jupyter notebook. You can then download the notebook and submit it to Gradescope.
+
+.Items to submit
+====
+- firstname_lastname_project1.ipynb
+====
+
+[WARNING]
+====
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not. **Please** take the time to double check your work. See https://the-examples-book.com/projects/submissions[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
