@@ -1,7 +1,3 @@
-<p align="center">
-  <a href="https://datamine.purdue.edu"><img width="100%" src="./banner.png" alt='Purdue University'></a>
-</p>
-
 [![Deploy to Cloudflare Pages](https://github.com/TheDataMine/the-examples-book/actions/workflows/deploy.yml/badge.svg)](https://github.com/TheDataMine/the-examples-book/actions/workflows/deploy.yml)
 
 ---
@@ -12,41 +8,11 @@
 
 # The Examples Book
 
-Supplementary material for solving projects assigned in [The Data Mine](https://datamine.purdue.edu/), Purdue University's integrative data science initiative. The "core" book can be found at [https://the-examples-book.com](https://the-examples-book.com). Complementary materials are available as appendices at the following URLs:
-
-- Containerization and Kubernetes Deployment: https://the-examples-book.com/starter-guides/data-engineering/containers/intro-to-containers
-- Prodigy Annotation Tool: https://the-examples-book.com/starter-guides/data-science/data-analysis/nlp/prodigy
-- Geospatial Analytics: https://the-examples-book.com/starter-guides/data-science/data-analysis/gis
-- Data Visualization: https://the-examples-book.com/starter-guides/data-visualiation/introduction-data-visualization
-- Natural Language Processing: https://the-examples-book.com/starter-guides/data-science/data-analysis/nlp/introduction-nlp
-- MATLAB: https://the-examples-book.com/starter-guides/tools-and-standards/matlab/introduction-matlab
-- Time Series: https://the-examples-book.com/starter-guides/data-science/data-analysis/time-series
-- Projects Archive: https://the-examples-book.com/projects
-- Corporate Partners Information: https://the-examples-book.com/crp
-- Anvil Resources & Guides: https://the-examples-book.com/starter-guides/anvil/
-- Registration: https://the-examples-book.com/registration
-- Think Summer: https://the-examples-book.com/think-summer
- 
-You can learn more about The Data Mine using the following links:
-
-- [The Data Mine website](https://datamine.purdue.edu/)
-- [Introducing The Data Mine at Purdue University](https://www.youtube.com/watch?v=R_kqpIMyhR4)
-- [2022 poster symposium](https://datamine.purdue.edu/symposium/welcome.html)
-- [2021 poster symposium](https://datamine.purdue.edu/symposium/welcome2021.html)
-- [2020 poster symposium](https://datamine.purdue.edu/symposium/welcome2020.html)
-- [Our team](https://datamine.purdue.edu/about-welcome/)
-
-## Contribution
-
-Thank you for those that have already contributed. If you have an ignored issue or pull request, please know we _are_ going to get to it and we really appreciate your patience.
-
-[Here](https://the-examples-book.com/book/how-to-contribute) is our guide on how to contribute. Please feel free to start a [discussion](https://github.com/TheDataMine/the-examples-book/discussions) or open up an [issue](https://github.com/TheDataMine/the-examples-book/issues).
-
 ## Build
 
 This book is written using [AsciiDoc](https://asciidoc.org/). AsciiDoc is an open and powerful format for writing notes, text documents, books, etc. It is easy to write technical documentation in AsciiDoc, and quickly convert the text to various mediums like websites, ebooks, pdfs, etc.
 
-### Search index
+## Search index
 
 Search is handled by [Meilisearch](https://www.meilisearch.com/). For this repository -- the core book -- the following GitHub Action job automatically builds, deploys, and updates the search index. There is _no_ additional work that must be done when a change is made to this repository. 
 
