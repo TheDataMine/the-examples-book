@@ -1,0 +1,256 @@
+= TDM 19000 - Retrival-Augmented Generation
+
+== Project Objectives
+
+Motivation: Large Language Models (LLMs) are powerful tools, but they are limited to information that's within their training data and may generate incorrect responses. Retrival-Augmented Generation (RAG) improves the accuracy of LLMs by allowing them to retrieve and use information from external documents when generating answers. 
+
+Context: In this project, students will build a RAG pipeline using Ollama, LangChain, and Milvus. Students will convert document text into embeddings, store those embeddings in a vector database, retrieve relevant document chunks in response to questions, and evaluate how context influences generate answers.
+
+Scope: RAG, Ollama, LangChain, Milvus, document chunking
+
+.Learning Objectives
+****
+- Understand the purpose and workflow of a Retrieval-Augmented Generation system.
+- Create embeddings from document text and store them in a vector database.
+- Evaluate how document retrieval affects the accuracy and relevance of generated answers.
+- Analyze similarity scores on specific document chunks to understand selections made during retrieval. 
+****  
+
+== Dataset
+In Question 2, we will use a PDF document as our "dataset" to send to the LLM. A relevant PDF file that you could try is:
+
+- https://datamine.purdue.edu/posters/TDM-Report_2024-4.pdf
+
+== Questions
+[IMPORTANT]
+====
+Please use 4 Cores for this project.
+====
+
+=== Overview about RAG
+A Retrieval-Augmented Generation (RAG) system is a way to improve AI responses by searching a set of documents, finding relevant information from them, and then using that information to generate an applicable answer. Responses from LLMs using RAG search for this information before creating an output, so its answers are based on real data you've inputted rather than just what it has been previously trained to know. 
+
+LLMs cannot be directly trained on text. First, the text must be converted to a vector-format using embeddings - we experienced a bit of this towards the end of the previous project. BUT it can be computationally intensive to make the conversion from a lot of text into numbers. It is best to store the vetors in a database that we can easily come back to later. 
+
+In this case, we will use the vector database `Milvus` - to get a deeper understanding of how Milvus works, read the https://en.wikipedia.org/wiki/Milvus_(vector_database)[Wikipedia page here].
+
+
+The Milvus database belongs in the `SCRATCH` directory on Anvil - similar to large Ollama files, Milvus takes up too much memory to be stored in our home directories.
+
+In your notebook, start by directing your Milvus URI to run from your SCRATCH directory:
+
+[source,Python]
+----
+import os
+
+URI = f"{os.getenv('SCRATCH')}/milvus_demo.db"
+collection_name = "[first_name]_[last_name]_test_collection" # change to YOUR name
+
+print("Using Milvus DB at:", URI)
+print("Using the collection:", collection_name)
+----
+
+[NOTE]
+====
+If you are, for some reason, needing to remove your entire Milvus database and start over, you can delete it. To do this fully, you must remove the database AND the database lock file. This can be accomplished by running this command in the Terminal:
+[source,bash]
+----
+rm  $SCRATCH/milvus_demo.db  $SCRATCH/.milvus_demo.db.lock
+----
+
+Removing this database should be unnecessary.  You should probably only need to do this if you are getting errors, for instance, when creating or updating the vector store.
+====
+
+We will begin working with an Ollama server. Run `/anvil/projects/tdm/bin/ollama serve` in a new Terminal window. 
+
+[source,Python]
+----
+# show what port your Ollama server is running on!
+
+with open(f"/dev/shm/ollama.{os.getuid()}") as hostfile:
+    hostline = [line.rstrip() for line in hostfile]
+os.environ["OLLAMA_HOST"] = hostline[0]
+print(os.environ["OLLAMA_HOST"])
+----
+
+`LangChain` is a framework designed to build applications by connecting LLMs to external data sources. We will use it here to help connect Ollama to our retrieval chains and prompts to the model.
+
+[source,Python]
+----
+from langchain_ollama import OllamaLLM
+
+# Choose to use the llama3.2 model that uses 2 threads !!
+# You can build `llama3.2-2` ahead of time, using the same methods from earlier in the week.
+llm = OllamaLLM(model="llama3.2-2")
+----
+
+Now we should be able to give queries systematically to the LLM! Try writing a few questions or prompts, and sending them to the model, all at once.  The LLM will take time to respond to each.  Do not worry; your session might look frozen, while the `llm.invoke` command is running, but the answers will appear.
+
+[source,Python]
+----
+questions = ["my first question is...", "my second question is....", ....]
+
+for q in questions:
+    print(f"\nQuestion: {q}")
+    print("Answer:", llm.invoke(q))
+----
+
+Now to begin using our models for text embedding, we will need to download `mxbai-embed-large` (Dr Ward also did this earlier in the week). This allows the LangChain-Ollama LLM to begin converting text into numerical vectors.  Then you need to use `mymodel` to make a version called `mxbai-embed-large-2`, which uses `mxbai-embed-large` with 2 threads.
+
+[source,Python]
+----
+from langchain_ollama import OllamaEmbeddings
+
+# choose to use the mxbai-embed-large model that uses 2 threads !!
+embed_model = OllamaEmbeddings(model="mxbai-embed-large-2")
+----
+
+We will test this workflow on this Data Mine report:
+
+https://datamine.purdue.edu/posters/TDM-Report_2024-4.pdf
+
+[source,Python]
+----
+from langchain_community.document_loaders import PyPDFLoader
+
+loader = PyPDFLoader("https://datamine.purdue.edu/posters/TDM-Report_2024-4.pdf") # You are welcome to change this to a different document
+data = loader.load()
+----
+
+If you want to print out the `data` that we've just defined, you can. This will display the PDF as its raw document data. This consists of two main categories:
+
+- Metadata (`metadata`) - a dictionary that provides context about the document, such as author, creation date, total number of pages, etc.
+- Page Content (`page_content`) - a long string containing the raw text extracted from each page of the document
+
+`data` should display your PDF content page by page, so if there were 5 pages in your document, you should be able to find a `metadata` and `page_content` pair for each page. 
+
+Since the PDF is currently split by page, there should be just a few big blocks of text. We need to break these up into smaller chunks, as embedding models work best when the text is at a more manageable scale. If the chunks are too large, the meaning of each passage becomes a bit diluted or lost. If they're too small, there isn't enough context to make the text meaningful to the model. 
+
+[IMPORTANT]
+====
+In RAG, you aren't looking for which page matches your query. You are asking the model to understand related passages just about relevant content, not return based on unrelated information, and be specific to what may have appeared in the document. 
+====
+
+To split up the raw PDF content, we will use the text splitter `RecursiveCharacterTextSplitter()`:
+
+[source,Python]
+----
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0)
+all_splits = text_splitter.split_documents(data)
+----
+
+[NOTE]
+====
+Adjusting the chunk_size and chunk_overlap will change how the model chooses to split up the text - how much text per chunk, and how much content overlap there is between chunks, respectively. 
+====
+
+Once you've saved the split text to all_splits, you can view how it looks in a bit cleaner format using `.page_content`. You can do this all at once, or use a for loop to split up the output by chunk:
+
+[source,Python]
+----
+for i, chunk in enumerate(all_splits):
+    print(f"\n--- Chunk {i} ---")
+    print(chunk.page_content)
+----
+
+=== Embeddings and Building a Database of Vectors
+Milvus has a function called `.from_documents`. Basically, this takes documents, embeds them, and stores them into the Milvus database. We will use a basic structure to make sure all of our important information gets included.
+
+In the code below, the mdw is my username.  You can find your location by typing:  `echo $SCRATCH`  in the terminal.
+
+[source,Python]
+----
+# imports
+from langchain_milvus import Milvus
+
+vector_store = Milvus.from_documents(
+    documents=all_splits,
+    embedding=embed_model,
+    collection_name=collection_name,
+    connection_args={"uri":"/anvil/scratch/x-mdw/milvus_demo.db"},    # change this to your scratch directory
+    drop_old=True,
+)
+----
+
+The documents, in this case, would be the list of all of the chunks that resulted from splitting up your PDF. Each chunk then becomes one entry in the vector database. 
+
+For embedding, you should use the embed_model from Ollama, so that each of the chunks from all_splits gets converted into a vector. 
+
+We defined a collection name and URI way back at the start of these notes, when first directing the Milvus database to live in the SCRATCH directory.
+
+Once vector_store has been created, we will need to turn the store into a retriever object. This will allow it to take a question, then find the most relevant chunks of the text. With this retriever, the next step is to create a retrieval chain, which will take the selected chunks, and use them to generate the response. 
+
+[source,Python]
+----
+from langchain.chains import create_retrieval_chain
+
+retriever = vector_store.as_retriever()
+chain = create_retrieval_chain(combine_docs_chain=llm,retriever=retriever)
+----
+
+We will use an already made prompt template from `LangChain Hub` that is specifically designed for RAG. Its very base-level thinking is:
+
+[source]
+----
+Use the following context to answer the question:
+
+Context:
+{context}
+
+Question:
+{input}
+----
+
+If the LLM had to process each retrieved chunk individually, the process could easily begin to take a long time. So instead, the context will consist of any and all selected relevant chunks. 
+
+
+[source,Python]
+----
+from langchain import hub
+
+retrieval_qa_chat_prompt = hub.pull("langchain-ai/retrieval-qa-chat")
+----
+
+(Dr Ward learned the method in the block before from Chat GPT!)
+
+[source,Python]
+----
+from langchain_core.runnables import RunnableLambda
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
+retrieval_chain = (
+    {
+        "context": lambda x: retriever.invoke(x["input"]),
+        "input": lambda x: x["input"],
+    }    
+    | RunnableLambda(
+        lambda x: {
+            "context": format_docs(x["context"]),
+            "input": x["input"],	
+	}
+    )
+    | retrieval_qa_chat_prompt
+    | llm
+)
+----
+
+Now `retrieval_chain` will connect everything together! So the final pipeline should be:
+
+[source]
+----
+User Question -> Retriever -> Combine Docs Chain -> LLM
+----
+
+To actually go and test the LLM:
+
+[source,Python]
+----
+# ask the model something about your selected PDF document
+response = retrieval_chain.invoke({"input": "What is the main idea of this document?"})  
+print(response)
+----
+
+Now try this on your own, using a document of your choosing!
+

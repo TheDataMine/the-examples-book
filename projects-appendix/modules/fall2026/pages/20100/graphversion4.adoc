@@ -1,0 +1,152 @@
+[source,Python]
+----
+# graph.py
+
+from langgraph.graph import StateGraph
+from langchain_core.messages import (
+    SystemMessage,
+    ToolMessage,
+    AIMessage
+)
+from langchain_ollama import ChatOllama
+from state import GraphState
+from tools import TOOLS
+
+# define the LLM
+llm = ChatOllama(
+    model="llama3.2-2",
+    temperature=0
+)
+
+# bind the tools
+llm_with_tools = llm.bind_tools(list(TOOLS.values()))
+
+##### agent
+def call_model(state: GraphState):
+
+    order_id = state["order_id"]
+    messages = state["messages"]
+    # define customer_name = .....
+    customer_name = state["customer_name"]
+    df = state["df"]
+
+    # clearly highlight that customer_name is what the customer should be called
+    prompt = f"""
+    You are an ecommerce support agent.
+
+    ORDER ID: {order_id}
+    CUSTOMER: {customer_name}
+
+    Rules:
+    - Ownership verification is handled by the system.
+    - Do not ask customers to verify ownership.
+    - Use tools when needed.
+    - Tool results are final and accurate.
+    - If a tool reports success, inform the customer of the successful result.
+    - You only have access to the available tools
+    - Never promise services you don't have tools to handle
+    - If a request cannot be completed using your existing tools, you MUST call create_support_ticket
+    """
+
+    conversation = [SystemMessage(content=prompt)] + messages
+
+    outputs = []
+
+    # first model call
+    response = llm_with_tools.invoke(conversation)
+    outputs.append(response)
+    conversation.append(response)
+
+    # tool execution
+    if response.tool_calls:
+        for tc in response.tool_calls:
+            tool_name = tc["name"]
+
+            ##### cancel_order
+            if tool_name == "cancel_order":
+                row = df[df["Order ID"] == order_id]
+                status = row.iloc[0]["Order Status"]
+
+                # if the customer does not own the order.....
+                if row.iloc[0]["Customer Name"] != customer_name:
+                    result = "You do not own this order."
+
+            # if the order has been shipped
+                elif status == "Shipped":
+                    result = (
+                        f"Order {order_id} has already shipped and cannot be cancelled."
+                    )
+
+            # if the order has already been cancelled
+                elif status == "Cancelled":
+                    result = (
+                        f"Order {order_id} is already cancelled."
+                    )
+
+            # other cases (order "Pending")
+            # order status becomes "Cancelled"
+                else:
+                    df.loc[
+                        df["Order ID"] == order_id,
+                        "Order Status"
+                    ] = "Cancelled"
+
+                    result = (
+                        f"Order {order_id} cancelled successfully."
+                    )
+
+            ##### get_order_status
+            elif tool_name == "get_order_status":
+
+                row = df[df["Order ID"] == order_id]
+                
+                # if the customer does not own the order.....
+                if row.iloc[0]["Customer Name"] != customer_name:
+                    result = "You do not own this order."
+
+                else:
+
+                    result = (
+                        f"Status: "
+                        f"{row.iloc[0]['Order Status']}"
+                    )
+
+            ##### create_support_ticket
+            elif tool_name == "create_support_ticket":
+                issue = tc["args"]["issue"]
+
+                result = (
+                    f"Support ticket created for {customer_name}. \nIssue: {issue}."
+                )
+
+            tool_msg = ToolMessage(
+                content=result,
+                tool_call_id=tc["id"]
+            )
+
+            outputs.append(tool_msg)
+            conversation.append(tool_msg)
+
+    # second model call
+        final_response = llm_with_tools.invoke(conversation)
+        outputs.append(final_response)
+
+    return {
+        "messages": outputs,
+        "order_id": order_id,
+        "customer_name": customer_name,
+        "df": df
+    }
+
+##### graph
+def construct_graph():
+
+    graph = StateGraph(GraphState)
+
+    graph.add_node("assistant", call_model)
+
+    graph.set_entry_point("assistant")
+    graph.set_finish_point("assistant")
+
+    return graph.compile()
+----

@@ -1,0 +1,132 @@
+[source,Python]
+----
+# graph.py
+
+from langgraph.graph import StateGraph
+from langchain_core.messages import (
+    SystemMessage,
+    ToolMessage,
+    AIMessage
+)
+from langchain_ollama import ChatOllama
+from state import GraphState
+from tools import TOOLS
+
+# define the LLM
+llm = ChatOllama(
+    model="llama3.2-2",
+    temperature=0
+)
+
+# bind the tools
+llm_with_tools = llm.bind_tools(list(TOOLS.values()))
+
+##### agent
+def call_model(state: GraphState):
+
+    order_id = state["order_id"]
+    messages = state["messages"]
+    # define df to be whatever dataframe is given to the agent
+    df = state["df"]
+
+    # changing the prompt will affect the result of using the agent
+    # it's OK to have a long prompt or lots of set rules
+    # Most important is that the intent is clear for the agent
+    
+    prompt = f"""
+    You are an ecommerce support agent.
+
+    ORDER ID: {order_id}
+
+    Rules:
+    - Use tools when needed
+    - Tool results are final and accurate.
+    - Always explain tool results clearly.
+    """
+
+    conversation = [SystemMessage(content=prompt)] + messages
+
+    outputs = []
+
+    # first model call
+    response = llm_with_tools.invoke(conversation)
+    outputs.append(response)
+    conversation.append(response)
+
+    # tool execution
+    if response.tool_calls:
+        for tc in response.tool_calls:
+            tool_name = tc["name"]
+
+            ##### cancel_order
+            if tool_name == "cancel_order":
+                row = df[df["Order ID"] == order_id]
+                status = row.iloc[0]["Order Status"]
+
+            # if the order has been shipped,
+            # nothing changes
+                if status == "Shipped":
+                    result = (
+                        f"Order {order_id} has already shipped "
+                        f"and cannot be cancelled."
+                    )
+
+            # if the order has already been cancelled
+            # nothing changes
+                elif status == "Cancelled":
+                    result = (
+                        f"Order {order_id} is already cancelled."
+                    )
+
+            # other cases (order "Pending")
+            # order status becomes "Cancelled"
+                else:
+                    df.loc[
+                        df["Order ID"] == order_id,
+                        "Order Status"
+                    ] = "Cancelled"
+
+                    result = (
+                        f"Order {order_id} cancelled successfully."
+                    )
+
+            ##### get_order_status
+            elif tool_name == "get_order_status":
+
+                row = df[df["Order ID"] == order_id]
+
+                result = (
+                    f"Status: "
+                    f"{row.iloc[0]['Order Status']}"
+                )
+
+            tool_msg = ToolMessage(
+                content=result,
+                tool_call_id=tc["id"]
+            )
+
+            outputs.append(tool_msg)
+            conversation.append(tool_msg)
+
+    # second model call
+        final_response = llm_with_tools.invoke(conversation)
+        outputs.append(final_response)
+
+    return {
+        "messages": outputs,
+        "order_id": order_id,
+        "df": df
+    }
+
+##### graph
+def construct_graph():
+
+    graph = StateGraph(GraphState)
+
+    graph.add_node("assistant", call_model)
+
+    graph.set_entry_point("assistant")
+    graph.set_finish_point("assistant")
+
+    return graph.compile()
+----

@@ -1,0 +1,48 @@
+= TDM 19000: Image Embeddings
+
+For the model to understand what is happening in this image, we must first use the CLIPProcessor (stored as `processor` when we setup the CLIP model and processor) to prepare the image. This `processor` will automatically resize the image, normalize the pixel values to be in a range that the model expects, and then convert the image into numerical tensors. 
+
+[source,Python]
+----
+inputs = processor(images=my_image, return_tensors="pt")
+
+inputs
+----
+
+[NOTE]
+====
+The resulting `inputs` is a dictionary of tensors, of the shape:
+
+[source]
+----
+{
+    'pixel_values': tensor([...])
+}
+----
+
+This is the formatting that the CLIP model expects and knows how to handle as input. 
+====
+
+From this point, we then need the model to take the processed image, and convert it into a numercial feature vector - an embedding - that represents the image. This is the model's way of storing the meaning of what is in the image.
+
+(For context:  You may recall that we also saw the usage of vectors and embeddings, when we studied large language models.)
+
+[source,Python]
+----
+# break the dictionary up into keyword arguments
+image_features = model.get_image_features(**inputs)
+----
+
+[IMPORTANT]
+====
+image_features stores the important parts of the image that make it itself and not any other image. 
+====
+
+The result is an embedding that does not make too much sense to us when viewed. But it is actually quite useful for the model. This vector will allow us to make similarity comparisons between multiple images in the future. 
+
+[source,Python]
+----
+# normalize the features to ensure that the magnitude doesn't matter
+normalized_img_feats = image_features / image_features.norm(dim=-1, keepdim=True)
+----
+

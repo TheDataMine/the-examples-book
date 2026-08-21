@@ -1,0 +1,81 @@
+=== What should an agent do when it cannot solve a user's request?
+
+AI agents usually try to do anything within their knowledge to help a user get a satisfactory result. But sometimes this means they are hallucinating information that isn't 100% true, or a task that they don't actually have the capability to complete. 
+
+Our agent knows how and when to cancel an order, how to look up the status of an order, and to verify customer ownership before sharing important information. That's all it has been trained to know. It may still try to offer up things that it can't actually do in its return messages - such as asking for an email address to confirm, offering refunds, making promises about shipping dates. 
+
+We can attempt to help stop some of these false offers by telling the agent to escalate situations to humans if it does not actually have the capability to complete them. This tool will be called create_support_ticket. With our current system, the agent should be using this tool if the user is asking for a service beyond checking an order's status or cancelling an order. 
+
+The prompt in this tool needs to be clear instructions that the agent *shouldn't* be able to avoid following.
+
+https://the-examples-book.com/projects/summer2026/19000/toolsversion4
+
+`state.py` has no changes here!
+In this simple version, issues will come from users' messages 
+and will be passed by the LLM.
+
+In the `call_model()` function, we will set some base rules for this new tool. For this quesiton, it is OK to keep the support ticket very basic. 
+
+The prompt rules is where we have to be careful. Because we are not building out this new tool to be very specific about every single thing the agent should think to escalate to humans, there will still be a lot of errors in how the agent behaves. The following example prompt doesn't even stop the agent from asking the user about the return policy, asking for extra user details, offering refunds with policies that have not been defined, and much more. 
+
+Taking from the Superstore dataset still, test the new `create_support_ticket` tool by prompting the agent to give refunds to some of the dataset rows.
+
+https://the-examples-book.com/projects/summer2026/19000/graphversion4
+
+[source,Python]
+----
+graph = construct_graph()
+----
+
+Reconfigure the graph, and do some testing to see how the agent handles requests that go beyond its defined tools:
+
+[source,Python]
+----
+from langchain_core.messages import HumanMessage
+
+tests = [
+    {
+        "title": "Refund request",
+        # rows #0 & #1
+        "customer_name": "Claire Gute",
+        # request refund on shipped order
+        "order_id": "CA-2013-152156",
+        "prompt": "I want a refund."
+    },
+    {
+        "title": "Return request",
+        # row #2
+        "customer_name": "Darrin Van Huff",
+        # request to return shipped order
+        "order_id": "CA-2013-138688",
+        "prompt": "I want to return my item."
+    },
+    {
+        "title": "Refund request",
+        # rows #9984 & #9985
+        "customer_name": "Dianna Vittorini",
+        # request refund on pending order
+        "order_id": "CA-2012-100251",
+        "prompt": "I want a refund"
+    },
+]
+
+for test in tests:
+    result = graph.invoke({
+        "messages": [
+            HumanMessage(content=test["prompt"])
+        ],
+        "customer_name": test["customer_name"],
+        "order_id": test["order_id"],
+        "df": myDF
+    })
+
+    myDF = result["df"]
+
+    print(f"\n{test['title']}")
+
+    for msg in result["messages"]:
+        print(f"\n{type(msg).__name__}")
+        print(msg.content)
+----
+

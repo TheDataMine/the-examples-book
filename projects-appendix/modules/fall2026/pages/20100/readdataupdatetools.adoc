@@ -1,0 +1,91 @@
+=== Read in the Superstore Sales dataset as `myDF` using the Pandas library, and update the tools
+
+Up to this point, we haven't actually been working with any real datasets - our tests used a fake order ID (#B73973). It could be really cool to take this agentic system and test it using a real dataset. The Superstore Sales dataset contains information about thousands of orders made by many different customers through the time this data was being tracked. 
+
+[source,Python]
+----
+import pandas as pd
+
+myDF = pd.read_csv("/anvil/projects/tdm/data/orders/Superstore_modified.csv")
+
+myDF['Order Status'].value_counts()
+----
+
+The `Order Status` column tracks if the customers' orders are "Shipped", "Pending", or "Cancelled". We'll have to make an additional tool that will check that the order has not already been shipped before calling `cancel_order`. 
+
+In the `get_order_status` tool, the agent should be given a prompt that instructs it to view the current status of an order, and return the status and ID of the order. This will be defined in `tools.py`, as follows:
+
+https://the-examples-book.com/projects/summer2026/19000/toolsversion2
+
+For the graph state, there are two changes:
+
+- `order_id: str` (was previously a dictionary). 
+- `df: pd.DataFrame`- allows us to connect the agent to a dataset; we'll then search for real order IDs from the row entries.
+
+https://the-examples-book.com/projects/summer2026/19000/graphversion2
+
+In `graph.py`, we have to modify the `call_model()` function. The definition for `order_id` changes now that it is defined as a string (simpler than before), and we have to define what should be used as `df`. 
+
+The prompt is where you can set specific rules for the agent that might not be set within the tools or other sections of code. We now have two tools (`cancel_order`, `get_order_status`) so having the rule "To cancel an order, call the `cancel_order` tool." doesn't quite work, as no rules are yet specifically telling the agent how to deal with the `get_order_status` tool. 
+
+The example (below) shows one way to update your prompt / rules.
+
+It's now more important to determine how the agent should execute its set of tools, as there are now two of them. Before, the entire tool execution section could just focus on telling the agent to deal with the fake order we were testing on. Now, to cancel an order, the agent must ensure that the order has not already been shipped (looking at the `Order Status` column) before allowing it to be cancelled. 
+
+When using the `cancel_order` tool, if the status of an order is "Shipped", the result should be a message saying that it has already shipped and thus cannot be cancelled. Cancellation should also be denied if the order has already been cancelled - orders can't be cancelled twice. Only in cases where it is currently "Pending" can it be cancelled - the agent is told to switch the "Pending" status to then be "Cancelled". 
+
+Now, if the agent is told to use the `get_order_status` tool, it needs to know to take `df`, and search its rows to find the relevant order ID. With that row (or rows, if the person ordered multiple items), it should find the order status of that order, and save that to the result. This will allow the agent to determine if it is allowed to cancel the order or not.
+
+At the very end of `call_model()`, make sure to update what is being returned, so it matches what is requried by the state:
+
+https://the-examples-book.com/projects/summer2026/19000/graphversion2
+
+[IMPORTANT]
+====
+You must use `graph = construct_graph()` in your notebook to reconfigure the graph with any changes made in the Python files. 
+====
+
+Run tests using this sample code:
+
+[source,Python]
+----
+# import again if needed
+from langchain_core.messages import HumanMessage
+
+tests = [
+    # test using real information from rows of the dataset
+
+    # from row #9993
+    (
+        "CANCEL ORDER - TEST #1",
+        "CA-2014-119914",
+        "Please cancel order CA-2014-119914."
+    ),
+    # from rows #9990-9992 (one order, three rows)
+    (
+        "ORDER STATUS - TEST #2",
+        "CA-2014-121258",
+        "Where is my order CA-2014-121258?"
+    )
+]
+
+for name, order_id, prompt in tests:
+    result = graph.invoke({
+        "messages": [HumanMessage(content=prompt)],
+        "order_id": order_id,
+        "df": myDF
+    })
+
+# this is important!!!!!!
+# if myDF isn't updated with the results, 
+# the rows will not show that the Order Status of the order
+# you cancelled actually changed
+    myDF = result["df"]
+
+    print(f"\n{name}")
+
+    for msg in result["messages"]:
+        print(f"\n{type(msg).__name__}")
+        print(msg.content)
+----
+
