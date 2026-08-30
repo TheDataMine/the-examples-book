@@ -1,0 +1,63 @@
+= TDM 20100: Cosine Similarity
+
+== Cosine Similarity in LLMs
+
+We made comparisons on the first ten numerical values to appear in the embedded vectors of some phrases. These vectors actually contain a lot more than ten values, and each is important for defining what has been embedded. 
+
+We *could* copy and paste the entire vector that outputs from running '/anvil/projects/tdm/bin/ollama run mxbai-embed-large-2 "The sky is blue"', but this is not very nice to do; it is long and messy, and some values could easily get left out. 
+
+Instead, we will use `subprocess` to run the mxbai-embed-large-2 model on each phrase, then we'll save the vectors into a list that can easily be used for comparison.
+
+[source,Python]
+----
+import subprocess
+import numpy as np
+import ast
+
+# run the Ollama mxbai-embed-large-2 model on "The sky is blue"
+# capture the output as a string
+result = subprocess.run(
+    ['/anvil/projects/tdm/bin/ollama', 'run', 'mxbai-embed-large-2', "The sky is blue"],
+    capture_output=True,
+    text=True
+)
+
+# get the raw text
+embedding_text = result.stdout.strip()
+
+# convert the string representation of list into an actual Python list
+vector_list = ast.literal_eval(embedding_text)
+
+# convert list of vectors to NumPy array
+vector1 = np.array(vector_list)
+
+print("Vector shape:", vector1.shape)
+print("First 5 values:", vector1[:5])
+----
+
+[IMPORTANT]
+====
+Do this for each of the three phrases:
+
+- "The sky is blue"
+- "The grass is green"
+- "I like cats"
+====
+
+With the vectors of the phrases, you can now use cosine similarity to give a score from -1 to 1 on how similar each phrase is to the others. 
+
+[source,Python]
+----
+# calculate cosine similarity
+similarity = np.dot(first_vec, second_vec) / (np.linalg.norm(first_vec) * np.linalg.norm(second_vec))
+print("Similarity score:", similarity)
+----
+
+[NOTE]
+====
+Cosine similarity ranges from -1 to 1: 
+
+- 1: Identical vectors
+- 0: No similarity
+- -1: Opposite vectors
+====
