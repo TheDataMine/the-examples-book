@@ -1,0 +1,61 @@
+). This allows the LangChain-Ollama LLM to begin converting text into numerical vectors.
+
+[source,Python]
+----
+from langchain_ollama import OllamaEmbeddings
+
+# choose to use the mxbai-embed-large model that uses 2 threads !!
+# we created mxbai-embed-large-2 during Project 2, Question 2
+embed_model = OllamaEmbeddings(model="mxbai-embed-large-2")
+----
+
+We will test this workflow on this Data Mine report:
+
+https://datamine.purdue.edu/posters/TDM-Report_2024-4.pdf
+
+[source,Python]
+----
+from langchain_community.document_loaders import PyPDFLoader
+
+loader = PyPDFLoader("https://datamine.purdue.edu/posters/TDM-Report_2024-4.pdf") # You are welcome to change this to a different document
+data = loader.load()
+----
+
+If you want to print out the `data` that we've just defined, you can. This will display the PDF as its raw document data. This consists of two main categories:
+
+- Metadata (`metadata`) - a dictionary that provides context about the document, such as author, creation date, total number of pages, etc.
+- Page Content (`page_content`) - a long string containing the raw text extracted from each page of the document
+
+`data` should display your PDF content page by page, so if there were 5 pages in your document, you should be able to find a `metadata` and `page_content` pair for each page. 
+
+Since the PDF is currently split by page, there should be just a few big blocks of text. We need to break these up into smaller chunks, as embedding models work best when the text is at a more manageable scale. If the chunks are too large, the meaning of each passage becomes a bit diluted or lost. If they're too small, there isn't enough context to make the text meaningful to the model. 
+
+[IMPORTANT]
+====
+In RAG, you aren't looking for which page matches your query. You are asking the model to understand related passages just about relevant content, not return based on unrelated information, and be specific to what may have appeared in the document. 
+====
+
+To split up the raw PDF content, we will use the text splitter `RecursiveCharacterTextSplitter()`:
+
+[source,Python]
+----
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0)
+all_splits = text_splitter.split_documents(data)
+----
+
+[NOTE]
+====
+Adjusting the chunk_size and chunk_overlap will change how the model chooses to split up the text - how much text per chunk, and how much content overlap there is between chunks, respectively. 
+====
+
+Once you've saved the split text to all_splits, you can view how it looks in a bit cleaner format using `.page_content`. You can do this all at once, or use a for loop to split up the output by chunk:
+
+[source,Python]
+----
+for i, chunk in enumerate(all_splits):
+    print(f"\n--- Chunk {i} ---")
+    print(chunk.page_content)
+----
+
