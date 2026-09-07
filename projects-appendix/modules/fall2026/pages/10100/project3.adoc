@@ -1,6 +1,6 @@
 = TDM 10100: Project 3 -- Fall 2026
 
-- Exploratory Data Analysis and Data Types (categorical data, numerical, strings, geo-spatial/temporal data, indexing)
+- Exploratory Data Analysis and Data Types (categorical data, numerical, strings, geospatial/temporal data, indexing)
 
 **Motivation:** In Project 3, we learn about various types of data that we encounter in real-world data sets.
 
@@ -11,7 +11,7 @@
 .Learning Objectives:
 ****
 - Demonstrate how to perform exploratory data analysis
-- Learn about various Data Types (categorical data, numerical, strings, geo-spatial/temporal data, indexing)
+- Learn about various Data Types (categorical data, numerical, strings, geospatial/temporal data, indexing)
 ****
 
 Again, please use the template found xref:ROOT:templates.adoc[here], and the important information about project submissions xref:ROOT:submissions.adoc[here], when you are ready to submit your work.
@@ -20,7 +20,14 @@ Again, please use the template found xref:ROOT:templates.adoc[here], and the imp
 
 This project will use the following dataset:
 
-- `/anvil/projects/tdm/data/consumer_complaints/complaints.csv`
+- `/anvil/projects/tdm/data/icecream/combined/reviews.csv`
+- `/anvil/projects/tdm/data/flights/subset/airports.csv`
+- `/anvil/projects/tdm/data/zillow/cities_crosswalk.csv`
+- `/anvil/projects/tdm/data/starwars/characters.csv`
+- `/anvil/projects/tdm/data/grouping/googleplaystore.csv`
+- `/anvil/projects/tdm/data/formula_1/circuits.csv`
+- `/anvil/projects/tdm/data/bay_area_bike_share/baywheels/202507-baywheels-tripdata.csv`
+
 
 [IMPORTANT]
 ====
@@ -76,7 +83,7 @@ Then do the same in R, namely, show the head of the `height` and the `weight` co
 
 https://www.datacamp.com/tutorial/na-rm-in-r
 
-As a side note:  coincidentally, the 4 droids are the ones who do not have their weight given!  BB-8 does not have a given height either:
+As a side note:  coincidentally, the 4 droids are the ones who do not have their weight given!  BB-8 does not have a given height either, as you can see here:
 
 [source, R]
 ----
@@ -152,7 +159,7 @@ pd.to_datetime(myDF['Last Updated'], format="%B %d, %Y")
 
 and we notice that the `format` is very similar to R, but also there is an error.
 
-In this case, R dealt with the error automatically, and Python does not.  We can add the option `errors="coerce"` after the format, and then Python will convert the strings to dates properly.
+In this case, R dealt with the error automatically, and Python did not.  We can add the option `errors="coerce"` after the format, and then Python will convert the strings to dates properly.
 
 then you can use the `dt.year` function to extract the year from the dates.  Then you can use the `value_counts()` function to see how many entries there are per year.  The output will look strange, because Python is trying to deal with the value that was not formatted correctly, so it does not know that you want integers as output.  Instead of using:
 
@@ -173,71 +180,91 @@ to force the output to be integers for the years.
 
 === Question 4 (2 pts)
 
-Not all data comes in a comma-delimited format, i.e., with commas in between the pieces of data.  In the data set of donations from the 1980 federal election campaigns, the symbol "|" is placed between pieces of data.
+Geospatial data can be easily mapped in Python and R.
 
-[source, bash]
+For example, in this data set:
+
+`/anvil/projects/tdm/data/formula_1/circuits.csv`
+
+we can see the latitude and longitude for the locations of F1 racetracks around the world.
+
+To plot the locations of these racetracks in R, we can use the `sf` and `leaflet` libraries.  We convert the longitudes and latitudes to WGS 84 format (you can read about that here)
+
+https://en.wikipedia.org/wiki/World_Geodetic_System
+
+and then display those locations with Leaflet:
+
+[source,r]
 ----
-C00078279|A|M11|P|80031492155|22Y||MCKENNON, K R|MIDLAND|MI|00000|||10031979|400|||||CONTRIBUTION REF TO INDIVIDUAL|3062020110011466469
-C00078279|A|M11||79031415137|15||OREFFICE, P|MIDLAND|MI|00000|DOW CHEMICAL CO||10261979|1500||||||3061920110000382948
-C00078279|A|M11||79031415137|15||DOWNEY, J|MIDLAND|MI|00000|DOW CHEMICAL CO||10261979|300||||||3061920110000382949
-C00078279|A|M11||79031415137|15||BLAIR, E|MIDLAND|MI|00000|DOW CHEMICAL CO||10261979|1000||||||3061920110000382950
-C00078287|A|Q1||79031231889|15||BLANCHARD, JOHN A|CHICAGO|IL|60685|||03201979|200||||||3061920110000383914
-C00078287|A|Q1||79031231889|15||CRAMER, JOHN H|CHICAGO|IL|60685|||02281979|200||||||3061920110000383915
-C00078287|A|Q1||79031231889|15||MCHUGH, KEVIN|CHICAGO|IL|60685|||03051979|200||||||3061920110000383916
-C00078287|A|Q1||79031231889|15||NOHA, EDWARD J|CHICAGO|IL|60685|||03121979|300||||||3061920110000383917
-C00078287|A|Q1||79031231889|15||RYCROFT, DONALD C|CHICAGO|IL|60685|||03191979|200||||||3061920110000383918
-C00078287|A|Q1||79031231889|15||VANDERSLICE, WILLIAM D|CHICAGO|IL|60685|||02271979|200||||||3061920110000383919
-----
+library(sf)
+library(leaflet)
 
+myDF <- read.csv("/anvil/projects/tdm/data/formula_1/circuits.csv")
 
-Instead of using the `read.csv` function to read in the data, we can use the `fread` function to read in the data, and it will *automatically* detect what symbol is placed between the pieces of data.  The `fread` function is not available by default, so we first load the `data.table` library.
+points <- st_as_sf(myDF, coords=c("lng", "lat"), crs=4326)
 
-This data set also does not have the names of the columns built in!  So we need to specify the names of the columns.
-
-You can use the following to read in the data and name the columns properly:
-
-[source, bash]
-----
-library(data.table)
-myDF <- fread("/anvil/projects/tdm/data/election/itcont1980.txt", quote="")
-names(myDF) <- c("CMTE_ID", "AMNDT_IND", "RPT_TP", "TRANSACTION_PGI", "IMAGE_NUM", "TRANSACTION_TP", "ENTITY_TP", "NAME", "CITY", "STATE", "ZIP_CODE", "EMPLOYER", "OCCUPATION", "TRANSACTION_DT", "TRANSACTION_AMT", "OTHER_ID", "TRAN_ID", "FILE_NUM", "MEMO_CD", "MEMO_TEXT", "SUB_ID")
+leaflet(width = "500px", height = "500px") %>%
+      addTiles() %>%
+      addMarkers(data = points)
 ----
 
-Now that you have the data read into the data frame `myDF`, here are two questions to get familiar with the data:
+Similarly, in Python, we can plot the locations of these racetracks, using `geopandas` and `folium`.
 
-Which value appears in the "STATE" column the most times?
+[source,Python]
+----
+import pandas as pd
+import geopandas as gpd
+import folium
+myDF = pd.read_csv('/anvil/projects/tdm/data/formula_1/circuits.csv')
+my_map = folium.Map(location=[39.77, -86.29], zoom_start=1)
+points = gpd.GeoDataFrame(myDF, geometry=gpd.points_from_xy(myDF.lng, myDF.lat), crs="EPSG:4326")
+for index, row in points.iterrows():
+    folium.Marker(
+        location=[row["lat"], row["lng"]]
+    ).add_to(my_map)
+my_map
+----
 
-Which value appears in the "NAME" column the most times?  Hint:  As in question 2, if you try to view the entire table of values in the "NAME" column, the table has length 217646, and it will not finish displaying.  For this reason, you should *only* look at the `head` or the `tail` of your table, not the entire table itself.
 
 
 .Deliverables
 ====
-- The value that appears in the "STATE" column the most times.
-- The value that appears in the "NAME" column the most times.
+- Render the map of the F1 racetracks in R.
+- Then render the map of the F1 racetracks in Python.
 ====
 
 
 === Question 5 (2 pts)
 
-In the data set about the 1980 federal election campaigns:
+Classify each of the columns from this data set:
 
-Use the `paste` command to join the "CITY" and "STATE" columns, with the goal of determining the top 5 city-and-state locations where donations were made.
+`/anvil/projects/tdm/data/bay_area_bike_share/baywheels/202507-baywheels-tripdata.csv`
 
-Hint:  As in questions 2 and 4, if you try to view the entire table of values of city-and-state pairs, the table has length 217646, and it will not finish displaying.  For this reason, you should *only* look at the `head` or the `tail` of your table, not the entire table itself.
+namely:
 
-Another hint:  Please notice the fact that there are 11582 rows in the data set in which the "CITY" and "STATE" are both empty!
+[source]
+----
+"ride_id"
+"rideable_type"
+"started_at"
+"ended_at"
+"start_station_name"
+"start_station_id"
+"end_station_name"
+"end_station_id"
+"start_lat"
+"start_lng"
+"end_lat"
+"end_lng"
+"member_casual"
+----
 
-++++
-<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_timt8zr8&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
-++++
+as a string, categorical variable, geospatial data, or date/timestamp (i.e., temporal data).  Be sure to briefly justify/explain your answers.
 
-++++
-<iframe id="kaltura_player" src="https://cdnapisec.kaltura.com/p/983291/sp/98329100/embedIframeJs/uiconf_id/29134031/partner_id/983291?iframeembed=true&playerId=kaltura_player&entry_id=1_bbh3bsnv&flashvars[streamerType]=auto&amp;flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_aheik41m" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" sandbox="allow-downloads allow-forms allow-same-origin allow-scripts allow-top-navigation allow-pointer-lock allow-popups allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation" frameborder="0" title="TDM 10100 Project 13 Question 1"></iframe>
-++++
 
 .Deliverables
 ====
-- The top 5 city-and-state locations where donations were made in the 1980 federal election campaigns.
+- Classify each of the types of data from the Bay Area Bike Share Baywheels data, as a string, categorical variable, geospatial data, or date/timestamp (i.e., temporal data).  Be sure to briefly justify/explain your answers.
 ====
 
 
@@ -253,7 +280,7 @@ Once you upload your submission to Gradescope, make sure that everything appears
 
 .Items to submit
 ====
-- firstname_lastname_project2.ipynb
+- firstname_lastname_project3.ipynb
 ====
 
 [WARNING]
