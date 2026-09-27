@@ -1,0 +1,115 @@
+= TDM 10100: Project 6 Question 1 examples
+
+We can load the Zillow data using `fread` but we need to first load `data.table`
+
+[source,r]
+----
+library(data.table)
+myDF <- fread("/anvil/projects/tdm/data/zillow/State_time_series.csv")
+----
+
+There is a column called `Date`:
+
+[source,r]
+----
+head(myDF)
+----
+
+and we can extract the months from these dates.  For instance, the first six values are all from April, the fourth month:
+
+[source,r]
+----
+month(head(myDF$Date))
+----
+
+We can also see how many entries occurred per year:
+
+[source,r]
+----
+table(year(myDF$Date))
+----
+
+The Iowa Liquor Sales data is too large to read the entire data set.  If you try to read it all, your kernel will crash.  (If you try, and you crash your kernel, then you need to re-load the `data.table` library again, from the start of the examples.)
+
+[source,r]
+----
+myDF <- fread("/anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales.csv")
+----
+
+So we can load just a few of the columns, for instance, the `Date`, `Store Number`, and `Store Name`:
+
+[source,r]
+----
+myDF <- fread("/anvil/projects/tdm/data/iowa_liquor_sales/iowa_liquor_sales.csv", select = c("Date", "Store Number", "Store Name"))
+----
+
+and you can see the first few entries:
+
+[source,r]
+----
+head(myDF)
+----
+
+This time, if we try to extract the months or years, R tells us that the `Date` column is a `character string is not in a standard unambiguous format`.
+
+[source,r]
+----
+table(year(myDF$Date))
+----
+
+We can load the `lubridate` library and we can convert the `Date` values into a useable format, with the `fast_strptime` function.  Here are the first six such values:
+
+[source,r]
+----
+library(lubridate)
+fast_strptime(head(myDF$Date), "%m/%d/%Y")
+----
+
+Now we can do things like extracting the year from those first six dates:
+
+[source,r]
+----
+year(fast_strptime(head(myDF$Date), "%m/%d/%Y"))
+----
+
+and now we can make a table of how many rows of data occurred in each year, by using the whole column, instead of only the head:
+
+[source,r]
+----
+table(year(fast_strptime(myDF$Date, "%m/%d/%Y")))
+----
+
+We can even extract the months and the years together, with the `my` function (which stands for `months and years`), to find out how many entries occurred in each month-and-year pair:
+
+[source,r]
+----
+table(paste(month(fast_strptime(myDF$Date, "%m/%d/%Y")),year(fast_strptime(myDF$Date, "%m/%d/%Y")),sep="-"))
+----
+
+It might be cleaner to see what is going on, if you break this into three lines:
+
+[source,r]
+----
+mymonths <- month(fast_strptime(myDF$Date, "%m/%d/%Y"))
+myyears <- year(fast_strptime(myDF$Date, "%m/%d/%Y"))
+table(paste(mymonths,myyears,sep="-"))
+----
+
+We are pasting the months and years together, with a dash as the separator in between them, and then making a table of how many month-and-year pairs occur.
+
+There is also a function called `my` (which stands for month-and-year) in the `lubridate` package, but if you are only using 2 GB of memory in your session, it will crash if you try it.
+
+In the year 2021, there were 2622712 rows of data:
+
+[source,r]
+----
+myDF2021 <- subset(myDF, year(fast_strptime(myDF$Date, "%m/%d/%Y")) == 2021)
+----
+
+and the store called `HY-VEE #3 / BDI / DES MOINES` had 19168 lines of data corresponding to 2021:
+
+[source,r]
+----
+tail(sort(table(myDF2021$`Store Name`)))
+----
+
