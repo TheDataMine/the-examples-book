@@ -18,10 +18,7 @@
 ****
 - Practice cleaning and preparing Spotify data for analysis.
 - Explore the target distribution and develop summary statistics for song popularity.
-- Build and interpret a linear regression model, checking its assumptions.
-- Understand the assumptions of linear regression and why they are necessary.
-- Perform feature selection to find a balance between fit and number of features in the model.
-- Interpret the results of the model using summary results. 
+- Understand the basics of a linear regression model.
 ****
 
 Please use the template found xref:ROOT:templates.adoc[here], and the important information about project submissions xref:ROOT:submissions.adoc[here], when you are ready to submit your work.
@@ -46,7 +43,7 @@ https://notebook.anvilcloud.rcac.purdue.edu/
 
 == Project Objectives
 
-In this project, you will build a linear regression model to predict the popularity of a song using features such as duration, loudness, and many more features. You'll clean and prepare a Spotify dataset, and explore patterns in songs. Along the way, you'll practice dealing with the model's **assumptions**, dealing with multicollinearity, handling outliers, and feature selection. You'll build the model and interpret its results. 
+In this project, you will build a linear regression model to predict the popularity of a song using features such as duration, loudness, and many more features. We will start to learn about model **assumptions**. We will build very simple models and interpret the results. 
 
 You can read more about the Spotify data set here:
 
@@ -104,7 +101,7 @@ X = myDF.drop(columns=["popularity"]).copy()
 .Deliverables
 ====
 - List the columns that remain in myDF, after removing the columns listed above, in `drop_cols`.
-- Print the shape of `X` and `y` using `X.shape()` and `y.shape()`.
+- Print the shape of `X` and `y` using `X.shape` and `y.shape`.
 ====
 
 === Question 2 Splitting the Data and Understanding the Data (2 points)
@@ -116,7 +113,7 @@ X = myDF.drop(columns=["popularity"]).copy()
 
 **Splitting the Data**
 
-Models are not trained on entire datasets. Instead, we partition the data into multiple subsets to serve distinct roles in the model development process. The most common partitioning scheme involves subsets:
+Models are not trained on entire datasets. Instead, we partition the data into multiple subsets (training data and testing data), to serve distinct roles in the model development process. The most common partitioning scheme involves subsets:
 
 - **Training data** is what the model actually learns from. It's used to find patterns and relationships between the features and the target.
 
@@ -157,7 +154,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 plt.figure(figsize=(8,5))
-sns.histplot(y, bins=30, kde=True, color="skyblue")
+sns.histplot(y_train, bins=30, kde=True, color="skyblue")
 plt.xlabel("_____") # Fill in a label for the x-axis
 plt.ylabel("______") # Fill in a label for the y-axis
 plt.title("_____") # Fill in a title for the histogram
@@ -204,20 +201,27 @@ plt.title("_____") # Fill in a title for the histogram
 plt.show()
 ----
 
-In 2 to 3 sentences, describe:
-
-(1) the relationship you observe between the two variables, and
-
-(2) how the regression line is constructed to represent the overall trend in the data using residuals. Make sure to include labels for the plot.
-
 .Deliverables
 ====
 - Generate a scatterplot of popularity versus duration (in minutes), and include a fitted regression line.
+====
+
+
+=== Question 5
+
+In 2 to 3 sentences, for the scatterplot from Question 4, describe:
+
+(1) the relationship you observe between the two variables, and
+
+(2) how the regression line is constructed to represent the overall trend in the data.  The residuals are the differences between the predicted data and the actual data.
+
+.Deliverables
+====
 - In 2 to 3 sentences, describe: (1) the relationship you observe between the two variables, and (2) how the regression line is constructed to represent the overall trend in the data using residuals. Make sure to include labels for the plot.
 ====
 
 
-=== Question 5 Checking Assumptions of Linear Regression Model (2 points)
+A few closing notes:
 
 **Linear Regression Assumptions**
 
@@ -237,245 +241,7 @@ If you are a data science or statistics major, a solid understanding of these as
 
 We have several ways to assess the normality assumption. A simple check is a histogram of the residuals, if it looks roughly bell-shaped and symmetric, that supports treating the errors as approximately normal.
 
-image::Normalityassumptionhistogram.png[width=600, height=450, caption="Normality Test Histogram Spotify Data"]
 
-**Normality Assumption - Q-Q plot**
-
-Another visual method for assessing the normality of errors, which is more
-powerful than a histogram, is a normal quantile-quantile plot, or Q-Q plot for
-short.
-
-Essentially, if the points in a Q-Q plot don't lie close to the straight line, that suggests the data are not normal. In essence, the plot puts the ordered sample values (sample quantiles) on the y-axis against the quantiles you'd expect under a normal distribution (theoretical quantiles) on the x-axis. Implementation details vary by software, but the idea is the same.
-
-image::Normalityassumptionqq.png[width=600, height=450, caption="Normality Test Q-Q Plot Spotify Data"]
-
-**Independence Assumption - Durbin-Watson Independence Test**
-
-- What it asks: “Are the residuals independent?”
-
-- If one residual is high and the next is also high, there's positive autocorrelation. If they tend to alternate up/down, there's negative autocorrelation. If there's no pattern in residuals, they're independent.
-
-Rule of thumb:
-
-** ~2 → residuals are approximately independent
-
-** < 2 → positive autocorrelation (closer to 0 is stronger)
-
-** > 2 → negative autocorrelation (closer to 4 is stronger)
-
-**Equal Variance Assumption - Residuals versus Fitted Values Plot**
-
-A Fitted vs. Residuals plot is one of the most useful diagnostics for checking the linearity and equal variance (homoscedasticity) assumptions.
-
-What to look for:
-
-- Zero-centered residuals.
-
-- At any fitted value, the average residual should be about 0. This supports the linearity assumption. We can add a horizontal reference line at y = 0 to make this clear.
-
-- Even spread (constant variance).
-
-- Across all fitted values, the spread of residuals should be roughly the same. 
-
-image::fittedvsresspotify.png[width=600, height=450, caption="Fitted vs Residuals Plot Spotify Data"]
-
-
-.Deliverables
-====
-**5a. Use the provided code to test for normality assumption. Make sure to label the plot and write 2-3 sentences on whether or not you think the model passes the normality assumption.**
-
-[source,python]
-----
-import matplotlib.pyplot as plt
-import statsmodels.api as sm
-import scipy.stats as stats
-import numpy as np
-
-# Residuals
-resid = model.resid
-z = (resid - np.mean(resid)) / np.std(resid, ddof=1)
-
-# Histogram with normal curve
-plt.hist(z, bins=30, density=True, alpha=0.6, color="skyblue", edgecolor="black")
-x = np.linspace(z.min(), z.max(), 100)
-plt.plot(x, stats.norm.pdf(x, 0, 1), "r", linewidth=2)
-plt.title("________") # For YOU to fill in
-plt.show()
-----
-
-**5b. Use the provided code to test for normality using the q-q plot. Make sure to label your plot and interpret the results in 2-3 sentences.**
-
-[source,python]
-----
-# Q-Q Plot
-sm.qqplot(z, line="45", fit=True)
-plt.title("Q-Q Plot of Residuals")
-plt.show()
-----
-
-
-**5c. Run the code below to test for independence assumption in regression using the durbin watson test. Write 2-3 sentences interpreting the results and why testing for independence is important when building a linear regression model.**
-
-[source,python]
-----
-# Durbin-Watson independence test
-from statsmodels.stats.stattools import durbin_watson
-
-dw_stat = durbin_watson(resid)
-print("[Independence: Durbin-Watson]")
-print(f"Statistic={dw_stat:.4f}")
-print("H0: Residuals are independent (no autocorrelation).")
-
-if 1.5 < dw_stat < 2.5:
-    print("-> Pass (approx. independent)")
-else:
-    print("-> FAIL: possible autocorrelation")
-print()
-----
-
-**5d. Run the code provided below to plot a residuals vs fitted values plot. Make sure to label your plot and interpret the results in 2-3 sentences.**
-
-[source,python]
-----
-import matplotlib.pyplot as plt
-
-plt.scatter(model.fittedvalues, resid, alpha=0.6)
-plt.axhline(0, color="red", linestyle="--")
-plt.title("______")
-plt.xlabel("______")
-plt.ylabel("______")
-plt.show()
-----
-
-====
-
-=== Question 6 Calculating R-squared and Predicting Popularity (2 points)
-
-
-
-.Deliverables
-====
-**6a. Use the provided code below to get the $R^2$ on the test set. Write 2-3 sentences interpreting the results of the $R^2$ on the test set.**
-
-[source,python]
-----
-from sklearn.metrics import r2_score
-import statsmodels.api as sm
-
-# Making sure test data has the same selected columns
-X_test = X_test[selected_cols].copy()
-mask = np.isfinite(X_test).all(1)
-X_test = X_test.loc[mask]
-y_test = y_test.loc[X_test.index]
-
-# Predict with statsmodels OLS
-y_pred = model.predict(sm.add_constant(X_test, has_constant='add'))
-
-# R² on the test set
-r2 = r2_score(y_test, y_pred) 
-print(f"Test R²: {r2:.3f}")
-----
-
-
-**6b. Run the code provided to generate a table displaying each variable along with its coefficient, direction of effect (positive or negative), p-value, and significance. Then, write 2-3 sentences interpreting the results. Highlight any findings that stand out or seem surprising.**
-
-_Note: The code has been provided, your task is to interpret the table's results._
-
-[source,python]
-----
-import pandas as pd
-
-alpha = 0.05  # significance threshold
-
-# Collect pieces from the statsmodels OLS result
-coef = model.params.rename("coef")
-pval = model.pvalues.rename("p_value")
-ci = model.conf_int()
-
-# Assemble table
-coef_tbl = (
-    pd.concat([coef, pval, ci], axis=1)
-      .drop(index="const", errors="ignore")             # drop intercept row
-      .assign(
-          effect=lambda d: d["coef"].apply(lambda x: "Positive" if x > 0 else "Negative"),
-          significant=lambda d: d["p_value"] < alpha
-      )
-      [["coef", "effect", "p_value", "significant"]]
-      .sort_values("p_value")                            # most significant first
-)
-
-# rounding
-coef_tbl_rounded = coef_tbl.round({"coef": 4, "p_value": 4})
-print(coef_tbl_rounded)
-----
-
-
-**6c. Using the code below, predict the popularity of a new song with the following features using the trained model:**
-
-Principal artist followers: 5,000,000
-
-Duration: 210,000 ms (~3.5 minutes)
-
-Loudness: -6.0
-
-Album total tracks: 10
-
-Acousticness: 0.20
-
-Explicit: 0 (not explicit)
-
-Mode: 1 (major key)
-
-Valence: 0.40
-
-Track number: 3
-
-Key: 5 (F major)
-
-Speechiness: 0.05
-
-[source,python]
-----
-import pandas as pd
-import statsmodels.api as sm
-
-new_song = pd.DataFrame([{
-
-    "principal_artist_followers": ______, # For YOU to fill in
-
-    "duration_ms": _______,  # For YOU to fill in
-
-    "loudness": _______, # For YOU to fill in            
-
-    "album_total_tracks": _____, # For YOU to fill in
-
-    "acousticness": ________, # For YOU to fill in
-
-    "explicit": ________, # For YOU to fill in          
-
-    "mode": ________, # For YOU to fill in             
-
-    "valence": ________, # For YOU to fill in
-
-    "track_number": ________, # For YOU to fill in
-
-    "key": ________, # For YOU to fill in           
-    
-    "speechiness": # For YOU to fill in
-
-}])
-
-# Ensure the model sees the same columns it was trained on
-new_song = new_song.reindex(columns=selected_cols)
-
-new_song = new_song.fillna(X_train[selected_cols].median(numeric_only=True))
-
-pred_pop = model.predict(sm.add_constant(new_song, has_constant="add"))[0]
-
-print(f"Predicted popularity: {pred_pop:.1f}")
-----
-
-====
 
 
 == References
