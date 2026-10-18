@@ -1,0 +1,162 @@
+= TDM 20100: SQL Notes Part 2
+
+== Now we can learn about how to `JOIN` the results of queries from two or more tables.  Using a `JOIN` is a powerful way to leverage lots of information from a database, but it takes a little time to set things up properly.  First, we revisit a question from yesterday, about the movies that received at least 2 million votes.  We want to find the titles of those movies.
+
+We will need the `basics` table and the `ratings` table.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM basics LIMIT 5;
+----
+
+[source,sql]
+----
+%%sql
+SELECT * FROM ratings LIMIT 5;
+----
+
+Now we join these two tables, and restrict the results to those movies with at least 2000000 votes.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM basics as b JOIN ratings AS r 
+ON b.tconst = r.tconst WHERE numVotes > 2000000 LIMIT 5;
+----
+
+== What was the most popular movie (highest rating) in the year your Mom or Dad or aunt, etc., was born?
+
+For instance, in 1940, there was The Great Dictator, with an (average) rating of 8.4.  It is a Charlie Chaplin movie that criticizes the dictators of the time, who were becoming very powerful in Europe.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM basics as b JOIN ratings AS r ON b.tconst = r.tconst
+ WHERE (b.startYear = 1940) AND (b.titleType = 'movie') ORDER BY r.averageRating DESC LIMIT 5;
+----
+
+
+
+
+== How many episodes of Friends were there?
+
+We start by finding the `tconst` for Friends.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM basics WHERE (primarytitle = 'Friends') AND (startYear > 1992) LIMIT 5;
+----
+
+So now we know that `tt0108778` is the `parentTconst` for Friends.
+
+Now we find the number of episodes per season.  To do this, we first find the episodes for Friends.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM episode WHERE parentTconst = 'tt0108778' LIMIT 5;
+----
+
+and then we group them by `seasonNumber`, to make sure that our results make sense.
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*), seasonNumber FROM episode WHERE parentTconst = 'tt0108778' GROUP BY seasonNumber;
+----
+
+Season 10 differs from what I expected (I was guessing that there would be 18 episodes), so I checked further on this.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM episode AS e JOIN basics as b ON e.tconst = b.tconst WHERE parentTconst = 'tt0108778' AND seasonNumber = 10 ORDER BY episodeNumber;
+----
+
+OK so they combined The Last One, which is two episodes, into just one listing.
+
+There is probably another pair of episodes that is combined too, because there are 234 episodes listed, although there were actually 236 episodes in the show altogether!
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*) FROM episode WHERE parentTconst = 'tt0108778';
+----
+
+
+
+
+== Who are the actors and actresses in the TV show Friends?
+
+We will need the `name` table and the `crew` table.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM name LIMIT 5;
+----
+
+[source,sql]
+----
+%%sql
+SELECT * FROM principals LIMIT 5;
+----
+
+Now we join these two tables together.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM principals AS p JOIN name as n ON p.nconst = n.nconst LIMIT 5;
+----
+
+and now we also join with the `basics` table, and we focus on the `tconst` for Friends, which is `tt0108778`.  There are 16 people listed, from the Friends TV show.
+
+[source,sql]
+----
+%%sql
+SELECT * FROM basics as b JOIN principals AS p ON b.tconst = p.tconst
+JOIN name as n ON p.nconst = n.nconst
+WHERE b.tconst = 'tt0108778' LIMIT 50;
+----
+
+and 14 of them are actors or actresses
+
+[source,sql]
+----
+%%sql
+SELECT * FROM basics as b JOIN principals AS p ON b.tconst = p.tconst
+JOIN name as n ON p.nconst = n.nconst
+WHERE (b.tconst = 'tt0108778')
+AND ((p.category = 'actress') OR (p.category = 'actor')) LIMIT 50;
+----
+
+== How many movies has Emma Watson appeared in?
+
+She has appeared in a total of 22 movies.
+
+[source,sql]
+----
+%%sql
+SELECT COUNT(*) FROM basics as b JOIN principals AS p ON b.tconst = p.tconst
+ JOIN name as n ON p.nconst = n.nconst
+ WHERE (n.primaryName = 'Emma Watson') AND (b.titleType = 'movie') LIMIT 5;
+----
+
+
+
+== James Caan died in 2022.  You can read his https://en.wikipedia.org/wiki/James_Caan[Wikipedia page] or his https://www.imdb.com/name/nm0001001/[IMDB page].  What was his highest rated movie?
+
+He appeared in The Godfather, which has a rating of 9.2
+
+[source,sql]
+----
+%%sql
+SELECT * FROM basics as b JOIN principals AS p ON b.tconst = p.tconst
+ JOIN name as n ON p.nconst = n.nconst
+ JOIN ratings AS r ON b.tconst = r.tconst
+ WHERE (n.primaryName = 'James Caan') AND (b.titleType = 'movie') ORDER BY r.averageRating DESC LIMIT 5;
+----
+
