@@ -1,0 +1,523 @@
+= TDM 20100: Project 11 - Website Scraping
+
+== Project Objectives
+
+Motivation: Web scraping allows programmers to collect data from websites, making it possible to build datasets for analysis, visualization, and machine learning. Learning how websites are structured and how to extract information from HTML is a fundamental skill in data science.
+
+Context: In this project, students will use Python's requests and BeautifulSoup libraries to explore the structure of webpages and extract information from real websites. Students will inspect HTML elements, navigate nested page structures, identify hyperlinks, use regular expressions to locate specific URLs, and build reusable functions that collect data across numerous websites.
+
+Scope: HTML, BeautifulSoup, HTTP requests, CSS selectors, hyperlinks
+
+.Learning Objectives
+****
+- Understand how HTML documents are structured and how webpages are represented through nested elements.
+- Locate and extract infromation using HTML tags, CSS selectors, and regular expressions.
+- Build reusable Python functions to automate web scraping tasks
+****  
+
+== Dataset
+- https://musicchartsarchive.com/
+- https://en.wikipedia.org/wiki/Wikipedia:Today%27s_featured_article
+
+== Questions
+
+=== Question 1 (2 points) 
+Web scraping is a form of data scraping, used for extracting data from websites. We will start by pulling the top songs and albums of the week from the https://musicchartsarchive.com/[Music Charts Archive], and inspecting the site by decades of music. 
+
+We will be using `BeautifulSoup`, a python library made for parsing HTML and XML documents. This will allow us to easily access information from the webpage. 
+
+Along with BeautifulSoup, we will use `requests`, which lets us send HTTP requests. These requests are sent to the server to obtain information, or to perform a specific action for us. 
+
+To start, read in the dataset:
+
+[source,Python]
+----
+import requests
+from bs4 import BeautifulSoup
+
+url = 'https://musicchartsarchive.com/'
+
+# try reading in the dataset without any headers! 
+# Does it still work? 
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+}
+
+response = requests.get(url, headers=headers)
+----
+
+[NOTE]
+====
+The `headers = {....}` are used to bypass the site's protection against bots. The 'User-Agent' section is us telling it "Please treat me as if I'm using Chrome running on Windows". Otherwise the server, when it sees a request from python, might think we're just an automated script, not a person using a browser. 
+====
+
+Check the server's response to us connecting to the site:
+
+[source,Python]
+----
+# check the status code
+print(f"Status Code: {response.status_code}")
+----
+
+[TIP]
+====
+Here is a https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status[cheat sheet] guide to what the status codes represent. 
+====
+
+Parse the music site document:
+
+[source,Python]
+----
+soup = BeautifulSoup(response.content,'html.parser')
+----
+
+The homepage of the Music Archive has a lot of different sections of information. We could easily choose to inspect the title, written paragraphs, or table content of this page. Use `soup.find()` and `soup.find_all()` to display some of the document's tags. 
+
+There are many standard options for this. Some that are specific to this page's content:
+
+- `<title>` - some sites specify the title of their page here
+- `<h1>` - this is the largest text on the page - typically the page's title, or an important heading
+- `<p>` - the paragraphs of text 
+- `<b>` - text that has been bolded
+- `<a>` - an anchor element, used to create a hyperlink
+- `<tr>` - a table row, used to create a table within the page
+
+There is one title for this page, so it would be fine to do `soup.find('title')`, or `soup.find('h1')`, and also `soup.find('p')`, for the one paragraph of text. 
+
+There are a lot of <a> tags and table rows. For these, use `soup.find_all('a')` and `soup.find_all('tr')`, respectively. 
+
+.Deliverables
+====
+1.1 Connect to the Music Charts Archive, and display the system status code to show that it was successful +
+1.2 Find and display the content of some of the page's tags, as mentioned in the text above +
+1.3 The tag content outputs can be a bit messy. Clean up how they are being displayed by using `.text` (to show only the text content and none of the tag information):
+
+[source,Python]
+----
+# example 
+
+# for soup.find(....)
+soup.find('h1').text
+----
+
+[source,Python]
+----
+# example 
+
+# for soup.find_all(....)
+for e in soup.find_all('tr'): # interate through each instance of the tag
+    print(e.text)
+----
+====
+
+=== Question 2 (2 points)
+Sometimes it isn't so easy to find specific content from a page. On the home page of the music archive, there are options to go to archived charts for each of the years as far back as 1976, sorted by decade. 
+
+image::Music_decades.png[Screenshot of the options to look at music from 1970s, 1980s, 1990s, 2000s, 2010s, and 2020s, width=60%, align=center]
+
+These are stored as <a> tags in the page's structure. But we saw in Question 1 that there are a lot of <a> tags, and that printing them all out isn't a good way to view them. 
+
+To find specific parts of a structure, you have to map out the path of tags that it takes to get there. These hyperlinks to each of the decades are each <a> tags, but they're stored within a path like this:
+
+[source,]
+----
+<nav>
+    <ul>
+        <li>
+            <a>1970s</a>
+            <a>1980s</a>
+            <a>1990s</a>
+            ......
+            ...
+        </li>
+    </ul>
+</nav>
+----
+
+[NOTE]
+====
+Here is an example of what it actually looks like when you are inspecting the page:
+
+image::Console_tags.png[Screenshot of the console's tag nesting system, width=60%, align=center]
+
+The decades buttons are the only links in the site's home page that follow this exact structure.
+====
+
+Use `soup.select('.nav ul li a')` to display these tags. Add the `href` from one of the decades to your dataset URL, and re-define the soup:
+
+[source,Python]
+----
+# add the '/2010s' href path to the URL
+url = 'https://musicchartsarchive.com/2010s'
+
+response = requests.get(url, headers=headers)
+soup = BeautifulSoup(response.content,'html.parser')
+----
+
+On this new page ('https://musicchartsarchive.com/2010s'), there are links to individual years' charts. Use:
+
+[source,Python]
+----
+soup.select('.article a')
+----
+
+...to find the tags to each of the charts from the 2010s. Select one of these year-specific hrefs, and re-define the soup accordingly:
+
+[source,Python]
+----
+# add the 'album-charts/2014' to the URL
+url = 'https://musicchartsarchive.com/album-charts/2014'
+
+response = requests.get(url, headers=headers)
+soup = BeautifulSoup(response.content,'html.parser')
+----
+
+Do this process again with the 'https://musicchartsarchive.com/album-charts/2014' page, using `soup.select('.article a')` to find the by-week charts. 
+
+Then re-define the soup for the Album Chart for *December 6, 2014*. 
+
+[HINT]
+====
+Add the href "/album-chart/2014-12-06" to the site's base URL!
+====
+
+On this page, there are <tr> tags in the table, each representing a row of the top albums chart. To extract specifically the ranking, album, and artist, do the following:
+
+[source,Python]
+----
+print(f'All of the titles and artists on the Album Chart for 2014-12-06 \n')
+
+# use 'tr td' to find the specific row content of the Album Chart
+# or use 'tr a' to find the content of the Album Chart that are hyperlinks
+# (this would be most of the albums and artists, but not all)
+for e in soup.select('tr td'):
+    print(e.text)
+----
+
+.Deliverables
+====
+2.1 Create a soup for one of the decades of music based on its HTML tag +
+2.2 Create a soup for one of the years of music based on its HTML tag +
+2.3 Create a soup for one of the weeks of music based on its HTML tag +
+2.4 Display the text of the Top Albums Chart of the week you've chosen to look at +
+====
+
+=== Question 3 (2 points)
+Every day, Wikipedia has a "Today's featured article" that's highlighted on the https://en.wikipedia.org/wiki/Main_Page[home page]. Wikipedia has been doing this since February 2004, and stores records of each day's featured article in an archive that we will use as our second dataset:
+
+[source,Python]
+----
+url = "https://en.wikipedia.org/wiki/Wikipedia:Today%27s_featured_article"
+
+headers = {
+    "User-Agent": "Mozilla/5.0"
+}
+
+response = requests.get(url, headers=headers)
+soup = BeautifulSoup(response.text,'html.parser')
+----
+
+There is a section that contains a menu for selecting what section of the archive you would like to view.
+
+image::Featured_Article_Years.png[Screenshot of Wikipedia's Today's Featured Article archive menu, width=70%, align=center]
+
+Each of the menu options are hyperlinks that take you to the respective category's content - so each is stored as an <a> tag. Use `soup.find_all()` to show the contents of all of the <a> tags on the home page. 
+
+There are a lot. It's a bit scary, and very messy. Luckily, we can narrow our search to find only the links to the Today's Featured Article pages of each *year*. 
+
+We will use `.compile()` from the Regular Expression module to find hrefs that contain (at least) a certain URL. 
+
+[source,Python]
+----
+# get the links specific to the "year" pages
+
+import re
+# find all <a> tags that contain this section of URL
+year_links = soup.find_all("a", href=re.compile("/wiki/Wikipedia:Today%27s_featured_article/20"))
+
+# so it will get 
+# /wiki/Wikipedia:Today%27s_featured_article/2014
+# /wiki/Wikipedia:Today%27s_featured_article/2015
+# /wiki/Wikipedia:Today%27s_featured_article/2016
+# .....
+# ...
+----
+
+We should be able to make a list of the URLs for each of the years' archives. Currently, we have found the content that gets added to the base page's URL, rather than the full URL of each year:
+
+- Base Wikipedia URL: https://en.wikipedia.org
+- year_links content: /wiki/Wikipedia:Today%27s_featured_article/2006
+- By-year archive URLs: https://en.wikipedia.org/wiki/Wikipedia:Today%27s_featured_article/2006
+
+Start by defining `base`, and `archive_page`:
+
+[source,Python]
+----
+# home page of Wikipedia
+base = "https://en.wikipedia.org"
+
+# Today's Featured Article page of Wikipedia
+archive_page = base + "/wiki/Wikipedia:Today%27s_featured_article"
+----
+
+Next we'll need to re-define the soup to be pulling content from the Today's Featured Article page:
+
+[source,Python]
+----
+response = requests.get(archive_page, headers=headers)
+soup = BeautifulSoup(response.text,'html.parser')
+----
+
+Use `re.compile()` to find wherever there is a pattern of "/wiki/Wikipedia:Today%27s_featured_article/20":
+
+[source,Python]
+----
+pattern = re.compile(r"/wiki/Wikipedia:Today%27s_featured_article/20\d\d$")
+----
+
+We will use `urljoin` to join base with each of the hrefs in pattern, and compile them into a list. 
+
+[source,Python]
+----
+from urllib.parse import urljoin
+
+year_urls = [
+    urljoin(base, a['href']) 
+    for a in soup.find_all('a', href=pattern)
+]
+----
+
+.Deliverables
+====
+3.1 Create `year_links`, containing the links to the featured article pages of each year +
+3.2 Join the items in `year_links` with the base URL +
+3.3. Display the contents of the list `year_urls`
+====
+
+=== Question 4 (2 points)
+Just as we compiled the links for the individual years, we're going to be creating `day_pattern`. The links for the day-specific featured articles follow a URL structure pattern (also found in this example URL): https://en.wikipedia.org/wiki/Wikipedia:Today%27s_featured_article/February_16,_2006. The non-specific form of this pattern can be found using:
+
+[source,Python]
+----
+day_pattern = re.compile(r"/wiki/Wikipedia:Today%27s_featured_article/[A-Za-z]+_\d{1,2},_\d{4}$")
+----
+
+In the archive, there are over 8000 pages. To scrape each one from Wikipedia would be a very painful process. Instead, we can build a function.
+
+`get_day_pages` should take a link as input, define the soup based on the given year, and make a list of each day's article from that year. 
+
+[source,Python]
+----
+def get_day_pages(years): 
+    response = requests.get(years, headers=headers)
+    soup = BeautifulSoup(response.text,'html.parser')
+
+    day_urls = [
+        # joins the base URL with the day's link
+        # ( give base = "https://en.wikipedia.org" )
+        urljoin(base, a['href']) 
+        for a in soup.find_all('a', href=[your_days_pattern]) # CHANGE THIS
+    ]
+
+    return day_urls
+----
+
+Test this function using `year_urls`.
+
+[source,Python]
+----
+all_day_pages = []
+
+# loop through the items in year_urls
+for y in [your_list_of_years]: # CHANGE THIS
+    print("Finding the urls for year", y[-4:])
+
+    days = get_day_pages(y)
+    all_day_pages.extend(days)
+
+print("Total day pages:", len(all_day_pages))
+----
+
+We can take each item of this list, and extract the day it represents. From each of these pages, there's a pattern in the dates each was featured. This is the same thing we looked at to make `day_pattern`, but now we're just looking at the month, day, and year part of the link. This will be called `date_pattern`.
+
+[source,Python]
+----
+date_pattern = re.compile(r"/([A-Za-z]+)_(\d{1,2}),_(\d{4})$")
+----
+
+The function `parse_date` will search each URL and extract the `date_pattern` section. It will then be saved and converted to actual datetime format - rather than being a combination of characters and numbers. 
+
+[source,Python]
+----
+def parse_date(url):
+    match = [your_date_pattern].search(url) # CHANGE THIS
+    
+    month, day, year = match.groups()
+
+    return datetime.strptime(f"{month} {day} {year}", "%B %d %Y").date()
+----
+
+.Deliverables
+====
+4.1 Print all_day_pages to view the list of day-specific URLs +
+4.2 Extract the date from each day's featured article +
+4.3 Test the function `parse_date()` to compile a list of each date that featured an article:
+
+[source,Python]
+----
+from datetime import datetime
+
+my_list = []
+
+for d in all_day_pages:
+    featured_date = parse_date(d)
+    my_list.append(featured_date)
+
+my_list
+----
+====
+
+=== Question 5 (2 points)
+Each daily featured article usually contains about a paragraph of text describing the selected topic. At the start of this text, the topic's name is mentioned. The featured article on June 15, 2005 was on the Cat's Eye Nebula, and looked like this:
+
+image::Cats_Eye_Nebula.png[Screenshot of the article featuing the Cat's Eye Nebula from Wikipedia, width=70%, align=center]
+
+To get the page's paragraph text, we can do:
+
+[source,Python]
+----
+response = requests.get('https://en.wikipedia.org/wiki/Wikipedia:Today%27s_featured_article/June_15,_2005', headers=headers)
+soup = BeautifulSoup(response.text,'html.parser')
+
+paragraph = soup.find("p")
+paragraph
+----
+
+Currently, there are well over 8000 pages that have been used as a daily featured article. We're going to scrape the names of some of them. 
+
+[NOTE]
+====
+We will take where the subject's name is mentioned in each article's paragraph, and extract it. However, there are so many Today's Featured Article pages that there are two common outcomes to attempting to scrape these 8000+ pages:
+
+- Wikipedia blocks requests after some point, and the conntection is refused
+- The scraping process takes *hours* 
+
+To avoid running into either of these cases in this project, we will use a trick: instead of looking for the titles of *all those pages*, we will scrape the titles of just 200 articles. This will give us a good sample-sized amount of data to learn from.
+====
+
+Build a function get_article_title() that will extract the title content of each URL. You will need to define the soup based on each URL, find each page's paragraph of text, and extract the title. 
+
+[source,Python]
+----
+def get_article_title(url):
+
+    # define the response:
+    # should use the inputted URL
+    # defined headers
+    # and timeout=10
+    response = ....
+    
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # find the paragraph text of the page
+    # (the <p> tags)
+    paragraph = ....
+
+    # extract the page's title
+    while paragraph:
+        bold = paragraph.find("b")
+        if bold:
+            link = bold.find("a")
+            if link:
+                return link.get("title")
+
+        paragraph = paragraph.find_next_sibling("p")
+
+    return None
+----
+
+Use a for loop to go through the first 200 links of the pages we've compiled into `all_day_pages`.
+
+[source,Python]
+----
+article_titles = []
+
+pages_to_scrape = all_day_pages[:200]
+
+for i, page in enumerate(pages_to_scrape):
+
+    if (i + 1) % 10 == 0:
+        print(f"Processing {i+1}/{len(pages_to_scrape)}")
+
+    title = get_featured_article_title(page)
+
+    article_titles.append(title)
+----
+
+[NOTE]
+====
+It is possible that Wikipedia could still get overwhelmed even with us only scraping the titles of 200 pages. If this happens, be polite to Wikipedia and create some space between requests:
+
+[source,Python]
+----
+import time
+
+# add "sleep" time at the end of your loop
+time.sleep(0.1)
+----
+
+It's common for the loop to run in about 30 seconds. With sleep time, it is usually closer to 60 seconds. 
+====
+
+You could print out all of the titles in the article_titles list if you *really* wanted to. When going through the titles, note that there are likely still some "None" cases, where the title wasn't extracted properly.
+
+.Deliverables
+====
+5.1 Build the `get_article_title()` function +
+5.2 Go through the first 200 entries of Today's Featured Article (stored in `all_day_pages`) and extract the title. +
+5.3 Explain (2-3 sentences) what some common issues might occur when scraping large quantities of pages like this +
+5.4 Use:
+
+[source,Python]
+----
+import pandas as pd
+
+df = pd.DataFrame({
+    "url": all_day_pages[:200],
+    "featured_date": my_list[:200],
+    "article_title": article_titles,
+})
+
+df.head()
+----
+
+...to take the URLs of each page (`all_day_pages`), the dates each page represents (`my_list`), and the title of each page's subject (`all_results`), and compile them into a dataframe. Print the first five rows of this dataframe.
+====
+
+
+== Submitting your Work
+
+Please make sure that you added comments for each question, which explain your thinking about your method of solving each question.  Please also make sure that your work is your own work, and that any outside sources (people, internet pages, generative AI, etc.) are cited properly in the project template.
+
+
+Prior to submitting your work, you need to put your work xref:ROOT:templates.adoc[into the project template], and re-run all of the code in Jupyter Lab and make sure that the results of running that code is visible in your template.  Please check the xref:ROOT:submissions.adoc[detailed instructions on how to ensure that your submission is formatted correctly]. To download your completed project, you can right-click on the file in the file explorer and click 'download'.
+
+
+.Items to submit
+====
+- firstname_lastname_project11.ipynb
+====
+
+[WARNING]
+====
+It is necessary to document your work, with comments about each solution.  All of your work needs to be your own work, with citations to any source that you used.  Please make sure that your work is your own work, and that any outside sources (people, internet pages, generative AI, etc.) are cited properly in the project template.
+
+You _must_ double check your `.ipynb` after submitting it in gradescope. A _very_ common mistake is to assume that your `.ipynb` file has been rendered properly and contains your code, markdown, and code output even though it may not.
+
+**Please** take the time to double check your work. See xref:ROOT:submissions.adoc[here] for instructions on how to double check this.
+
+You **will not** receive full credit if your `.ipynb` file does not contain all of the information you expect it to, or if it does not render properly in Gradescope. Please ask a TA if you need help with this.
+====
+
+
+
